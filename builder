@@ -106,7 +106,7 @@ def main(selected=nil)
       puts "** Fetching sources"
       res1 = perror "spectool -f -g -S #{p}.spec"
       puts "** Sending package to remote build host #{build_host}"
-      res2 = perror "pkgwiz remote-build -b #{build_host} -m abiquo-1.7"
+      res2 = perror "pkgwiz remote-build -b #{build_host} -m abiquo-2.0"
       if (res1 == 0) and (res2 == 0)
         puts "** OK".green.bold
       else
