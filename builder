@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+
 require 'rubygems'
 require 'term/ansicolor'
 require 'thor'
@@ -22,7 +23,7 @@ class CLI < Thor
   desc "clean_buildbot", "Clean remote buildbot"
   method_options :host => :string, :port => :string
   def clean_buildbot
-    host = options[:host] || 'builder6'
+    host = options[:host] || 'vbuilder'
     port = options[:port] || 4567
     puts "Cleaning remote buildbot #{host}:#{port}"
     `curl --silent -X POST http://#{host}:4567/job/clean `
@@ -31,7 +32,7 @@ class CLI < Thor
   desc "tag_build", "Tag current buildbot packages"
   method_options :host => :string, :port => :string, :tag => :string
   def tag_build
-    host = options[:host] || 'builder6'
+    host = options[:host] || 'vbuilder'
     port = options[:port] || 4567
     tag = options[:tag]
     if tag and not tag.strip.chomp.empty?
@@ -72,7 +73,7 @@ def main(selected=nil)
     abiquo-logos-ee
   }
 
-  build_host = 'builder6' 
+  build_host = 'vbuilder' 
   binaries_url = `rpm --eval "%{abiquo_binaries_url}"`
 
   if ENV['ABI_BRANCH'].nil? 
