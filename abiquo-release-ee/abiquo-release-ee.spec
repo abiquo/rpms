@@ -1,4 +1,4 @@
-%define builtin_release_name RC2
+%define builtin_release_name GA
 %define base_release_version 2.0
 %define builtin_release_variant Enterprise Edition
 %define builtin_release_version %{base_release_version}
@@ -12,7 +12,7 @@ Summary: %{product_family} release file
 Name: abiquo-release-ee
 Epoch: 10
 Version: 2.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: GPL
 Group: System Environment/Base
 Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
@@ -95,6 +95,9 @@ rm -rf $RPM_BUILD_ROOT
 #/var/lib/supportinfo
 
 %changelog
+* Wed Mar 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 10:2.0-5
+- GA Bump
+
 * Wed Feb 08 2012 Sergio Rubio <srubio@abiquo.com> - 10:2.0-4
 - RC2 bump
 

@@ -1,7 +1,7 @@
 Summary: redis
 Name: redis
 Version: 2.0.4
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: BSD
 Group: Applications/Multimedia
 URL: http://code.google.com/p/redis/
@@ -94,6 +94,9 @@ fi
 %dir %attr(0755,redis,redis) %{_localstatedir}/log/redis
 
 %changelog
+* Wed Mar 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0.4-2
+- Fixed pidfile bug
+
 * Fri Dec 10 2010 Sergio Rubio <srubio@abiquo.com> - 2.0.4-1
 - updated to redis 2.0.4
 

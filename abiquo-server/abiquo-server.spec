@@ -2,7 +2,7 @@
 
 Name:           abiquo-server
 Version:        2.0
-Release:        1%{?dist}%{?buildstamp}
+Release:        3%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -10,12 +10,15 @@ Summary:        Abiquo Server Enterprise Edition
 Source0:	%{?abiquo_binaries_url}server.war
 Source1:        abiquo.properties.server
 Source2:        abiquo-accounting.cron
-Source3:	%{?abiquo_binaries_url}kinton-schema.sql
+# Source3:	%{?abiquo_binaries_url}kinton-schema.sql
+Source3:	kinton-schema.sql
 Source4:	server.xml
+Source5:	kinton-delta-1_8_5-to-2_0_0.sql
+Source6:	kinton-premium-delta-1_8_5-to-2_0_0.sql
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires:       abiquo-core abiquo-client-premium mysql-server nfs-utils sos wget ruby ntp libvirt-client rabbitmq-server 
+Requires:       abiquo-core abiquo-client-premium mysql-server nfs-utils sos wget ruby ntp libvirt-client rabbitmq-server redis 
 Requires:       /usr/sbin/sendmail /usr/bin/which
-BuildRequires: /usr/bin/unzip
+BuildRequires:  /usr/bin/unzip
 BuildArch: 	noarch
 
 %description
@@ -41,6 +44,8 @@ cp -r %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/server/ %{SOURCE0}
 cp %{SOURCE2} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
 cp %{SOURCE4} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/Catalina/localhost/
+cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+cp %{SOURCE6} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -53,6 +58,12 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/server.xml
 
 %changelog
+* Wed Mar 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-3
+- Added redis
+
+* Thu Mar 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
+- Added 1.8.5 to 2.0 deltas
+
 * Mon Dec 19 2011 Sergio Rubio <srubio@abiquo.com> - 2.0-1
 - bumped version to 2.0
 

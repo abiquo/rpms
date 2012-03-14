@@ -2,7 +2,7 @@
 
 Name:     abiquo-remote-services
 Version:  2.0
-Release:  1%{?dist}
+Release:  2%{?dist}
 Summary:  Abiquo Remote Services
 Group:    Development/System 
 License:  Multiple 
@@ -10,7 +10,7 @@ URL:      http://www.abiquo.com
 Source0:  README 
 Source1:  abiquo.properties.remoteservices
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-tarantino libvirt-client dhcp redis nfs-utils OpenIPMI-tools
+Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-virtualfactory libvirt-client dhcp redis nfs-utils OpenIPMI-tools
 BuildArch: noarch
 
 %description
@@ -57,6 +57,9 @@ EOF
 %{abiquo_basedir}/config/examples/abiquo.properties.remoteservices
 
 %changelog
+* Tue Mar 13 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
+- Remove tarantino, add virtualfactory again
+
 * Mon Dec 19 2011 Sergio Rubio <srubio@abiquo.com> - 2.0-1
 - bumped version to 2.0
 - remove virtualfactory dep, add tarantino dep
