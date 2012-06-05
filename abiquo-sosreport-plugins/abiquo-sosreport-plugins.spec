@@ -1,4 +1,8 @@
+%if 0%{?rhel} >= 6
+%define python_sitelib /usr/lib/python2.6/site-packages/
+%else
 %define python_sitelib /usr/lib/python2.4/site-packages/
+%endif
 
 Summary: Abiquo SOSReport plugins
 Name: abiquo-sosreport-plugins

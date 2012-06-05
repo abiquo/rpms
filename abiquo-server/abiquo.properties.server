@@ -11,4 +11,3 @@ abiquo.redis.host = 127.0.0.1
 abiquo.redis.port = 6379
 abiquo.auth.module = abiquo
 abiquo.server.api.location = http://10.60.20.11/api
-

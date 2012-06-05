@@ -2,7 +2,7 @@
 
 Name:           abiquo-server
 Version:        2.0
-Release:        3%{?dist}%{?buildstamp}
+Release:        8%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -10,11 +10,11 @@ Summary:        Abiquo Server Enterprise Edition
 Source0:	%{?abiquo_binaries_url}server.war
 Source1:        abiquo.properties.server
 Source2:        abiquo-accounting.cron
-# Source3:	%{?abiquo_binaries_url}kinton-schema.sql
-Source3:	kinton-schema.sql
+Source3:	%{?abiquo_binaries_url}kinton-schema.sql
+# Source3:	kinton-schema.sql
 Source4:	server.xml
-Source5:	kinton-delta-1_8_5-to-2_0_0.sql
-Source6:	kinton-premium-delta-1_8_5-to-2_0_0.sql
+Source5:	%{?abiquo_binaries_url}delta-community/2.0.0-HF3/kinton-delta-2_0_0-HF1-to-2_0_0-HF3.sql
+# Source6:	kinton-premium-delta-1_8_5-to-2_0_0.sql
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires:       abiquo-core abiquo-client-premium mysql-server nfs-utils sos wget ruby ntp libvirt-client rabbitmq-server redis 
 Requires:       /usr/sbin/sendmail /usr/bin/which
@@ -45,7 +45,7 @@ cp -r %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE2} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
 cp %{SOURCE4} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/Catalina/localhost/
 cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-cp %{SOURCE6} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+# cp %{SOURCE6} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -58,6 +58,21 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/server.xml
 
 %changelog
+* Tue May 29 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-8
+- Added HF3 delta
+
+* Thu May 24 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-7
+- 2.0-HF3 Bump
+
+* Wed Apr 11 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-6
+- update to include 2.0 -> 2.0 HF1 delta
+
+* Fri Mar 16 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-5
+- release bump
+
+* Thu Mar 15 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-4
+- bumped release
+
 * Wed Mar 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-3
 - Added redis
 

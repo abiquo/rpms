@@ -2,7 +2,7 @@
 
 Name:     abiquo-client-premium
 Version:  2.0
-Release:  1%{?dist}%{?buildstamp}
+Release:  3%{?dist}%{?buildstamp}
 Summary:  Abiquo Flex Client
 Group:    Development/System 
 License:  Multiple 
@@ -42,6 +42,12 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/tomcat/webapps/ROOT
 
 %changelog
+* Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-3
+- 2.0-HF1 bump
+
+* Fri Mar 16 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
+- bumped release
+
 * Mon Dec 19 2011 Sergio Rubio <srubio@abiquo.com> - 2.0-1
 - bumped version to 2.0
 

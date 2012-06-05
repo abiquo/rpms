@@ -39,10 +39,13 @@ auth_tcp = "none"
 auth_tls = "none"
 log_level = 3
 log_outputs="3:syslog:libvirtd"
+# Prevent mDNS errors
+mdns_adv = 0
 
 EOF
 
 cat > /etc/sysconfig/libvirtd <<EOF
+LIBVIRTD_CONFIG=/etc/libvirt/libvirtd.conf
 LIBVIRTD_ARGS="--listen"
 EOF
 

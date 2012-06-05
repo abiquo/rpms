@@ -2,7 +2,7 @@
 
 Name:     abiquo-am
 Version:  2.0
-Release:  1%{?dist}%{?buildstamp}
+Release:  2%{?dist}%{?buildstamp}
 Summary:  Abiquo Appliance Manager
 Group:    Development/System 
 License:  Multiple 
@@ -40,6 +40,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
+- 2.0-HF1 bump
+
 * Mon Dec 19 2011 Sergio Rubio <srubio@abiquo.com> - 2.0-1
 - bumped version to 2.0
 

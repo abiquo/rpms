@@ -2,7 +2,7 @@
 
 Name:           abiquo-lvmiscsi
 Version:        2.0
-Release:        1%{?dist}%{?buildstamp}
+Release:        2%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -61,6 +61,9 @@ install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
 %{_initrddir}/abiquo-lvmiscsi
 
 %changelog
+* Thu Mar 15 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
+- bumped release
+
 * Wed Dec 21 2011 Sergio Rubio <srubio@abiquo.com> - 2.0-1
 - 2.0 version bump
 - Updated tomcat

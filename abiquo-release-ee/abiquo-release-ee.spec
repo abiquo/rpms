@@ -1,4 +1,4 @@
-%define builtin_release_name GA
+%define builtin_release_name HF3
 %define base_release_version 2.0
 %define builtin_release_variant Enterprise Edition
 %define builtin_release_version %{base_release_version}
@@ -12,7 +12,7 @@ Summary: %{product_family} release file
 Name: abiquo-release-ee
 Epoch: 10
 Version: 2.0
-Release: 5%{?dist}
+Release: 8%{?dist}
 License: GPL
 Group: System Environment/Base
 Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
@@ -95,6 +95,15 @@ rm -rf $RPM_BUILD_ROOT
 #/var/lib/supportinfo
 
 %changelog
+* Thu May 24 2012 Abel Boldú <abel.boldu@abiquo.com> - 10:2.0-8
+- 2.0-HF3 Bump
+
+* Wed May 02 2012 Abel Boldú <abel.boldu@abiquo.com> - 10:2.0-7
+- 2.0-HF2 bump
+
+* Tue Apr 10 2012 Abel Boldú <abel.boldu@abiquo.com> - 10:2.0-6
+- bumped to HF1
+
 * Wed Mar 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 10:2.0-5
 - GA Bump
 

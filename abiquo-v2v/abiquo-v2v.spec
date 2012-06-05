@@ -2,14 +2,14 @@
 
 Name:     abiquo-v2v
 Version:  2.0
-Release:  3%{?dist}%{?buildstamp}
+Release:  5%{?dist}%{?buildstamp}
 Summary:  Abiquo V2V Conversion Component 
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 Source0:  %{?abiquo_binaries_url}bpm-async.war
-Source1:  %{?abiquo_binaries_url}v2v-diskmanager
-Source2:  %{?abiquo_binaries_url}mechadora
+Source1:  %{?abiquo_binaries_url}scripts/v2v-diskmanager
+Source2:  %{?abiquo_binaries_url}scripts/mechadora
 Source3:  abiquo.properties.v2v
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: abiquo-core vboxmanage iscsi-initiator-utils nfs-utils samba qemu-img
@@ -34,8 +34,8 @@ mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}
 cp  %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/scripts
 cp  %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/scripts
 mkdir -p $RPM_BUILD_ROOT/usr/bin/
-cp %{SOURCE1} $RPM_BUILD_ROOT/usr/bin/
-cp %{SOURCE2} $RPM_BUILD_ROOT/usr/bin/
+%{__install} -Dp -m 0755 %{SOURCE1} $RPM_BUILD_ROOT/usr/bin/
+%{__install} -Dp -m 0755 %{SOURCE2} $RPM_BUILD_ROOT/usr/bin/
 cp %{SOURCE3} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 
 %clean
@@ -82,6 +82,12 @@ EOF
 
 
 %changelog
+* Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-5
+- 2.0-HF1 bump
+
+* Wed Mar 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-4
+- Adding binary permissions
+
 * Thu Feb 02 2012 Sergio Rubio <srubio@abiquo.com> - 2.0-3
 - Added qemu-img dependency
 

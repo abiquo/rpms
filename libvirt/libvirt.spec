@@ -262,6 +262,8 @@ BuildRequires: cyrus-sasl-devel
 %if %{with_polkit}
 %if 0%{?fedora} >= 12 || 0%{?rhel} >= 6
 # Only need the binary, not -devel
+BuildRequires: libnl-devel 
+BuildRequires: device-mapper-devel
 BuildRequires: polkit >= 0.93
 %else
 BuildRequires: PolicyKit-devel >= 0.6

@@ -1,5 +1,5 @@
 %define builtin_release_version 2.0
-%define builtin_release_name RC2 
+%define builtin_release_name HF1 
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
 %define real_release_name %{?release_name}%{!?release_name:%{builtin_release_name}}
 %define current_arch %{_arch}
@@ -7,10 +7,11 @@
 Summary: Abiquo release notes files
 Name: abiquo-release-notes-ee
 Version: %{real_release_version}
-Release: 2 
+Release: 4 
 License: GPL
 Group: System Environment/Base
-Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
+# Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
+Source: %{name}-%{builtin_release_version}.tar.gz
 Obsoletes: indexhtml abiquo-release-notes
 BuildRoot: %{_tmppath}/abiquo-release-notes-root
 Provides: indexhtml abiquo-release-notes
@@ -36,6 +37,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_defaultdocdir}/HTML
 
 %changelog
+* Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-4
+- 2.0-HF1 bump
+
+* Fri Mar 16 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-3
+- 2.0 bump
+
 * Wed Feb 08 2012 Sergio Rubio <srubio@abiquo.com> - 2.0-2
 - RC2 bump
 

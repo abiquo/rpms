@@ -5,7 +5,7 @@
 
 Summary: Abiquo Elite Toolkit
 Name: rubygem-%{gemname}
-Version: 0.5.8
+Version: 0.6.1
 Release: 1%{?dist}
 Group: Development/Languages
 License: GPLv2+ or Ruby
@@ -16,6 +16,7 @@ Requires: rubygems
 Requires: rubygem(nokogiri) >= 1.3
 Requires: rubygem(term-ansicolor) >= 1.0
 Requires: rubygem(iniparse) >= 1.1.4
+# Requires: rubygem(abiquo) >= 0.1.2
 BuildRequires: rubygems
 BuildArch: noarch
 Provides: rubygem(%{gemname}) = %{version}
@@ -57,6 +58,12 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Wed Apr 11 2012 Abel Boldú <abel.boldu@abiquo.com> - 0.6.0-1
+- Upstream bump. Added abiquo gem dependency
+
+* Tue Apr 10 2012 Abel Boldú <abel.boldu@abiquo.com> - 0.5.9-1
+- upstream bump
+
 * Thu Feb 09 2012 Sergio Rubio <srubio@abiquo.com> - 0.5.8-1
 - upstream update
 

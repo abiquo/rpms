@@ -2,7 +2,7 @@
 
 Name:     abiquo-virtualfactory
 Version:  2.0
-Release:  1%{?dist}%{?buildstamp}
+Release:  2%{?dist}%{?buildstamp}
 Summary:  Abiquo Virtualfactory
 Group:    Development/System 
 License:  Multiple 
@@ -36,6 +36,9 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/tomcat/webapps/virtualfactory
 
 %changelog
+* Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
+- 2.0-HF1 bump
+
 * Thu Feb 23 2012 Sergio Rubio <srubio@abiquo.com> - 2.0-1
 - initial release
 

@@ -13,12 +13,6 @@ RETVAL=0
 start()
 {
 
-  if ! [ -f /opt/vm_repository/.abiquo_repository ]; then
-	  echo -e "\n/opt/vm_repository/.abiquo_repository file not found."
-	  echo -e "Make sure the Abiquo NFS Repository is mounted in /opt/vm_repository\n"
-	  exit 1
-  fi
-
   status libvirtd
   RETVAL=$?
 

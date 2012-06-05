@@ -7,7 +7,8 @@ License:  Multiple
 URL:      http://www.virtualbox.org
 Source:   http://mirror.abiquo.com/sources/VirtualBox-%{version}-OSE.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-BuildRequires: iasl dev86 libxml2-devel libxslt-devel libIDL-devel hal-devel curl-devel dev86 libcap-devel glibc-devel libstdc++-devel libpng-devel libXmu-devel libX11-devel mesa-libGL-devel libXrandr-devel
+BuildRequires: iasl dev86 libxml2-devel libxslt-devel libIDL-devel hal-devel curl-devel dev86 libcap-devel glibc-devel libstdc++-devel libpng-devel libXmu-devel libX11-devel mesa-libGL-devel libXrandr-devel glibc openssl openssl-devel glibc-headers kBuild
+#BuildRequires: libgcc-multilib
 Patch1:  no-curl-detect.diff
 Source1: VBoxManage
 
@@ -30,7 +31,8 @@ chmod -R a+rX,g-w,o-w .
 %build
 cd VirtualBox-%{version}_OSE
 ./configure --disable-python --disable-sdl-ttf --disable-alsa --disable-pulse --disable-dbus --disable-kmods --disable-opengl --disable-hardening --build-headless
-source env.sh
+pwd
+source $RPM_BUILD_DIR/VirtualBox-%{version}_OSE/env.sh
 kmk all
 
 
