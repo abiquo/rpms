@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo/lvmiscsi
 
 Name:           abiquo-lvmiscsi
-Version:        2.0
-Release:        2%{?dist}%{?buildstamp}
+Version:        2.2
+Release:        1%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -61,6 +61,9 @@ install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
 %{_initrddir}/abiquo-lvmiscsi
 
 %changelog
+* Wed Jun 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Thu Mar 15 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
 - bumped release
 

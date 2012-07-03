@@ -1,7 +1,7 @@
 Name:           abiquo-aim
 BuildRequires:  hiredis gcc-c++ thrift-cpp-devel boost-devel curl-devel libvirt-devel 
 Requires:	libvirt hiredis boost
-Version:        2.0rel1.4.2
+Version:        2.0rel1.4.3
 Release:        2%{?dist}
 Url:            http://www.abiquo.com/
 License:        BSD(or similar)

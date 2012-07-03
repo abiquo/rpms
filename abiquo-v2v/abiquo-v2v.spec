@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-v2v
-Version:  2.0
-Release:  5%{?dist}%{?buildstamp}
+Version:  2.2
+Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo V2V Conversion Component 
 Group:    Development/System 
 License:  Multiple 
@@ -37,6 +37,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/bin/
 %{__install} -Dp -m 0755 %{SOURCE1} $RPM_BUILD_ROOT/usr/bin/
 %{__install} -Dp -m 0755 %{SOURCE2} $RPM_BUILD_ROOT/usr/bin/
 cp %{SOURCE3} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
+mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/v2v-conversions
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -82,6 +83,9 @@ EOF
 
 
 %changelog
+* Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Added new conversions dir. Bumped version to 2.2
+
 * Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-5
 - 2.0-HF1 bump
 

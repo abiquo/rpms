@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-remote-services
-Version:  2.0
-Release:  2%{?dist}
+Version:  2.2
+Release:  1%{?dist}
 Summary:  Abiquo Remote Services
 Group:    Development/System 
 License:  Multiple 
@@ -57,6 +57,9 @@ EOF
 %{abiquo_basedir}/config/examples/abiquo.properties.remoteservices
 
 %changelog
+* Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Tue Mar 13 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-2
 - Remove tarantino, add virtualfactory again
 

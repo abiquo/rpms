@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-cloud-node
-Version:  2.0
+Version:  2.2
 Release:  1%{?dist}
 Summary:  Abiquo Cloud Node setup package
 Group:    Development/System 
@@ -57,6 +57,9 @@ fi
 %defattr(-,root,root,-)
 
 %changelog
+* Wed Jun 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Mon Dec 19 2011 Sergio Rubio <srubio@abiquo.com> - 2.0-1
 - bumped version to 2.0
 - Add abiquo-aim dep

@@ -13,22 +13,20 @@
 ## Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import sos.plugintools
+import os
 
 
-class abiquo_xen_node(sos.plugintools.PluginBase):
-    """Abiquo xen node related information
+class abiquo_dhcp(sos.plugintools.PluginBase):
+    """Abiquo server dhcp related information
     """
 
     def checkenabled(self):
-        if self.cInfo["policy"].pkgByName("abiquo-aim") and self.cInfo["policy"].pkgByName("xen"):
+        if os.path.exists("/var/lib/dhcpd/dhcpd.leases"):
             return True
         return False
 
     def setup(self):
-        # Xen log
-        self.addCopySpec("/var/log/xen/")
-
-        #Xen conf
-        self.addCopySpec("/etc/xen/")
+        self.addCopySpec("/var/lib/dhcpd/dhcpd.leases")
+        self.addCopySpec("/var/lib/dhcpd/dhcpd.leases~")
 
         return

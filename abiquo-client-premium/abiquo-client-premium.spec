@@ -1,14 +1,15 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-client-premium
-Version:  2.0
-Release:  3%{?dist}%{?buildstamp}
+Version:  2.2
+Release:  2%{?dist}%{?buildstamp}
 Summary:  Abiquo Flex Client
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 Source0:  %{?abiquo_binaries_url}client-premium.war
 Source1:  index.html
+Source2:  client-premium.xml
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: abiquo-core
 Obsoletes: abiquo-client
@@ -30,6 +31,8 @@ mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ROOT
 mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/client-premium/ %{SOURCE0}
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ROOT/
+cp %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/Catalina/localhost/
+cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/
 
 
 %clean
@@ -40,8 +43,16 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %{abiquo_basedir}/tomcat/webapps/client-premium
 %{abiquo_basedir}/tomcat/webapps/ROOT
+%config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/client-premium.xml
+
 
 %changelog
+* Tue Jul 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-2
+- added client-premium.xml
+
+* Tue Jun 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-3
 - 2.0-HF1 bump
 

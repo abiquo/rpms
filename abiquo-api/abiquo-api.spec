@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-api
-Version:  2.0
-Release:  3%{?dist}%{?buildstamp}
+Version:  2.2
+Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo Repository Manager
 Group:    Development/System 
 License:  Multiple 
@@ -41,6 +41,9 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/api.xml
 
 %changelog
+* Tue Jun 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-3
 - 2.0-HF1 bump
 

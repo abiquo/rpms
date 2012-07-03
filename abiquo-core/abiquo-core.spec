@@ -1,14 +1,14 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-core
-Version: 2.0
-Release: 1%{?dist}
+Version: 	2.2
+Release: 	1%{?dist}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
 Summary:        Abiquo Server core package 
-Source0:        https://github.com/downloads/abiquo-rpms/abiquo-core/%{name}-%{version}.tar.gz
-Source1:        server.xml
+Source0:        http://mirror.abiquo.com/sources/%{name}-%{version}.tar.gz
+# Source1:        server.xml 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:	noarch
 
@@ -35,7 +35,7 @@ mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}
 mkdir -p $RPM_BUILD_ROOT/opt/vm_repository
 cp -r tomcat $RPM_BUILD_ROOT/%{abiquo_basedir}
 install -m 755 scripts/abiquo-tomcat.init $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/abiquo-tomcat
-cp %{SOURCE1} $RPM_BUILD_ROOT%{_docdir}/%{name}/examples/tomcat/
+# cp %{SOURCE1} $RPM_BUILD_ROOT%{_docdir}/%{name}/examples/tomcat/
 
 %post
 /sbin/chkconfig --add abiquo-tomcat
@@ -63,6 +63,9 @@ fi
 %config %{_sysconfdir}/rc.d/init.d/abiquo-tomcat
 
 %changelog
+* Wed Jun 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Fri Oct 21 2011 Sergio Rubio <rubiojr@frameos.org> - 2.0-1
 - Added new property managedrack
 - Do not try to add limits to /etc/security/limits.conf

@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-ssm
-Version:  2.0
-Release:  3%{?dist}%{?buildstamp}
+Version:  2.2
+Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo System Storage Manager
 Group:    Development/System 
 License:  Multiple 
@@ -34,6 +34,9 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/tomcat/webapps/ssm
 
 %changelog
+* Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-3
 - 2.0-HF1 bump
 

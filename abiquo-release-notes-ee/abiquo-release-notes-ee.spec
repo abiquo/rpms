@@ -1,5 +1,5 @@
-%define builtin_release_version 2.0
-%define builtin_release_name HF1 
+%define builtin_release_version 2.2
+%define builtin_release_name RC1
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
 %define real_release_name %{?release_name}%{!?release_name:%{builtin_release_name}}
 %define current_arch %{_arch}

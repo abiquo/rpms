@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-server
-Version:        2.0
-Release:        8%{?dist}%{?buildstamp}
+Version:        2.2
+Release:        1%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -12,9 +12,8 @@ Source1:        abiquo.properties.server
 Source2:        abiquo-accounting.cron
 Source3:	%{?abiquo_binaries_url}kinton-schema.sql
 # Source3:	kinton-schema.sql
-Source4:	server.xml
-Source5:	%{?abiquo_binaries_url}delta-community/2.0.0-HF3/kinton-delta-2_0_0-HF1-to-2_0_0-HF3.sql
-# Source6:	kinton-premium-delta-1_8_5-to-2_0_0.sql
+Source4:	%{?abiquo_binaries_url}delta-community/2.0.0-HF3/kinton-delta-2_0_0-HF1-to-2_0_0-HF3.sql
+# Source5:	kinton-premium-delta-1_8_5-to-2_0_0.sql
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires:       abiquo-core abiquo-client-premium mysql-server nfs-utils sos wget ruby ntp libvirt-client rabbitmq-server redis 
 Requires:       /usr/sbin/sendmail /usr/bin/which
@@ -39,13 +38,11 @@ mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/Catalina/localhost/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 mkdir -p %{buildroot}/%{_sysconfdir}/cron.d/
 cp %{SOURCE3} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-cp %{SOURCE4} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 cp -r %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/server/ %{SOURCE0}
 cp %{SOURCE2} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
-cp %{SOURCE4} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/Catalina/localhost/
-cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-# cp %{SOURCE6} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+cp %{SOURCE4} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+# cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -58,6 +55,9 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/server.xml
 
 %changelog
+* Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- Bumped version to 2.2
+
 * Tue May 29 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-8
 - Added HF3 delta
 
