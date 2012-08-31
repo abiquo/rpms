@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-core
-Version: 	2.2
-Release: 	2%{?dist}
+Version: 	2.2.0
+Release: 	1%{?dist}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -65,6 +65,9 @@ fi
 %config %{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
+- new versioning
+
 * Mon Aug 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-2
 - Added logrotate rule
 

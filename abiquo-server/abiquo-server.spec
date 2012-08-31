@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-server
-Version:        2.2
+Version:        2.2.0
 Release:        1%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
@@ -46,6 +46,9 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/config/examples/abiquo.properties.server
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
+- new versioning
+
 * Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
 - Bumped version to 2.2
 

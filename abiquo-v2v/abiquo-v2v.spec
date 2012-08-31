@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-v2v
-Version:  2.2
+Version:  2.2.0
 Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo V2V Conversion Component 
 Group:    Development/System 
@@ -84,6 +84,9 @@ EOF
 
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
+- new versioning
+
 * Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
 - Added new conversions dir. Bumped version to 2.2
 

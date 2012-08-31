@@ -1,5 +1,5 @@
-%define builtin_release_version 2.2
-%define builtin_release_name RC1
+%define builtin_release_version 2.2.0
+%define builtin_release_name GA
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
 %define real_release_name %{?release_name}%{!?release_name:%{builtin_release_name}}
 %define current_arch %{_arch}
@@ -7,7 +7,7 @@
 Summary: Abiquo release notes files
 Name: abiquo-release-notes-ee
 Version: %{real_release_version}
-Release: 1 
+Release: 0
 License: GPL
 Group: System Environment/Base
 Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz

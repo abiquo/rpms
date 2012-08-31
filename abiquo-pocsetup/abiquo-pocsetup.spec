@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-pocsetup
-Version:  2.2
+Version:  2.2.0
 Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo POC Setup Metapackage
 Group:    Development/System 
@@ -89,6 +89,9 @@ EOF
 %doc %{_docdir}/%{name}/README
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
+- new versioning
+
 * Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
 - Bumped version to 2.2
 

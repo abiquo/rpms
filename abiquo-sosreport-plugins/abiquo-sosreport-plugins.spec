@@ -6,7 +6,7 @@
 
 Summary: Abiquo SOSReport plugins
 Name: abiquo-sosreport-plugins
-Version: 2.2
+Version: 2.2.0
 Release: 1%{?dist}
 License: BSD 
 Group: System Environment/Base
@@ -42,6 +42,9 @@ mkdir -p %{buildroot}%{python_sitelib}/sos/plugins
 %{python_sitelib}/sos/plugins/*
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
+- new versioning
+
 * Tue Jul 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
 - 2.2 bump
 

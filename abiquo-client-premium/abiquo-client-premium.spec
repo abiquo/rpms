@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-client-premium
-Version:  2.2
-Release:  2%{?dist}%{?buildstamp}
+Version:  2.2.0
+Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo Flex Client
 Group:    Development/System 
 License:  Multiple 
@@ -48,6 +48,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_docdir}/%{name}
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
+- new versioning
+
 * Tue Jul 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-2
 - added client-premium.xml
 

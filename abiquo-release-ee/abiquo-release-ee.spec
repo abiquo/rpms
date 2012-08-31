@@ -1,5 +1,5 @@
-%define builtin_release_name RC
-%define base_release_version 2.2
+%define builtin_release_name GA
+%define base_release_version 2.2.0
 %define builtin_release_variant Enterprise Edition
 %define builtin_release_version %{base_release_version}
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
@@ -10,8 +10,8 @@
 
 Summary: %{product_family} release file
 Name: abiquo-release-ee
-Epoch: 10
-Version: 2.2
+Epoch: 11
+Version: 2.2.0
 Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
@@ -95,6 +95,9 @@ rm -rf $RPM_BUILD_ROOT
 #/var/lib/supportinfo
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 11:2.2.0-1
+- new versioning
+
 * Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 10:2.2-1
 - Bumped version to 2.2
 
