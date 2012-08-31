@@ -2,13 +2,13 @@
 
 Name:           abiquo-core
 Version: 	2.2
-Release: 	1%{?dist}
+Release: 	2%{?dist}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
 Summary:        Abiquo Server core package 
 Source0:        http://mirror.abiquo.com/sources/%{name}-%{version}.tar.gz
-# Source1:        server.xml 
+Source1:        abiquo-tomcat.logrotate
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:	noarch
 
@@ -29,13 +29,14 @@ rm -rf $RPM_BUILD_ROOT
 
 %install
 mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}/examples/tomcat/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}
 mkdir -p $RPM_BUILD_ROOT/opt/vm_repository
 cp -r tomcat $RPM_BUILD_ROOT/%{abiquo_basedir}
 install -m 755 scripts/abiquo-tomcat.init $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/abiquo-tomcat
-# cp %{SOURCE1} $RPM_BUILD_ROOT%{_docdir}/%{name}/examples/tomcat/
+cp %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %post
 /sbin/chkconfig --add abiquo-tomcat
@@ -61,8 +62,12 @@ fi
 /opt/vm_repository
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/*
 %config %{_sysconfdir}/rc.d/init.d/abiquo-tomcat
+%config %{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %changelog
+* Mon Aug 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-2
+- Added logrotate rule
+
 * Wed Jun 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
 - Bumped version to 2.2
 

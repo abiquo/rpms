@@ -80,6 +80,7 @@ EOF
 /usr/bin/mechadora
 /usr/bin/v2v-diskmanager
 %{abiquo_basedir}/config/examples/abiquo.properties.v2v
+%{abiquo_basedir}/v2v-conversions
 
 
 %changelog

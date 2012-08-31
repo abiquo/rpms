@@ -38,12 +38,8 @@ install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ROOT/ %{SOURCE1}
 
 
-%post
-# This adds the proper /etc/rc*.d links for the script
-/sbin/chkconfig --add abiquo-lvmiscsi
-
-%preun
-/sbin/chkconfig --del abiquo-lvmiscsi
+#%preun
+#/sbin/chkconfig --del abiquo-lvmiscsi
 
 %files
 %{abiquo_basedir}/tomcat/bin
@@ -59,6 +55,10 @@ install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
 %{_docdir}/%{name}
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/*
 %{_initrddir}/abiquo-lvmiscsi
+
+%post
+/sbin/chkconfig --add abiquo-lvmiscsi
+
 
 %changelog
 * Wed Jun 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1

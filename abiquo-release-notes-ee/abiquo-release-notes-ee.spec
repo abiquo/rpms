@@ -7,11 +7,10 @@
 Summary: Abiquo release notes files
 Name: abiquo-release-notes-ee
 Version: %{real_release_version}
-Release: 4 
+Release: 1 
 License: GPL
 Group: System Environment/Base
-# Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
-Source: %{name}-%{builtin_release_version}.tar.gz
+Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
 Obsoletes: indexhtml abiquo-release-notes
 BuildRoot: %{_tmppath}/abiquo-release-notes-root
 Provides: indexhtml abiquo-release-notes
@@ -37,6 +36,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_defaultdocdir}/HTML
 
 %changelog
+* Thu Jul 12 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
+- 2.2 bump
+
 * Thu Apr 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0-4
 - 2.0-HF1 bump
 

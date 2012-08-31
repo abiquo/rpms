@@ -7,13 +7,10 @@ Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
 Summary:        Abiquo Server Enterprise Edition 
-Source0:	%{?abiquo_binaries_url}server.war
-Source1:        abiquo.properties.server
-Source2:        abiquo-accounting.cron
-Source3:	%{?abiquo_binaries_url}kinton-schema.sql
-# Source3:	kinton-schema.sql
-Source4:	%{?abiquo_binaries_url}delta-community/2.0.0-HF3/kinton-delta-2_0_0-HF1-to-2_0_0-HF3.sql
-# Source5:	kinton-premium-delta-1_8_5-to-2_0_0.sql
+Source0:        abiquo.properties.server
+Source1:        abiquo-accounting.cron
+Source2:	%{?abiquo_binaries_url}database/kinton-schema.sql
+Source3:	%{?abiquo_binaries_url}database/kinton-latest-delta.sql
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires:       abiquo-core abiquo-client-premium mysql-server nfs-utils sos wget ruby ntp libvirt-client rabbitmq-server redis 
 Requires:       /usr/sbin/sendmail /usr/bin/which
@@ -33,26 +30,20 @@ mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}/database
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}/examples
 mkdir -p $RPM_BUILD_ROOT%{abiquo_basedir}
-mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps
-mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/Catalina/localhost/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 mkdir -p %{buildroot}/%{_sysconfdir}/cron.d/
+cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+cp -r %{SOURCE0} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
+cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
 cp %{SOURCE3} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-cp -r %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
-/usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/server/ %{SOURCE0}
-cp %{SOURCE2} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
-cp %{SOURCE4} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-# cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%{abiquo_basedir}/tomcat/webapps/server
 %{_docdir}/%{name}
 %{_sysconfdir}/cron.d/abiquo-accounting
 %{abiquo_basedir}/config/examples/abiquo.properties.server
-%config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/server.xml
 
 %changelog
 * Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1

@@ -28,6 +28,7 @@ Make sure that you read the license agrements in /usr/share/doc/abiquo-core lice
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ROOT
+mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/Catalina/localhost/
 mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/client-premium/ %{SOURCE0}
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ROOT/
@@ -44,7 +45,7 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/tomcat/webapps/client-premium
 %{abiquo_basedir}/tomcat/webapps/ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/client-premium.xml
-
+%{_docdir}/%{name}
 
 %changelog
 * Tue Jul 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-2

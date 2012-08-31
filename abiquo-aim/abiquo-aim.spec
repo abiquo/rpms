@@ -1,8 +1,8 @@
 Name:           abiquo-aim
 BuildRequires:  hiredis gcc-c++ thrift-cpp-devel boost-devel curl-devel libvirt-devel 
 Requires:	libvirt hiredis boost
-Version:        2.0rel1.4.3
-Release:        2%{?dist}
+Version:        2.0rel1.4.5
+Release:        1%{?dist}
 Url:            http://www.abiquo.com/
 License:        BSD(or similar)
 Group:          System/Management
@@ -58,6 +58,12 @@ if ! [ -d /opt/vm_repository ]; then
 fi
 
 %changelog
+* Wed Aug 22 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0rel1.4.5-1
+- bumped version, valid datastore types setting
+
+* Fri Jul 20 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0rel1.4.4-1
+- bumped version
+
 * Tue Apr 24 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0rel1.4.2-2
 - NFS check removed from service
 
