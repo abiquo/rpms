@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-nodecollector
-Version:  2.2
+Version:  2.2.0
 Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo Node Collector
 Group:    Development/System 
@@ -37,6 +37,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
+- new versioning
+
 * Wed Jun 06 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
 - Bumped version to 2.2
 

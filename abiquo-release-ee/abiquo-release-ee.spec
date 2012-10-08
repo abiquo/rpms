@@ -1,7 +1,7 @@
 %define builtin_release_name GA
 %define base_release_version 2.2.0
 %define builtin_release_variant Enterprise Edition
-%define builtin_release_version %{base_release_version}
+%define builtin_release_version 2.2
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
 %define real_release_name %{?release_name}%{!?release_name:%{builtin_release_name}}
 %define product_family Abiquo Linux
@@ -12,7 +12,7 @@ Summary: %{product_family} release file
 Name: abiquo-release-ee
 Epoch: 11
 Version: 2.2.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: GPL
 Group: System Environment/Base
 Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
@@ -95,6 +95,9 @@ rm -rf $RPM_BUILD_ROOT
 #/var/lib/supportinfo
 
 %changelog
+* Tue Oct 02 2012 Abel Boldú <abel.boldu@abiquo.com> - 11:2.2.0-2
+- keeping major version updates
+
 * Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 11:2.2.0-1
 - new versioning
 

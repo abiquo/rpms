@@ -1,11 +1,15 @@
 DROP DATABASE IF EXISTS kinton;
 CREATE DATABASE IF NOT EXISTS kinton;
 USE kinton;
+
+-- DROP DATABASE IF EXISTS kinton_acounting;
+-- CREATE DATABASE IF NOT EXISTS kinton;
+-- USE kinton;
 -- *********************************************************************
 -- Update Database Script
 -- *********************************************************************
 -- Change Log: src/kinton_master_changelog.xml
--- Ran at: 8/14/12 2:09 AM
+-- Ran at: 10/5/12 2:15 AM
 -- Against: root@10.60.20.42@jdbc:mysql://10.60.20.42:3306/kinton
 -- Liquibase version: 2.0.3
 -- *********************************************************************
@@ -1887,7 +1891,7 @@ DELIMITER ;
 
 INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualdatacenter_created', '2.0.3', '3:aad1479f52e2c84a12067d06472a16bb', 147);
 
--- Changeset src/2.0ga/triggers.xml::virtualdatacenter_updated::destevez::(Checksum: 3:dfd898a33273322c00bf1f5659bbab64)
+-- Changeset src/2.0ga/triggers.xml::virtualdatacenter_updated::destevez::(Checksum: 3:b28dcbbbf64fc2044efa37976e97dd23)
 DROP TRIGGER IF EXISTS virtualdatacenter_updated;
 
 DELIMITER |
@@ -1919,7 +1923,7 @@ CREATE TRIGGER virtualdatacenter_updated AFTER UPDATE ON virtualdatacenter
         -- Remove VlanUsed
 	    BEGIN
 		DECLARE done INTEGER DEFAULT 0;
-		DECLARE cursorVlan CURSOR FOR SELECT DISTINCT vn.network_id, vn.network_name FROM vlan_network vn WHERE vn.network_id = OLD.networktypeID;
+		DECLARE cursorVlan CURSOR FOR SELECT DISTINCT vn.vlan_network_id, vn.network_name FROM vlan_network vn WHERE vn.network_id = OLD.networktypeID;
 		DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
 		    
 		OPEN cursorVlan;
@@ -1951,7 +1955,7 @@ CREATE TRIGGER virtualdatacenter_updated AFTER UPDATE ON virtualdatacenter
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualdatacenter_updated', '2.0.3', '3:dfd898a33273322c00bf1f5659bbab64', 148);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualdatacenter_updated', '2.0.3', '3:b28dcbbbf64fc2044efa37976e97dd23', 148);
 
 -- Changeset src/2.0ga/triggers.xml::virtualdatacenter_deleted::destevez::(Checksum: 3:5cb6a7ee8228db181d3c413dcaf8f221)
 DROP TRIGGER IF EXISTS virtualdatacenter_deleted;
@@ -2493,7 +2497,7 @@ DELIMITER ;
 
 INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_vlan_network_update_stats', '2.0.3', '3:626e84bf949ec742c3ba79f5daadfdaa', 158);
 
--- Changeset src/2.0ga/triggers.xml::update_ip_pool_management_update_stats::destevez::(Checksum: 3:ba909d5fad1cdefe9e85d3c3acec78f0)
+-- Changeset src/2.0ga/triggers.xml::update_ip_pool_management_update_stats::destevez::(Checksum: 3:9471ae96bcea8c0d126b5acc5f68db12)
 DROP TRIGGER IF EXISTS update_ip_pool_management_update_stats;
 
 DELIMITER |
@@ -2524,16 +2528,19 @@ CREATE TRIGGER update_ip_pool_management_update_stats AFTER UPDATE ON ip_pool_ma
                 SELECT vdc.idDataCenter, vdc.idVirtualDataCenter, vdc.idEnterprise  INTO idDataCenterObj, idVirtualDataCenterObj, idEnterpriseObj
                 FROM rasd_management rm, virtualdatacenter vdc, vlan_network vn
                 WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-		AND NEW.vlan_network_id = vn.vlan_network_id
-		AND vn.networktype = 'PUBLIC'
-		AND NEW.idManagement = rm.idManagement;
+			AND NEW.vlan_network_id = vn.vlan_network_id
+			AND vn.networktype = 'PUBLIC'
+			AND NEW.idManagement = rm.idManagement;
                 -- New Public IP assignment for a VDC ---> Reserved
                 UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed+1 WHERE idDataCenter = idDataCenterObj;
                 UPDATE IGNORE enterprise_resources_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idEnterprise = idEnterpriseObj;
                 UPDATE IGNORE vdc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idVirtualDataCenter = idVirtualDataCenterObj;
                 UPDATE IGNORE dc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idDataCenter = idDataCenterObj;
-                IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
-                    CALL AccountingIPsRegisterEvents('IP_RESERVED',NEW.idManagement,NEW.ip,idVirtualDataCenterObj, idEnterpriseObj);
+                IF (idDataCenterObj IS NOT NULL AND idVirtualDataCenterObj IS NOT NULL AND idEnterpriseObj IS NOT NULL) THEN
+                	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Reserved IP: ',IFNULL(idEnterpriseObj,'entnull'),IFNULL(idDataCenterObj,'dcnull'),IFNULL(idVirtualDataCenterObj,'vdcnull')));
+                	IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
+                    	CALL AccountingIPsRegisterEvents('IP_RESERVED',NEW.idManagement,NEW.ip,idVirtualDataCenterObj, idEnterpriseObj);
+                	END IF;
                 END IF;
             END IF;
         END IF;
@@ -2541,7 +2548,7 @@ CREATE TRIGGER update_ip_pool_management_update_stats AFTER UPDATE ON ip_pool_ma
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_ip_pool_management_update_stats', '2.0.3', '3:ba909d5fad1cdefe9e85d3c3acec78f0', 159);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_ip_pool_management_update_stats', '2.0.3', '3:9471ae96bcea8c0d126b5acc5f68db12', 159);
 
 -- Changeset src/2.0ga/triggers.xml::dclimit_created::destevez::(Checksum: 3:bd480e1b74b09bfd09196b9a7e0201c3)
 DROP TRIGGER IF EXISTS dclimit_created;
@@ -3066,7 +3073,7 @@ DELIMITER ;
 
 INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'calculate_cloud_usage_stats', '2.0.3', '3:671d82a809e1fb9d7922843013e67c1c', 169);
 
--- Changeset src/2.0ga/procedures.xml::CalculateEnterpriseResourcesStats::destevez::(Checksum: 3:2b2dd67788b94b5af2a1445377d8bbb2)
+-- Changeset src/2.0ga/procedures.xml::CalculateEnterpriseResourcesStats::destevez::(Checksum: 3:ce0db9bbe48b0e59292c3aa7ef1aae7a)
 DROP PROCEDURE IF EXISTS CalculateEnterpriseResourcesStats;
 
 DELIMITER |
@@ -3112,14 +3119,14 @@ CREATE PROCEDURE CalculateEnterpriseResourcesStats()
     --
     SELECT IF (SUM(vm.cpu) IS NULL, 0, SUM(vm.cpu)), IF (SUM(vm.ram) IS NULL, 0, SUM(vm.ram)), IF (SUM(vm.hd) IS NULL, 0, SUM(vm.hd)) INTO vCpuUsed, memoryUsed, localStorageUsed
     FROM virtualmachine vm
-    WHERE vm.state = "ON"
+    WHERE vm.state IN ("ON","OFF","PAUSED")
     AND vm.idType = 1
     AND vm.idEnterprise = idEnterpriseObj;
     --
     SELECT IFNULL(SUM(limitResource),0) * 1048576  INTO extraHDUsed
 	FROM rasd_management rm, rasd r, virtualmachine vm 
 	WHERE rm.idResource = r.instanceID AND rm.idVM = vm.idVM AND rm.idResourceType=17
-	AND vm.state="ON"
+	AND vm.state IN ("ON","OFF","PAUSED")
 	AND vm.idType=1
 	AND vm.idEnterprise = idEnterpriseObj;   
 	--
@@ -3170,7 +3177,7 @@ CREATE PROCEDURE CalculateEnterpriseResourcesStats()
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'CalculateEnterpriseResourcesStats', '2.0.3', '3:2b2dd67788b94b5af2a1445377d8bbb2', 170);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'CalculateEnterpriseResourcesStats', '2.0.3', '3:ce0db9bbe48b0e59292c3aa7ef1aae7a', 170);
 
 -- Changeset src/2.0ga/procedures.xml::CalculateVdcEnterpriseStats::destevez::(Checksum: 3:be509954d54d99afb53946f5dcb9a2a6)
 DROP PROCEDURE IF EXISTS CalculateVdcEnterpriseStats;
@@ -3468,7 +3475,7 @@ DELIMITER ;
 
 INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'add_version_column_to_all', '2.0.3', '3:28232591f7d936ca502b7f812c0eadd8', 175);
 
--- Changeset src/2.0ga/procedures.xml::AccountingVMRegisterEvents::destevez::(Checksum: 3:220ab9183ceb2a22241c8e8d610410a3)
+-- Changeset src/2.0ga/procedures.xml::AccountingVMRegisterEvents::destevez::(Checksum: 3:9c6058842d972f202cec4f0eafacb4ac)
 DROP PROCEDURE IF EXISTS AccountingVMRegisterEvents;
 
 -- 
@@ -3488,10 +3495,25 @@ CREATE PROCEDURE AccountingVMRegisterEvents(
     IN hdValue BIGINT(20) unsigned,
     IN costCode int(4))
 BEGIN
+    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
+
 	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('newState: ',newState, 'previousState', previousState));
     IF idType = 1 AND (oldState != newState) THEN
     	-- We state changes only deal with captured or Abiquo generated VMs
 		IF previousState = "NOT_ALLOCATED" AND newState = "ON" THEN
+            -- Save away the appropriate names to ensure they are available when we add rows to the ..._detail table
+            SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name),
+                    kinton_accounting.ABQ_ADD_VAPP_NAME(vapp.idVirtualApp, vapp.name),
+                    kinton_accounting.ABQ_ADD_VM_NAME(vm.idVM, CONCAT(IF(ISNULL(vm.description),_utf8'',substr(vm.description,1,120)), _utf8' - ', vm.name))
+                    INTO idDummy, idDummy, idDummy, idDummy
+            FROM    nodevirtualimage nvi, node n, virtualapp vapp, virtualmachine vm, virtualdatacenter vdc, enterprise e
+		    WHERE   vm.idVM = nvi.idVM
+                    AND nvi.idNode = n.idNode
+                    AND vapp.idVirtualApp = n.idVirtualApp
+                    AND vm.idVM = idVirtualMachine
+                    AND vdc.idVirtualDataCenter=vapp.idVirtualDataCenter
+                    AND e.idEnterprise=vdc.idEnterprise;
+            
 		--  => DEPLOY Event Detected (1st PowerON)
 		    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('DEPLOY event detected -> newState: ',newState, 'previousState', previousState));
 		    INSERT INTO accounting_event_vm (idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,cpu,ram,hd,startTime,stopTime,costCode,hypervisorType) 
@@ -3544,9 +3566,9 @@ END;
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingVMRegisterEvents', '2.0.3', '3:220ab9183ceb2a22241c8e8d610410a3', 176);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingVMRegisterEvents', '2.0.3', '3:9c6058842d972f202cec4f0eafacb4ac', 176);
 
--- Changeset src/2.0ga/procedures.xml::AccountingStorageRegisterEvents::destevez::(Checksum: 3:aac577edcdef1809046cb17033e4fd6b)
+-- Changeset src/2.0ga/procedures.xml::AccountingStorageRegisterEvents::destevez::(Checksum: 3:8b2edbf4e9ed685822d65f62427c3d9f)
 DROP PROCEDURE IF EXISTS AccountingStorageRegisterEvents;
 
 -- 
@@ -3565,8 +3587,15 @@ CREATE PROCEDURE AccountingStorageRegisterEvents(
     IN idThisEnterprise INT(10) UNSIGNED,  
     IN sizeReserved BIGINT(20))
 BEGIN   
+    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
+
     -- Storage Creation Event Detected (table rasd_management). Storage is converted to Bytes
     IF action = "CREATE_STORAGE" THEN
+        SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
+                    INTO idDummy, idDummy
+            FROM    virtualdatacenter vdc, enterprise e
+            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
+
         INSERT INTO accounting_event_storage (idResource, resourceName, idStorageTier, idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,sizeReserved,startTime, stopTime)
         SELECT idThisResource, thisResourceName, idStorageTier, null, idThisEnterprise, idThisVirtualDataCenter, null, sizeReserved * 1048576, now(), null; 
     END IF;
@@ -3598,9 +3627,9 @@ END;
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingStorageRegisterEvents', '2.0.3', '3:aac577edcdef1809046cb17033e4fd6b', 177);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingStorageRegisterEvents', '2.0.3', '3:8b2edbf4e9ed685822d65f62427c3d9f', 177);
 
--- Changeset src/2.0ga/procedures.xml::AccountingIPsRegisterEvents::destevez::(Checksum: 3:24e38da5ba34fb616f448fc162e02ed8)
+-- Changeset src/2.0ga/procedures.xml::AccountingIPsRegisterEvents::destevez::(Checksum: 3:e6f6edc61eb760b261e0b18621f105e8)
 DROP PROCEDURE IF EXISTS AccountingIPsRegisterEvents;
 
 -- 
@@ -3617,9 +3646,16 @@ CREATE PROCEDURE AccountingIPsRegisterEvents(
     IN idThisVirtualDataCenter INT(10) UNSIGNED,
     IN idThisEnterprise INT(10) UNSIGNED)
 BEGIN   
+    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
+
     --  
     -- IP Reserved Event Detected (table ip_pool_management)
     IF action = "IP_RESERVED" THEN
+        SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
+                    INTO idDummy, idDummy
+            FROM    virtualdatacenter vdc, enterprise e
+            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
+
         INSERT INTO accounting_event_ips (idManagement,idEnterprise,idVirtualDataCenter,ip,startTime,stopTime)
         SELECT idManagement, idThisEnterprise, idThisVirtualDataCenter, ipAddress, now(), null; 
     END IF;
@@ -3638,9 +3674,9 @@ END;
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingIPsRegisterEvents', '2.0.3', '3:24e38da5ba34fb616f448fc162e02ed8', 178);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingIPsRegisterEvents', '2.0.3', '3:e6f6edc61eb760b261e0b18621f105e8', 178);
 
--- Changeset src/2.0ga/procedures.xml::AccountingVLANRegisterEvents::destevez::(Checksum: 3:cb4c2f5c930bb3d774ee2a88004a3041)
+-- Changeset src/2.0ga/procedures.xml::AccountingVLANRegisterEvents::destevez::(Checksum: 3:ddf172bb852e2db7f7c022517ca99e8a)
 DROP PROCEDURE IF EXISTS AccountingVLANRegisterEvents;
 
 -- 
@@ -3657,10 +3693,17 @@ CREATE PROCEDURE AccountingVLANRegisterEvents(
     IN idThisVirtualDataCenter INT(10) UNSIGNED,
     IN idThisEnterprise INT(10) UNSIGNED)
 BEGIN   
+    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
+
     -- INSERT INTO debug_msg (msg) VALUES (CONCAT('PROCEDURE AccountingVLANRegisterEvents Activated: ',IFNULL(vlan_network_id,'NULL'),'-',IFNULL(network_name,'NULL'),'-',IFNULL(idThisVirtualDataCenter,'NULL'),'-',idThisEnterprise,'-',action,'-',now()));   
     --  
     -- VLAN Created Event Detected
     IF action = "CREATE_VLAN" THEN
+        SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
+                    INTO idDummy, idDummy
+            FROM    virtualdatacenter vdc, enterprise e
+            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
+
         INSERT INTO accounting_event_vlan (vlan_network_id,idEnterprise,idVirtualDataCenter,network_name,startTime,stopTime) 
         SELECT vlan_network_id, idThisEnterprise, idThisVirtualDataCenter, network_name, now(), null; 
     END IF;
@@ -3679,734 +3722,537 @@ END;
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingVLANRegisterEvents', '2.0.3', '3:cb4c2f5c930bb3d774ee2a88004a3041', 179);
-
--- Changeset src/2.0ga/procedures.xml::UpdateAccounting::destevez::(Checksum: 3:e60aa0722d88cee928078fd531aa0c4b)
-DROP PROCEDURE IF EXISTS UpdateAccounting;
-
--- 
--- UpdateAccounting
---
--- Inserts rows at accounting_event_detail based on Views defined for VMs, Storage and IPs events
--- 
-DELIMITER |
-CREATE PROCEDURE UpdateAccounting()
-    NOT DETERMINISTIC
-    SQL SECURITY DEFINER
-    COMMENT ''
-BEGIN
--- For VM Resources Accounting
-INSERT INTO accounting_event_detail(
-  `startTime`,
-  `endTime`, 
-  `idAccountingResourceType`,
-  `resourceType`,
-  `resourceUnits`,
-  `resourceName`, 
-  `idEnterprise`, 
-  `idVirtualDataCenter`, 
-  `idVirtualApp`, 
-  `idVirtualMachine`, 
-  `enterpriseName`, 
-  `virtualDataCenter`, 
-  `virtualApp`, 
-  `virtualMachine`,
-  `costCode`,
-  `idStorageTier`)
-SELECT DISTINCT
-      T.`ROUNDED_HOUR`,
-      from_unixtime(3600 + unix_timestamp(T.`ROUNDED_HOUR`)),
-      1,
-      'VirtualMachine-vcpu',
-      T.cpu,
-      T.`VIRTUAL_MACHINE`,
-      T.`idEnterprise`,
-      T.`idVirtualDataCenter`,
-      T.`idVirtualApp`,
-      T.`idVM`,
-      T.`VIRTUAL_ENTERPRISE`,
-      T.`VIRTUAL_DATACENTER`,
-      T.`VIRTUAL_APP`,
-      T.`VIRTUAL_MACHINE`,
-      T.`costCode`,
-      NULL
-FROM `LAST_HOUR_USAGE_VM_VW` T
-UNION ALL
-SELECT DISTINCT
-      T.`ROUNDED_HOUR`,
-      from_unixtime(3600 + unix_timestamp(T.`ROUNDED_HOUR`)),
-      2,
-      'VirtualMachine-vram',
-      T.`ram`,
-      T.`VIRTUAL_MACHINE`,
-      T.`idEnterprise`,
-      T.`idVirtualDataCenter`,
-      T.`idVirtualApp`,
-      T.`idVM`,
-      T.`VIRTUAL_ENTERPRISE`,
-      T.`VIRTUAL_DATACENTER`,
-      T.`VIRTUAL_APP`,
-      T.`VIRTUAL_MACHINE`,
-      T.`costCode`,
-      NULL
-FROM `LAST_HOUR_USAGE_VM_VW` T
-UNION ALL
-SELECT DISTINCT
-      T.`ROUNDED_HOUR`,
-      from_unixtime(3600 + unix_timestamp(T.`ROUNDED_HOUR`)),
-      3,
-      'VirtualMachine-vhd',
-      T.`hd`,
-      T.`VIRTUAL_MACHINE`,
-      T.`idEnterprise`,
-      T.`idVirtualDataCenter`,
-      T.`idVirtualApp`,
-      T.`idVM`,
-      T.`VIRTUAL_ENTERPRISE`,
-      T.`VIRTUAL_DATACENTER`,
-      T.`VIRTUAL_APP`,
-      T.`VIRTUAL_MACHINE`,
-      T.`costCode`,
-      NULL
-FROM `LAST_HOUR_USAGE_VM_VW` T
--- Storage
-UNION ALL
-SELECT DISTINCT
-      T.`ROUNDED_HOUR`,
-      from_unixtime(3600 + unix_timestamp(T.`ROUNDED_HOUR`)),
-      4,
-      'ExternalStorage',
-      T.`sizeReserved`,
-      CONCAT(IF (T.`resourceName` IS NULL, '', T.`resourceName`), ' - ', T.`idResource`),
-      T.`idEnterprise`,
-      T.`idVirtualDataCenter`,
-      NULL,
-      NULL, 
-      T.`VIRTUAL_ENTERPRISE`,
-      T.`VIRTUAL_DATACENTER`,
-      '',
-      '',
-      NULL,
-      T.`idStorageTier`
-FROM `LAST_HOUR_USAGE_STORAGE_VW` T
--- IP
-UNION ALL
-SELECT DISTINCT
-      T.`ROUNDED_HOUR`,
-      from_unixtime(3600 + unix_timestamp(T.`ROUNDED_HOUR`)),
-      5,
-      'IPAddress',
-      1,
-      T.`ip`,
-      T.`idEnterprise`,
-      T.`idVirtualDataCenter`,
-      NULL,
-      NULL, 
-      T.`VIRTUAL_ENTERPRISE`,
-      T.`VIRTUAL_DATACENTER`,
-      '',
-      '',
-      NULL,
-      NULL
-FROM `LAST_HOUR_USAGE_IPS_VW` T
--- VLAN
-UNION ALL
-SELECT DISTINCT
-      T.`ROUNDED_HOUR`,
-      from_unixtime(3600 + unix_timestamp(T.`ROUNDED_HOUR`)),
-      6,
-      'VLAN',
-      1,
-      T.`networkName`,
-      T.`idEnterprise`,
-      T.`idVirtualDataCenter`,
-      NULL,
-      NULL, 
-      T.`VIRTUAL_ENTERPRISE`,
-      T.`VIRTUAL_DATACENTER`,
-      '',
-      '',
-      NULL,
-      NULL
-FROM `LAST_HOUR_USAGE_VLAN_VW` T
--- Hypervisor Type
-UNION ALL
-SELECT DISTINCT
-      T.`ROUNDED_HOUR`,
-      from_unixtime(3600 + unix_timestamp(T.`ROUNDED_HOUR`)),
-      7,
-      'VirtualMachine-hypervisorType',
-      1,
-      T.hypervisorType,
-      T.`idEnterprise`,
-      T.`idVirtualDataCenter`,
-      T.`idVirtualApp`,
-      T.`idVM`,
-      T.`VIRTUAL_ENTERPRISE`,
-      T.`VIRTUAL_DATACENTER`,
-      T.`VIRTUAL_APP`,
-      T.`VIRTUAL_MACHINE`,
-      NULL,
-      NULL
-FROM `LAST_HOUR_USAGE_VM_VW` T;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'UpdateAccounting', '2.0.3', '3:e60aa0722d88cee928078fd531aa0c4b', 180);
-
--- Changeset src/2.0ga/procedures.xml::DeleteOldRegisteredEvents::destevez::(Checksum: 3:e679accf8c38df201f3eb8e9226fa82e)
-DROP PROCEDURE IF EXISTS DeleteOldRegisteredEvents;
-
--- 
--- DeleteOldRegisteredEvents
---
--- Auxiliar procedure to delete old rows from event registering tables
--- All events registered older than 'hours' parameter from now will be deleted
--- 
-DELIMITER |
-CREATE PROCEDURE DeleteOldRegisteredEvents(    
-IN hours INT(2) UNSIGNED)
-BEGIN   
-    DELETE FROM accounting_event_vm  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-    DELETE FROM accounting_event_storage  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-    DELETE FROM accounting_event_ips  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-    DELETE FROM accounting_event_vlan  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'DeleteOldRegisteredEvents', '2.0.3', '3:e679accf8c38df201f3eb8e9226fa82e', 181);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingVLANRegisterEvents', '2.0.3', '3:ddf172bb852e2db7f7c022517ca99e8a', 179);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-92::destevezg (generated)::(Checksum: 3:61865568b5c369334126d98f2cbe9ca2)
 ALTER TABLE `kinton`.`apps_library` ADD CONSTRAINT `fk_idEnterpriseApps` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-92', '2.0.3', '3:61865568b5c369334126d98f2cbe9ca2', 182);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-92', '2.0.3', '3:61865568b5c369334126d98f2cbe9ca2', 180);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-93::destevezg (generated)::(Checksum: 3:4a2fb0e70026d6bfe34d2eea6989c1cf)
 ALTER TABLE `kinton`.`auth_serverresource` ADD CONSTRAINT `auth_serverresourceFK1` FOREIGN KEY (`idGroup`) REFERENCES `kinton`.`auth_group` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-93', '2.0.3', '3:4a2fb0e70026d6bfe34d2eea6989c1cf', 183);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-93', '2.0.3', '3:4a2fb0e70026d6bfe34d2eea6989c1cf', 181);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-94::destevezg (generated)::(Checksum: 3:25f0b96d5511b61ebff630df02f7f80e)
 ALTER TABLE `kinton`.`auth_serverresource` ADD CONSTRAINT `auth_serverresourceFK2` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-94', '2.0.3', '3:25f0b96d5511b61ebff630df02f7f80e', 184);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-94', '2.0.3', '3:25f0b96d5511b61ebff630df02f7f80e', 182);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-95::destevezg (generated)::(Checksum: 3:f4199d4c8ef6d658b47e268c5b179975)
 ALTER TABLE `kinton`.`auth_serverresource_exception` ADD CONSTRAINT `auth_serverresource_exceptionFK1` FOREIGN KEY (`idResource`) REFERENCES `kinton`.`auth_serverresource` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-95', '2.0.3', '3:f4199d4c8ef6d658b47e268c5b179975', 185);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-95', '2.0.3', '3:f4199d4c8ef6d658b47e268c5b179975', 183);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-96::destevezg (generated)::(Checksum: 3:c07a9802053c16ea4ff6ed536da64a49)
 ALTER TABLE `kinton`.`auth_serverresource_exception` ADD CONSTRAINT `auth_serverresource_exceptionFK2` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-96', '2.0.3', '3:c07a9802053c16ea4ff6ed536da64a49', 186);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-96', '2.0.3', '3:c07a9802053c16ea4ff6ed536da64a49', 184);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-97::destevezg (generated)::(Checksum: 3:c1380d095c438a19d05b61b4fbcfe7fa)
 ALTER TABLE `kinton`.`chef_runlist` ADD CONSTRAINT `chef_runlist_FK1` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-97', '2.0.3', '3:c1380d095c438a19d05b61b4fbcfe7fa', 187);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-97', '2.0.3', '3:c1380d095c438a19d05b61b4fbcfe7fa', 185);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-98::destevezg (generated)::(Checksum: 3:96c71c89d367921fd04f4fed07442eac)
 ALTER TABLE `kinton`.`datacenter` ADD CONSTRAINT `datacenternetwork_FK1` FOREIGN KEY (`network_id`) REFERENCES `kinton`.`network` (`network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-98', '2.0.3', '3:96c71c89d367921fd04f4fed07442eac', 188);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-98', '2.0.3', '3:96c71c89d367921fd04f4fed07442eac', 186);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-99::destevezg (generated)::(Checksum: 3:a6695e1d09254cd47b2bd905e433c15f)
 ALTER TABLE `kinton`.`disk_management` ADD CONSTRAINT `disk_datastore_FK` FOREIGN KEY (`idDatastore`) REFERENCES `kinton`.`datastore` (`idDatastore`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-99', '2.0.3', '3:a6695e1d09254cd47b2bd905e433c15f', 189);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-99', '2.0.3', '3:a6695e1d09254cd47b2bd905e433c15f', 187);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-100::destevezg (generated)::(Checksum: 3:162a67a515a4b894be24ea92677a4ec2)
 ALTER TABLE `kinton`.`disk_management` ADD CONSTRAINT `disk_idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-100', '2.0.3', '3:162a67a515a4b894be24ea92677a4ec2', 190);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-100', '2.0.3', '3:162a67a515a4b894be24ea92677a4ec2', 188);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-102::destevezg (generated)::(Checksum: 3:9cc3b6aa2c32810c3af8841bcf75d057)
 ALTER TABLE `kinton`.`enterprise` ADD CONSTRAINT `enterprise_pricing_FK` FOREIGN KEY (`idPricingTemplate`) REFERENCES `kinton`.`pricingTemplate` (`idPricingTemplate`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-102', '2.0.3', '3:9cc3b6aa2c32810c3af8841bcf75d057', 191);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-102', '2.0.3', '3:9cc3b6aa2c32810c3af8841bcf75d057', 189);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-103::destevezg (generated)::(Checksum: 3:f110c901d46203476b26407f34a20553)
 ALTER TABLE `kinton`.`enterprise_limits_by_datacenter` ADD CONSTRAINT `enterprise_FK7` FOREIGN KEY (`default_vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-103', '2.0.3', '3:f110c901d46203476b26407f34a20553', 192);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-103', '2.0.3', '3:f110c901d46203476b26407f34a20553', 190);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-104::destevezg (generated)::(Checksum: 3:0a90424859d5c751e009a52788fbd5c7)
 ALTER TABLE `kinton`.`enterprise_properties` ADD CONSTRAINT `FK_enterprise` FOREIGN KEY (`enterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-104', '2.0.3', '3:0a90424859d5c751e009a52788fbd5c7', 193);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-104', '2.0.3', '3:0a90424859d5c751e009a52788fbd5c7', 191);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-105::destevezg (generated)::(Checksum: 3:c6f97a64d3bbaf7e4b704612fb2da6e8)
 ALTER TABLE `kinton`.`enterprise_properties_map` ADD CONSTRAINT `FK2_enterprise_properties` FOREIGN KEY (`enterprise_properties`) REFERENCES `kinton`.`enterprise_properties` (`idProperties`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-105', '2.0.3', '3:c6f97a64d3bbaf7e4b704612fb2da6e8', 194);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-105', '2.0.3', '3:c6f97a64d3bbaf7e4b704612fb2da6e8', 192);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-106::destevezg (generated)::(Checksum: 3:f12c60cd95ff11d2437444a8202c5bd4)
 ALTER TABLE `kinton`.`enterprise_theme` ADD CONSTRAINT `THEME_FK1` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-106', '2.0.3', '3:f12c60cd95ff11d2437444a8202c5bd4', 195);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-106', '2.0.3', '3:f12c60cd95ff11d2437444a8202c5bd4', 193);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-107::destevezg (generated)::(Checksum: 3:6754b7abce5397c7844d687884732683)
 ALTER TABLE `kinton`.`hypervisor` ADD CONSTRAINT `Hypervisor_FK1` FOREIGN KEY (`idPhysicalMachine`) REFERENCES `kinton`.`physicalmachine` (`idPhysicalMachine`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-107', '2.0.3', '3:6754b7abce5397c7844d687884732683', 196);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-107', '2.0.3', '3:6754b7abce5397c7844d687884732683', 194);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-109::destevezg (generated)::(Checksum: 3:2067c951c3aa82d24eb4324e3d90f25e)
 ALTER TABLE `kinton`.`ip_pool_management` ADD CONSTRAINT `id_management_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-109', '2.0.3', '3:2067c951c3aa82d24eb4324e3d90f25e', 197);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-109', '2.0.3', '3:2067c951c3aa82d24eb4324e3d90f25e', 195);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-110::destevezg (generated)::(Checksum: 3:09da99c4e6e31595f34ec2be25b43dc8)
 ALTER TABLE `kinton`.`ip_pool_management` ADD CONSTRAINT `ippool_vlan_network_FK` FOREIGN KEY (`vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-110', '2.0.3', '3:09da99c4e6e31595f34ec2be25b43dc8', 198);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-110', '2.0.3', '3:09da99c4e6e31595f34ec2be25b43dc8', 196);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-111::destevezg (generated)::(Checksum: 3:e52fa216c74824b00447bb18025d3958)
 ALTER TABLE `kinton`.`log` ADD CONSTRAINT `log_FK1` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-111', '2.0.3', '3:e52fa216c74824b00447bb18025d3958', 199);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-111', '2.0.3', '3:e52fa216c74824b00447bb18025d3958', 197);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-112::destevezg (generated)::(Checksum: 3:e6034e81d4247717b894501b1e5f2077)
 ALTER TABLE `kinton`.`node` ADD CONSTRAINT `node_FK2` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-112', '2.0.3', '3:e6034e81d4247717b894501b1e5f2077', 200);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-112', '2.0.3', '3:e6034e81d4247717b894501b1e5f2077', 198);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-113::destevezg (generated)::(Checksum: 3:c0ef24d86a2e36e3f18678ecf98a4fd1)
 ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idDiskStatefulConversion_FK4` FOREIGN KEY (`idDiskStatefulConversion`) REFERENCES `kinton`.`diskstateful_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-113', '2.0.3', '3:c0ef24d86a2e36e3f18678ecf98a4fd1', 201);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-113', '2.0.3', '3:c0ef24d86a2e36e3f18678ecf98a4fd1', 199);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-116::destevezg (generated)::(Checksum: 3:87401343ba30f95853096f53f2145d4c)
 ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idTier_FK4` FOREIGN KEY (`idTier`) REFERENCES `kinton`.`tier` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-116', '2.0.3', '3:87401343ba30f95853096f53f2145d4c', 202);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-116', '2.0.3', '3:87401343ba30f95853096f53f2145d4c', 200);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-117::destevezg (generated)::(Checksum: 3:241f9a9ba6ee93b09a7bee6372e2a99f)
 ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idVirtualApplianceStatefulConversion_FK4` FOREIGN KEY (`idVirtualApplianceStatefulConversion`) REFERENCES `kinton`.`vappstateful_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-117', '2.0.3', '3:241f9a9ba6ee93b09a7bee6372e2a99f', 203);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-117', '2.0.3', '3:241f9a9ba6ee93b09a7bee6372e2a99f', 201);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-118::destevezg (generated)::(Checksum: 3:babee5873b113a16e3d247c4a8b7d5ae)
 ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idVirtualImageConversion_FK4` FOREIGN KEY (`idVirtualImageConversion`) REFERENCES `kinton`.`virtualimage_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-118', '2.0.3', '3:babee5873b113a16e3d247c4a8b7d5ae', 204);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-118', '2.0.3', '3:babee5873b113a16e3d247c4a8b7d5ae', 202);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-119::destevezg (generated)::(Checksum: 3:2e37837fbfb14dfc4499ce39e4e45d0f)
 ALTER TABLE `kinton`.`nodenetwork` ADD CONSTRAINT `nodeNetwork_FK1` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`node` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-119', '2.0.3', '3:2e37837fbfb14dfc4499ce39e4e45d0f', 205);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-119', '2.0.3', '3:2e37837fbfb14dfc4499ce39e4e45d0f', 203);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-120::destevezg (generated)::(Checksum: 3:224c98605877be44c1a4b7772f40139d)
 ALTER TABLE `kinton`.`nodestorage` ADD CONSTRAINT `nodeStorage_FK1` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`node` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-120', '2.0.3', '3:224c98605877be44c1a4b7772f40139d', 206);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-120', '2.0.3', '3:224c98605877be44c1a4b7772f40139d', 204);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-121::destevezg (generated)::(Checksum: 3:7add768133119551554b8e3fe4eabcfe)
 ALTER TABLE `kinton`.`nodevirtualimage` ADD CONSTRAINT `nodevirtualImage_FK1` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-121', '2.0.3', '3:7add768133119551554b8e3fe4eabcfe', 207);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-121', '2.0.3', '3:7add768133119551554b8e3fe4eabcfe', 205);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-122::destevezg (generated)::(Checksum: 3:4c513d9af35d89264d6426523832b0bf)
 ALTER TABLE `kinton`.`nodevirtualimage` ADD CONSTRAINT `nodevirtualimage_FK3` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`node` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-122', '2.0.3', '3:4c513d9af35d89264d6426523832b0bf', 208);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-122', '2.0.3', '3:4c513d9af35d89264d6426523832b0bf', 206);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-123::destevezg (generated)::(Checksum: 3:cdbd03b583ae11a990b14cee938029af)
 ALTER TABLE `kinton`.`nodevirtualimage` ADD CONSTRAINT `nodevirtualImage_FK2` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-123', '2.0.3', '3:cdbd03b583ae11a990b14cee938029af', 209);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-123', '2.0.3', '3:cdbd03b583ae11a990b14cee938029af', 207);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-124::destevezg (generated)::(Checksum: 3:e19d2a8d15b2698983ec2bd3244da199)
 ALTER TABLE `kinton`.`ovf_package` ADD CONSTRAINT `fk_ovf_package_repository` FOREIGN KEY (`id_apps_library`) REFERENCES `kinton`.`apps_library` (`id_apps_library`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-124', '2.0.3', '3:e19d2a8d15b2698983ec2bd3244da199', 210);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-124', '2.0.3', '3:e19d2a8d15b2698983ec2bd3244da199', 208);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-125::destevezg (generated)::(Checksum: 3:e7542966e2a4262fcd6d94d9eab2d31d)
 ALTER TABLE `kinton`.`ovf_package` ADD CONSTRAINT `fk_ovf_package_category` FOREIGN KEY (`idCategory`) REFERENCES `kinton`.`category` (`idCategory`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-125', '2.0.3', '3:e7542966e2a4262fcd6d94d9eab2d31d', 211);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-125', '2.0.3', '3:e7542966e2a4262fcd6d94d9eab2d31d', 209);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-126::destevezg (generated)::(Checksum: 3:c4d6eb8f3294ff8dc825f8dcb0694229)
 ALTER TABLE `kinton`.`ovf_package_list` ADD CONSTRAINT `fk_ovf_package_list_repository` FOREIGN KEY (`id_apps_library`) REFERENCES `kinton`.`apps_library` (`id_apps_library`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-126', '2.0.3', '3:c4d6eb8f3294ff8dc825f8dcb0694229', 212);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-126', '2.0.3', '3:c4d6eb8f3294ff8dc825f8dcb0694229', 210);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-127::destevezg (generated)::(Checksum: 3:588d684f716fac4248a78f84b20e1848)
 ALTER TABLE `kinton`.`ovf_package_list_has_ovf_package` ADD CONSTRAINT `fk_ovf_package_list_has_ovf_package_ovf_package1` FOREIGN KEY (`id_ovf_package`) REFERENCES `kinton`.`ovf_package` (`id_ovf_package`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-127', '2.0.3', '3:588d684f716fac4248a78f84b20e1848', 213);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-127', '2.0.3', '3:588d684f716fac4248a78f84b20e1848', 211);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-128::destevezg (generated)::(Checksum: 3:a6664c8e00e9f84735691bc9f65ffdae)
 ALTER TABLE `kinton`.`ovf_package_list_has_ovf_package` ADD CONSTRAINT `fk_ovf_package_list_has_ovf_package_ovf_package_list1` FOREIGN KEY (`id_ovf_package_list`) REFERENCES `kinton`.`ovf_package_list` (`id_ovf_package_list`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-128', '2.0.3', '3:a6664c8e00e9f84735691bc9f65ffdae', 214);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-128', '2.0.3', '3:a6664c8e00e9f84735691bc9f65ffdae', 212);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-129::destevezg (generated)::(Checksum: 3:401d7128c9685671b8132c2be2f3b51c)
 ALTER TABLE `kinton`.`physicalmachine` ADD CONSTRAINT `PhysicalMachine_FK5` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-129', '2.0.3', '3:401d7128c9685671b8132c2be2f3b51c', 215);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-129', '2.0.3', '3:401d7128c9685671b8132c2be2f3b51c', 213);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-130::destevezg (generated)::(Checksum: 3:7bd171095093a31d90a52130c93b4361)
 ALTER TABLE `kinton`.`physicalmachine` ADD CONSTRAINT `PhysicalMachine_FK6` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-130', '2.0.3', '3:7bd171095093a31d90a52130c93b4361', 216);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-130', '2.0.3', '3:7bd171095093a31d90a52130c93b4361', 214);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-131::destevezg (generated)::(Checksum: 3:8aac24d3878f2cf143029245d36bc718)
 ALTER TABLE `kinton`.`physicalmachine` ADD CONSTRAINT `PhysicalMachine_FK1` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-131', '2.0.3', '3:8aac24d3878f2cf143029245d36bc718', 217);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-131', '2.0.3', '3:8aac24d3878f2cf143029245d36bc718', 215);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-132::destevezg (generated)::(Checksum: 3:0d408de63c791d1d72e1ca6ed5b37115)
 ALTER TABLE `kinton`.`pricingTemplate` ADD CONSTRAINT `Pricing_FK2_Currency` FOREIGN KEY (`idCurrency`) REFERENCES `kinton`.`currency` (`idCurrency`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-132', '2.0.3', '3:0d408de63c791d1d72e1ca6ed5b37115', 218);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-132', '2.0.3', '3:0d408de63c791d1d72e1ca6ed5b37115', 216);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-133::destevezg (generated)::(Checksum: 3:7f40febbf510e024517380fd5e5aef48)
 ALTER TABLE `kinton`.`rack` ADD CONSTRAINT `Rack_FK1` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-133', '2.0.3', '3:7f40febbf510e024517380fd5e5aef48', 219);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-133', '2.0.3', '3:7f40febbf510e024517380fd5e5aef48', 217);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-134::destevezg (generated)::(Checksum: 3:b582521bf03ee8d5ea05c684578c7034)
 ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idResource_FK` FOREIGN KEY (`idResource`) REFERENCES `kinton`.`rasd` (`instanceID`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-134', '2.0.3', '3:b582521bf03ee8d5ea05c684578c7034', 220);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-134', '2.0.3', '3:b582521bf03ee8d5ea05c684578c7034', 218);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-135::destevezg (generated)::(Checksum: 3:aeb0ded36caf7b4870a9cbda8cb62771)
 ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idVirtualApp_FK` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-135', '2.0.3', '3:aeb0ded36caf7b4870a9cbda8cb62771', 221);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-135', '2.0.3', '3:aeb0ded36caf7b4870a9cbda8cb62771', 219);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-136::destevezg (generated)::(Checksum: 3:0abce3e30f01b6ddf819b8e30ee635a9)
 ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idVirtualDataCenter_FK` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `kinton`.`virtualdatacenter` (`idVirtualDataCenter`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-136', '2.0.3', '3:0abce3e30f01b6ddf819b8e30ee635a9', 222);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-136', '2.0.3', '3:0abce3e30f01b6ddf819b8e30ee635a9', 220);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-137::destevezg (generated)::(Checksum: 3:01ea4328ecb4f1edfcffece4bd1019d1)
 ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idVM_FK` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-137', '2.0.3', '3:01ea4328ecb4f1edfcffece4bd1019d1', 223);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-137', '2.0.3', '3:01ea4328ecb4f1edfcffece4bd1019d1', 221);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-138::destevezg (generated)::(Checksum: 3:79755fa4b03184aaf81ed902878886e3)
 ALTER TABLE `kinton`.`remote_service` ADD CONSTRAINT `idDatecenter_FK` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-138', '2.0.3', '3:79755fa4b03184aaf81ed902878886e3', 224);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-138', '2.0.3', '3:79755fa4b03184aaf81ed902878886e3', 222);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-139::destevezg (generated)::(Checksum: 3:3b7a36fc3de222b2827dd624bbf188df)
 ALTER TABLE `kinton`.`repository` ADD CONSTRAINT `fk_idDataCenter` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-139', '2.0.3', '3:3b7a36fc3de222b2827dd624bbf188df', 225);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-139', '2.0.3', '3:3b7a36fc3de222b2827dd624bbf188df', 223);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-140::destevezg (generated)::(Checksum: 3:cecf006c92ac717d6c86487c837a9718)
 ALTER TABLE `kinton`.`role` ADD CONSTRAINT `fk_role_1` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-140', '2.0.3', '3:cecf006c92ac717d6c86487c837a9718', 226);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-140', '2.0.3', '3:cecf006c92ac717d6c86487c837a9718', 224);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-141::destevezg (generated)::(Checksum: 3:afe3ffec74162088a0854a7f70d46f00)
 ALTER TABLE `kinton`.`role_ldap` ADD CONSTRAINT `fk_role_ldap_role` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-141', '2.0.3', '3:afe3ffec74162088a0854a7f70d46f00', 227);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-141', '2.0.3', '3:afe3ffec74162088a0854a7f70d46f00', 225);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-142::destevezg (generated)::(Checksum: 3:dc4c00c7d2f82ac51a5bd20c136d466f)
 ALTER TABLE `kinton`.`roles_privileges` ADD CONSTRAINT `fk_roles_privileges_privileges` FOREIGN KEY (`idPrivilege`) REFERENCES `kinton`.`privilege` (`idPrivilege`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-142', '2.0.3', '3:dc4c00c7d2f82ac51a5bd20c136d466f', 228);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-142', '2.0.3', '3:dc4c00c7d2f82ac51a5bd20c136d466f', 226);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-143::destevezg (generated)::(Checksum: 3:9759ca65a44a631f100713776f858563)
 ALTER TABLE `kinton`.`roles_privileges` ADD CONSTRAINT `fk_roles_privileges_role` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-143', '2.0.3', '3:9759ca65a44a631f100713776f858563', 229);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-143', '2.0.3', '3:9759ca65a44a631f100713776f858563', 227);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-144::destevezg (generated)::(Checksum: 3:41352352d930fd662d1d7d363bc4f719)
 ALTER TABLE `kinton`.`session` ADD CONSTRAINT `fk_session_user` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-144', '2.0.3', '3:41352352d930fd662d1d7d363bc4f719', 230);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-144', '2.0.3', '3:41352352d930fd662d1d7d363bc4f719', 228);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-145::destevezg (generated)::(Checksum: 3:45727eba271f8926bf7e2d794169d7e4)
 ALTER TABLE `kinton`.`storage_device` ADD CONSTRAINT `storage_device_FK_1` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-145', '2.0.3', '3:45727eba271f8926bf7e2d794169d7e4', 231);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-145', '2.0.3', '3:45727eba271f8926bf7e2d794169d7e4', 229);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-146::destevezg (generated)::(Checksum: 3:41cc38e6af909e00988ea3e2ed9f9a11)
 ALTER TABLE `kinton`.`storage_pool` ADD CONSTRAINT `storage_pool_FK1` FOREIGN KEY (`idStorageDevice`) REFERENCES `kinton`.`storage_device` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-146', '2.0.3', '3:41cc38e6af909e00988ea3e2ed9f9a11', 232);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-146', '2.0.3', '3:41cc38e6af909e00988ea3e2ed9f9a11', 230);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-147::destevezg (generated)::(Checksum: 3:89446970e88861750073ca38aecd7221)
 ALTER TABLE `kinton`.`storage_pool` ADD CONSTRAINT `storage_pool_FK2` FOREIGN KEY (`idTier`) REFERENCES `kinton`.`tier` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-147', '2.0.3', '3:89446970e88861750073ca38aecd7221', 233);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-147', '2.0.3', '3:89446970e88861750073ca38aecd7221', 231);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-148::destevezg (generated)::(Checksum: 3:4fb61370d6709dbdad6cb8912d78d147)
 ALTER TABLE `kinton`.`tier` ADD CONSTRAINT `tier_FK_1` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-148', '2.0.3', '3:4fb61370d6709dbdad6cb8912d78d147', 234);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-148', '2.0.3', '3:4fb61370d6709dbdad6cb8912d78d147', 232);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-149::destevezg (generated)::(Checksum: 3:ce3759c45c6e5e0957bdf286928ddfd6)
 ALTER TABLE `kinton`.`ucs_rack` ADD CONSTRAINT `id_rack_FK` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-149', '2.0.3', '3:ce3759c45c6e5e0957bdf286928ddfd6', 235);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-149', '2.0.3', '3:ce3759c45c6e5e0957bdf286928ddfd6', 233);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-150::destevezg (generated)::(Checksum: 3:6a2e1beff7657d80b3ddc590c6afb4ff)
 ALTER TABLE `kinton`.`user` ADD CONSTRAINT `FK1_user` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-150', '2.0.3', '3:6a2e1beff7657d80b3ddc590c6afb4ff', 236);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-150', '2.0.3', '3:6a2e1beff7657d80b3ddc590c6afb4ff', 234);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-151::destevezg (generated)::(Checksum: 3:4c49355453f85109bc9fdaaa7d9c8f9d)
 ALTER TABLE `kinton`.`user` ADD CONSTRAINT `User_FK1` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-151', '2.0.3', '3:4c49355453f85109bc9fdaaa7d9c8f9d', 237);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-151', '2.0.3', '3:4c49355453f85109bc9fdaaa7d9c8f9d', 235);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-152::destevezg (generated)::(Checksum: 3:c69b44279fe35ae4d5357530fa58f98c)
 ALTER TABLE `kinton`.`vappstateful_conversions` ADD CONSTRAINT `idUser_FK3` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-152', '2.0.3', '3:c69b44279fe35ae4d5357530fa58f98c', 238);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-152', '2.0.3', '3:c69b44279fe35ae4d5357530fa58f98c', 236);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-153::destevezg (generated)::(Checksum: 3:55d5fcfd88c84da2d8e8b047fbe4ca74)
 ALTER TABLE `kinton`.`vappstateful_conversions` ADD CONSTRAINT `idVirtualApp_FK3` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-153', '2.0.3', '3:55d5fcfd88c84da2d8e8b047fbe4ca74', 239);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-153', '2.0.3', '3:55d5fcfd88c84da2d8e8b047fbe4ca74', 237);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-154::destevezg (generated)::(Checksum: 3:5a8a82475af9f6cd7f2dd53d712f7772)
 ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `virtualimage_conversions_FK` FOREIGN KEY (`idConversion`) REFERENCES `kinton`.`virtualimage_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-154', '2.0.3', '3:5a8a82475af9f6cd7f2dd53d712f7772', 240);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-154', '2.0.3', '3:5a8a82475af9f6cd7f2dd53d712f7772', 238);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-155::destevezg (generated)::(Checksum: 3:28bb4e87b926a15b198c9c3f0ed9a41e)
 ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `virtual_appliance_conversions_node_FK` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`nodevirtualimage` (`idNode`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-155', '2.0.3', '3:28bb4e87b926a15b198c9c3f0ed9a41e', 241);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-155', '2.0.3', '3:28bb4e87b926a15b198c9c3f0ed9a41e', 239);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-156::destevezg (generated)::(Checksum: 3:3338ded640346300fe6fc834f29cd573)
 ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `user_FK` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-156', '2.0.3', '3:3338ded640346300fe6fc834f29cd573', 242);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-156', '2.0.3', '3:3338ded640346300fe6fc834f29cd573', 240);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-157::destevezg (generated)::(Checksum: 3:21c1084c13f597df7b8ae0b17661bec8)
 ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `virtualapp_FK` FOREIGN KEY (`idVirtualAppliance`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-157', '2.0.3', '3:21c1084c13f597df7b8ae0b17661bec8', 243);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-157', '2.0.3', '3:21c1084c13f597df7b8ae0b17661bec8', 241);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-158::destevezg (generated)::(Checksum: 3:b69eabf2c2c54d2b3fca684c10307674)
 ALTER TABLE `kinton`.`virtualapp` ADD CONSTRAINT `VirtualApp_FK5` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-158', '2.0.3', '3:b69eabf2c2c54d2b3fca684c10307674', 244);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-158', '2.0.3', '3:b69eabf2c2c54d2b3fca684c10307674', 242);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-159::destevezg (generated)::(Checksum: 3:cc83157e9e8f124153e80effb9d51efb)
 ALTER TABLE `kinton`.`virtualapp` ADD CONSTRAINT `VirtualApp_FK4` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `kinton`.`virtualdatacenter` (`idVirtualDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-159', '2.0.3', '3:cc83157e9e8f124153e80effb9d51efb', 245);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-159', '2.0.3', '3:cc83157e9e8f124153e80effb9d51efb', 243);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-160::destevezg (generated)::(Checksum: 3:b16109dedffbd117d36f5b77cd4afd47)
 ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK7` FOREIGN KEY (`default_vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-160', '2.0.3', '3:b16109dedffbd117d36f5b77cd4afd47', 246);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-160', '2.0.3', '3:b16109dedffbd117d36f5b77cd4afd47', 244);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-161::destevezg (generated)::(Checksum: 3:ada5fd43eb881ae2b2c0a4ae26e8b60b)
 ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK6` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-161', '2.0.3', '3:ada5fd43eb881ae2b2c0a4ae26e8b60b', 247);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-161', '2.0.3', '3:ada5fd43eb881ae2b2c0a4ae26e8b60b', 245);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-162::destevezg (generated)::(Checksum: 3:c1c9a3d9a6cd5f576dba7bec3898158f)
 ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK1` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-162', '2.0.3', '3:c1c9a3d9a6cd5f576dba7bec3898158f', 248);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-162', '2.0.3', '3:c1c9a3d9a6cd5f576dba7bec3898158f', 246);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-163::destevezg (generated)::(Checksum: 3:bcb0e0250107a0123f8ea29709d18132)
 ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK4` FOREIGN KEY (`networktypeID`) REFERENCES `kinton`.`network` (`network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-163', '2.0.3', '3:bcb0e0250107a0123f8ea29709d18132', 249);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-163', '2.0.3', '3:bcb0e0250107a0123f8ea29709d18132', 247);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-164::destevezg (generated)::(Checksum: 3:da457c42797f29326ae68a0f6ef932c7)
 ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `fk_virtualimage_category` FOREIGN KEY (`idCategory`) REFERENCES `kinton`.`category` (`idCategory`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-164', '2.0.3', '3:da457c42797f29326ae68a0f6ef932c7', 250);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-164', '2.0.3', '3:da457c42797f29326ae68a0f6ef932c7', 248);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-165::destevezg (generated)::(Checksum: 3:66e0aecdb3e6496bd6014ddd811aedd7)
 ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `virtualImage_FK9` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-165', '2.0.3', '3:66e0aecdb3e6496bd6014ddd811aedd7', 251);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-165', '2.0.3', '3:66e0aecdb3e6496bd6014ddd811aedd7', 249);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-166::destevezg (generated)::(Checksum: 3:490d988acc72011b15b3cdd2c054c1d0)
 ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `virtualImage_FK8` FOREIGN KEY (`idMaster`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-166', '2.0.3', '3:490d988acc72011b15b3cdd2c054c1d0', 252);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-166', '2.0.3', '3:490d988acc72011b15b3cdd2c054c1d0', 250);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-167::destevezg (generated)::(Checksum: 3:8d0283f48802ab658df52a67d2b84168)
 ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `virtualImage_FK3` FOREIGN KEY (`idRepository`) REFERENCES `kinton`.`repository` (`idRepository`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-167', '2.0.3', '3:8d0283f48802ab658df52a67d2b84168', 253);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-167', '2.0.3', '3:8d0283f48802ab658df52a67d2b84168', 251);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-168::destevezg (generated)::(Checksum: 3:43369b643b83dbf4abc3cdd88dea9e55)
 ALTER TABLE `kinton`.`virtualimage_conversions` ADD CONSTRAINT `idImage_FK` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-168', '2.0.3', '3:43369b643b83dbf4abc3cdd88dea9e55', 254);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-168', '2.0.3', '3:43369b643b83dbf4abc3cdd88dea9e55', 252);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-169::destevezg (generated)::(Checksum: 3:0e024cd1c55e694b36db28daef7be341)
 ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualmachine_conversion_FK` FOREIGN KEY (`idConversion`) REFERENCES `kinton`.`virtualimage_conversions` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-169', '2.0.3', '3:0e024cd1c55e694b36db28daef7be341', 255);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-169', '2.0.3', '3:0e024cd1c55e694b36db28daef7be341', 253);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-170::destevezg (generated)::(Checksum: 3:448b288afac7932843f109c4c8150cf7)
 ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_datastore_FK` FOREIGN KEY (`idDatastore`) REFERENCES `kinton`.`datastore` (`idDatastore`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-170', '2.0.3', '3:448b288afac7932843f109c4c8150cf7', 256);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-170', '2.0.3', '3:448b288afac7932843f109c4c8150cf7', 254);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-171::destevezg (generated)::(Checksum: 3:fe98b32bbffe0d24efb06fbbee891dd5)
 ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK5` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-171', '2.0.3', '3:fe98b32bbffe0d24efb06fbbee891dd5', 257);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-171', '2.0.3', '3:fe98b32bbffe0d24efb06fbbee891dd5', 255);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-172::destevezg (generated)::(Checksum: 3:039a3cb6e568637b87fa0c4d1fd751fb)
 ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK1` FOREIGN KEY (`idHypervisor`) REFERENCES `kinton`.`hypervisor` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-172', '2.0.3', '3:039a3cb6e568637b87fa0c4d1fd751fb', 258);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-172', '2.0.3', '3:039a3cb6e568637b87fa0c4d1fd751fb', 256);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-173::destevezg (generated)::(Checksum: 3:89b532248fcd75b771983698562696a0)
 ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK3` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-173', '2.0.3', '3:89b532248fcd75b771983698562696a0', 259);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-173', '2.0.3', '3:89b532248fcd75b771983698562696a0', 257);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-174::destevezg (generated)::(Checksum: 3:648895356db22362b96054e955327394)
 ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK4` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-174', '2.0.3', '3:648895356db22362b96054e955327394', 260);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-174', '2.0.3', '3:648895356db22362b96054e955327394', 258);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-175::destevezg (generated)::(Checksum: 3:45fabe26bed9e78a381e00f57a8106fe)
 ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK6` FOREIGN KEY (`network_configuration_id`) REFERENCES `kinton`.`network_configuration` (`network_configuration_id`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-175', '2.0.3', '3:45fabe26bed9e78a381e00f57a8106fe', 261);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-175', '2.0.3', '3:45fabe26bed9e78a381e00f57a8106fe', 259);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-176::destevezg (generated)::(Checksum: 3:29df9763e7f45787933eedc0d93753a0)
 ALTER TABLE `kinton`.`virtualmachinetrackedstate` ADD CONSTRAINT `VirtualMachineTrackedState_FK1` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-176', '2.0.3', '3:29df9763e7f45787933eedc0d93753a0', 262);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-176', '2.0.3', '3:29df9763e7f45787933eedc0d93753a0', 260);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-177::destevezg (generated)::(Checksum: 3:e82153ad84d182e5f828cd744af702fd)
 ALTER TABLE `kinton`.`vlan_network` ADD CONSTRAINT `vlannetwork_enterprise_FK` FOREIGN KEY (`enterprise_id`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-177', '2.0.3', '3:e82153ad84d182e5f828cd744af702fd', 263);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-177', '2.0.3', '3:e82153ad84d182e5f828cd744af702fd', 261);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-178::destevezg (generated)::(Checksum: 3:8ba1097cdbd056308fd5aba20d89345e)
 ALTER TABLE `kinton`.`vlan_network` ADD CONSTRAINT `vlannetwork_configuration_FK` FOREIGN KEY (`network_configuration_id`) REFERENCES `kinton`.`network_configuration` (`network_configuration_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-178', '2.0.3', '3:8ba1097cdbd056308fd5aba20d89345e', 264);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-178', '2.0.3', '3:8ba1097cdbd056308fd5aba20d89345e', 262);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-179::destevezg (generated)::(Checksum: 3:b5b66d52f3615106dbf5b81be8aeead0)
 ALTER TABLE `kinton`.`vlan_network` ADD CONSTRAINT `vlannetwork_network_FK` FOREIGN KEY (`network_id`) REFERENCES `kinton`.`network` (`network_id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-179', '2.0.3', '3:b5b66d52f3615106dbf5b81be8aeead0', 265);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-179', '2.0.3', '3:b5b66d52f3615106dbf5b81be8aeead0', 263);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-180::destevezg (generated)::(Checksum: 3:10999a3fbaadde9cf33ad4b3dabdad36)
 ALTER TABLE `kinton`.`vlan_network_assignment` ADD CONSTRAINT `vlan_network_assignment_idRack_FK` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-180', '2.0.3', '3:10999a3fbaadde9cf33ad4b3dabdad36', 266);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-180', '2.0.3', '3:10999a3fbaadde9cf33ad4b3dabdad36', 264);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-181::destevezg (generated)::(Checksum: 3:e0bcbb3f28283f516bd242be82ac242c)
 ALTER TABLE `kinton`.`vlan_network_assignment` ADD CONSTRAINT `vlan_network_assignment_idVirtualDataCenter_FK` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `kinton`.`virtualdatacenter` (`idVirtualDataCenter`) ON UPDATE NO ACTION ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-181', '2.0.3', '3:e0bcbb3f28283f516bd242be82ac242c', 267);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-181', '2.0.3', '3:e0bcbb3f28283f516bd242be82ac242c', 265);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-182::destevezg (generated)::(Checksum: 3:eda88ebcb0ae4b0237caab929c1aea15)
 ALTER TABLE `kinton`.`vlan_network_assignment` ADD CONSTRAINT `vlan_network_assignment_networkid_FK` FOREIGN KEY (`vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-182', '2.0.3', '3:eda88ebcb0ae4b0237caab929c1aea15', 268);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-182', '2.0.3', '3:eda88ebcb0ae4b0237caab929c1aea15', 266);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-183::destevezg (generated)::(Checksum: 3:8261f126803cf01ac95fc860bf05683c)
 ALTER TABLE `kinton`.`vlans_dhcpOption` ADD CONSTRAINT `fk_vlans_dhcp_dhcp` FOREIGN KEY (`idDhcpOption`) REFERENCES `kinton`.`dhcpOption` (`idDhcpOption`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-183', '2.0.3', '3:8261f126803cf01ac95fc860bf05683c', 269);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-183', '2.0.3', '3:8261f126803cf01ac95fc860bf05683c', 267);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-184::destevezg (generated)::(Checksum: 3:2e17ee385fe1756792aa18f36c7cf467)
 ALTER TABLE `kinton`.`vlans_dhcpOption` ADD CONSTRAINT `fk_vlans_dhcp_vlan` FOREIGN KEY (`idVlan`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-184', '2.0.3', '3:2e17ee385fe1756792aa18f36c7cf467', 270);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-184', '2.0.3', '3:2e17ee385fe1756792aa18f36c7cf467', 268);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-185::destevezg (generated)::(Checksum: 3:80a62ee2317a6712e5807f3f6d0ba197)
 ALTER TABLE `kinton`.`volume_management` ADD CONSTRAINT `volumemanagement_FK3` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-185', '2.0.3', '3:80a62ee2317a6712e5807f3f6d0ba197', 271);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-185', '2.0.3', '3:80a62ee2317a6712e5807f3f6d0ba197', 269);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-186::destevezg (generated)::(Checksum: 3:7aae02e0bacd25676d9e6dd34e96732e)
 ALTER TABLE `kinton`.`volume_management` ADD CONSTRAINT `idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-186', '2.0.3', '3:7aae02e0bacd25676d9e6dd34e96732e', 272);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-186', '2.0.3', '3:7aae02e0bacd25676d9e6dd34e96732e', 270);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-187::destevezg (generated)::(Checksum: 3:b623134004ac65bccbd18f8b166a65a3)
 ALTER TABLE `kinton`.`volume_management` ADD CONSTRAINT `idStorage_FK` FOREIGN KEY (`idStorage`) REFERENCES `kinton`.`storage_pool` (`idStorage`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-187', '2.0.3', '3:b623134004ac65bccbd18f8b166a65a3', 273);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-187', '2.0.3', '3:b623134004ac65bccbd18f8b166a65a3', 271);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-188::destevezg (generated)::(Checksum: 3:727265749266ca7e5cd2363a313d6423)
 ALTER TABLE `kinton`.`workload_enterprise_exclusion_rule` ADD CONSTRAINT `FK_eerule_enterprise_1` FOREIGN KEY (`idEnterprise1`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-188', '2.0.3', '3:727265749266ca7e5cd2363a313d6423', 274);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-188', '2.0.3', '3:727265749266ca7e5cd2363a313d6423', 272);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-189::destevezg (generated)::(Checksum: 3:6ff99a1ad8e39d4f80c918cefe816932)
 ALTER TABLE `kinton`.`workload_enterprise_exclusion_rule` ADD CONSTRAINT `FK_eerule_enterprise_2` FOREIGN KEY (`idEnterprise2`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-189', '2.0.3', '3:6ff99a1ad8e39d4f80c918cefe816932', 275);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-189', '2.0.3', '3:6ff99a1ad8e39d4f80c918cefe816932', 273);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-190::destevezg (generated)::(Checksum: 3:c2b5d1e4466e21627abaa7ad015fff4e)
 ALTER TABLE `kinton`.`workload_fit_policy_rule` ADD CONSTRAINT `FK_fprule_datacenter` FOREIGN KEY (`idDatacenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-190', '2.0.3', '3:c2b5d1e4466e21627abaa7ad015fff4e', 276);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-190', '2.0.3', '3:c2b5d1e4466e21627abaa7ad015fff4e', 274);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-191::destevezg (generated)::(Checksum: 3:f6bf190b5e4a59f02bcc3db933b369ec)
 ALTER TABLE `kinton`.`workload_machine_load_rule` ADD CONSTRAINT `FK_mlrule_datacenter` FOREIGN KEY (`idDatacenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-191', '2.0.3', '3:f6bf190b5e4a59f02bcc3db933b369ec', 277);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-191', '2.0.3', '3:f6bf190b5e4a59f02bcc3db933b369ec', 275);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-192::destevezg (generated)::(Checksum: 3:19d7e4f37a06adf14f372a57f894026d)
 ALTER TABLE `kinton`.`workload_machine_load_rule` ADD CONSTRAINT `FK_mlrule_machine` FOREIGN KEY (`idMachine`) REFERENCES `kinton`.`physicalmachine` (`idPhysicalMachine`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-192', '2.0.3', '3:19d7e4f37a06adf14f372a57f894026d', 278);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-192', '2.0.3', '3:19d7e4f37a06adf14f372a57f894026d', 276);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-193::destevezg (generated)::(Checksum: 3:98e3e9fbffc688e3cdf0a6f62cc886ab)
 ALTER TABLE `kinton`.`workload_machine_load_rule` ADD CONSTRAINT `FK_mlrule_rack` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-193', '2.0.3', '3:98e3e9fbffc688e3cdf0a6f62cc886ab', 279);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-193', '2.0.3', '3:98e3e9fbffc688e3cdf0a6f62cc886ab', 277);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-3::destevezg (generated)::(Checksum: 3:87349e83626f9fb90db22db902f3b164)
 ALTER TABLE `kinton`.`diskstateful_conversions` ADD CONSTRAINT `idManagement_FK2` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`volume_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-3', '2.0.3', '3:87349e83626f9fb90db22db902f3b164', 280);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-3', '2.0.3', '3:87349e83626f9fb90db22db902f3b164', 278);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-4::destevezg (generated)::(Checksum: 3:ac5709e413466a1f11ac597a7c5a585e)
 ALTER TABLE `kinton`.`initiator_mapping` ADD CONSTRAINT `volume_managementFK_1` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`volume_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-4', '2.0.3', '3:ac5709e413466a1f11ac597a7c5a585e', 281);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-4', '2.0.3', '3:ac5709e413466a1f11ac597a7c5a585e', 279);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-5::destevezg (generated)::(Checksum: 3:258283ddc293a5413837c04174818f97)
 ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idManagement_FK4` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`volume_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-5', '2.0.3', '3:258283ddc293a5413837c04174818f97', 282);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-5', '2.0.3', '3:258283ddc293a5413837c04174818f97', 280);
 
 -- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-6::destevezg (generated)::(Checksum: 3:4026921db5863970af971d6346b563ed)
 ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idNodeVirtualImage_FK4` FOREIGN KEY (`idNodeVirtualImage`) REFERENCES `kinton`.`nodevirtualimage` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-6', '2.0.3', '3:4026921db5863970af971d6346b563ed', 283);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-6', '2.0.3', '3:4026921db5863970af971d6346b563ed', 281);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-1::destevezg (generated)::(Checksum: 3:e2dcb29ad5406df0802012ef391de0ff)
 ALTER TABLE `kinton`.`category` ADD `idEnterprise` INT UNSIGNED;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-1', '2.0.3', '3:e2dcb29ad5406df0802012ef391de0ff', 284);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-1', '2.0.3', '3:e2dcb29ad5406df0802012ef391de0ff', 282);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-2::destevezg (generated)::(Checksum: 3:7c8e1ea0630376b5d6124083673e4b1e)
 ALTER TABLE `kinton`.`category` ADD CONSTRAINT `category_enterprise_FK` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-2', '2.0.3', '3:7c8e1ea0630376b5d6124083673e4b1e', 285);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-2', '2.0.3', '3:7c8e1ea0630376b5d6124083673e4b1e', 283);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-3::destevezg (generated)::(Checksum: 3:9fa54ec9f24cfe1738d991eb1ba27029)
 DROP INDEX `name` ON `kinton`.`category`;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Index', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-3', '2.0.3', '3:9fa54ec9f24cfe1738d991eb1ba27029', 286);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Index', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-3', '2.0.3', '3:9fa54ec9f24cfe1738d991eb1ba27029', 284);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-4::destevezg (generated)::(Checksum: 3:d395cdedeb298779d6b6ffe8227a3145)
 CREATE UNIQUE INDEX `name` ON `kinton`.`category`(`name`, `idEnterprise`);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Index', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-4', '2.0.3', '3:d395cdedeb298779d6b6ffe8227a3145', 287);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Index', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-4', '2.0.3', '3:d395cdedeb298779d6b6ffe8227a3145', 285);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::new_roles::destevezg (generated)::(Checksum: 3:af3b0c4fbec8b55829ccb6bb719d853f)
 INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (51, 'USERS_MANAGE_CHEF_ENTERPRISE', 0);
@@ -4415,7 +4261,7 @@ INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (52
 
 INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (53, 'APPLIB_MANAGE_GLOBAL_CATEGORIES', 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_roles', '2.0.3', '3:af3b0c4fbec8b55829ccb6bb719d853f', 288);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_roles', '2.0.3', '3:af3b0c4fbec8b55829ccb6bb719d853f', 286);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::new_roles_privileges::destevezg (generated)::(Checksum: 3:47cd29b2bef41ce1030a4ff606a13247)
 INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (51, 1, 0);
@@ -4424,18 +4270,18 @@ INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) V
 
 INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (53, 1, 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_roles_privileges', '2.0.3', '3:47cd29b2bef41ce1030a4ff606a13247', 289);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_roles_privileges', '2.0.3', '3:47cd29b2bef41ce1030a4ff606a13247', 287);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::new_system_properties::destevezg (generated)::(Checksum: 3:fd220730402f42a743fb053338d61469)
 INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show (1) or hide (0) hard disk tab', 'client.main.showHardDisk', '1', 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_system_properties', '2.0.3', '3:fd220730402f42a743fb053338d61469', 290);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_system_properties', '2.0.3', '3:fd220730402f42a743fb053338d61469', 288);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::fix_availableVirtualDatacenters::destevezg (generated)::(Checksum: 3:db92fadc2e165d504c60c4a50b2647ab)
 -- Change to NULL to avoid an empty string for the property availableVirtualDatacenters
 UPDATE IGNORE user SET availableVirtualDatacenters = NULL WHERE availableVirtualDatacenters = "";
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', 'Change to NULL to avoid an empty string for the property availableVirtualDatacenters', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'fix_availableVirtualDatacenters', '2.0.3', '3:db92fadc2e165d504c60c4a50b2647ab', 291);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', 'Change to NULL to avoid an empty string for the property availableVirtualDatacenters', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'fix_availableVirtualDatacenters', '2.0.3', '3:db92fadc2e165d504c60c4a50b2647ab', 289);
 
 -- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::Triggerschangedfor2.0HF1::destevez::(Checksum: 3:5d23aff108d74c5aa470120df95d9ba1)
 DROP TRIGGER IF EXISTS create_nodevirtualimage_update_stats;
@@ -4747,7 +4593,7 @@ CREATE TRIGGER update_virtualapp_update_stats AFTER UPDATE ON virtualapp
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL (x4), SQL From File (x4)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'Triggerschangedfor2.0HF1', '2.0.3', '3:5d23aff108d74c5aa470120df95d9ba1', 292);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL (x4), SQL From File (x4)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'Triggerschangedfor2.0HF1', '2.0.3', '3:5d23aff108d74c5aa470120df95d9ba1', 290);
 
 -- Changeset src/2.0.0-HF3/kinton-2.0.0-HF3.xml::ABICLOUDPREMIUM-3908-calculate_cloud_usage_stats::destevez::(Checksum: 3:68385f363d412ac77ead3713a4cba021)
 DROP PROCEDURE IF EXISTS CalculateCloudUsageStats;
@@ -4981,7 +4827,7 @@ END;
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.0.0-HF3/kinton-2.0.0-HF3.xml', 'ABICLOUDPREMIUM-3908-calculate_cloud_usage_stats', '2.0.3', '3:68385f363d412ac77ead3713a4cba021', 293);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.0.0-HF3/kinton-2.0.0-HF3.xml', 'ABICLOUDPREMIUM-3908-calculate_cloud_usage_stats', '2.0.3', '3:68385f363d412ac77ead3713a4cba021', 291);
 
 -- Changeset src/2.2/kinton-2.2.xml::1336485500618-1::destevezg (generated)::(Checksum: 3:4441c84bd8a0fcebb40e9bb65aaf5191)
 ALTER TABLE `kinton`.`pricingTemplate` ADD `memoryGB` DECIMAL(20,5) DEFAULT '0';
@@ -4990,81 +4836,86 @@ UPDATE pricingTemplate SET memoryGB = memoryMB/1024;
 
 ALTER TABLE `kinton`.`pricingTemplate` DROP COLUMN `memoryMB`;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Column, Custom SQL, Drop Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-1', '2.0.3', '3:4441c84bd8a0fcebb40e9bb65aaf5191', 294);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Column, Custom SQL, Drop Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-1', '2.0.3', '3:4441c84bd8a0fcebb40e9bb65aaf5191', 292);
 
 -- Changeset src/2.2/kinton-2.2.xml::1336485500618-2::destevezg (generated)::(Checksum: 3:3e028861a9cd184465e4b26a3cfcb777)
 ALTER TABLE `kinton`.`metering` MODIFY `user` VARCHAR(128) NOT NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Not-Null Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-2', '2.0.3', '3:3e028861a9cd184465e4b26a3cfcb777', 295);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Not-Null Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-2', '2.0.3', '3:3e028861a9cd184465e4b26a3cfcb777', 293);
 
 -- Changeset src/2.2/kinton-2.2.xml::1336485500618-5::destevezg (generated)::(Checksum: 3:c79a9d931d4ba6ccb61f1169afba19a8)
 ALTER TABLE `kinton`.`costCodeCurrency` ADD CONSTRAINT `idCurrency_FK` FOREIGN KEY (`idCurrency`) REFERENCES `kinton`.`currency` (`idCurrency`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-5', '2.0.3', '3:c79a9d931d4ba6ccb61f1169afba19a8', 296);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-5', '2.0.3', '3:c79a9d931d4ba6ccb61f1169afba19a8', 294);
 
 -- Changeset src/2.2/kinton-2.2.xml::1336485500618-7::destevezg (generated)::(Checksum: 3:5b51a053210935c51c948d0c7fa381dc)
 ALTER TABLE `kinton`.`costCode` MODIFY `idCostCode` INT UNSIGNED AUTO_INCREMENT;
 
 ALTER TABLE `kinton`.`pricingCostCode` ADD CONSTRAINT `pricingCostCode_FK2` FOREIGN KEY (`idPricingTemplate`) REFERENCES `kinton`.`pricingTemplate` (`idPricingTemplate`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Set Column as Auto-Increment, Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-7', '2.0.3', '3:5b51a053210935c51c948d0c7fa381dc', 297);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Set Column as Auto-Increment, Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-7', '2.0.3', '3:5b51a053210935c51c948d0c7fa381dc', 295);
 
 -- Changeset src/2.2/kinton-2.2.xml::1336485500618-8::destevezg (generated)::(Checksum: 3:18db5a13981a0ab6234d17f46e8eda05)
 ALTER TABLE `kinton`.`pricingTier` ADD CONSTRAINT `pricingTier_FK2` FOREIGN KEY (`idPricingTemplate`) REFERENCES `kinton`.`pricingTemplate` (`idPricingTemplate`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-8', '2.0.3', '3:18db5a13981a0ab6234d17f46e8eda05', 298);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-8', '2.0.3', '3:18db5a13981a0ab6234d17f46e8eda05', 296);
 
 -- Changeset src/2.2/kinton-2.2.xml::1336485500618-9::destevezg (generated)::(Checksum: 3:51b22321576067fff7232c38f0ab65c8)
 ALTER TABLE `kinton`.`pricingTier` ADD CONSTRAINT `pricingTier_FK1` FOREIGN KEY (`idTier`) REFERENCES `kinton`.`tier` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-9', '2.0.3', '3:51b22321576067fff7232c38f0ab65c8', 299);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-9', '2.0.3', '3:51b22321576067fff7232c38f0ab65c8', 297);
 
 -- Changeset src/2.2/kinton-2.2.xml::1336485500618-11::destevezg (generated)::(Checksum: 3:219c18769d18cef1d17381ba4a1bb5ce)
 DROP TABLE `kinton`.`log`;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-11', '2.0.3', '3:219c18769d18cef1d17381ba4a1bb5ce', 300);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-11', '2.0.3', '3:219c18769d18cef1d17381ba4a1bb5ce', 298);
 
 -- Changeset src/2.2/kinton-2.2.xml::1337940808955-1::destevezg (generated)::(Checksum: 3:6f998f6f3e1878a5b204ced6fe8c34e4)
 ALTER TABLE `kinton`.`metering` MODIFY `user` VARCHAR(128) NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-1', '2.0.3', '3:6f998f6f3e1878a5b204ced6fe8c34e4', 301);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-1', '2.0.3', '3:6f998f6f3e1878a5b204ced6fe8c34e4', 299);
 
 -- Changeset src/2.2/kinton-2.2.xml::1337940808955-5::destevezg (generated)::(Checksum: 3:6e1b2afc755e1e0933c651e6b5ee8eb7)
 ALTER TABLE `kinton`.`costCodeCurrency` ADD CONSTRAINT `idCostCode_FK` FOREIGN KEY (`idCostCode`) REFERENCES `kinton`.`costCode` (`idCostCode`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-5', '2.0.3', '3:6e1b2afc755e1e0933c651e6b5ee8eb7', 302);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-5', '2.0.3', '3:6e1b2afc755e1e0933c651e6b5ee8eb7', 300);
 
 -- Changeset src/2.2/kinton-2.2.xml::1337940808955-6::destevezg (generated)::(Checksum: 3:db624edc38a2e1cacb2ebe3a6156bccc)
 ALTER TABLE `kinton`.`pricingCostCode` ADD CONSTRAINT `pricingCostCode_FK1` FOREIGN KEY (`idCostCode`) REFERENCES `kinton`.`costCode` (`idCostCode`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-6', '2.0.3', '3:db624edc38a2e1cacb2ebe3a6156bccc', 303);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-6', '2.0.3', '3:db624edc38a2e1cacb2ebe3a6156bccc', 301);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3856::sacedo::(Checksum: 3:58ee105e73f736fa89b0804f646f73e4)
 ALTER TABLE `kinton`.`virtualmachine` ADD `keymap` VARCHAR(255);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('sacedo', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3856', '2.0.3', '3:58ee105e73f736fa89b0804f646f73e4', 304);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('sacedo', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3856', '2.0.3', '3:58ee105e73f736fa89b0804f646f73e4', 302);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698::zmalik::(Checksum: 3:ccd5c84bb742930df6ccd39f8fb552e5)
 CREATE TABLE `kinton`.`scope` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(255) DEFAULT 'auto_name' NOT NULL, `autoEnt` TINYINT(1) DEFAULT 0 NOT NULL, `autoDat` TINYINT(1) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_SCOPE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
 
 CREATE TABLE `kinton`.`scope_resource` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idScope` INT UNSIGNED NOT NULL, `idResource` INT UNSIGNED NOT NULL, `resourceType` VARCHAR(64) DEFAULT 'auto_name' NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_SCOPE_RESOURCE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Create Table (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698', '2.0.3', '3:ccd5c84bb742930df6ccd39f8fb552e5', 305);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Create Table (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698', '2.0.3', '3:ccd5c84bb742930df6ccd39f8fb552e5', 303);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-columns::zmalik::(Checksum: 3:0d7c4b7edc6c4c10d3f13e101d1151cf)
 ALTER TABLE `kinton`.`role` ADD `idScope` INT UNSIGNED;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-columns', '2.0.3', '3:0d7c4b7edc6c4c10d3f13e101d1151cf', 306);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-columns', '2.0.3', '3:0d7c4b7edc6c4c10d3f13e101d1151cf', 304);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-constraints::zmalik::(Checksum: 3:8afd9227de5253e2a04506ad214a6931)
 ALTER TABLE `kinton`.`scope_resource` ADD CONSTRAINT `fk_scope_resource_scope` FOREIGN KEY (`idScope`) REFERENCES `kinton`.`scope` (`id`) ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-constraints', '2.0.3', '3:8afd9227de5253e2a04506ad214a6931', 307);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-constraints', '2.0.3', '3:8afd9227de5253e2a04506ad214a6931', 305);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-constraints1::zmalik::(Checksum: 3:bd3389b3752100eb6a4262004441e391)
 ALTER TABLE `kinton`.`role` ADD CONSTRAINT `fk_role_scope` FOREIGN KEY (`idScope`) REFERENCES `kinton`.`scope` (`id`) ON DELETE SET NULL;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-constraints1', '2.0.3', '3:bd3389b3752100eb6a4262004441e391', 308);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-constraints1', '2.0.3', '3:bd3389b3752100eb6a4262004441e391', 306);
+
+-- Changeset src/2.2/kinton-2.2.xml::fixWrongDBEngine::destevez::(Checksum: 3:c2313c070f2d1d0c561c27d2b46995ba)
+ALTER TABLE metering ENGINE=InnoDB;
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'fixWrongDBEngine', '2.0.3', '3:c2313c070f2d1d0c561c27d2b46995ba', 307);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-update-and-inserts::zmalik::(Checksum: 3:2d4ecdd62de718f0b6f8e4b653909ebf)
 INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (54, 'USERS_MANAGE_SCOPES', 0);
@@ -5073,32 +4924,39 @@ INSERT INTO `kinton`.`scope` (`autoDat`, `autoEnt`, `id`, `name`, `version_c`) V
 
 UPDATE `kinton`.`role` SET `idScope` = '1';
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row (x2), Update Data', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-update-and-inserts', '2.0.3', '3:2d4ecdd62de718f0b6f8e4b653909ebf', 309);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row (x2), Update Data', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-update-and-inserts', '2.0.3', '3:2d4ecdd62de718f0b6f8e4b653909ebf', 308);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-admin::zmalik::(Checksum: 3:af289f7006bdc919bc053d038cbdbf25)
 INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (54, 1, 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-admin', '2.0.3', '3:af289f7006bdc919bc053d038cbdbf25', 310);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-admin', '2.0.3', '3:af289f7006bdc919bc053d038cbdbf25', 309);
 
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-0::jdevesa::(Checksum: 3:e9dbdc6f9338442109d48d92ff76a76a)
-CREATE TABLE `kinton`.`dvd_management` (`idManagement` INT UNSIGNED NOT NULL, `idImage` INT UNSIGNED);
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-0::jdevesa::(Checksum: 3:8d84d03c13f8b54bc6f46b47b3b4c6f2)
+CREATE TABLE `kinton`.`dvd_management` (`idManagement` INT UNSIGNED NOT NULL, `idImage` INT UNSIGNED) engine innodb default charset=utf8;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-0', '2.0.3', '3:e9dbdc6f9338442109d48d92ff76a76a', 311);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-0', '2.0.3', '3:8d84d03c13f8b54bc6f46b47b3b4c6f2', 310);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-1::jdevesa::(Checksum: 3:6a705cc1e1c2c2ba4a9eec6a0a430623)
 ALTER TABLE `kinton`.`dvd_management` ADD CONSTRAINT `dvd_management_image_FK` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-1', '2.0.3', '3:6a705cc1e1c2c2ba4a9eec6a0a430623', 312);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-1', '2.0.3', '3:6a705cc1e1c2c2ba4a9eec6a0a430623', 311);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-2::jdevesa::(Checksum: 3:423310274c7be31be9d4435fca0d23f6)
 ALTER TABLE `kinton`.`dvd_management` ADD CONSTRAINT `dvd_idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-2', '2.0.3', '3:423310274c7be31be9d4435fca0d23f6', 313);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-2', '2.0.3', '3:423310274c7be31be9d4435fca0d23f6', 312);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4033::xthevenot::(Checksum: 3:ee17d425d7bbd7981fff90e0876dec5f)
 INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Default index view (0 is the Home, 1 Infrastructure, ...)', 'client.main.defaultView', '0', 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4033', '2.0.3', '3:ee17d425d7bbd7981fff90e0876dec5f', 314);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4033', '2.0.3', '3:ee17d425d7bbd7981fff90e0876dec5f', 313);
+
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4344::xthevenot::(Checksum: 3:413e9afa18ea719bd4c58a7c468fdd6e)
+INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show soft limit info (1 show, 0 hide)', 'client.main.showSoftInfo', '1', 0);
+
+INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show hard limit info (1 show, 0 hide)', 'client.main.showHardInfo', '1', 0);
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4344', '2.0.3', '3:413e9afa18ea719bd4c58a7c468fdd6e', 314);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3910::xthevenot::(Checksum: 3:d6ef777a6b393e0a780b4a233d4c6884)
 INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (55, 'USERS_MANAGE_RESERVED_MACHINES', 0);
@@ -5107,6 +4965,89 @@ INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) V
 
 INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3910', '2.0.3', '3:d6ef777a6b393e0a780b4a233d4c6884', 315);
 
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4407::xthevenot::(Checksum: 3:7eb210f7ec2e3d8c4db8200a88d892bd)
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement' WHERE name='client.wiki.allocation.datacenter' AND value='http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement' WHERE name='client.wiki.allocation.global' AND value='http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem' WHERE name='client.wiki.apps.uploadVM' AND value='http://community.abiquo.com/display/ABI20/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view' WHERE name='client.wiki.config.general' AND value='http://community.abiquo.com/display/ABI20/Configuration+view';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view#ConfigurationView-Heartbeat' WHERE name='client.wiki.config.heartbeat' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-Heartbeating';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view#ConfigurationView-LicenseManagement' WHERE name='client.wiki.config.licence' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-LicenseManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI20/Configuration+view#Configurationview-ProductRegistration' WHERE name='client.wiki.config.registration' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#Configurationview-ProductRegistration';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Abiquo+Documentation+Home' WHERE name='client.wiki.defaultURL' AND value='http://community.abiquo.com/display/ABI20/Abiquo+Documentation+Home';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-DatastoreManagement' WHERE name='client.wiki.infra.addDatastore' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DatastoreManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter' WHERE name='client.wiki.infra.createDatacenter' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-CreatingMultiplePhysicalMachines' WHERE name='client.wiki.infra.createMultiplePhysicalMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingMultiplePhysicalMachines';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-CreatingPhysicalMachinesonStandardRacks' WHERE name='client.wiki.infra.createPhysicalMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingPhysicalMachinesonStandardRacks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Racks#ManageRacks-CreatingRacks' WHERE name='client.wiki.infra.createRack' AND value='http://community.abiquo.com/display/ABI20/Manage+Racks#ManageRacks-CreatingRacks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-DiscoveringBladesonManagedRacks' WHERE name='client.wiki.infra.discoverBlades' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DiscoveringBladesonManagedRacks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter' WHERE name='client.wiki.infra.editDatacenter' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-RemoteServices' WHERE name='client.wiki.infra.editRemoteService' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-RemoteServices';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-SendingEmailNotifications' WHERE name='client.wiki.infra.mailNotification' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-SendingEmailNotifications';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks' WHERE name='client.wiki.network.publicVlan' AND value='http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCPforPublicandExternalNetworks' WHERE name='client.wiki.network.staticRoutes' AND value='http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCP';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-CostCodesTab' WHERE name='client.wiki.pricing.createCostCode' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CostCodesTab';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-CurrenciesTab' WHERE name='client.wiki.pricing.createCurrency' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CurrenciesTab';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-PricingModelsTab' WHERE name='client.wiki.pricing.createTemplate' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-PricingModelsTab';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-ManagedStorage' WHERE name='client.wiki.storage.storageDevice' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-ManagedStorage';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-StoragePools' WHERE name='client.wiki.storage.storagePool' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-StoragePools';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-TierManagement' WHERE name='client.wiki.storage.tier' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-TierManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Enterprises#ManageEnterprises-CreatingorEditinganEnterprise' WHERE name='client.wiki.user.createEnterprise' AND value='http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-CreatingorEditinganEnterprise';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Roles' WHERE name='client.wiki.user.createRole' AND value='http://community.abiquo.com/display/ABI20/Manage+Roles+and+Privileges';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Users#ManageUsers-CreatingorEditingaUser' WHERE name='client.wiki.user.createUser' AND value='http://community.abiquo.com/display/ABI20/Manage+Users#ManageUsers-CreatingorEditingaUser';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Enterprises#ManageEnterprises-EdittheEnterprise%27sDatacenters' WHERE name='client.wiki.user.dataCenterLimits' AND value='http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-EdittheEnterprise%27sDatacenters';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Networks#ManageNetworks-CreateaPrivateVLAN' WHERE name='client.wiki.vdc.createPrivateNetwork' AND value='http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-CreateaPrivateVLAN';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Networks#ManageNetworks-PublicIPReservation' WHERE name='client.wiki.vdc.createPublicNetwork' AND value='http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-PublicIPReservation';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance' WHERE name='client.wiki.vdc.createVapp' AND value='http://community.abiquo.com/display/ABI20/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter' WHERE name='client.wiki.vdc.createVdc' AND value='http://community.abiquo.com/display/ABI20/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage' WHERE name='client.wiki.vdc.createVolume' AND value='http://community.abiquo.com/display/ABI20/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanInstance' WHERE name='client.wiki.vm.bundleVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanInstance';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Imported+Virtual+Machines' WHERE name='client.wiki.vm.captureVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-WorkingwithImportedVirtualMachines';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Create+Virtual+Machine+instances' WHERE name='client.wiki.vm.createInstance' AND value='http://community.abiquo.com/display/ABI20/Create+Virtual+Machine+instances';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface' WHERE name='client.wiki.vm.createNetworkInterface' AND value='http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Create+Persistent+Virtual+Machines' WHERE name='client.wiki.vm.createStateful' AND value='http://community.abiquo.com/display/ABI20/Create+Persistent+Virtual+Machines';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+Virtual+Machines' WHERE name='client.wiki.vm.editVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines';
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Update Data (x40)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4407', '2.0.3', '3:7eb210f7ec2e3d8c4db8200a88d892bd', 316);
+
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3658::scastro::(Checksum: 3:76559c1d1d91c98c23197868335d8b30)
 DROP TABLE `kinton`.`node_virtual_image_stateful_conversions`;
 
@@ -5114,7 +5055,7 @@ DROP TABLE `kinton`.`diskstateful_conversions`;
 
 DROP TABLE `kinton`.`vappstateful_conversions`;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('scastro', '', NOW(), 'Drop Table (x3)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3658', '2.0.3', '3:76559c1d1d91c98c23197868335d8b30', 316);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('scastro', '', NOW(), 'Drop Table (x3)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3658', '2.0.3', '3:76559c1d1d91c98c23197868335d8b30', 317);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3898::destevez::(Checksum: 3:de10ff87abd570bc74a50ce7455b7720)
 DROP TRIGGER IF EXISTS delete_nodevirtualimage_update_stats;
@@ -5196,7 +5137,7 @@ CREATE TRIGGER delete_nodevirtualimage_update_stats AFTER DELETE ON nodevirtuali
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3898', '2.0.3', '3:de10ff87abd570bc74a50ce7455b7720', 317);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3898', '2.0.3', '3:de10ff87abd570bc74a50ce7455b7720', 318);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3727::destevez::(Checksum: 3:ce98b001ef068af5bcb4f1c2e37d5a28)
 DROP TRIGGER IF EXISTS update_virtualmachine_update_stats;
@@ -5321,9 +5262,64 @@ CREATE TRIGGER update_virtualmachine_update_stats AFTER UPDATE ON virtualmachine
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3727', '2.0.3', '3:ce98b001ef068af5bcb4f1c2e37d5a28', 318);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3727', '2.0.3', '3:ce98b001ef068af5bcb4f1c2e37d5a28', 319);
 
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4059-4114::destevez::(Checksum: 3:2b2dd67788b94b5af2a1445377d8bbb2)
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-2435::destevez::(Checksum: 3:04d9543a931fc7e2ff308c00600f48aa)
+DROP TRIGGER IF EXISTS update_ip_pool_management_update_stats;
+
+DELIMITER |
+CREATE TRIGGER update_ip_pool_management_update_stats AFTER UPDATE ON ip_pool_management
+    FOR EACH ROW BEGIN
+        DECLARE idDataCenterObj INTEGER;
+        DECLARE idVirtualDataCenterObj INTEGER;
+        DECLARE idEnterpriseObj INTEGER;
+	   DECLARE networkTypeObj VARCHAR(15);
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+		SELECT vn.networktype, dc.idDataCenter INTO networkTypeObj, idDataCenterObj
+		FROM vlan_network vn, datacenter dc
+		WHERE dc.network_id = vn.network_id
+		AND OLD.vlan_network_id = vn.vlan_network_id;
+		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('update_ip_pool_management_update_stats', '-', OLD.ip, '-',OLD.available,'-', NEW.available,'-', IFNULL(networkTypeObj,'NULL'), '-', IFNULL(idDataCenterObj,'NULL')));
+		IF networkTypeObj = 'PUBLIC' THEN		
+			IF OLD.available=FALSE AND NEW.available=TRUE THEN
+				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal+1 WHERE idDataCenter = idDataCenterObj;
+			END IF;
+			IF OLD.available=TRUE AND NEW.available=FALSE THEN
+				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal-1 WHERE idDataCenter = idDataCenterObj;
+			END IF;
+		END IF;
+	    -- Checks for public available 
+            -- Checks for reserved IPs		
+            IF OLD.mac IS NULL AND NEW.mac IS NOT NULL THEN
+                -- Query for datacenter
+                SELECT vdc.idDataCenter, vdc.idVirtualDataCenter, vdc.idEnterprise  INTO idDataCenterObj, idVirtualDataCenterObj, idEnterpriseObj
+                FROM rasd_management rm, virtualdatacenter vdc, vlan_network vn
+                WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
+			AND NEW.vlan_network_id = vn.vlan_network_id
+			AND vn.networktype = 'PUBLIC'
+			AND NEW.idManagement = rm.idManagement;
+                -- New Public IP assignment for a VDC ---> Reserved
+                UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed+1 WHERE idDataCenter = idDataCenterObj;
+                UPDATE IGNORE enterprise_resources_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idEnterprise = idEnterpriseObj;
+                UPDATE IGNORE vdc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idVirtualDataCenter = idVirtualDataCenterObj;
+                UPDATE IGNORE dc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idDataCenter = idDataCenterObj;
+                IF (idDataCenterObj IS NOT NULL AND idVirtualDataCenterObj IS NOT NULL AND idEnterpriseObj IS NOT NULL) THEN
+                	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Reserved IP: ',IFNULL(idEnterpriseObj,'entnull'),IFNULL(idDataCenterObj,'dcnull'),IFNULL(idVirtualDataCenterObj,'vdcnull')));
+                	IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
+                    	CALL AccountingIPsRegisterEvents('IP_RESERVED',NEW.idManagement,NEW.ip,idVirtualDataCenterObj, idEnterpriseObj);
+                	END IF;
+                END IF;
+            END IF;
+        END IF;
+    END;
+|
+DELIMITER ;
+
+DELETE FROM accounting_event_ips WHERE idEnterprise=0 AND idVirtualDataCenter=0;
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-2435', '2.0.3', '3:04d9543a931fc7e2ff308c00600f48aa', 320);
+
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4059-4114-4417::destevez::(Checksum: 3:ce0db9bbe48b0e59292c3aa7ef1aae7a)
 DROP PROCEDURE IF EXISTS CalculateEnterpriseResourcesStats;
 
 DELIMITER |
@@ -5369,14 +5365,14 @@ CREATE PROCEDURE CalculateEnterpriseResourcesStats()
     --
     SELECT IF (SUM(vm.cpu) IS NULL, 0, SUM(vm.cpu)), IF (SUM(vm.ram) IS NULL, 0, SUM(vm.ram)), IF (SUM(vm.hd) IS NULL, 0, SUM(vm.hd)) INTO vCpuUsed, memoryUsed, localStorageUsed
     FROM virtualmachine vm
-    WHERE vm.state = "ON"
+    WHERE vm.state IN ("ON","OFF","PAUSED")
     AND vm.idType = 1
     AND vm.idEnterprise = idEnterpriseObj;
     --
     SELECT IFNULL(SUM(limitResource),0) * 1048576  INTO extraHDUsed
 	FROM rasd_management rm, rasd r, virtualmachine vm 
 	WHERE rm.idResource = r.instanceID AND rm.idVM = vm.idVM AND rm.idResourceType=17
-	AND vm.state="ON"
+	AND vm.state IN ("ON","OFF","PAUSED")
 	AND vm.idType=1
 	AND vm.idEnterprise = idEnterpriseObj;   
 	--
@@ -5427,7 +5423,7 @@ CREATE PROCEDURE CalculateEnterpriseResourcesStats()
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4059-4114', '2.0.3', '3:2b2dd67788b94b5af2a1445377d8bbb2', 319);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4059-4114-4417', '2.0.3', '3:ce0db9bbe48b0e59292c3aa7ef1aae7a', 321);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4127-4114::destevez::(Checksum: 3:be509954d54d99afb53946f5dcb9a2a6)
 DROP PROCEDURE IF EXISTS CalculateVdcEnterpriseStats;
@@ -5580,7 +5576,7 @@ CREATE PROCEDURE CalculateVdcEnterpriseStats()
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4127-4114', '2.0.3', '3:be509954d54d99afb53946f5dcb9a2a6', 320);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4127-4114', '2.0.3', '3:be509954d54d99afb53946f5dcb9a2a6', 322);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4114-4166::destevez::(Checksum: 3:64ba2418c95dabffd34a95ede7aa3bf8)
 DROP PROCEDURE IF EXISTS CalculateVappEnterpriseStats;
@@ -5866,7 +5862,12 @@ CREATE PROCEDURE CalculateCloudUsageStats()
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4114-4166', '2.0.3', '3:64ba2418c95dabffd34a95ede7aa3bf8', 321);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4114-4166', '2.0.3', '3:64ba2418c95dabffd34a95ede7aa3bf8', 323);
+
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4217::jdevesa::(Checksum: 3:b388a8f15cdd350e02dc8622a13bfdb9)
+delete from rasd where instanceid not in (select idresource from rasd_management where idresource is not null);
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4217', '2.0.3', '3:b388a8f15cdd350e02dc8622a13bfdb9', 324);
 
 # Introduction of OPTIMIZED ACCOUNTING
 # This script defines all of the DBMS changes to:
@@ -5904,6 +5905,7 @@ BEGIN
           endTime           TIMESTAMP       NULL,
           PRIMARY KEY (idObject)
         ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+        CREATE INDEX obj_name_idx on kinton_accounting.object_name(objectName);
     END IF;
 
 	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='ent_name') THEN
@@ -6012,7 +6014,7 @@ CREATE FUNCTION kinton_accounting.ABQ_OBJECT_NAME_TO_ID (objName VARCHAR(511))
    DETERMINISTIC
     BEGIN
      DECLARE id INT;
-     SELECT idObject INTO id FROM kinton_accounting.object_name o WHERE o.objectName=objName;
+     SELECT idObject INTO id FROM kinton_accounting.object_name obj WHERE obj.objectName=objName;
      IF id IS NULL THEN
         INSERT INTO kinton_accounting.object_name (objectName, startTime) VALUES (objName, now());
         SELECT LAST_INSERT_ID() INTO id;
@@ -6028,7 +6030,7 @@ CREATE FUNCTION kinton_accounting.ABQ_OBJECT_ID_TO_NAME (idObj INT)
    DETERMINISTIC
     BEGIN
      DECLARE objName VARCHAR(511);
-     SELECT objectName INTO objName FROM kinton_accounting.object_name o WHERE o.idObject=idObj;
+     SELECT objectName INTO objName FROM kinton_accounting.object_name obj WHERE obj.idObject=idObj;
      RETURN objName;
     END|
 DELIMITER ;
@@ -6060,7 +6062,7 @@ CREATE FUNCTION kinton_accounting.ABQ_ENT_ID_TO_NAME (id INT)
    DETERMINISTIC
     BEGIN
      DECLARE entName VARCHAR(40);
-     SELECT enterpriseName INTO entName FROM kinton_accounting.ent_name e WHERE e.idEnterprise=id;
+     SELECT enterpriseName INTO entName FROM kinton_accounting.ent_name ent WHERE ent.idEnterprise=id;
      RETURN entName;
     END|
 DELIMITER ;
@@ -6092,7 +6094,7 @@ CREATE FUNCTION kinton_accounting.ABQ_VDC_ID_TO_NAME (id INT)
    DETERMINISTIC
     BEGIN
      DECLARE vName VARCHAR(40);
-     SELECT vdcName INTO vName FROM kinton_accounting.vdc_name v WHERE v.idVirtualDataCenter=id;
+     SELECT vdcName INTO vName FROM kinton_accounting.vdc_name vdc WHERE vdc.idVirtualDataCenter=id;
      RETURN vName;
     END|
 DELIMITER ;
@@ -6124,7 +6126,7 @@ CREATE FUNCTION kinton_accounting.ABQ_VAPP_ID_TO_NAME (id INT)
    DETERMINISTIC
     BEGIN
      DECLARE vName VARCHAR(40);
-     SELECT vappName INTO vName FROM kinton_accounting.vapp_name v WHERE v.idVirtualApp=id;
+     SELECT vappName INTO vName FROM kinton_accounting.vapp_name vapp WHERE vapp.idVirtualApp=id;
      RETURN vName;
     END|
 DELIMITER ;
@@ -6156,7 +6158,7 @@ CREATE FUNCTION kinton_accounting.ABQ_VM_ID_TO_NAME(id INT)
    DETERMINISTIC
     BEGIN
      DECLARE vName VARCHAR(255);
-     SELECT vmName INTO vName FROM kinton_accounting.vm_name v WHERE v.idVM=id;
+     SELECT vmName INTO vName FROM kinton_accounting.vm_name vm WHERE vm.idVM=id;
      RETURN vName;
     END|
 DELIMITER ;
@@ -6171,62 +6173,165 @@ DROP PROCEDURE IF EXISTS kinton_accounting.migrate_accounting_data;
 DELIMITER |
 CREATE PROCEDURE kinton_accounting.migrate_accounting_data() 
 BEGIN
-    SELECT COUNT(*) INTO @migratedCount FROM kinton_accounting.accounting_event_detail;
-    IF @migratedCount = 0 THEN
-        SELECT "Copying existing accounting data into optimized tables (might take a while!)..." as " ";
+    DECLARE batch_size INT;
+    DECLARE last_batch INT;
+    DECLARE last_batch_size INT;
+    DECLARE processed_startTime TIMESTAMP;
+    DECLARE target_startTime TIMESTAMP;
+    DECLARE migrationStartTime TIMESTAMP;
 
-        INSERT INTO kinton_accounting.accounting_event_detail
-            (   startTime, endTime,
-                idAccountingResourceType, resourceType, resourceUnits, resourceName, 
-                idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
-                costCode, idStorageTier, version_c
-            )
-            SELECT
-                startTime, endTime,
-                idAccountingResourceType, kinton_accounting.ABQ_OBJECT_NAME_TO_ID(resourceType),
-                resourceUnits, kinton_accounting.ABQ_OBJECT_NAME_TO_ID(resourceName), 
-                kinton_accounting.ABQ_ADD_ENT_NAME(idEnterprise, enterpriseName),
-                kinton_accounting.ABQ_ADD_VDC_NAME(idVirtualDataCenter, virtualDataCenter),
-                kinton_accounting.ABQ_ADD_VAPP_NAME(idVirtualApp, virtualApp),
-                kinton_accounting.ABQ_ADD_VM_NAME(idVirtualMachine, virtualMachine),
-                IF(idAccountingResourceType=1,costCode,NULL),
-                idStorageTier, version_c    
-            FROM
-            (
-                SELECT 
-                    `accounting_event_detail`.`startTime`  AS `startTime`,
-                    `accounting_event_detail`.`endTime` AS `endTime`,
-                    `accounting_event_detail`.`idAccountingResourceType` AS `idAccountingResourceType`,
-                    `accounting_event_detail`.`resourceType` AS `resourceType`,
-                    `accounting_event_detail`.`resourceName` AS `resourceName`,
-                    MAX(`accounting_event_detail`.`resourceUnits`)  AS `resourceUnits`, # Use the max resources reported in the hour, where multiple entries exist!
-                    `accounting_event_detail`.`idEnterprise` AS `idEnterprise`,
-                    `accounting_event_detail`.`idVirtualDataCenter` AS `idVirtualDataCenter`,
-                    `accounting_event_detail`.`idVirtualApp` AS `idVirtualApp`,
-                    `accounting_event_detail`.`idVirtualMachine` AS `idVirtualMachine`,
-                    `accounting_event_detail`.`enterpriseName` AS `enterpriseName`,
-                    `accounting_event_detail`.`virtualDataCenter` AS `virtualDataCenter`,
-                    `accounting_event_detail`.`virtualApp` AS `virtualApp`,
-                    `accounting_event_detail`.`virtualMachine` AS `virtualMachine`,
-                    `accounting_event_detail`.`costCode` AS `costCode`,
-                    `accounting_event_detail`.`idStorageTier` AS `idStorageTier`,
-                    version_c
-                FROM kinton.`accounting_event_detail`
-                GROUP BY 
-                    `accounting_event_detail`.`startTime`,
-                    `accounting_event_detail`.`endTime`,
-                    `accounting_event_detail`.`idAccountingResourceType`,
-                    `accounting_event_detail`.`resourceName`,
-                    `accounting_event_detail`.`idEnterprise`,
-                    `accounting_event_detail`.`idVirtualDataCenter`,
-                    `accounting_event_detail`.`idVirtualApp`,
-                    `accounting_event_detail`.`idVirtualMachine`,
-                    `accounting_event_detail`.`costCode`
-            ) TMP_HOURLY_USAGE_MAX_VW_EXTENDED;
+    DECLARE rowsToProcess BIGINT;
+    DECLARE rowsProcessed BIGINT;
+
+    IF EXISTS(SELECT * FROM information_schema.tables WHERE table_schema= 'kinton' AND table_name='accounting_event_detail' AND table_type='BASE TABLE') THEN
+        SELECT CONCAT("Detected old kinton.accounting_event_detail table, will migrate data from it...") as " ";
+        SELECT NOW() AS 'Migrate START';
+
+        SELECT MAX(startTime) INTO processed_startTime FROM kinton_accounting.accounting_event_detail;
+        IF (processed_startTime IS NULL) THEN
+            SELECT TIMESTAMPADD(HOUR,-1,MIN(startTime)) INTO processed_startTime FROM kinton.accounting_event_detail;
+        END IF;
+        SELECT MAX(startTime), COUNT(*) INTO target_startTime, rowsToProcess FROM kinton.accounting_event_detail WHERE startTime > processed_startTime;
+        SELECT 0 INTO rowsProcessed;
+
+        SELECT CONCAT("Copying existing accounting data into optimized tables, migrating ", rowsToProcess, " accounting data rows from ", QUOTE(processed_startTime), " to ",  QUOTE(target_startTime)) as " ";
+
+        # Create buffer variables and CREATE TMP table to hold intermediate data...
+        SET last_batch=0;
+        SELECT 100000 INTO batch_size;
+
+        IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='tmp_accounting_event_detail') THEN
+            CREATE TEMPORARY TABLE kinton_accounting.tmp_accounting_event_detail (
+              `idAccountingEvent` bigint(20) NOT NULL auto_increment,
+              `startTime` timestamp NOT NULL default '0000-00-00 00:00:00',
+              `endTime` timestamp NOT NULL default '0000-00-00 00:00:00',
+              `idAccountingResourceType` tinyint(4) NOT NULL,
+              `resourceType` varchar(255) NOT NULL,
+              `resourceUnits` bigint(20) NOT NULL,
+              `resourceName` varchar(511) NOT NULL,
+              `idEnterprise` int(11) unsigned NOT NULL,
+              `idVirtualDataCenter` int(11) unsigned NOT NULL,
+              `idVirtualApp` int(11) unsigned default NULL,
+              `idVirtualMachine` int(11) unsigned default NULL,
+              `enterpriseName` varchar(255) NOT NULL,
+              `virtualDataCenter` varchar(255) NOT NULL,
+              `virtualApp` varchar(255) DEFAULT NULL,
+              `virtualMachine` varchar(255) DEFAULT NULL,
+              `costCode` int(4) default NULL,
+              `idStorageTier` int(10) default NULL,
+              `version_c` int(11) default '0',
+              PRIMARY KEY  (`idAccountingEvent`)
+            ) ENGINE=InnoDB
+            AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+        ELSE
+            DELETE FROM kinton_accounting.tmp_accounting_event_detail;
+        END IF;
+
+        SELECT NOW() INTO migrationStartTime;
+        WHILE (last_batch=0) DO
+            SELECT CONCAT("Processing BATCH from ", QUOTE(processed_startTime), " target batch size is ",  QUOTE(batch_size)) as " ";
+            
+            # Read a small batch of data from the main table into a TMP table where it is easier to process
+            PREPARE STMT FROM
+                        "INSERT INTO kinton_accounting.tmp_accounting_event_detail
+                        (   startTime, endTime,
+                            idAccountingResourceType, resourceType, resourceUnits, resourceName, 
+                            idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
+                            enterpriseName, virtualDataCenter, virtualApp, virtualMachine,
+                            costCode, idStorageTier, version_c
+                        )
+                        SELECT startTime, endTime,
+                            idAccountingResourceType, resourceType, resourceUnits, resourceName, 
+                            idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
+                            enterpriseName, virtualDataCenter, virtualApp, virtualMachine,
+                            costCode, idStorageTier, version_c
+                        FROM kinton.accounting_event_detail
+                        WHERE startTime > ?
+                        ORDER BY startTime ASC LIMIT 0, ?";
+            SET @pst = processed_startTime;
+            set @bs = batch_size;
+            EXECUTE STMT USING @pst, @bs;
+            
+            SELECT COUNT(*) INTO last_batch_size FROM kinton_accounting.tmp_accounting_event_detail;
+            SELECT CONCAT("TMP table populated with a batch of ", QUOTE(last_batch_size), " rows") AS " ";
+
+            IF (last_batch_size < batch_size) THEN
+                SELECT CONCAT("Detected **LAST** BATCH to process!") AS " ";
+                SELECT 1 INTO last_batch;
+            ELSE
+                # Remove any rows from this batch that may be in the next batch...
+                SELECT MAX(startTime) INTO @batch_last_startTime FROM kinton_accounting.tmp_accounting_event_detail;
+                
+                SELECT CONCAT("Pruning entries with the following startTime from the batch - ", QUOTE(@batch_last_startTime)) AS " ";
+                DELETE FROM kinton_accounting.tmp_accounting_event_detail WHERE startTime=@batch_last_startTime;
+            END IF;
+
+            #   Now INSERT the rows from the TMP table INTO kinton_accounting.accounting_event_detail...
+            SELECT CONCAT("Inserting data from TMP table into new kinton_accounting.accounting_event_detail table...") AS " ";
+            INSERT INTO kinton_accounting.accounting_event_detail
+                (   startTime, endTime,
+                    idAccountingResourceType, resourceType, resourceUnits, resourceName, 
+                    idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
+                    costCode, idStorageTier, version_c
+                )
+                SELECT
+                    startTime, endTime,
+                    idAccountingResourceType, kinton_accounting.ABQ_OBJECT_NAME_TO_ID(resourceType),
+                    resourceUnits, kinton_accounting.ABQ_OBJECT_NAME_TO_ID(resourceName), 
+                    kinton_accounting.ABQ_ADD_ENT_NAME(idEnterprise, enterpriseName),
+                    kinton_accounting.ABQ_ADD_VDC_NAME(idVirtualDataCenter, virtualDataCenter),
+                    kinton_accounting.ABQ_ADD_VAPP_NAME(idVirtualApp, virtualApp),
+                    kinton_accounting.ABQ_ADD_VM_NAME(idVirtualMachine, virtualMachine),
+                    IF(idAccountingResourceType=1,costCode,NULL),
+                    idStorageTier, version_c    
+                FROM
+                (
+                    SELECT 
+                        `tmp_accounting_event_detail`.`startTime`  AS `startTime`,
+                        `tmp_accounting_event_detail`.`endTime` AS `endTime`,
+                        `tmp_accounting_event_detail`.`idAccountingResourceType` AS `idAccountingResourceType`,
+                        `tmp_accounting_event_detail`.`resourceType` AS `resourceType`,
+                        `tmp_accounting_event_detail`.`resourceName` AS `resourceName`,
+                        MAX(`tmp_accounting_event_detail`.`resourceUnits`)  AS `resourceUnits`, # Use the max resources reported in the hour, where multiple entries exist!
+                        `tmp_accounting_event_detail`.`idEnterprise` AS `idEnterprise`,
+                        `tmp_accounting_event_detail`.`idVirtualDataCenter` AS `idVirtualDataCenter`,
+                        `tmp_accounting_event_detail`.`idVirtualApp` AS `idVirtualApp`,
+                        `tmp_accounting_event_detail`.`idVirtualMachine` AS `idVirtualMachine`,
+                        `tmp_accounting_event_detail`.`enterpriseName` AS `enterpriseName`,
+                        `tmp_accounting_event_detail`.`virtualDataCenter` AS `virtualDataCenter`,
+                        `tmp_accounting_event_detail`.`virtualApp` AS `virtualApp`,
+                        `tmp_accounting_event_detail`.`virtualMachine` AS `virtualMachine`,
+                        `tmp_accounting_event_detail`.`costCode` AS `costCode`,
+                        `tmp_accounting_event_detail`.`idStorageTier` AS `idStorageTier`,
+                        version_c
+                    FROM kinton_accounting.tmp_accounting_event_detail
+                    GROUP BY 
+                        `tmp_accounting_event_detail`.`startTime`,
+                        `tmp_accounting_event_detail`.`endTime`,
+                        `tmp_accounting_event_detail`.`idAccountingResourceType`,
+                        `tmp_accounting_event_detail`.`resourceName`,
+                        `tmp_accounting_event_detail`.`idEnterprise`,
+                        `tmp_accounting_event_detail`.`idVirtualDataCenter`,
+                        `tmp_accounting_event_detail`.`idVirtualApp`,
+                        `tmp_accounting_event_detail`.`idVirtualMachine`,
+                        `tmp_accounting_event_detail`.`costCode`
+                ) TMP_HOURLY_USAGE_MAX_VW_EXTENDED;
+
+            #SELECT CONCAT("Purging content of the TMP table...") AS " ";
+            # Finally update the next startTime we should use for processing the next batch...
+            SELECT MAX(startTime) INTO processed_startTime FROM kinton_accounting.tmp_accounting_event_detail;
+
+            # And truncate the TMP table ready for the next batch of data...
+            DELETE FROM kinton_accounting.tmp_accounting_event_detail;
+            SELECT rowsProcessed + ROW_COUNT() INTO rowsProcessed;
+            SELECT CONCAT("STATUS - Migration ", (rowsProcessed/rowsToProcess) * 100, "% Complete, estimated Time remaining is ",
+                            ((TIMESTAMPDIFF(SECOND, migrationStartTime, NOW())/rowsProcessed) * (rowsToProcess - rowsProcessed))/60, " minutes.") AS " ";
+        END WHILE;
 
         SELECT "Copy of existing accounting data complete!" as " ";
+        SELECT NOW() AS 'Migrate STOP';
     ELSE
-        SELECT "kinton_accounting.accounting_event_detail already contains data, so data migration was skipped!" as " ";
+        SELECT "kinton_accounting.accounting_event_detail already migrated, so data migration was skipped!" as " ";
     END IF;
 END;
 |
@@ -6367,19 +6472,20 @@ BEGIN
         (UNIX_TIMESTAMP(`accounting_event_vm`.`stopTime`) - UNIX_TIMESTAMP(`accounting_event_vm`.`startTime`)) AS `DELTA_TIME`,
         period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`
         period_end AS `PERIOD_END`,
-        CONCAT(IF(ISNULL(`virtualmachine`.`description`),_utf8'',substr(`virtualmachine`.`description`,1,120)),_utf8' - ',`virtualmachine`.`name`) AS `VIRTUAL_MACHINE`,
-        `virtualapp`.`name` AS `VIRTUAL_APP`,
-        `virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,
-        `enterprise`.`name` AS `VIRTUAL_ENTERPRISE`
+        `vm_name`.`vmName` AS `VIRTUAL_MACHINE`,
+        `vapp_name`.`vappName` AS `VIRTUAL_APP`,
+        `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
+        `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE`
     FROM
         kinton.`accounting_event_vm`
-        JOIN kinton.`virtualmachine` on(`accounting_event_vm`.`idVM` = `virtualmachine`.`idVM`)
-        JOIN kinton.`virtualapp` on(`accounting_event_vm`.`idVirtualApp` = `virtualapp`.`idVirtualApp`)
-        JOIN kinton.`virtualdatacenter` on(`accounting_event_vm`.`idVirtualDataCenter` = `virtualdatacenter`.`idVirtualDataCenter`)
-        JOIN kinton.`enterprise` on(`accounting_event_vm`.`idEnterprise` = `enterprise`.`idEnterprise`)
+        JOIN kinton_accounting.`vm_name` on(`accounting_event_vm`.`idVM` = kinton_accounting.`vm_name`.`idVM`)
+        JOIN kinton_accounting.`vapp_name` on(`accounting_event_vm`.`idVirtualApp` = kinton_accounting.`vapp_name`.`idVirtualApp`)
+        JOIN kinton_accounting.`vdc_name` on(`accounting_event_vm`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
+        JOIN kinton_accounting.`ent_name` on(`accounting_event_vm`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
     WHERE
         # Is currently active, and was active prior to the end of the account period
-        (`accounting_event_vm`.`startTime` <= period_end AND `accounting_event_vm`.`stopTime` IS NULL) OR
+        (`accounting_event_vm`.`startTime` < period_end AND 
+         (`accounting_event_vm`.stopTime IS NULL OR `accounting_event_vm`.stopTime >= period_end)) OR
         # OR stopped running during the account period
         ((`accounting_event_vm`.stopTime >= period_start) AND (`accounting_event_vm`.stopTime < period_end));
 
@@ -6403,15 +6509,16 @@ BEGIN
         (UNIX_TIMESTAMP(`accounting_event_storage`.stopTime) - UNIX_TIMESTAMP(`accounting_event_storage`.startTime)) AS `DELTA_TIME`,
         period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`,
         period_end AS `PERIOD_END`,
-        `virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,
-        `enterprise`.`name` AS `VIRTUAL_ENTERPRISE` 
+        `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
+        `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE` 
      FROM 
         kinton.`accounting_event_storage`
-        JOIN kinton.`virtualdatacenter` ON(`accounting_event_storage`.idVirtualDataCenter = `virtualdatacenter`.`idVirtualDataCenter`)
-        JOIN kinton.`enterprise` ON(`accounting_event_storage`.idEnterprise = `enterprise`.`idEnterprise`) 
+        JOIN kinton_accounting.`vdc_name` on(`accounting_event_storage`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
+        JOIN kinton_accounting.`ent_name` on(`accounting_event_storage`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
      WHERE 
         # Is currently active, and was active prior to the end of the account period
-        (`accounting_event_storage`.`startTime` <= period_end AND `accounting_event_storage`.stopTime IS NULL) OR
+        (`accounting_event_storage`.`startTime` < period_end AND 
+         (`accounting_event_storage`.stopTime IS NULL OR `accounting_event_storage`.stopTime >= period_end)) OR
         # OR stopped running during the account period
         ((`accounting_event_storage`.stopTime >= period_start) AND (`accounting_event_storage`.stopTime < period_end));
 
@@ -6430,15 +6537,16 @@ BEGIN
         (unix_timestamp(`accounting_event_ips`.stopTime) - unix_timestamp(`accounting_event_ips`.startTime)) AS `DELTA_TIME`,
         period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`,
         period_end AS `PERIOD_END`,
-        `virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,
-        `enterprise`.`name` AS `VIRTUAL_ENTERPRISE` 
+        `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
+        `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE` 
     FROM 
         kinton.`accounting_event_ips`
-        JOIN kinton.`virtualdatacenter`ON (`accounting_event_ips`.idVirtualDataCenter = `virtualdatacenter`.`idVirtualDataCenter`)
-        JOIN kinton.`enterprise` ON (`accounting_event_ips`.idEnterprise = `enterprise`.`idEnterprise`) 
+        JOIN kinton_accounting.`vdc_name` on(`accounting_event_ips`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
+        JOIN kinton_accounting.`ent_name` on(`accounting_event_ips`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
     WHERE
         # IP Is currently RESERVED, and was reserved prior to the end of the account period
-        (`accounting_event_ips`.`startTime` <= period_end AND `accounting_event_ips`.stopTime IS NULL) OR
+        (`accounting_event_ips`.`startTime` < period_end AND 
+         (`accounting_event_ips`.stopTime IS NULL OR `accounting_event_ips`.stopTime >= period_end)) OR
         # IP stopped being reserved during the account period
         ((`accounting_event_ips`.stopTime >= period_start) AND (`accounting_event_ips`.stopTime < period_end));
 
@@ -6457,15 +6565,16 @@ BEGIN
         (unix_timestamp(`accounting_event_vlan`.stopTime) - unix_timestamp(`accounting_event_vlan`.startTime)) AS `DELTA_TIME`,
         period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`,
         period_end AS `PERIOD_END`,
-        `virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,
-        `enterprise`.`name` AS `VIRTUAL_ENTERPRISE` 
+        `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
+        `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE` 
     FROM 
         kinton.`accounting_event_vlan`
-        JOIN kinton.`virtualdatacenter` ON (`accounting_event_vlan`.idVirtualDataCenter = `virtualdatacenter`.`idVirtualDataCenter`)
-        JOIN kinton.`enterprise` ON (`accounting_event_vlan`.idEnterprise = `enterprise`.`idEnterprise`)
+        JOIN kinton_accounting.`vdc_name` on(`accounting_event_vlan`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
+        JOIN kinton_accounting.`ent_name` on(`accounting_event_vlan`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
     WHERE 
         # VLAN is still Reserved
-        (`accounting_event_vlan`.`startTime` <= period_end AND `accounting_event_vlan`.stopTime IS NULL) OR
+        (`accounting_event_vlan`.`startTime` < period_end AND 
+         (`accounting_event_vlan`.stopTime IS NULL OR `accounting_event_vlan`.stopTime >= period_end)) OR
         # VLAN stopped being reserved during the account period
         ((`accounting_event_vlan`.stopTime >= period_start) AND (`accounting_event_vlan`.stopTime < period_end));
 END|

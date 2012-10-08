@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `kinton`.`DATABASECHANGELOGLOCK` (
 -- Update Database Script
 -- *********************************************************************
 -- Change Log: src/2.2/kinton-2.2.xml
--- Ran at: 8/14/12 2:09 AM
+-- Ran at: 10/5/12 2:15 AM
 -- Against: root@10.60.20.42@jdbc:mysql://10.60.20.42:3306/kinton
 -- Liquibase version: 2.0.3
 -- *********************************************************************
@@ -118,6 +118,11 @@ ALTER TABLE `kinton`.`role` ADD CONSTRAINT `fk_role_scope` FOREIGN KEY (`idScope
 
 INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-constraints1', '2.0.3', '3:bd3389b3752100eb6a4262004441e391', 15);
 
+-- Changeset src/2.2/kinton-2.2.xml::fixWrongDBEngine::destevez::(Checksum: 3:c2313c070f2d1d0c561c27d2b46995ba)
+ALTER TABLE metering ENGINE=InnoDB;
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'fixWrongDBEngine', '2.0.3', '3:c2313c070f2d1d0c561c27d2b46995ba', 16);
+
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-update-and-inserts::zmalik::(Checksum: 3:2d4ecdd62de718f0b6f8e4b653909ebf)
 INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (54, 'USERS_MANAGE_SCOPES', 0);
 
@@ -125,39 +130,129 @@ INSERT INTO `kinton`.`scope` (`autoDat`, `autoEnt`, `id`, `name`, `version_c`) V
 
 UPDATE `kinton`.`role` SET `idScope` = '1';
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row (x2), Update Data', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-update-and-inserts', '2.0.3', '3:2d4ecdd62de718f0b6f8e4b653909ebf', 16);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row (x2), Update Data', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-update-and-inserts', '2.0.3', '3:2d4ecdd62de718f0b6f8e4b653909ebf', 17);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-admin::zmalik::(Checksum: 3:af289f7006bdc919bc053d038cbdbf25)
 INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (54, 1, 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-admin', '2.0.3', '3:af289f7006bdc919bc053d038cbdbf25', 17);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-admin', '2.0.3', '3:af289f7006bdc919bc053d038cbdbf25', 18);
 
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-0::jdevesa::(Checksum: 3:e9dbdc6f9338442109d48d92ff76a76a)
-CREATE TABLE `kinton`.`dvd_management` (`idManagement` INT UNSIGNED NOT NULL, `idImage` INT UNSIGNED);
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-0::jdevesa::(Checksum: 3:8d84d03c13f8b54bc6f46b47b3b4c6f2)
+CREATE TABLE `kinton`.`dvd_management` (`idManagement` INT UNSIGNED NOT NULL, `idImage` INT UNSIGNED) engine innodb default charset=utf8;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-0', '2.0.3', '3:e9dbdc6f9338442109d48d92ff76a76a', 18);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-0', '2.0.3', '3:8d84d03c13f8b54bc6f46b47b3b4c6f2', 19);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-1::jdevesa::(Checksum: 3:6a705cc1e1c2c2ba4a9eec6a0a430623)
 ALTER TABLE `kinton`.`dvd_management` ADD CONSTRAINT `dvd_management_image_FK` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE NO ACTION;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-1', '2.0.3', '3:6a705cc1e1c2c2ba4a9eec6a0a430623', 19);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-1', '2.0.3', '3:6a705cc1e1c2c2ba4a9eec6a0a430623', 20);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-2::jdevesa::(Checksum: 3:423310274c7be31be9d4435fca0d23f6)
 ALTER TABLE `kinton`.`dvd_management` ADD CONSTRAINT `dvd_idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-2', '2.0.3', '3:423310274c7be31be9d4435fca0d23f6', 20);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-2', '2.0.3', '3:423310274c7be31be9d4435fca0d23f6', 21);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4033::xthevenot::(Checksum: 3:ee17d425d7bbd7981fff90e0876dec5f)
 INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Default index view (0 is the Home, 1 Infrastructure, ...)', 'client.main.defaultView', '0', 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4033', '2.0.3', '3:ee17d425d7bbd7981fff90e0876dec5f', 21);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4033', '2.0.3', '3:ee17d425d7bbd7981fff90e0876dec5f', 22);
+
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4344::xthevenot::(Checksum: 3:413e9afa18ea719bd4c58a7c468fdd6e)
+INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show soft limit info (1 show, 0 hide)', 'client.main.showSoftInfo', '1', 0);
+
+INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show hard limit info (1 show, 0 hide)', 'client.main.showHardInfo', '1', 0);
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4344', '2.0.3', '3:413e9afa18ea719bd4c58a7c468fdd6e', 23);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3910::xthevenot::(Checksum: 3:d6ef777a6b393e0a780b4a233d4c6884)
 INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (55, 'USERS_MANAGE_RESERVED_MACHINES', 0);
 
 INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (55, 1, 0);
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3910', '2.0.3', '3:d6ef777a6b393e0a780b4a233d4c6884', 22);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3910', '2.0.3', '3:d6ef777a6b393e0a780b4a233d4c6884', 24);
+
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4407::xthevenot::(Checksum: 3:7eb210f7ec2e3d8c4db8200a88d892bd)
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement' WHERE name='client.wiki.allocation.datacenter' AND value='http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement' WHERE name='client.wiki.allocation.global' AND value='http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem' WHERE name='client.wiki.apps.uploadVM' AND value='http://community.abiquo.com/display/ABI20/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view' WHERE name='client.wiki.config.general' AND value='http://community.abiquo.com/display/ABI20/Configuration+view';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view#ConfigurationView-Heartbeat' WHERE name='client.wiki.config.heartbeat' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-Heartbeating';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view#ConfigurationView-LicenseManagement' WHERE name='client.wiki.config.licence' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-LicenseManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI20/Configuration+view#Configurationview-ProductRegistration' WHERE name='client.wiki.config.registration' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#Configurationview-ProductRegistration';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Abiquo+Documentation+Home' WHERE name='client.wiki.defaultURL' AND value='http://community.abiquo.com/display/ABI20/Abiquo+Documentation+Home';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-DatastoreManagement' WHERE name='client.wiki.infra.addDatastore' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DatastoreManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter' WHERE name='client.wiki.infra.createDatacenter' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-CreatingMultiplePhysicalMachines' WHERE name='client.wiki.infra.createMultiplePhysicalMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingMultiplePhysicalMachines';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-CreatingPhysicalMachinesonStandardRacks' WHERE name='client.wiki.infra.createPhysicalMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingPhysicalMachinesonStandardRacks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Racks#ManageRacks-CreatingRacks' WHERE name='client.wiki.infra.createRack' AND value='http://community.abiquo.com/display/ABI20/Manage+Racks#ManageRacks-CreatingRacks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-DiscoveringBladesonManagedRacks' WHERE name='client.wiki.infra.discoverBlades' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DiscoveringBladesonManagedRacks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter' WHERE name='client.wiki.infra.editDatacenter' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-RemoteServices' WHERE name='client.wiki.infra.editRemoteService' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-RemoteServices';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-SendingEmailNotifications' WHERE name='client.wiki.infra.mailNotification' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-SendingEmailNotifications';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks' WHERE name='client.wiki.network.publicVlan' AND value='http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCPforPublicandExternalNetworks' WHERE name='client.wiki.network.staticRoutes' AND value='http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCP';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-CostCodesTab' WHERE name='client.wiki.pricing.createCostCode' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CostCodesTab';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-CurrenciesTab' WHERE name='client.wiki.pricing.createCurrency' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CurrenciesTab';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-PricingModelsTab' WHERE name='client.wiki.pricing.createTemplate' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-PricingModelsTab';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-ManagedStorage' WHERE name='client.wiki.storage.storageDevice' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-ManagedStorage';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-StoragePools' WHERE name='client.wiki.storage.storagePool' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-StoragePools';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-TierManagement' WHERE name='client.wiki.storage.tier' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-TierManagement';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Enterprises#ManageEnterprises-CreatingorEditinganEnterprise' WHERE name='client.wiki.user.createEnterprise' AND value='http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-CreatingorEditinganEnterprise';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Roles' WHERE name='client.wiki.user.createRole' AND value='http://community.abiquo.com/display/ABI20/Manage+Roles+and+Privileges';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Users#ManageUsers-CreatingorEditingaUser' WHERE name='client.wiki.user.createUser' AND value='http://community.abiquo.com/display/ABI20/Manage+Users#ManageUsers-CreatingorEditingaUser';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Enterprises#ManageEnterprises-EdittheEnterprise%27sDatacenters' WHERE name='client.wiki.user.dataCenterLimits' AND value='http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-EdittheEnterprise%27sDatacenters';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Networks#ManageNetworks-CreateaPrivateVLAN' WHERE name='client.wiki.vdc.createPrivateNetwork' AND value='http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-CreateaPrivateVLAN';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Networks#ManageNetworks-PublicIPReservation' WHERE name='client.wiki.vdc.createPublicNetwork' AND value='http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-PublicIPReservation';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance' WHERE name='client.wiki.vdc.createVapp' AND value='http://community.abiquo.com/display/ABI20/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter' WHERE name='client.wiki.vdc.createVdc' AND value='http://community.abiquo.com/display/ABI20/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage' WHERE name='client.wiki.vdc.createVolume' AND value='http://community.abiquo.com/display/ABI20/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanInstance' WHERE name='client.wiki.vm.bundleVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanInstance';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Imported+Virtual+Machines' WHERE name='client.wiki.vm.captureVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-WorkingwithImportedVirtualMachines';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Create+Virtual+Machine+instances' WHERE name='client.wiki.vm.createInstance' AND value='http://community.abiquo.com/display/ABI20/Create+Virtual+Machine+instances';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface' WHERE name='client.wiki.vm.createNetworkInterface' AND value='http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Create+Persistent+Virtual+Machines' WHERE name='client.wiki.vm.createStateful' AND value='http://community.abiquo.com/display/ABI20/Create+Persistent+Virtual+Machines';
+
+UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+Virtual+Machines' WHERE name='client.wiki.vm.editVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines';
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Update Data (x40)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4407', '2.0.3', '3:7eb210f7ec2e3d8c4db8200a88d892bd', 25);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3658::scastro::(Checksum: 3:76559c1d1d91c98c23197868335d8b30)
 DROP TABLE `kinton`.`node_virtual_image_stateful_conversions`;
@@ -166,7 +261,7 @@ DROP TABLE `kinton`.`diskstateful_conversions`;
 
 DROP TABLE `kinton`.`vappstateful_conversions`;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('scastro', '', NOW(), 'Drop Table (x3)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3658', '2.0.3', '3:76559c1d1d91c98c23197868335d8b30', 23);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('scastro', '', NOW(), 'Drop Table (x3)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3658', '2.0.3', '3:76559c1d1d91c98c23197868335d8b30', 26);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3898::destevez::(Checksum: 3:de10ff87abd570bc74a50ce7455b7720)
 DROP TRIGGER IF EXISTS delete_nodevirtualimage_update_stats;
@@ -248,7 +343,7 @@ CREATE TRIGGER delete_nodevirtualimage_update_stats AFTER DELETE ON nodevirtuali
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3898', '2.0.3', '3:de10ff87abd570bc74a50ce7455b7720', 24);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3898', '2.0.3', '3:de10ff87abd570bc74a50ce7455b7720', 27);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3727::destevez::(Checksum: 3:ce98b001ef068af5bcb4f1c2e37d5a28)
 DROP TRIGGER IF EXISTS update_virtualmachine_update_stats;
@@ -373,9 +468,64 @@ CREATE TRIGGER update_virtualmachine_update_stats AFTER UPDATE ON virtualmachine
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3727', '2.0.3', '3:ce98b001ef068af5bcb4f1c2e37d5a28', 25);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3727', '2.0.3', '3:ce98b001ef068af5bcb4f1c2e37d5a28', 28);
 
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4059-4114::destevez::(Checksum: 3:2b2dd67788b94b5af2a1445377d8bbb2)
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-2435::destevez::(Checksum: 3:04d9543a931fc7e2ff308c00600f48aa)
+DROP TRIGGER IF EXISTS update_ip_pool_management_update_stats;
+
+DELIMITER |
+CREATE TRIGGER update_ip_pool_management_update_stats AFTER UPDATE ON ip_pool_management
+    FOR EACH ROW BEGIN
+        DECLARE idDataCenterObj INTEGER;
+        DECLARE idVirtualDataCenterObj INTEGER;
+        DECLARE idEnterpriseObj INTEGER;
+	   DECLARE networkTypeObj VARCHAR(15);
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+		SELECT vn.networktype, dc.idDataCenter INTO networkTypeObj, idDataCenterObj
+		FROM vlan_network vn, datacenter dc
+		WHERE dc.network_id = vn.network_id
+		AND OLD.vlan_network_id = vn.vlan_network_id;
+		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('update_ip_pool_management_update_stats', '-', OLD.ip, '-',OLD.available,'-', NEW.available,'-', IFNULL(networkTypeObj,'NULL'), '-', IFNULL(idDataCenterObj,'NULL')));
+		IF networkTypeObj = 'PUBLIC' THEN		
+			IF OLD.available=FALSE AND NEW.available=TRUE THEN
+				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal+1 WHERE idDataCenter = idDataCenterObj;
+			END IF;
+			IF OLD.available=TRUE AND NEW.available=FALSE THEN
+				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal-1 WHERE idDataCenter = idDataCenterObj;
+			END IF;
+		END IF;
+	    -- Checks for public available 
+            -- Checks for reserved IPs		
+            IF OLD.mac IS NULL AND NEW.mac IS NOT NULL THEN
+                -- Query for datacenter
+                SELECT vdc.idDataCenter, vdc.idVirtualDataCenter, vdc.idEnterprise  INTO idDataCenterObj, idVirtualDataCenterObj, idEnterpriseObj
+                FROM rasd_management rm, virtualdatacenter vdc, vlan_network vn
+                WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
+			AND NEW.vlan_network_id = vn.vlan_network_id
+			AND vn.networktype = 'PUBLIC'
+			AND NEW.idManagement = rm.idManagement;
+                -- New Public IP assignment for a VDC ---> Reserved
+                UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed+1 WHERE idDataCenter = idDataCenterObj;
+                UPDATE IGNORE enterprise_resources_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idEnterprise = idEnterpriseObj;
+                UPDATE IGNORE vdc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idVirtualDataCenter = idVirtualDataCenterObj;
+                UPDATE IGNORE dc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idDataCenter = idDataCenterObj;
+                IF (idDataCenterObj IS NOT NULL AND idVirtualDataCenterObj IS NOT NULL AND idEnterpriseObj IS NOT NULL) THEN
+                	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Reserved IP: ',IFNULL(idEnterpriseObj,'entnull'),IFNULL(idDataCenterObj,'dcnull'),IFNULL(idVirtualDataCenterObj,'vdcnull')));
+                	IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
+                    	CALL AccountingIPsRegisterEvents('IP_RESERVED',NEW.idManagement,NEW.ip,idVirtualDataCenterObj, idEnterpriseObj);
+                	END IF;
+                END IF;
+            END IF;
+        END IF;
+    END;
+|
+DELIMITER ;
+
+DELETE FROM accounting_event_ips WHERE idEnterprise=0 AND idVirtualDataCenter=0;
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-2435', '2.0.3', '3:04d9543a931fc7e2ff308c00600f48aa', 29);
+
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4059-4114-4417::destevez::(Checksum: 3:ce0db9bbe48b0e59292c3aa7ef1aae7a)
 DROP PROCEDURE IF EXISTS CalculateEnterpriseResourcesStats;
 
 DELIMITER |
@@ -421,14 +571,14 @@ CREATE PROCEDURE CalculateEnterpriseResourcesStats()
     --
     SELECT IF (SUM(vm.cpu) IS NULL, 0, SUM(vm.cpu)), IF (SUM(vm.ram) IS NULL, 0, SUM(vm.ram)), IF (SUM(vm.hd) IS NULL, 0, SUM(vm.hd)) INTO vCpuUsed, memoryUsed, localStorageUsed
     FROM virtualmachine vm
-    WHERE vm.state = "ON"
+    WHERE vm.state IN ("ON","OFF","PAUSED")
     AND vm.idType = 1
     AND vm.idEnterprise = idEnterpriseObj;
     --
     SELECT IFNULL(SUM(limitResource),0) * 1048576  INTO extraHDUsed
 	FROM rasd_management rm, rasd r, virtualmachine vm 
 	WHERE rm.idResource = r.instanceID AND rm.idVM = vm.idVM AND rm.idResourceType=17
-	AND vm.state="ON"
+	AND vm.state IN ("ON","OFF","PAUSED")
 	AND vm.idType=1
 	AND vm.idEnterprise = idEnterpriseObj;   
 	--
@@ -479,7 +629,7 @@ CREATE PROCEDURE CalculateEnterpriseResourcesStats()
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4059-4114', '2.0.3', '3:2b2dd67788b94b5af2a1445377d8bbb2', 26);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4059-4114-4417', '2.0.3', '3:ce0db9bbe48b0e59292c3aa7ef1aae7a', 30);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4127-4114::destevez::(Checksum: 3:be509954d54d99afb53946f5dcb9a2a6)
 DROP PROCEDURE IF EXISTS CalculateVdcEnterpriseStats;
@@ -632,7 +782,7 @@ CREATE PROCEDURE CalculateVdcEnterpriseStats()
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4127-4114', '2.0.3', '3:be509954d54d99afb53946f5dcb9a2a6', 27);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4127-4114', '2.0.3', '3:be509954d54d99afb53946f5dcb9a2a6', 31);
 
 -- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4114-4166::destevez::(Checksum: 3:64ba2418c95dabffd34a95ede7aa3bf8)
 DROP PROCEDURE IF EXISTS CalculateVappEnterpriseStats;
@@ -918,7 +1068,12 @@ CREATE PROCEDURE CalculateCloudUsageStats()
 |
 DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4114-4166', '2.0.3', '3:64ba2418c95dabffd34a95ede7aa3bf8', 28);
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4114-4166', '2.0.3', '3:64ba2418c95dabffd34a95ede7aa3bf8', 32);
+
+-- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4217::jdevesa::(Checksum: 3:b388a8f15cdd350e02dc8622a13bfdb9)
+delete from rasd where instanceid not in (select idresource from rasd_management where idresource is not null);
+
+INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4217', '2.0.3', '3:b388a8f15cdd350e02dc8622a13bfdb9', 33);
 
 -- Release Database Lock
 -- Release Database Lock

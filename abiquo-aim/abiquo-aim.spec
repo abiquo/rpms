@@ -1,7 +1,7 @@
 Name:           abiquo-aim
 BuildRequires:  hiredis gcc-c++ thrift-cpp-devel boost-devel curl-devel libvirt-devel 
 Requires:	libvirt hiredis boost
-Version:        2.0rel1.4.5
+Version:        2.2rel1.5.1
 Release:        1%{?dist}
 Url:            http://www.abiquo.com/
 License:        BSD(or similar)
@@ -58,6 +58,9 @@ if ! [ -d /opt/vm_repository ]; then
 fi
 
 %changelog
+* Mon Sep 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2rel1.5.1-1
+- bumped version 2.2
+
 * Wed Aug 22 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0rel1.4.5-1
 - bumped version, valid datastore types setting
 

@@ -2,7 +2,7 @@
 
 Name:           abiquo-core
 Version: 	2.2.0
-Release: 	1%{?dist}
+Release: 	2%{?dist}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -65,6 +65,9 @@ fi
 %config %{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %changelog
+* Wed Oct 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-2
+- bumped release
+
 * Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
 - new versioning
 
