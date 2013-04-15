@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-remote-services
-Version:  2.2.0
+Version:  2.4.0
 Release:  1%{?dist}
 Summary:  Abiquo Remote Services
 Group:    Development/System 
@@ -57,8 +57,14 @@ EOF
 %{abiquo_basedir}/config/examples/abiquo.properties.remoteservices
 
 %changelog
+* Wed Dec 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
+- Bumped version to 2.4.0
+
+* Tue Oct 23 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.3.0-1
+- Bumped version to 2.3.0
+
 * Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
-- new versioning
+- New versioning
 
 * Fri Jun 08 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2-1
 - Bumped version to 2.2

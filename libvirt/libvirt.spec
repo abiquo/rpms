@@ -147,7 +147,7 @@ Summary: Library providing a simple API virtualization
 Name: libvirt
 Version: 0.8.4
 #Release: 1%{?dist}%{?extra_release}
-Release: 4%{?dist}
+Release: 5%{?dist}
 License: LGPLv2+
 Group: Development/Libraries
 #Source: http://libvirt.org/sources/libvirt-%{version}.tar.gz
@@ -313,6 +313,9 @@ BuildRequires: libxslt-devel
 # Fedora build root suckage
 BuildRequires: gawk
 
+# Patch to support upstream iptables
+Patch0: libvirt-no-iptables-checksum.patch 
+
 %description
 Libvirt is a C toolkit to interact with the virtualization capabilities
 of recent versions of Linux (and other OSes). The main package includes
@@ -365,6 +368,7 @@ of recent versions of Linux (and other OSes).
 
 %prep
 %setup -q
+%patch0 -p1
 
 %build
 %if ! %{with_xen}
@@ -798,6 +802,9 @@ fi
 %endif
 
 %changelog
+* Tue Apr 02 2013 Abel Boldú <abel.boldu@abiquo.com> - 0.8.4-5
+- Iptables rules patch
+
 * Mon Dec 13 2010 Sergio Rubio <srubio@abiquo.com> - 0.8.4-4
 - rebuilt
 

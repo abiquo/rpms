@@ -5,7 +5,7 @@
 
 Summary: Abiquo Elite Toolkit
 Name: rubygem-%{gemname}
-Version: 0.6.2
+Version: 0.6.4
 Release: 1%{?dist}
 Group: Development/Languages
 License: GPLv2+ or Ruby

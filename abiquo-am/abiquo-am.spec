@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-am
-Version:  2.2.0
+Version:  2.4.0
 Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo Appliance Manager
 Group:    Development/System 
@@ -40,6 +40,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Nov 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
+- Bumped version to 2.4
+
+* Wed Oct 17 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.3.0-1
+- bumped version to 2.3.0
+
 * Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
 - new versioning
 

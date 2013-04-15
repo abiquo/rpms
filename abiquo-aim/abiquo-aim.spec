@@ -1,20 +1,25 @@
+%define base_release_version 1.5.3
+
 Name:           abiquo-aim
 BuildRequires:  hiredis gcc-c++ thrift-cpp-devel boost-devel curl-devel libvirt-devel 
-Requires:	libvirt hiredis boost
-Version:        2.2rel1.5.1
-Release:        1%{?dist}
+Requires:	hiredis boost vconfig
+Version:        2.4rel%{base_release_version}
+Release:        2%{?dist}
 Url:            http://www.abiquo.com/
 License:        BSD(or similar)
 Group:          System/Management
 Summary:        Abiquo Cloud Node Agent
-Source:         https://github.com/downloads/abiquo/aim/abiquo-aim-%{version}.tar.bz2 
+Source:		http://mirror.abiquo.com/sources/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Source1:	abiquo-aim.ini
 Source2:	abiquo-aim.init
+Patch0:		abiquo-aim-el6-libboost.patch 
 # Remove this stuff for the next version
 %if 0%{?rhel} == 6
 BuildRequires:  libuuid-devel
 %endif
+
+Requires: libvirt
 
 %description
 Summary:        Abiquo Cloud Node Agent
@@ -26,6 +31,9 @@ Authors:
 
 %prep
 %setup -q
+%if 0%{?rhel} == 6
+%patch0 -p1
+%endif
 
 %build
 CPATH="/usr/include/thrift:/usr/include/hiredis" make
@@ -58,6 +66,18 @@ if ! [ -d /opt/vm_repository ]; then
 fi
 
 %changelog
+* Thu Jan 31 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.4rel1.5.3-2
+- Added vconfig legacy dependency
+
+* Fri Dec 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4rel1.5.3-1
+- Bumped version to 2.4rel1.5.3
+
+* Tue Nov 20 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2rel1.5.2-2
+- Patch for rhel6
+
+* Tue Oct 30 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2rel1.5.2-1
+- Bridges bugfix
+
 * Mon Sep 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2rel1.5.1-1
 - bumped version 2.2
 

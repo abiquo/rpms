@@ -1,1700 +1,2165 @@
 DROP DATABASE IF EXISTS kinton;
 CREATE DATABASE IF NOT EXISTS kinton;
-USE kinton;
-
--- DROP DATABASE IF EXISTS kinton_acounting;
--- CREATE DATABASE IF NOT EXISTS kinton;
--- USE kinton;
--- *********************************************************************
--- Update Database Script
--- *********************************************************************
--- Change Log: src/kinton_master_changelog.xml
--- Ran at: 10/5/12 2:15 AM
--- Against: root@10.60.20.42@jdbc:mysql://10.60.20.42:3306/kinton
--- Liquibase version: 2.0.3
--- *********************************************************************
-
--- Create Database Lock Table
-CREATE TABLE `kinton`.`DATABASECHANGELOGLOCK` (`ID` INT NOT NULL, `LOCKED` TINYINT(1) NOT NULL, `LOCKGRANTED` DATETIME, `LOCKEDBY` VARCHAR(255), CONSTRAINT `PK_DATABASECHANGELOGLOCK` PRIMARY KEY (`ID`));
-
-INSERT INTO `kinton`.`DATABASECHANGELOGLOCK` (`ID`, `LOCKED`) VALUES (1, 0);
-
--- Lock Database
--- Create Database Change Log Table
-CREATE TABLE `kinton`.`DATABASECHANGELOG` (`ID` VARCHAR(63) NOT NULL, `AUTHOR` VARCHAR(63) NOT NULL, `FILENAME` VARCHAR(200) NOT NULL, `DATEEXECUTED` DATETIME NOT NULL, `ORDEREXECUTED` INT NOT NULL, `EXECTYPE` VARCHAR(10) NOT NULL, `MD5SUM` VARCHAR(35), `DESCRIPTION` VARCHAR(255), `COMMENTS` VARCHAR(255), `TAG` VARCHAR(255), `LIQUIBASE` VARCHAR(20), CONSTRAINT `PK_DATABASECHANGELOG` PRIMARY KEY (`ID`, `AUTHOR`, `FILENAME`));
-
--- Changeset src/kinton_master_changelog.xml::sql_mode::destevez::(Checksum: 3:825e3d2ad2e776f91586d6a0f1f70155)
-SET SESSION sql_mode='';
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL', 'EXECUTED', 'src/kinton_master_changelog.xml', 'sql_mode', '2.0.3', '3:825e3d2ad2e776f91586d6a0f1f70155', 1);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-1::destevezg (generated)::(Checksum: 3:1fa499c79ccc8dd6441f5be160a8a20a)
-CREATE TABLE `kinton`.`accounting_event_detail` (`idAccountingEvent` BIGINT AUTO_INCREMENT NOT NULL, `startTime` TIMESTAMP DEFAULT '0000-00-00 00:00:00', `endTime` TIMESTAMP DEFAULT '0000-00-00 00:00:00', `idAccountingResourceType` TINYINT NOT NULL, `resourceType` VARCHAR(255) NOT NULL, `resourceUnits` BIGINT NOT NULL, `resourceName` VARCHAR(511) NOT NULL, `idEnterprise` INT UNSIGNED NOT NULL, `idVirtualDataCenter` INT UNSIGNED NOT NULL, `idVirtualApp` INT UNSIGNED, `idVirtualMachine` INT UNSIGNED, `enterpriseName` VARCHAR(255) NOT NULL, `virtualDataCenter` VARCHAR(255) NOT NULL, `virtualApp` VARCHAR(255), `virtualMachine` VARCHAR(255), `costCode` INT, `idStorageTier` INT, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ACCOUNTING_EVENT_DETAIL` PRIMARY KEY (`idAccountingEvent`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-1', '2.0.3', '3:1fa499c79ccc8dd6441f5be160a8a20a', 2);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-2::destevezg (generated)::(Checksum: 3:a5b0a4d26eaffc3be0bb048d99cf20d1)
-CREATE TABLE `kinton`.`accounting_event_ips` (`idIPsAccountingEvent` BIGINT UNSIGNED AUTO_INCREMENT NOT NULL, `idManagement` INT UNSIGNED NOT NULL, `idEnterprise` INT UNSIGNED NOT NULL, `idVirtualDataCenter` INT UNSIGNED NOT NULL, `ip` VARCHAR(20) NOT NULL, `startTime` TIMESTAMP, `stopTime` TIMESTAMP, `consolidated` TINYINT(1) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ACCOUNTING_EVENT_IPS` PRIMARY KEY (`idIPsAccountingEvent`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-2', '2.0.3', '3:a5b0a4d26eaffc3be0bb048d99cf20d1', 3);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-3::destevezg (generated)::(Checksum: 3:4e9ef329616b20821f92e3b940adbc15)
-CREATE TABLE `kinton`.`accounting_event_storage` (`idStorageAccountingEvent` BIGINT UNSIGNED AUTO_INCREMENT NOT NULL, `idResource` VARCHAR(50), `resourceName` VARCHAR(511), `idVM` INT UNSIGNED, `idStorageTier` INT UNSIGNED, `idEnterprise` INT UNSIGNED NOT NULL, `idVirtualDataCenter` INT UNSIGNED NOT NULL, `idVirtualApp` INT UNSIGNED, `sizeReserved` BIGINT UNSIGNED NOT NULL, `startTime` TIMESTAMP, `stopTime` TIMESTAMP, `consolidated` TINYINT(1) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ACCOUNTING_EVENT_STORAGE` PRIMARY KEY (`idStorageAccountingEvent`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-3', '2.0.3', '3:4e9ef329616b20821f92e3b940adbc15', 4);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-4::destevezg (generated)::(Checksum: 3:a033f02497669d24b6ed860cb02c221c)
-CREATE TABLE `kinton`.`accounting_event_vlan` (`idVLANAccountingEvent` BIGINT UNSIGNED AUTO_INCREMENT NOT NULL, `vlan_network_id` INT UNSIGNED NOT NULL, `idEnterprise` INT UNSIGNED NOT NULL, `idVirtualDataCenter` INT UNSIGNED NOT NULL, `network_name` VARCHAR(40) NOT NULL, `startTime` TIMESTAMP, `stopTime` TIMESTAMP, `consolidated` TINYINT(1) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ACCOUNTING_EVENT_VLAN` PRIMARY KEY (`idVLANAccountingEvent`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-4', '2.0.3', '3:a033f02497669d24b6ed860cb02c221c', 5);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-5::destevezg (generated)::(Checksum: 3:47f51627ad81dc49264f67b42f543ba2)
-CREATE TABLE `kinton`.`accounting_event_vm` (`idVMAccountingEvent` BIGINT UNSIGNED AUTO_INCREMENT NOT NULL, `idVM` INT UNSIGNED NOT NULL, `idEnterprise` INT UNSIGNED NOT NULL, `idVirtualDataCenter` INT UNSIGNED NOT NULL, `idVirtualApp` INT UNSIGNED NOT NULL, `cpu` INT UNSIGNED NOT NULL, `ram` INT UNSIGNED NOT NULL, `hd` BIGINT UNSIGNED NOT NULL, `startTime` TIMESTAMP, `stopTime` TIMESTAMP, `consolidated` TINYINT(1) DEFAULT 0 NOT NULL, `costCode` INT, `hypervisorType` VARCHAR(255), `version_c` INT DEFAULT 0, CONSTRAINT `PK_ACCOUNTING_EVENT_VM` PRIMARY KEY (`idVMAccountingEvent`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-5', '2.0.3', '3:47f51627ad81dc49264f67b42f543ba2', 6);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-6::destevezg (generated)::(Checksum: 3:8c73779c204ec6278df878eddd80b77f)
-CREATE TABLE `kinton`.`alerts` (`id` CHAR(36) NOT NULL, `type` VARCHAR(60) NOT NULL, `value` VARCHAR(60) NOT NULL, `description` VARCHAR(240), `tstamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ALERTS` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-6', '2.0.3', '3:8c73779c204ec6278df878eddd80b77f', 7);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-7::destevezg (generated)::(Checksum: 3:787fd9772c35d842e8fd632d6268028b)
-CREATE TABLE `kinton`.`apps_library` (`id_apps_library` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idEnterprise` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_APPS_LIBRARY` PRIMARY KEY (`id_apps_library`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-7', '2.0.3', '3:787fd9772c35d842e8fd632d6268028b', 8);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-8::destevezg (generated)::(Checksum: 3:2f2cf3e39a6718ebebb7479456783cec)
-CREATE TABLE `kinton`.`auth_group` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(20), `description` VARCHAR(50), `version_c` INT DEFAULT 0, CONSTRAINT `PK_AUTH_GROUP` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-8', '2.0.3', '3:2f2cf3e39a6718ebebb7479456783cec', 9);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-9::destevezg (generated)::(Checksum: 3:c061c7bf09669bd5f7beaa3673089e9c)
-CREATE TABLE `kinton`.`auth_serverresource` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(50), `description` VARCHAR(100), `idGroup` INT UNSIGNED, `idRole` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_AUTH_SERVERRESOURCE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-9', '2.0.3', '3:c061c7bf09669bd5f7beaa3673089e9c', 10);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-10::destevezg (generated)::(Checksum: 3:1b46903b83f80f738d133f73f614035e)
-CREATE TABLE `kinton`.`auth_serverresource_exception` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idResource` INT UNSIGNED NOT NULL, `idUser` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_AUTH_SERVERRESOURCE_EXCEPTION` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-10', '2.0.3', '3:1b46903b83f80f738d133f73f614035e', 11);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-11::destevezg (generated)::(Checksum: 3:a18dcd1a1be857c76cd9eea2a9884cd2)
-CREATE TABLE `kinton`.`category` (`idCategory` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(30) NOT NULL, `isErasable` INT UNSIGNED DEFAULT 1 NOT NULL, `isDefault` INT UNSIGNED DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_CATEGORY` PRIMARY KEY (`idCategory`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-11', '2.0.3', '3:a18dcd1a1be857c76cd9eea2a9884cd2', 12);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-12::destevezg (generated)::(Checksum: 3:479e5e3af9e6a44f4fc9dbed80e6a997)
-CREATE TABLE `kinton`.`chargeback_simple` (`idAccountingResourceType` TINYINT NOT NULL, `resourceType` VARCHAR(20) NOT NULL, `costPerHour` DECIMAL(15,12) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_CHARGEBACK_SIMPLE` PRIMARY KEY (`idAccountingResourceType`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-12', '2.0.3', '3:479e5e3af9e6a44f4fc9dbed80e6a997', 13);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-13::destevezg (generated)::(Checksum: 3:d6d05a87d471ea3396b72755a678b96f)
-CREATE TABLE `kinton`.`chef_runlist` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idVM` INT UNSIGNED NOT NULL, `name` VARCHAR(100) NOT NULL, `description` VARCHAR(255), `priority` INT DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_CHEF_RUNLIST` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-13', '2.0.3', '3:d6d05a87d471ea3396b72755a678b96f', 14);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-14::destevezg (generated)::(Checksum: 3:96dd6e407f119eb964fe42c62c2ca79e)
-CREATE TABLE `kinton`.`cloud_usage_stats` (`idDataCenter` INT AUTO_INCREMENT NOT NULL, `serversTotal` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `serversRunning` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `storageTotal` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `storageReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `storageUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `publicIPsTotal` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `publicIPsReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `publicIPsUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vlanReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vlanUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vMachinesTotal` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vMachinesRunning` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vCpuTotal` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vCpuReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vCpuUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vMemoryTotal` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vMemoryReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vMemoryUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vStorageReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vStorageUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vStorageTotal` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `numUsersCreated` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `numVDCCreated` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `numEnterprisesCreated` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_CLOUD_USAGE_STATS` PRIMARY KEY (`idDataCenter`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-14', '2.0.3', '3:96dd6e407f119eb964fe42c62c2ca79e', 15);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-15::destevezg (generated)::(Checksum: 3:760ab69dd396ccb94f6918d55a485cca)
-CREATE TABLE `kinton`.`costCode` (`idCostCode` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(20) NOT NULL, `description` VARCHAR(100) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_COSTCODE` PRIMARY KEY (`idCostCode`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-15', '2.0.3', '3:760ab69dd396ccb94f6918d55a485cca', 16);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-16::destevezg (generated)::(Checksum: 3:350a5d3c65c40a8fd81b1130a9114c49)
-CREATE TABLE `kinton`.`costCodeCurrency` (`idCostCodeCurrency` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idCostCode` INT UNSIGNED, `idCurrency` INT UNSIGNED, `price` DECIMAL(20,5) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_COSTCODECURRENCY` PRIMARY KEY (`idCostCodeCurrency`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-16', '2.0.3', '3:350a5d3c65c40a8fd81b1130a9114c49', 17);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-17::destevezg (generated)::(Checksum: 3:52e834853212606010797cd36204c702)
-CREATE TABLE `kinton`.`currency` (`idCurrency` INT UNSIGNED AUTO_INCREMENT NOT NULL, `symbol` VARCHAR(10) NOT NULL, `name` VARCHAR(20) NOT NULL, `digits` INT DEFAULT 2 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_CURRENCY` PRIMARY KEY (`idCurrency`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-17', '2.0.3', '3:52e834853212606010797cd36204c702', 18);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-18::destevezg (generated)::(Checksum: 3:777e471b83d5a83febb9f9808983a265)
-CREATE TABLE `kinton`.`datacenter` (`idDataCenter` INT UNSIGNED AUTO_INCREMENT NOT NULL, `uuid` VARCHAR(40), `name` VARCHAR(20) NOT NULL, `situation` VARCHAR(100), `network_id` INT UNSIGNED, `version_c` INT DEFAULT 0, CONSTRAINT `PK_DATACENTER` PRIMARY KEY (`idDataCenter`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-18', '2.0.3', '3:777e471b83d5a83febb9f9808983a265', 19);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-19::destevezg (generated)::(Checksum: 3:d68cedf4ba1325816fbcdb17e78f4bb4)
-CREATE TABLE `kinton`.`datastore` (`idDatastore` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(255) NOT NULL, `rootPath` VARCHAR(42) NOT NULL, `directory` VARCHAR(255) NOT NULL, `enabled` TINYINT(1) DEFAULT 0 NOT NULL, `size` BIGINT UNSIGNED NOT NULL, `usedSize` BIGINT UNSIGNED NOT NULL, `datastoreUuid` VARCHAR(255), `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_DATASTORE` PRIMARY KEY (`idDatastore`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-19', '2.0.3', '3:d68cedf4ba1325816fbcdb17e78f4bb4', 20);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-20::destevezg (generated)::(Checksum: 3:53a123366dce86c925fde8ee9bbf5cfb)
-CREATE TABLE `kinton`.`datastore_assignment` (`idDatastore` INT UNSIGNED NOT NULL, `idPhysicalMachine` INT UNSIGNED DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-20', '2.0.3', '3:53a123366dce86c925fde8ee9bbf5cfb', 21);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-21::destevezg (generated)::(Checksum: 3:d2145318a654660d2fbaf801a8359041)
-CREATE TABLE `kinton`.`dc_enterprise_stats` (`idDCEnterpriseStats` INT AUTO_INCREMENT NOT NULL, `idDataCenter` INT NOT NULL, `idEnterprise` INT NOT NULL, `vCpuReserved` BIGINT UNSIGNED DEFAULT 0, `vCpuUsed` BIGINT UNSIGNED DEFAULT 0, `memoryReserved` BIGINT UNSIGNED DEFAULT 0, `memoryUsed` BIGINT UNSIGNED DEFAULT 0, `localStorageReserved` BIGINT UNSIGNED DEFAULT 0, `localStorageUsed` BIGINT UNSIGNED DEFAULT 0, `extStorageReserved` BIGINT UNSIGNED DEFAULT 0, `extStorageUsed` BIGINT UNSIGNED DEFAULT 0, `repositoryReserved` BIGINT UNSIGNED DEFAULT 0, `repositoryUsed` BIGINT UNSIGNED DEFAULT 0, `publicIPsReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `publicIPsUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vlanReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vlanUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_DC_ENTERPRISE_STATS` PRIMARY KEY (`idDCEnterpriseStats`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-21', '2.0.3', '3:d2145318a654660d2fbaf801a8359041', 22);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-22::destevezg (generated)::(Checksum: 3:9e463f91eba996f9ffea2d3d0d60c578)
-CREATE TABLE `kinton`.`dhcpOption` (`idDhcpOption` INT UNSIGNED AUTO_INCREMENT NOT NULL, `dhcp_opt` INT NOT NULL, `gateway` VARCHAR(40), `network_address` VARCHAR(40) NOT NULL, `mask` INT NOT NULL, `netmask` VARCHAR(20) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_DHCPOPTION` PRIMARY KEY (`idDhcpOption`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-22', '2.0.3', '3:9e463f91eba996f9ffea2d3d0d60c578', 23);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-23::destevezg (generated)::(Checksum: 3:d988c667cb5fb43d55ceea415d9d5205)
-CREATE TABLE `kinton`.`disk_management` (`idManagement` INT UNSIGNED NOT NULL, `idDatastore` INT UNSIGNED, `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-23', '2.0.3', '3:d988c667cb5fb43d55ceea415d9d5205', 24);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-24::destevezg (generated)::(Checksum: 3:0f2fd84257dfbe356711b4ca8cd305a7)
-CREATE TABLE `kinton`.`diskstateful_conversions` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `imagePath` VARCHAR(256) NOT NULL, `idManagement` INT UNSIGNED NOT NULL, `state` VARCHAR(50) NOT NULL, `convertionTimestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_DISKSTATEFUL_CONVERSIONS` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-24', '2.0.3', '3:0f2fd84257dfbe356711b4ca8cd305a7', 25);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-25::destevezg (generated)::(Checksum: 3:130b6dc57dfad1397c35625d5d1463c2)
-CREATE TABLE `kinton`.`enterprise` (`idEnterprise` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(40) NOT NULL, `ramSoft` BIGINT DEFAULT 0 NOT NULL, `cpuSoft` BIGINT DEFAULT 0 NOT NULL, `hdSoft` BIGINT DEFAULT 0 NOT NULL, `storageSoft` BIGINT DEFAULT 0 NOT NULL, `repositorySoft` BIGINT DEFAULT 0 NOT NULL, `vlanSoft` BIGINT DEFAULT 0 NOT NULL, `publicIPSoft` BIGINT DEFAULT 0 NOT NULL, `ramHard` BIGINT DEFAULT 0 NOT NULL, `cpuHard` BIGINT DEFAULT 0 NOT NULL, `hdHard` BIGINT DEFAULT 0 NOT NULL, `storageHard` BIGINT DEFAULT 0 NOT NULL, `repositoryHard` BIGINT DEFAULT 0 NOT NULL, `vlanHard` BIGINT DEFAULT 0 NOT NULL, `publicIPHard` BIGINT DEFAULT 0 NOT NULL, `chef_url` VARCHAR(255), `chef_client` VARCHAR(50), `chef_validator` VARCHAR(50), `chef_client_certificate` TEXT, `chef_validator_certificate` TEXT, `isReservationRestricted` TINYINT(1) DEFAULT 0, `version_c` INT DEFAULT 1 NOT NULL, `idPricingTemplate` INT UNSIGNED, CONSTRAINT `PK_ENTERPRISE` PRIMARY KEY (`idEnterprise`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-25', '2.0.3', '3:130b6dc57dfad1397c35625d5d1463c2', 26);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-26::destevezg (generated)::(Checksum: 3:69bfe558818115ac4b4dfa84d3d8de1e)
-CREATE TABLE `kinton`.`enterprise_limits_by_datacenter` (`idDatacenterLimit` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idEnterprise` INT UNSIGNED, `idDataCenter` INT UNSIGNED, `ramSoft` BIGINT NOT NULL, `cpuSoft` BIGINT NOT NULL, `hdSoft` BIGINT NOT NULL, `storageSoft` BIGINT NOT NULL, `repositorySoft` BIGINT NOT NULL, `vlanSoft` BIGINT NOT NULL, `publicIPSoft` BIGINT NOT NULL, `ramHard` BIGINT NOT NULL, `cpuHard` BIGINT NOT NULL, `hdHard` BIGINT NOT NULL, `storageHard` BIGINT NOT NULL, `repositoryHard` BIGINT NOT NULL, `vlanHard` BIGINT NOT NULL, `publicIPHard` BIGINT NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, `default_vlan_network_id` INT UNSIGNED, CONSTRAINT `PK_ENTERPRISE_LIMITS_BY_DATACENTER` PRIMARY KEY (`idDatacenterLimit`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-26', '2.0.3', '3:69bfe558818115ac4b4dfa84d3d8de1e', 27);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-27::destevezg (generated)::(Checksum: 3:81c8e8fb31d3d86128542bfe21e002a9)
-CREATE TABLE `kinton`.`enterprise_properties` (`idProperties` INT UNSIGNED AUTO_INCREMENT NOT NULL, `enterprise` INT UNSIGNED, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ENTERPRISE_PROPERTIES` PRIMARY KEY (`idProperties`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-27', '2.0.3', '3:81c8e8fb31d3d86128542bfe21e002a9', 28);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-28::destevezg (generated)::(Checksum: 3:5e0b809fab55e8118cc216e1d306bf3a)
-CREATE TABLE `kinton`.`enterprise_properties_map` (`enterprise_properties` INT UNSIGNED NOT NULL, `map_key` VARCHAR(30) NOT NULL, `value` VARCHAR(50), `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-28', '2.0.3', '3:5e0b809fab55e8118cc216e1d306bf3a', 29);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-29::destevezg (generated)::(Checksum: 3:3efb70d74c36d5683996dfd24c8ddf12)
-CREATE TABLE `kinton`.`enterprise_resources_stats` (`idEnterprise` INT AUTO_INCREMENT NOT NULL, `vCpuReserved` BIGINT UNSIGNED DEFAULT 0, `vCpuUsed` BIGINT UNSIGNED DEFAULT 0, `memoryReserved` BIGINT UNSIGNED DEFAULT 0, `memoryUsed` BIGINT UNSIGNED DEFAULT 0, `localStorageReserved` BIGINT UNSIGNED DEFAULT 0, `localStorageUsed` BIGINT UNSIGNED DEFAULT 0, `extStorageReserved` BIGINT UNSIGNED DEFAULT 0, `extStorageUsed` BIGINT UNSIGNED DEFAULT 0, `repositoryReserved` BIGINT UNSIGNED DEFAULT 0, `repositoryUsed` BIGINT UNSIGNED DEFAULT 0, `publicIPsReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `publicIPsUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vlanReserved` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `vlanUsed` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_ENTERPRISE_RESOURCES_STATS` PRIMARY KEY (`idEnterprise`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-29', '2.0.3', '3:3efb70d74c36d5683996dfd24c8ddf12', 30);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-30::destevezg (generated)::(Checksum: 3:59245dc17805f9917702e777dece5d96)
-CREATE TABLE `kinton`.`enterprise_theme` (`idEnterprise` INT UNSIGNED NOT NULL, `company_logo_path` TEXT, `theme` TEXT, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ENTERPRISE_THEME` PRIMARY KEY (`idEnterprise`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-30', '2.0.3', '3:59245dc17805f9917702e777dece5d96', 31);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-31::destevezg (generated)::(Checksum: 3:cb53ef7e84b6a2edd5eb4c691b082e2e)
-CREATE TABLE `kinton`.`heartbeatlog` (`id` CHAR(36) NOT NULL, `abicloud_id` VARCHAR(60), `client_ip` VARCHAR(16) NOT NULL, `physical_servers` INT NOT NULL, `virtual_machines` INT NOT NULL, `volumes` INT NOT NULL, `virtual_datacenters` INT NOT NULL, `virtual_appliances` INT NOT NULL, `organizations` INT NOT NULL, `total_virtual_cores_allocated` BIGINT NOT NULL, `total_virtual_cores_used` BIGINT NOT NULL, `total_virtual_cores` BIGINT DEFAULT 0 NOT NULL, `total_virtual_memory_allocated` BIGINT NOT NULL, `total_virtual_memory_used` BIGINT NOT NULL, `total_virtual_memory` BIGINT DEFAULT 0 NOT NULL, `total_volume_space_allocated` BIGINT NOT NULL, `total_volume_space_used` BIGINT NOT NULL, `total_volume_space` BIGINT DEFAULT 0 NOT NULL, `virtual_images` BIGINT NOT NULL, `operating_system_name` VARCHAR(60) NOT NULL, `operating_system_version` VARCHAR(60) NOT NULL, `database_name` VARCHAR(60) NOT NULL, `database_version` VARCHAR(60) NOT NULL, `application_server_name` VARCHAR(60) NOT NULL, `application_server_version` VARCHAR(60) NOT NULL, `java_version` VARCHAR(60) NOT NULL, `abicloud_version` VARCHAR(60) NOT NULL, `abicloud_distribution` VARCHAR(60) NOT NULL, `tstamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_HEARTBEATLOG` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-31', '2.0.3', '3:cb53ef7e84b6a2edd5eb4c691b082e2e', 32);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-32::destevezg (generated)::(Checksum: 3:a54346d08d039caf856158c98342047a)
-CREATE TABLE `kinton`.`hypervisor` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idPhysicalMachine` INT UNSIGNED NOT NULL, `ip` VARCHAR(39) NOT NULL, `ipService` VARCHAR(39) NOT NULL, `port` INT NOT NULL, `user` VARCHAR(255) DEFAULT 'user' NOT NULL, `password` VARCHAR(255) DEFAULT 'password' NOT NULL, `version_c` INT DEFAULT 0, `type` VARCHAR(255) NOT NULL, CONSTRAINT `PK_HYPERVISOR` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-32', '2.0.3', '3:a54346d08d039caf856158c98342047a', 33);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-33::destevezg (generated)::(Checksum: 3:4553169cea18f126cd0add78eac0a8a7)
-CREATE TABLE `kinton`.`initiator_mapping` (`idInitiatorMapping` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idManagement` INT UNSIGNED NOT NULL, `initiatorIqn` VARCHAR(256) NOT NULL, `targetIqn` VARCHAR(256) NOT NULL, `targetLun` INT NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_INITIATOR_MAPPING` PRIMARY KEY (`idInitiatorMapping`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-33', '2.0.3', '3:4553169cea18f126cd0add78eac0a8a7', 34);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-34::destevezg (generated)::(Checksum: 3:b2a4028100a7a39f1d1020a793a2bd9f)
-CREATE TABLE `kinton`.`ip_pool_management` (`idManagement` INT UNSIGNED NOT NULL, `mac` VARCHAR(20), `name` VARCHAR(30), `ip` VARCHAR(20) NOT NULL, `vlan_network_name` VARCHAR(40), `vlan_network_id` INT UNSIGNED, `quarantine` TINYINT(1) DEFAULT 0 NOT NULL, `available` TINYINT(1) DEFAULT 1 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-34', '2.0.3', '3:b2a4028100a7a39f1d1020a793a2bd9f', 35);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-35::destevezg (generated)::(Checksum: 3:114b963b04c30bcc8c4d309ae5680cc3)
-CREATE TABLE `kinton`.`license` (`idLicense` INT AUTO_INCREMENT NOT NULL, `data` VARCHAR(1000) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_LICENSE` PRIMARY KEY (`idLicense`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-35', '2.0.3', '3:114b963b04c30bcc8c4d309ae5680cc3', 36);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-36::destevezg (generated)::(Checksum: 3:ee7e8564f9a6f927ba5cd46c21a88d36)
-CREATE TABLE `kinton`.`log` (`idLog` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idVirtualApp` INT UNSIGNED NOT NULL, `description` VARCHAR(250) NOT NULL, `logDate` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `deleted` TINYINT(1) DEFAULT 0, `version_c` INT DEFAULT 0, CONSTRAINT `PK_LOG` PRIMARY KEY (`idLog`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-36', '2.0.3', '3:ee7e8564f9a6f927ba5cd46c21a88d36', 37);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-37::destevezg (generated)::(Checksum: 3:2afd5ca9c33785df19d5bb7d1ea1c7e8)
-CREATE TABLE `kinton`.`metering` (`idMeter` BIGINT UNSIGNED AUTO_INCREMENT NOT NULL, `idDatacenter` INT UNSIGNED, `datacenter` VARCHAR(20), `idRack` INT UNSIGNED, `rack` VARCHAR(20), `idPhysicalMachine` INT UNSIGNED, `physicalmachine` VARCHAR(256), `idStorageSystem` INT UNSIGNED, `storageSystem` VARCHAR(256), `idStoragePool` VARCHAR(40), `storagePool` VARCHAR(256), `idVolume` VARCHAR(50), `volume` VARCHAR(256), `idNetwork` INT UNSIGNED, `network` VARCHAR(256), `idSubnet` INT UNSIGNED, `subnet` VARCHAR(256), `idEnterprise` INT UNSIGNED, `enterprise` VARCHAR(40), `idUser` INT UNSIGNED, `user` VARCHAR(128), `idVirtualDataCenter` INT UNSIGNED, `virtualDataCenter` VARCHAR(40), `idVirtualApp` INT UNSIGNED, `virtualApp` VARCHAR(30), `idVirtualMachine` INT UNSIGNED, `virtualmachine` VARCHAR(256), `severity` VARCHAR(100) NOT NULL, `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `performedby` VARCHAR(255) NOT NULL, `actionperformed` VARCHAR(100) NOT NULL, `component` VARCHAR(255), `stacktrace` TEXT, `version_c` INT DEFAULT 0, CONSTRAINT `PK_METERING` PRIMARY KEY (`idMeter`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-37', '2.0.3', '3:2afd5ca9c33785df19d5bb7d1ea1c7e8', 38);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-38::destevezg (generated)::(Checksum: 3:2b979f45c26c5d78a80ceeab7e7f109b)
-CREATE TABLE `kinton`.`network` (`network_id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `uuid` VARCHAR(40) NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_NETWORK` PRIMARY KEY (`network_id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-38', '2.0.3', '3:2b979f45c26c5d78a80ceeab7e7f109b', 39);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-39::destevezg (generated)::(Checksum: 3:bc49a7c19baf45004bf6519288bbfa37)
-CREATE TABLE `kinton`.`network_configuration` (`network_configuration_id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `gateway` VARCHAR(40), `network_address` VARCHAR(40) NOT NULL, `mask` INT NOT NULL, `netmask` VARCHAR(20) NOT NULL, `primary_dns` VARCHAR(20), `secondary_dns` VARCHAR(20), `sufix_dns` VARCHAR(40), `fence_mode` VARCHAR(20) NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_NETWORK_CONFIGURATION` PRIMARY KEY (`network_configuration_id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-39', '2.0.3', '3:bc49a7c19baf45004bf6519288bbfa37', 40);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-40::destevezg (generated)::(Checksum: 3:6b91194ab89222dcf4e42dcf86a9b16c)
-CREATE TABLE `kinton`.`node` (`idVirtualApp` INT UNSIGNED NOT NULL, `idNode` INT UNSIGNED AUTO_INCREMENT NOT NULL, `modified` INT NOT NULL, `posX` INT DEFAULT 0 NOT NULL, `posY` INT DEFAULT 0 NOT NULL, `type` VARCHAR(50) NOT NULL, `name` VARCHAR(255) NOT NULL, `ip` VARCHAR(15), `mac` VARCHAR(17), `version_c` INT DEFAULT 0, CONSTRAINT `PK_NODE` PRIMARY KEY (`idNode`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-40', '2.0.3', '3:6b91194ab89222dcf4e42dcf86a9b16c', 41);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-41::destevezg (generated)::(Checksum: 3:5649c82dca080d57f5e9f1ded0f7fa8a)
-CREATE TABLE `kinton`.`node_virtual_image_stateful_conversions` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `newName` VARCHAR(255) NOT NULL, `idVirtualApplianceStatefulConversion` INT UNSIGNED NOT NULL, `idNodeVirtualImage` INT UNSIGNED NOT NULL, `idVirtualImageConversion` INT UNSIGNED, `idDiskStatefulConversion` INT UNSIGNED, `state` VARCHAR(50) NOT NULL, `subState` VARCHAR(50), `version_c` INT DEFAULT 0, `idTier` INT UNSIGNED NOT NULL, `idManagement` INT UNSIGNED, CONSTRAINT `PK_NODE_VIRTUAL_IMAGE_STATEFUL_CONVERSIONS` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-41', '2.0.3', '3:5649c82dca080d57f5e9f1ded0f7fa8a', 42);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-42::destevezg (generated)::(Checksum: 3:1be16468c3ddde51bd8426c9aeb9b373)
-CREATE TABLE `kinton`.`nodenetwork` (`idNode` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_NODENETWORK` PRIMARY KEY (`idNode`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-42', '2.0.3', '3:1be16468c3ddde51bd8426c9aeb9b373', 43);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-43::destevezg (generated)::(Checksum: 3:d45df511418af4a35e7902e37d7109b8)
-CREATE TABLE `kinton`.`noderelationtype` (`idNodeRelationType` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(20), `version_c` INT DEFAULT 0, CONSTRAINT `PK_NODERELATIONTYPE` PRIMARY KEY (`idNodeRelationType`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-43', '2.0.3', '3:d45df511418af4a35e7902e37d7109b8', 44);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-44::destevezg (generated)::(Checksum: 3:bcf1d9ce455ec5a034d49f8cdc77bbae)
-CREATE TABLE `kinton`.`nodestorage` (`idNode` INT UNSIGNED DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_NODESTORAGE` PRIMARY KEY (`idNode`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-44', '2.0.3', '3:bcf1d9ce455ec5a034d49f8cdc77bbae', 45);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-45::destevezg (generated)::(Checksum: 3:4299e545c98449bcf16aaba9d3dd5af8)
-CREATE TABLE `kinton`.`nodevirtualimage` (`idNode` INT UNSIGNED NOT NULL, `idVM` INT UNSIGNED, `idImage` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-45', '2.0.3', '3:4299e545c98449bcf16aaba9d3dd5af8', 46);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-46::destevezg (generated)::(Checksum: 3:0905951d123429ef1a7b0017106c8ee9)
-CREATE TABLE `kinton`.`one_time_token` (`idOneTimeTokenSession` INT UNSIGNED AUTO_INCREMENT NOT NULL, `token` VARCHAR(128) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ONE_TIME_TOKEN` PRIMARY KEY (`idOneTimeTokenSession`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-46', '2.0.3', '3:0905951d123429ef1a7b0017106c8ee9', 47);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-47::destevezg (generated)::(Checksum: 3:de0b803f07cd4aa3007ffbf9668a63ea)
-CREATE TABLE `kinton`.`ovf_package` (`id_ovf_package` INT AUTO_INCREMENT NOT NULL, `id_apps_library` INT UNSIGNED NOT NULL, `url` VARCHAR(255) NOT NULL, `name` VARCHAR(255), `description` VARCHAR(255), `iconUrl` VARCHAR(255), `productName` VARCHAR(255), `productUrl` VARCHAR(45), `productVersion` VARCHAR(45), `productVendor` VARCHAR(45), `idCategory` INT UNSIGNED, `diskSizeMb` BIGINT, `version_c` INT DEFAULT 0, `type` VARCHAR(50) NOT NULL, CONSTRAINT `PK_OVF_PACKAGE` PRIMARY KEY (`id_ovf_package`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-47', '2.0.3', '3:de0b803f07cd4aa3007ffbf9668a63ea', 48);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-48::destevezg (generated)::(Checksum: 3:0b09400a24f84219969aad8045a2a18e)
-CREATE TABLE `kinton`.`ovf_package_list` (`id_ovf_package_list` INT AUTO_INCREMENT NOT NULL, `name` VARCHAR(45) NOT NULL, `url` VARCHAR(255), `id_apps_library` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_OVF_PACKAGE_LIST` PRIMARY KEY (`id_ovf_package_list`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-48', '2.0.3', '3:0b09400a24f84219969aad8045a2a18e', 49);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-49::destevezg (generated)::(Checksum: 3:5f1327b65c8ac5737d7b7c3e1081b8ee)
-CREATE TABLE `kinton`.`ovf_package_list_has_ovf_package` (`id_ovf_package_list` INT NOT NULL, `id_ovf_package` INT NOT NULL, `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-49', '2.0.3', '3:5f1327b65c8ac5737d7b7c3e1081b8ee', 50);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-50::destevezg (generated)::(Checksum: 3:024157dffa5204f1647087501ae70c0e)
-CREATE TABLE `kinton`.`physicalmachine` (`idPhysicalMachine` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idRack` INT UNSIGNED, `idDataCenter` INT UNSIGNED NOT NULL, `name` VARCHAR(256) NOT NULL, `description` VARCHAR(100), `ram` INT NOT NULL, `cpu` INT NOT NULL, `ramUsed` INT NOT NULL, `cpuUsed` INT NOT NULL, `idState` INT UNSIGNED DEFAULT 0 NOT NULL, `vswitchName` VARCHAR(200) NOT NULL, `idEnterprise` INT UNSIGNED, `initiatorIQN` VARCHAR(256), `version_c` INT DEFAULT 0, `ipmiIP` VARCHAR(39), `ipmiPort` INT UNSIGNED, `ipmiUser` VARCHAR(255), `ipmiPassword` VARCHAR(255), CONSTRAINT `PK_PHYSICALMACHINE` PRIMARY KEY (`idPhysicalMachine`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-50', '2.0.3', '3:024157dffa5204f1647087501ae70c0e', 51);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-51::destevezg (generated)::(Checksum: 3:806f7e446f68098dd0d41c0105a24438)
-CREATE TABLE `kinton`.`pricingCostCode` (`idPricingCostCode` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idPricingTemplate` INT UNSIGNED NOT NULL, `idCostCode` INT UNSIGNED NOT NULL, `price` DECIMAL(20,5) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_PRICINGCOSTCODE` PRIMARY KEY (`idPricingCostCode`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-51', '2.0.3', '3:806f7e446f68098dd0d41c0105a24438', 52);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-52::destevezg (generated)::(Checksum: 3:56295e26860afbba5936ef2dc472e0a0)
-CREATE TABLE `kinton`.`pricingTemplate` (`idPricingTemplate` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idCurrency` INT UNSIGNED NOT NULL, `name` VARCHAR(256) NOT NULL, `chargingPeriod` INT UNSIGNED NOT NULL, `minimumCharge` INT UNSIGNED NOT NULL, `showChangesBefore` TINYINT(1) DEFAULT 0 NOT NULL, `standingChargePeriod` DECIMAL(20,5) DEFAULT 0 NOT NULL, `minimumChargePeriod` DECIMAL(20,5) DEFAULT 0 NOT NULL, `vcpu` DECIMAL(20,5) DEFAULT 0 NOT NULL, `memoryMB` DECIMAL(20,5) DEFAULT 0 NOT NULL, `hdGB` DECIMAL(20,5) DEFAULT 0 NOT NULL, `vlan` DECIMAL(20,5) DEFAULT 0 NOT NULL, `publicIp` DECIMAL(20,5) DEFAULT 0 NOT NULL, `defaultTemplate` TINYINT(1) DEFAULT 0 NOT NULL, `description` VARCHAR(1000) NOT NULL, `last_update` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_PRICINGTEMPLATE` PRIMARY KEY (`idPricingTemplate`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-52', '2.0.3', '3:56295e26860afbba5936ef2dc472e0a0', 53);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-53::destevezg (generated)::(Checksum: 3:047c5fbafa97112cfa815ca57b7d9136)
-CREATE TABLE `kinton`.`pricingTier` (`idPricingTier` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idPricingTemplate` INT UNSIGNED NOT NULL, `idTier` INT UNSIGNED NOT NULL, `price` DECIMAL(20,5) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_PRICINGTIER` PRIMARY KEY (`idPricingTier`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-53', '2.0.3', '3:047c5fbafa97112cfa815ca57b7d9136', 54);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-54::destevezg (generated)::(Checksum: 3:4796cbed4e74dd02dcc2f68df1794d79)
-CREATE TABLE `kinton`.`privilege` (`idPrivilege` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(50) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_PRIVILEGE` PRIMARY KEY (`idPrivilege`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-54', '2.0.3', '3:4796cbed4e74dd02dcc2f68df1794d79', 55);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-55::destevezg (generated)::(Checksum: 3:f196649f225ac654a9587ceb1878b586)
-CREATE TABLE `kinton`.`rack` (`idRack` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idDataCenter` INT UNSIGNED NOT NULL, `name` VARCHAR(20) NOT NULL, `shortDescription` VARCHAR(30), `largeDescription` VARCHAR(100), `vlan_id_min` INT UNSIGNED DEFAULT 2, `vlan_id_max` INT UNSIGNED DEFAULT 4094, `vlans_id_avoided` VARCHAR(255) DEFAULT '', `vlan_per_vdc_expected` INT UNSIGNED DEFAULT 8, `nrsq` INT UNSIGNED DEFAULT 10, `haEnabled` TINYINT(1) DEFAULT 0, `version_c` INT DEFAULT 0, CONSTRAINT `PK_RACK` PRIMARY KEY (`idRack`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-55', '2.0.3', '3:f196649f225ac654a9587ceb1878b586', 56);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-56::destevezg (generated)::(Checksum: 3:253740b8f537edc756c126a302f88433)
-CREATE TABLE `kinton`.`rasd` (`address` VARCHAR(256), `addressOnParent` VARCHAR(25), `allocationUnits` VARCHAR(15), `automaticAllocation` INT, `automaticDeallocation` INT, `caption` VARCHAR(15), `changeableType` INT, `configurationName` VARCHAR(15), `connectionResource` VARCHAR(256), `consumerVisibility` INT, `description` VARCHAR(255), `elementName` VARCHAR(255) NOT NULL, `generation` BIGINT, `hostResource` VARCHAR(256), `instanceID` VARCHAR(50) NOT NULL, `limitResource` BIGINT, `mappingBehaviour` INT, `otherResourceType` VARCHAR(50), `parent` VARCHAR(50), `poolID` VARCHAR(50), `reservation` BIGINT, `resourceSubType` VARCHAR(15), `resourceType` INT NOT NULL, `virtualQuantity` INT, `weight` INT, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_RASD` PRIMARY KEY (`instanceID`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-56', '2.0.3', '3:253740b8f537edc756c126a302f88433', 57);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-57::destevezg (generated)::(Checksum: 3:73427f139a1db872852342e290eef17f)
-CREATE TABLE `kinton`.`rasd_management` (`idManagement` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idResourceType` VARCHAR(5) NOT NULL, `idVirtualDataCenter` INT UNSIGNED, `idVM` INT UNSIGNED, `idResource` VARCHAR(50), `idVirtualApp` INT UNSIGNED, `version_c` INT DEFAULT 1 NOT NULL, `temporal` INT UNSIGNED, `sequence` INT UNSIGNED, CONSTRAINT `PK_RASD_MANAGEMENT` PRIMARY KEY (`idManagement`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-57', '2.0.3', '3:73427f139a1db872852342e290eef17f', 58);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-58::destevezg (generated)::(Checksum: 3:e458e4c5fa8663a002b73404936feaac)
-CREATE TABLE `kinton`.`register` (`id` CHAR(36) NOT NULL, `company_name` VARCHAR(60) NOT NULL, `company_address` VARCHAR(240) NOT NULL, `company_state` VARCHAR(60) NOT NULL, `company_country_code` VARCHAR(2) NOT NULL, `company_industry` VARCHAR(255), `contact_title` VARCHAR(60) NOT NULL, `contact_name` VARCHAR(60) NOT NULL, `contact_email` VARCHAR(60) NOT NULL, `contact_phone` VARCHAR(60) NOT NULL, `company_size_revenue` VARCHAR(60) NOT NULL, `company_size_employees` VARCHAR(60) NOT NULL, `subscribe_development_news` TINYINT(1) DEFAULT 0 NOT NULL, `subscribe_commercial_news` TINYINT(1) DEFAULT 0 NOT NULL, `allow_commercial_contact` TINYINT(1) DEFAULT 0 NOT NULL, `creation_date` TIMESTAMP DEFAULT '0000-00-00 00:00:00' NOT NULL, `last_updated` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_REGISTER` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-58', '2.0.3', '3:e458e4c5fa8663a002b73404936feaac', 59);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-59::destevezg (generated)::(Checksum: 3:4290f1bf5e82a9c984a4c2f45aa39289)
-CREATE TABLE `kinton`.`remote_service` (`idRemoteService` INT UNSIGNED AUTO_INCREMENT NOT NULL, `uri` VARCHAR(255) NOT NULL, `idDataCenter` INT UNSIGNED NOT NULL, `status` INT UNSIGNED DEFAULT 0 NOT NULL, `remoteServiceType` VARCHAR(255) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_REMOTE_SERVICE` PRIMARY KEY (`idRemoteService`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-59', '2.0.3', '3:4290f1bf5e82a9c984a4c2f45aa39289', 60);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-60::destevezg (generated)::(Checksum: 3:106c340f4a0e9c1c846366d46ead4b3f)
-CREATE TABLE `kinton`.`repository` (`idRepository` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idDataCenter` INT UNSIGNED NOT NULL, `name` VARCHAR(30), `URL` VARCHAR(255) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_REPOSITORY` PRIMARY KEY (`idRepository`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-60', '2.0.3', '3:106c340f4a0e9c1c846366d46ead4b3f', 61);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-61::destevezg (generated)::(Checksum: 3:7c35032bce567fc743c7560c27367c0f)
-CREATE TABLE `kinton`.`role` (`idRole` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(40) DEFAULT 'auto_name' NOT NULL, `idEnterprise` INT UNSIGNED, `blocked` TINYINT(1) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ROLE` PRIMARY KEY (`idRole`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-61', '2.0.3', '3:7c35032bce567fc743c7560c27367c0f', 62);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-62::destevezg (generated)::(Checksum: 3:42731c72cb6d0e17604237240fc0562e)
-CREATE TABLE `kinton`.`role_ldap` (`idRole_ldap` INT AUTO_INCREMENT NOT NULL, `idRole` INT UNSIGNED NOT NULL, `role_ldap` VARCHAR(128) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_ROLE_LDAP` PRIMARY KEY (`idRole_ldap`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-62', '2.0.3', '3:42731c72cb6d0e17604237240fc0562e', 63);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-63::destevezg (generated)::(Checksum: 3:e0e26dde37f9d7d63c09fd55968c0977)
-CREATE TABLE `kinton`.`roles_privileges` (`idRole` INT UNSIGNED NOT NULL, `idPrivilege` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-63', '2.0.3', '3:e0e26dde37f9d7d63c09fd55968c0977', 64);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-64::destevezg (generated)::(Checksum: 3:0d056c8aecd4026dcda8627ad06d634c)
-CREATE TABLE `kinton`.`session` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `user` VARCHAR(128) NOT NULL, `key` VARCHAR(100) NOT NULL, `expireDate` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `idUser` INT UNSIGNED, `authType` VARCHAR(20) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_SESSION` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-64', '2.0.3', '3:0d056c8aecd4026dcda8627ad06d634c', 65);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-65::destevezg (generated)::(Checksum: 3:86505391e8081fdbbef2365031e93a74)
-CREATE TABLE `kinton`.`storage_device` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(256) NOT NULL, `idDataCenter` INT UNSIGNED NOT NULL, `management_ip` VARCHAR(256) NOT NULL, `management_port` INT UNSIGNED DEFAULT 0 NOT NULL, `iscsi_ip` VARCHAR(256) NOT NULL, `iscsi_port` INT UNSIGNED DEFAULT 0 NOT NULL, `storage_technology` VARCHAR(256), `username` VARCHAR(256), `password` VARCHAR(256), `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_STORAGE_DEVICE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-65', '2.0.3', '3:86505391e8081fdbbef2365031e93a74', 66);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-66::destevezg (generated)::(Checksum: 3:32239c8a6898e6748abd20b04a51e0a1)
-CREATE TABLE `kinton`.`storage_pool` (`idStorage` VARCHAR(40) NOT NULL, `idStorageDevice` INT UNSIGNED NOT NULL, `idTier` INT UNSIGNED NOT NULL, `isEnabled` TINYINT(1) DEFAULT 1 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, `totalSizeInMb` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `usedSizeInMb` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `availableSizeInMb` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `name` VARCHAR(256), CONSTRAINT `PK_STORAGE_POOL` PRIMARY KEY (`idStorage`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-66', '2.0.3', '3:32239c8a6898e6748abd20b04a51e0a1', 67);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-67::destevezg (generated)::(Checksum: 3:6f8230da5dbd7b92cce93f40529c836e)
-CREATE TABLE `kinton`.`system_properties` (`systemPropertyId` INT UNSIGNED AUTO_INCREMENT NOT NULL, `version_c` INT DEFAULT 0, `name` VARCHAR(255) NOT NULL, `value` VARCHAR(255) NOT NULL, `description` VARCHAR(255), CONSTRAINT `PK_SYSTEM_PROPERTIES` PRIMARY KEY (`systemPropertyId`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-67', '2.0.3', '3:6f8230da5dbd7b92cce93f40529c836e', 68);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-68::destevezg (generated)::(Checksum: 3:ae0cb00375718d9e76a33ef29b7bf6be)
-CREATE TABLE `kinton`.`tasks` (`id` INT AUTO_INCREMENT NOT NULL, `status` VARCHAR(20) NOT NULL, `component` VARCHAR(20) NOT NULL, `action` VARCHAR(20) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_TASKS` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-68', '2.0.3', '3:ae0cb00375718d9e76a33ef29b7bf6be', 69);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-69::destevezg (generated)::(Checksum: 3:062eb2720262e56cfe8c260344e5de20)
-CREATE TABLE `kinton`.`tier` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(40) NOT NULL, `description` VARCHAR(255) NOT NULL, `isEnabled` TINYINT(1) DEFAULT 1 NOT NULL, `idDataCenter` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_TIER` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-69', '2.0.3', '3:062eb2720262e56cfe8c260344e5de20', 70);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-70::destevezg (generated)::(Checksum: 3:59dc8765f11cc6fde61d76ad1654aafb)
-CREATE TABLE `kinton`.`ucs_rack` (`idRack` INT UNSIGNED NOT NULL, `ip` VARCHAR(20) NOT NULL, `port` INT NOT NULL, `user_rack` VARCHAR(255) NOT NULL, `password` VARCHAR(255) NOT NULL, `defaultTemplate` VARCHAR(200), `maxMachinesOn` INT DEFAULT 0, `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-70', '2.0.3', '3:59dc8765f11cc6fde61d76ad1654aafb', 71);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-71::destevezg (generated)::(Checksum: 3:27d3915c699b72899dd8d35e3de536f3)
-CREATE TABLE `kinton`.`user` (`idUser` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idRole` INT UNSIGNED NOT NULL, `idEnterprise` INT UNSIGNED, `user` VARCHAR(128) NOT NULL, `name` VARCHAR(128) NOT NULL, `surname` VARCHAR(50), `description` VARCHAR(100), `email` VARCHAR(200), `locale` VARCHAR(10) NOT NULL, `password` VARCHAR(32), `availableVirtualDatacenters` VARCHAR(255), `active` INT UNSIGNED DEFAULT 0 NOT NULL, `authType` VARCHAR(20) NOT NULL, `creationDate` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_USER` PRIMARY KEY (`idUser`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-71', '2.0.3', '3:27d3915c699b72899dd8d35e3de536f3', 72);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-72::destevezg (generated)::(Checksum: 3:580ee3ec6feb35780f7165b1b284eaa7)
-CREATE TABLE `kinton`.`vapp_enterprise_stats` (`idVirtualApp` INT AUTO_INCREMENT NOT NULL, `idEnterprise` INT NOT NULL, `idVirtualDataCenter` INT NOT NULL, `vappName` VARCHAR(45), `vdcName` VARCHAR(45), `vmCreated` MEDIUMINT UNSIGNED DEFAULT 0, `vmActive` MEDIUMINT UNSIGNED DEFAULT 0, `volAssociated` MEDIUMINT UNSIGNED DEFAULT 0, `volAttached` MEDIUMINT UNSIGNED DEFAULT 0, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_VAPP_ENTERPRISE_STATS` PRIMARY KEY (`idVirtualApp`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-72', '2.0.3', '3:580ee3ec6feb35780f7165b1b284eaa7', 73);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-73::destevezg (generated)::(Checksum: 3:0b96fb1106b6a6757d5536412fa985e5)
-CREATE TABLE `kinton`.`vappstateful_conversions` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idVirtualApp` INT UNSIGNED NOT NULL, `idUser` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_VAPPSTATEFUL_CONVERSIONS` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-73', '2.0.3', '3:0b96fb1106b6a6757d5536412fa985e5', 74);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-74::destevezg (generated)::(Checksum: 3:08886937fc7101c1a6cee4d8c80ed3fa)
-CREATE TABLE `kinton`.`vdc_enterprise_stats` (`idVirtualDataCenter` INT AUTO_INCREMENT NOT NULL, `idEnterprise` INT NOT NULL, `vdcName` VARCHAR(45), `vmCreated` MEDIUMINT UNSIGNED DEFAULT 0, `vmActive` MEDIUMINT UNSIGNED DEFAULT 0, `volCreated` MEDIUMINT UNSIGNED DEFAULT 0, `volAssociated` MEDIUMINT UNSIGNED DEFAULT 0, `volAttached` MEDIUMINT UNSIGNED DEFAULT 0, `vCpuReserved` BIGINT UNSIGNED DEFAULT 0, `vCpuUsed` BIGINT UNSIGNED DEFAULT 0, `memoryReserved` BIGINT UNSIGNED DEFAULT 0, `memoryUsed` BIGINT UNSIGNED DEFAULT 0, `localStorageReserved` BIGINT UNSIGNED DEFAULT 0, `localStorageUsed` BIGINT UNSIGNED DEFAULT 0, `extStorageReserved` BIGINT UNSIGNED DEFAULT 0, `extStorageUsed` BIGINT UNSIGNED DEFAULT 0, `publicIPsReserved` MEDIUMINT UNSIGNED DEFAULT 0 NOT NULL, `publicIPsUsed` MEDIUMINT UNSIGNED DEFAULT 0 NOT NULL, `vlanReserved` MEDIUMINT UNSIGNED DEFAULT 0 NOT NULL, `vlanUsed` MEDIUMINT UNSIGNED DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_VDC_ENTERPRISE_STATS` PRIMARY KEY (`idVirtualDataCenter`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-74', '2.0.3', '3:08886937fc7101c1a6cee4d8c80ed3fa', 75);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-75::destevezg (generated)::(Checksum: 3:063283fb7dbf433f93070fe153c9a135)
-CREATE TABLE `kinton`.`virtual_appliance_conversions` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idConversion` INT UNSIGNED NOT NULL, `idVirtualAppliance` INT UNSIGNED NOT NULL, `idUser` INT UNSIGNED, `forceLimits` TINYINT(1), `idNode` INT UNSIGNED, `version_c` INT DEFAULT 0, CONSTRAINT `PK_VIRTUAL_APPLIANCE_CONVERSIONS` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-75', '2.0.3', '3:063283fb7dbf433f93070fe153c9a135', 76);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-76::destevezg (generated)::(Checksum: 3:22888bcaa7edf918356316881c639995)
-CREATE TABLE `kinton`.`virtualapp` (`idVirtualApp` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idVirtualDataCenter` INT UNSIGNED NOT NULL, `idEnterprise` INT UNSIGNED, `name` VARCHAR(30) NOT NULL, `public` INT UNSIGNED NOT NULL, `high_disponibility` INT UNSIGNED NOT NULL, `error` INT UNSIGNED NOT NULL, `nodeconnections` TEXT, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_VIRTUALAPP` PRIMARY KEY (`idVirtualApp`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-76', '2.0.3', '3:22888bcaa7edf918356316881c639995', 77);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-77::destevezg (generated)::(Checksum: 3:5115c624b35d8bb58fc4b20ccc127e13)
-CREATE TABLE `kinton`.`virtualdatacenter` (`idVirtualDataCenter` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idEnterprise` INT UNSIGNED NOT NULL, `name` VARCHAR(40), `idDataCenter` INT UNSIGNED NOT NULL, `networktypeID` INT UNSIGNED, `hypervisorType` VARCHAR(255) NOT NULL, `ramSoft` BIGINT DEFAULT 0 NOT NULL, `cpuSoft` BIGINT DEFAULT 0 NOT NULL, `hdSoft` BIGINT DEFAULT 0 NOT NULL, `storageSoft` BIGINT DEFAULT 0 NOT NULL, `vlanSoft` BIGINT DEFAULT 0 NOT NULL, `publicIPSoft` BIGINT DEFAULT 0 NOT NULL, `ramHard` BIGINT DEFAULT 0 NOT NULL, `cpuHard` BIGINT DEFAULT 0 NOT NULL, `hdHard` BIGINT DEFAULT 0 NOT NULL, `storageHard` BIGINT DEFAULT 0 NOT NULL, `vlanHard` BIGINT DEFAULT 0 NOT NULL, `publicIPHard` BIGINT DEFAULT 0 NOT NULL, `default_vlan_network_id` INT UNSIGNED, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_VIRTUALDATACENTER` PRIMARY KEY (`idVirtualDataCenter`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-77', '2.0.3', '3:5115c624b35d8bb58fc4b20ccc127e13', 78);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-78::destevezg (generated)::(Checksum: 3:4bf4da8397db1467955f7367abc244d0)
-CREATE TABLE `kinton`.`virtualimage` (`idImage` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(255) NOT NULL, `description` VARCHAR(255), `pathName` VARCHAR(255) NOT NULL, `hd_required` BIGINT, `ram_required` INT UNSIGNED, `cpu_required` INT, `iconUrl` VARCHAR(255), `idCategory` INT UNSIGNED NOT NULL, `idRepository` INT UNSIGNED, `type` VARCHAR(50) NOT NULL, `ethDriverType` VARCHAR(16), `idMaster` INT UNSIGNED, `idEnterprise` INT UNSIGNED, `shared` INT UNSIGNED DEFAULT 0 NOT NULL, `ovfid` VARCHAR(255), `stateful` INT UNSIGNED NOT NULL, `diskFileSize` BIGINT UNSIGNED NOT NULL, `chefEnabled` TINYINT(1) DEFAULT 0 NOT NULL, `cost_code` INT DEFAULT 0, `creation_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `creation_user` VARCHAR(128) NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_VIRTUALIMAGE` PRIMARY KEY (`idImage`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-78', '2.0.3', '3:4bf4da8397db1467955f7367abc244d0', 79);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-79::destevezg (generated)::(Checksum: 3:a4f5454fefbf871ee9892ce6776f2078)
-CREATE TABLE `kinton`.`virtualimage_conversions` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idImage` INT UNSIGNED NOT NULL, `sourceType` VARCHAR(50), `targetType` VARCHAR(50) NOT NULL, `sourcePath` VARCHAR(255), `targetPath` VARCHAR(255) NOT NULL, `state` VARCHAR(50) NOT NULL, `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, `size` BIGINT, `version_c` INT DEFAULT 0, CONSTRAINT `PK_VIRTUALIMAGE_CONVERSIONS` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-79', '2.0.3', '3:a4f5454fefbf871ee9892ce6776f2078', 80);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-80::destevezg (generated)::(Checksum: 3:03eb1ec9b1cea36680f39207ec0cb265)
-CREATE TABLE `kinton`.`virtualmachine` (`idVM` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idHypervisor` INT UNSIGNED, `idImage` INT UNSIGNED, `UUID` VARCHAR(36) NOT NULL, `name` VARCHAR(255) NOT NULL, `description` VARCHAR(255), `ram` INT UNSIGNED, `cpu` INT UNSIGNED, `hd` BIGINT UNSIGNED, `vdrpPort` INT UNSIGNED, `vdrpIP` VARCHAR(39), `state` VARCHAR(50) NOT NULL, `subState` VARCHAR(50), `high_disponibility` INT UNSIGNED NOT NULL, `idConversion` INT UNSIGNED, `idType` INT UNSIGNED DEFAULT 0 NOT NULL, `idUser` INT UNSIGNED, `idEnterprise` INT UNSIGNED, `idDatastore` INT UNSIGNED, `password` VARCHAR(32), `network_configuration_id` INT UNSIGNED, `temporal` INT UNSIGNED, `ethDriverType` VARCHAR(16), `version_c` INT DEFAULT 0, CONSTRAINT `PK_VIRTUALMACHINE` PRIMARY KEY (`idVM`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-80', '2.0.3', '3:03eb1ec9b1cea36680f39207ec0cb265', 81);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-81::destevezg (generated)::(Checksum: 3:aaeeca88536c792823792daff78fc302)
-CREATE TABLE `kinton`.`virtualmachinetrackedstate` (`idVM` INT UNSIGNED NOT NULL, `previousState` VARCHAR(50) NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_VIRTUALMACHINETRACKEDSTATE` PRIMARY KEY (`idVM`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-81', '2.0.3', '3:aaeeca88536c792823792daff78fc302', 82);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-82::destevezg (generated)::(Checksum: 3:26947b00d958299de2b04874501cb62d)
-CREATE TABLE `kinton`.`vlan_network` (`vlan_network_id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `network_id` INT UNSIGNED NOT NULL, `network_configuration_id` INT UNSIGNED NOT NULL, `network_name` VARCHAR(40) NOT NULL, `vlan_tag` INT UNSIGNED, `networktype` VARCHAR(15) DEFAULT 'INTERNAL' NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, `enterprise_id` INT UNSIGNED, CONSTRAINT `PK_VLAN_NETWORK` PRIMARY KEY (`vlan_network_id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-82', '2.0.3', '3:26947b00d958299de2b04874501cb62d', 83);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-83::destevezg (generated)::(Checksum: 3:7e17f77ecfd27b92c4f31099bab23263)
-CREATE TABLE `kinton`.`vlan_network_assignment` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `vlan_network_id` INT UNSIGNED NOT NULL, `idRack` INT UNSIGNED NOT NULL, `idVirtualDataCenter` INT UNSIGNED, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_VLAN_NETWORK_ASSIGNMENT` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-83', '2.0.3', '3:7e17f77ecfd27b92c4f31099bab23263', 84);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-84::destevezg (generated)::(Checksum: 3:ad296e1cb54e03f2bca4d616edbad6cd)
-CREATE TABLE `kinton`.`vlans_dhcpOption` (`idVlan` INT UNSIGNED NOT NULL, `idDhcpOption` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-84', '2.0.3', '3:ad296e1cb54e03f2bca4d616edbad6cd', 85);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-85::destevezg (generated)::(Checksum: 3:0c21699680283121de7813315629e44f)
-CREATE TABLE `kinton`.`volume_management` (`idManagement` INT UNSIGNED NOT NULL, `usedSize` BIGINT UNSIGNED DEFAULT 0 NOT NULL, `idSCSI` VARCHAR(256) NOT NULL, `state` INT NOT NULL, `idStorage` VARCHAR(40) NOT NULL, `idImage` INT UNSIGNED, `version_c` INT DEFAULT 0) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-85', '2.0.3', '3:0c21699680283121de7813315629e44f', 86);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-86::destevezg (generated)::(Checksum: 3:7a8b4908fb9d95a66944fee41a1203c6)
-CREATE TABLE `kinton`.`workload_enterprise_exclusion_rule` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idEnterprise1` INT UNSIGNED NOT NULL, `idEnterprise2` INT UNSIGNED NOT NULL, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_WORKLOAD_ENTERPRISE_EXCLUSION_RULE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-86', '2.0.3', '3:7a8b4908fb9d95a66944fee41a1203c6', 87);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-87::destevezg (generated)::(Checksum: 3:a92b34c47f2346398f5b8b119fc7e530)
-CREATE TABLE `kinton`.`workload_fit_policy_rule` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `fitPolicy` VARCHAR(20) NOT NULL, `idDatacenter` INT UNSIGNED, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_WORKLOAD_FIT_POLICY_RULE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-87', '2.0.3', '3:a92b34c47f2346398f5b8b119fc7e530', 88);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-88::destevezg (generated)::(Checksum: 3:1730d1e6ce407813be6ceb6d424317f6)
-CREATE TABLE `kinton`.`workload_machine_load_rule` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `ramLoadPercentage` INT UNSIGNED NOT NULL, `cpuLoadPercentage` INT UNSIGNED NOT NULL, `idDatacenter` INT UNSIGNED, `idRack` INT UNSIGNED, `idMachine` INT UNSIGNED, `version_c` INT DEFAULT 1 NOT NULL, CONSTRAINT `PK_WORKLOAD_MACHINE_LOAD_RULE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-88', '2.0.3', '3:1730d1e6ce407813be6ceb6d424317f6', 89);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-89::destevezg (generated)::(Checksum: 3:aa74d712d9cfccf4c578872a99fa0e59)
-ALTER TABLE `kinton`.`datastore_assignment` ADD PRIMARY KEY (`idDatastore`, `idPhysicalMachine`);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Primary Key', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-89', '2.0.3', '3:aa74d712d9cfccf4c578872a99fa0e59', 90);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-90::destevezg (generated)::(Checksum: 3:22e25d11ab6124ead2cbb6fde07eeb66)
-ALTER TABLE `kinton`.`ovf_package_list_has_ovf_package` ADD PRIMARY KEY (`id_ovf_package_list`, `id_ovf_package`);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Primary Key', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-90', '2.0.3', '3:22e25d11ab6124ead2cbb6fde07eeb66', 91);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-194::destevezg (generated)::(Checksum: 3:a380c7f9fc0bc3ea9fe1e4be4d4fcd2c)
-CREATE UNIQUE INDEX `name` ON `kinton`.`category`(`name`);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Index', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-194', '2.0.3', '3:a380c7f9fc0bc3ea9fe1e4be4d4fcd2c', 92);
-
--- Changeset src/2.0ga/schema.xml::1337848104277-195::destevezg (generated)::(Checksum: 3:4eff3205127c7bc1a520db1b06261792)
-CREATE UNIQUE INDEX `user_auth_idx` ON `kinton`.`user`(`user`, `authType`);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Index', 'EXECUTED', 'src/2.0ga/schema.xml', '1337848104277-195', '2.0.3', '3:4eff3205127c7bc1a520db1b06261792', 93);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-1::destevezg (generated)::(Checksum: 3:465179a94d1a28d6942f8bb44a9beceb)
-ALTER TABLE `kinton`.`accounting_event_ips` MODIFY `startTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-1', '2.0.3', '3:465179a94d1a28d6942f8bb44a9beceb', 94);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-2::destevezg (generated)::(Checksum: 3:9fcade3f621d8902edd5fe7e0cd7c864)
-ALTER TABLE `kinton`.`accounting_event_ips` MODIFY `stopTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-2', '2.0.3', '3:9fcade3f621d8902edd5fe7e0cd7c864', 95);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-3::destevezg (generated)::(Checksum: 3:e863feedebe5753f3d3c3f6bf637ee52)
-ALTER TABLE `kinton`.`accounting_event_storage` MODIFY `startTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-3', '2.0.3', '3:e863feedebe5753f3d3c3f6bf637ee52', 96);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-4::destevezg (generated)::(Checksum: 3:eca37028c90adad85e58e56a696eef03)
-ALTER TABLE `kinton`.`accounting_event_storage` MODIFY `stopTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-4', '2.0.3', '3:eca37028c90adad85e58e56a696eef03', 97);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-5::destevezg (generated)::(Checksum: 3:04401822cd01707f6c95c5e8385714ab)
-ALTER TABLE `kinton`.`accounting_event_vlan` MODIFY `startTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-5', '2.0.3', '3:04401822cd01707f6c95c5e8385714ab', 98);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-6::destevezg (generated)::(Checksum: 3:9ec41f0bf6e618839b6b3b24e0073770)
-ALTER TABLE `kinton`.`accounting_event_vlan` MODIFY `stopTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-6', '2.0.3', '3:9ec41f0bf6e618839b6b3b24e0073770', 99);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-7::destevezg (generated)::(Checksum: 3:2481e182d0b6ad7dfcdaadf1d3e0b3fb)
-ALTER TABLE `kinton`.`accounting_event_vm` MODIFY `startTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-7', '2.0.3', '3:2481e182d0b6ad7dfcdaadf1d3e0b3fb', 100);
-
--- Changeset src/2.0ga/schema.xml::1337865595474-8::destevezg (generated)::(Checksum: 3:c9ea354150730436040615b45ad45cbf)
-ALTER TABLE `kinton`.`accounting_event_vm` MODIFY `stopTime` TIMESTAMP NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.0ga/schema.xml', '1337865595474-8', '2.0.3', '3:c9ea354150730436040615b45ad45cbf', 101);
-
--- Changeset src/2.0ga/views.xml::1335522742615-197::destevezg (generated)::(Checksum: 3:19045b95150d1691be2db56be4b2a037)
-CREATE VIEW `kinton`.`HOURLY_USAGE_MAX_VW` AS select `accounting_event_detail`.`startTime` AS `startTime`,`accounting_event_detail`.`endTime` AS `endTime`,`accounting_event_detail`.`idAccountingResourceType` AS `idAccountingResourceType`,`accounting_event_detail`.`resourceType` AS `resourceType`,`accounting_event_detail`.`resourceName` AS `resourceName`,max(`accounting_event_detail`.`resourceUnits`) AS `resourceUnits`,`accounting_event_detail`.`idEnterprise` AS `idEnterprise`,`accounting_event_detail`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`accounting_event_detail`.`idVirtualApp` AS `idVirtualApp`,`accounting_event_detail`.`idVirtualMachine` AS `idVirtualMachine`,`accounting_event_detail`.`enterpriseName` AS `enterpriseName`,`accounting_event_detail`.`virtualDataCenter` AS `virtualDataCenter`,`accounting_event_detail`.`virtualApp` AS `virtualApp`,`accounting_event_detail`.`virtualMachine` AS `virtualMachine` from `accounting_event_detail` group by `accounting_event_detail`.`startTime`,`accounting_event_detail`.`endTime`,`accounting_event_detail`.`idAccountingResourceType`,`accounting_event_detail`.`resourceType`,`accounting_event_detail`.`resourceName`,`accounting_event_detail`.`idEnterprise`,`accounting_event_detail`.`idVirtualDataCenter`,`accounting_event_detail`.`idVirtualApp`,`accounting_event_detail`.`idVirtualMachine`,`accounting_event_detail`.`enterpriseName`,`accounting_event_detail`.`virtualDataCenter`,`accounting_event_detail`.`virtualApp`,`accounting_event_detail`.`virtualMachine`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-197', '2.0.3', '3:19045b95150d1691be2db56be4b2a037', 102);
-
--- Changeset src/2.0ga/views.xml::1335522742615-196::destevezg (generated)::(Checksum: 3:9869fe725c330aa37e6e07da68d16c25)
-CREATE VIEW `kinton`.`DAILY_USAGE_SUM_VW` AS select cast(`v`.`startTime` as date) AS `startTime`,cast(`v`.`startTime` as date) AS `endTime`,`v`.`idAccountingResourceType` AS `idAccountingResourceType`,`v`.`resourceType` AS `resourceType`,sum(`v`.`resourceUnits`) AS `resourceUnits`,`v`.`idEnterprise` AS `idEnterprise`,`v`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`v`.`enterpriseName` AS `enterpriseName`,`v`.`virtualDataCenter` AS `virtualDataCenter` from `HOURLY_USAGE_MAX_VW` `v` group by cast(`v`.`startTime` as date),`v`.`idAccountingResourceType`,`v`.`resourceType`,`v`.`idEnterprise`,`v`.`idVirtualDataCenter`,`v`.`enterpriseName`,`v`.`virtualDataCenter`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-196', '2.0.3', '3:9869fe725c330aa37e6e07da68d16c25', 103);
-
--- Changeset src/2.0ga/views.xml::1335522742615-198::destevezg (generated)::(Checksum: 3:c09f0be5aab0442e34c330d4cbc466f6)
-CREATE VIEW `kinton`.`HOURLY_USAGE_SUM_VW` AS select `v`.`startTime` AS `startTime`,`v`.`endTime` AS `endTime`,`v`.`idAccountingResourceType` AS `idAccountingResourceType`,`v`.`resourceType` AS `resourceType`,sum(`v`.`resourceUnits`) AS `resourceUnits`,`v`.`idEnterprise` AS `idEnterprise`,`v`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`v`.`enterpriseName` AS `enterpriseName`,`v`.`virtualDataCenter` AS `virtualDataCenter` from `HOURLY_USAGE_MAX_VW` `v` group by `v`.`startTime`,`v`.`endTime`,`v`.`idAccountingResourceType`,`v`.`resourceType`,`v`.`idEnterprise`,`v`.`idVirtualDataCenter`,`v`.`enterpriseName`,`v`.`virtualDataCenter`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-198', '2.0.3', '3:c09f0be5aab0442e34c330d4cbc466f6', 104);
-
--- Changeset src/2.0ga/views.xml::1335522742615-199::destevezg (generated)::(Checksum: 3:d8e3551adcbbdbf1d7f4b285400ab942)
-CREATE VIEW `kinton`.`LAST_HOUR_USAGE_IPS_VW` AS select `accounting_event_ips`.`idIPsAccountingEvent` AS `idIPsAccountingEvent`,`accounting_event_ips`.`idEnterprise` AS `idEnterprise`,`accounting_event_ips`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`accounting_event_ips`.`ip` AS `ip`,`accounting_event_ips`.`startTime` AS `startTime`,`accounting_event_ips`.`stopTime` AS `stopTime`,(unix_timestamp(`accounting_event_ips`.`stopTime`) - unix_timestamp(`accounting_event_ips`.`startTime`)) AS `DELTA_TIME`,from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600))) AS `ROUNDED_HOUR`,`virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,`enterprise`.`name` AS `VIRTUAL_ENTERPRISE` from ((`accounting_event_ips` join `virtualdatacenter` on((`accounting_event_ips`.`idVirtualDataCenter` = `virtualdatacenter`.`idVirtualDataCenter`))) join `enterprise` on((`accounting_event_ips`.`idEnterprise` = `enterprise`.`idEnterprise`))) where (isnull(`accounting_event_ips`.`stopTime`) or ((`accounting_event_ips`.`stopTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_ips`.`stopTime`) - unix_timestamp(`accounting_event_ips`.`startTime`)) > 3600)) or ((`accounting_event_ips`.`startTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_ips`.`stopTime`) - unix_timestamp(`accounting_event_ips`.`startTime`)) <= 3600)));
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-199', '2.0.3', '3:d8e3551adcbbdbf1d7f4b285400ab942', 105);
-
--- Changeset src/2.0ga/views.xml::1335522742615-200::destevezg (generated)::(Checksum: 3:0dcf936b3a90f923643fa62ab50905d4)
-CREATE VIEW `kinton`.`LAST_HOUR_USAGE_STORAGE_VW` AS select `accounting_event_storage`.`idStorageAccountingEvent` AS `idStorageAccountingEvent`,`accounting_event_storage`.`idVM` AS `idVM`,`accounting_event_storage`.`idEnterprise` AS `idEnterprise`,`accounting_event_storage`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`accounting_event_storage`.`idVirtualApp` AS `idVirtualApp`,`accounting_event_storage`.`idResource` AS `idResource`,`accounting_event_storage`.`resourceName` AS `resourceName`,`accounting_event_storage`.`idStorageTier` AS `idStorageTier`,`accounting_event_storage`.`sizeReserved` AS `sizeReserved`,`accounting_event_storage`.`startTime` AS `startTime`,`accounting_event_storage`.`stopTime` AS `stopTime`,(unix_timestamp(`accounting_event_storage`.`stopTime`) - unix_timestamp(`accounting_event_storage`.`startTime`)) AS `DELTA_TIME`,from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600))) AS `ROUNDED_HOUR`,`virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,`enterprise`.`name` AS `VIRTUAL_ENTERPRISE` from ((`accounting_event_storage` join `virtualdatacenter` on((`accounting_event_storage`.`idVirtualDataCenter` = `virtualdatacenter`.`idVirtualDataCenter`))) join `enterprise` on((`accounting_event_storage`.`idEnterprise` = `enterprise`.`idEnterprise`))) where (isnull(`accounting_event_storage`.`stopTime`) or ((`accounting_event_storage`.`stopTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_storage`.`stopTime`) - unix_timestamp(`accounting_event_storage`.`startTime`)) > 3600)) or ((`accounting_event_storage`.`startTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_storage`.`stopTime`) - unix_timestamp(`accounting_event_storage`.`startTime`)) <= 3600)));
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-200', '2.0.3', '3:0dcf936b3a90f923643fa62ab50905d4', 106);
-
--- Changeset src/2.0ga/views.xml::1335522742615-201::destevezg (generated)::(Checksum: 3:fba05e70c0fb9525cb0e32d895418d15)
-CREATE VIEW `kinton`.`LAST_HOUR_USAGE_VLAN_VW` AS select `accounting_event_vlan`.`idVLANAccountingEvent` AS `idVLANAccountingEvent`,`accounting_event_vlan`.`idEnterprise` AS `idEnterprise`,`accounting_event_vlan`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`accounting_event_vlan`.`network_name` AS `networkName`,`accounting_event_vlan`.`startTime` AS `startTime`,`accounting_event_vlan`.`stopTime` AS `stopTime`,(unix_timestamp(`accounting_event_vlan`.`stopTime`) - unix_timestamp(`accounting_event_vlan`.`startTime`)) AS `DELTA_TIME`,from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600))) AS `ROUNDED_HOUR`,`virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,`enterprise`.`name` AS `VIRTUAL_ENTERPRISE` from ((`accounting_event_vlan` join `virtualdatacenter` on((`accounting_event_vlan`.`idVirtualDataCenter` = `virtualdatacenter`.`idVirtualDataCenter`))) join `enterprise` on((`accounting_event_vlan`.`idEnterprise` = `enterprise`.`idEnterprise`))) where (isnull(`accounting_event_vlan`.`stopTime`) or ((`accounting_event_vlan`.`stopTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_vlan`.`stopTime`) - unix_timestamp(`accounting_event_vlan`.`startTime`)) > 3600)) or ((`accounting_event_vlan`.`startTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_vlan`.`stopTime`) - unix_timestamp(`accounting_event_vlan`.`startTime`)) <= 3600)));
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-201', '2.0.3', '3:fba05e70c0fb9525cb0e32d895418d15', 107);
-
--- Changeset src/2.0ga/views.xml::1335522742615-202::destevezg (generated)::(Checksum: 3:7d1bf8364c8de37fe3e228b6ea35d56a)
-CREATE VIEW `kinton`.`LAST_HOUR_USAGE_VM_VW` AS select `accounting_event_vm`.`idVMAccountingEvent` AS `idVMAccountingEvent`,`accounting_event_vm`.`idVM` AS `idVM`,`accounting_event_vm`.`idEnterprise` AS `idEnterprise`,`accounting_event_vm`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`accounting_event_vm`.`idVirtualApp` AS `idVirtualApp`,`accounting_event_vm`.`cpu` AS `cpu`,`accounting_event_vm`.`ram` AS `ram`,`accounting_event_vm`.`hd` AS `hd`,`accounting_event_vm`.`startTime` AS `startTime`,`accounting_event_vm`.`stopTime` AS `stopTime`,`accounting_event_vm`.`costCode` AS `costCode`,`accounting_event_vm`.`hypervisorType` AS `hypervisorType`,(unix_timestamp(`accounting_event_vm`.`stopTime`) - unix_timestamp(`accounting_event_vm`.`startTime`)) AS `DELTA_TIME`,from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600))) AS `ROUNDED_HOUR`,concat(if(isnull(`virtualmachine`.`description`),'',substr(`virtualmachine`.`description`,1,120)),' - ',`virtualmachine`.`name`) AS `VIRTUAL_MACHINE`,`virtualapp`.`name` AS `VIRTUAL_APP`,`virtualdatacenter`.`name` AS `VIRTUAL_DATACENTER`,`enterprise`.`name` AS `VIRTUAL_ENTERPRISE` from ((((`accounting_event_vm` join `virtualmachine` on((`accounting_event_vm`.`idVM` = `virtualmachine`.`idVM`))) join `virtualapp` on((`accounting_event_vm`.`idVirtualApp` = `virtualapp`.`idVirtualApp`))) join `virtualdatacenter` on((`accounting_event_vm`.`idVirtualDataCenter` = `virtualdatacenter`.`idVirtualDataCenter`))) join `enterprise` on((`accounting_event_vm`.`idEnterprise` = `enterprise`.`idEnterprise`))) where (isnull(`accounting_event_vm`.`stopTime`) or ((`accounting_event_vm`.`stopTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_vm`.`stopTime`) - unix_timestamp(`accounting_event_vm`.`startTime`)) > 3600)) or ((`accounting_event_vm`.`startTime` > from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600)))) and ((unix_timestamp(`accounting_event_vm`.`stopTime`) - unix_timestamp(`accounting_event_vm`.`startTime`)) <= 3600)));
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-202', '2.0.3', '3:7d1bf8364c8de37fe3e228b6ea35d56a', 108);
-
--- Changeset src/2.0ga/views.xml::1335522742615-203::destevezg (generated)::(Checksum: 3:3525d4780909590966ee84aa2034fbe7)
-CREATE VIEW `kinton`.`MONTHLY_USAGE_SUM_VW` AS select cast((`v`.`startTime` - interval (dayofmonth(`v`.`startTime`) - 1) day) as date) AS `startTime`,last_day(`v`.`startTime`) AS `endTime`,`v`.`idAccountingResourceType` AS `idAccountingResourceType`,`v`.`resourceType` AS `resourceType`,sum(`v`.`resourceUnits`) AS `resourceUnits`,`v`.`idEnterprise` AS `idEnterprise`,`v`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`v`.`enterpriseName` AS `enterpriseName`,`v`.`virtualDataCenter` AS `virtualDataCenter` from `HOURLY_USAGE_MAX_VW` `v` group by cast((`v`.`startTime` - interval (dayofmonth(`v`.`startTime`) - 1) day) as date),`v`.`idAccountingResourceType`,`v`.`resourceType`,`v`.`idEnterprise`,`v`.`idVirtualDataCenter`,`v`.`enterpriseName`,`v`.`virtualDataCenter`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create View', 'EXECUTED', 'src/2.0ga/views.xml', '1335522742615-203', '2.0.3', '3:3525d4780909590966ee84aa2034fbe7', 109);
-
--- Changeset src/2.0ga/data.xml::1335522749701-5::destevezg (generated)::(Checksum: 3:b3f0c67b2f6f4cac3086fefc627fe152)
-INSERT INTO `kinton`.`enterprise` (`chef_client`, `chef_client_certificate`, `chef_url`, `chef_validator`, `chef_validator_certificate`, `cpuHard`, `cpuSoft`, `hdHard`, `hdSoft`, `idEnterprise`, `idPricingTemplate`, `isReservationRestricted`, `name`, `publicIPHard`, `publicIPSoft`, `ramHard`, `ramSoft`, `repositoryHard`, `repositorySoft`, `storageHard`, `storageSoft`, `version_c`, `vlanHard`, `vlanSoft`) VALUES (NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 1, NULL, 0, 'Abiquo', 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-5', '2.0.3', '3:b3f0c67b2f6f4cac3086fefc627fe152', 110);
-
--- Changeset src/2.0ga/data.xml::1335522749701-1::destevezg (generated)::(Checksum: 3:de8cf3a70531e851e5914cc06037b9b4)
-INSERT INTO `kinton`.`enterprise_resources_stats` (`extStorageReserved`, `extStorageUsed`, `idEnterprise`, `localStorageReserved`, `localStorageUsed`, `memoryReserved`, `memoryUsed`, `publicIPsReserved`, `publicIPsUsed`, `repositoryReserved`, `repositoryUsed`, `vCpuReserved`, `vCpuUsed`, `version_c`, `vlanReserved`, `vlanUsed`) VALUES (0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-1', '2.0.3', '3:de8cf3a70531e851e5914cc06037b9b4', 111);
-
--- Changeset src/2.0ga/data.xml::1335522749701-2::destevezg (generated)::(Checksum: 3:6ee2a7bfbc6e05a148230fba90faca87)
-INSERT INTO `kinton`.`apps_library` (`idEnterprise`, `id_apps_library`, `version_c`) VALUES (1, 1, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-2', '2.0.3', '3:6ee2a7bfbc6e05a148230fba90faca87', 112);
-
--- Changeset src/2.0ga/data.xml::1335522749701-4::destevezg (generated)::(Checksum: 3:1b6e28cec49ba1fe6aa832e958625b61)
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (1, 'ENTERPRISE_ENUMERATE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (2, 'ENTERPRISE_ADMINISTER_ALL', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (3, 'ENTERPRISE_RESOURCE_SUMMARY_ENT', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (4, 'PHYS_DC_ENUMERATE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (5, 'PHYS_DC_RETRIEVE_RESOURCE_USAGE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (6, 'PHYS_DC_MANAGE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (7, 'PHYS_DC_RETRIEVE_DETAILS', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (8, 'PHYS_DC_ALLOW_MODIFY_SERVERS', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (9, 'PHYS_DC_ALLOW_MODIFY_NETWORK', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (10, 'PHYS_DC_ALLOW_MODIFY_STORAGE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (11, 'PHYS_DC_ALLOW_MODIFY_ALLOCATION', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (12, 'VDC_ENUMERATE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (13, 'VDC_MANAGE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (14, 'VDC_MANAGE_VAPP', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (15, 'VDC_MANAGE_NETWORK', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (16, 'VDC_MANAGE_STORAGE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (17, 'VAPP_CUSTOMISE_SETTINGS', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (18, 'VAPP_DEPLOY_UNDEPLOY', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (19, 'VAPP_ASSIGN_NETWORK', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (20, 'VAPP_ASSIGN_VOLUME', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (21, 'VAPP_PERFORM_ACTIONS', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (22, 'VAPP_CREATE_STATEFUL', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (23, 'VAPP_CREATE_INSTANCE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (24, 'APPLIB_VIEW', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (25, 'APPLIB_ALLOW_MODIFY', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (26, 'APPLIB_UPLOAD_IMAGE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (27, 'APPLIB_MANAGE_REPOSITORY', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (28, 'APPLIB_DOWNLOAD_IMAGE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (29, 'APPLIB_MANAGE_CATEGORIES', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (30, 'USERS_VIEW', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (31, 'USERS_MANAGE_ENTERPRISE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (32, 'USERS_MANAGE_USERS', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (33, 'USERS_MANAGE_OTHER_ENTERPRISES', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (34, 'USERS_PROHIBIT_VDC_RESTRICTION', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (35, 'USERS_VIEW_PRIVILEGES', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (36, 'USERS_MANAGE_ROLES', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (37, 'USERS_MANAGE_ROLES_OTHER_ENTERPRISES', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (38, 'USERS_MANAGE_SYSTEM_ROLES', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (39, 'USERS_MANAGE_LDAP_GROUP', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (40, 'USERS_ENUMERATE_CONNECTED', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (41, 'SYSCONFIG_VIEW', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (42, 'SYSCONFIG_ALLOW_MODIFY', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (43, 'EVENTLOG_VIEW_ENTERPRISE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (44, 'EVENTLOG_VIEW_ALL', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (45, 'APPLIB_VM_COST_CODE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (46, 'USERS_MANAGE_ENTERPRISE_BRANDING', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (47, 'SYSCONFIG_SHOW_REPORTS', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (48, 'USERS_DEFINE_AS_MANAGER', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (49, 'PRICING_VIEW', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (50, 'PRICING_MANAGE', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x50)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-4', '2.0.3', '3:1b6e28cec49ba1fe6aa832e958625b61', 113);
-
--- Changeset src/2.0ga/data.xml::1335522749701-6::destevezg (generated)::(Checksum: 3:d8fe6ecf9187dc7c3fb35d05bdb8ef4b)
-INSERT INTO `kinton`.`workload_fit_policy_rule` (`fitPolicy`, `id`, `idDatacenter`, `version_c`) VALUES ('PROGRESSIVE', 0, NULL, 1);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-6', '2.0.3', '3:d8fe6ecf9187dc7c3fb35d05bdb8ef4b', 114);
-
--- Changeset src/2.0ga/data.xml::1335522749701-7::destevezg (generated)::(Checksum: 3:6bee14978f59c4c0246e57db5acd1f54)
-INSERT INTO `kinton`.`cloud_usage_stats` (`idDataCenter`, `numEnterprisesCreated`, `numUsersCreated`, `numVDCCreated`, `publicIPsReserved`, `publicIPsTotal`, `publicIPsUsed`, `serversRunning`, `serversTotal`, `storageReserved`, `storageTotal`, `storageUsed`, `vCpuReserved`, `vCpuTotal`, `vCpuUsed`, `vMachinesRunning`, `vMachinesTotal`, `vMemoryReserved`, `vMemoryTotal`, `vMemoryUsed`, `vStorageReserved`, `vStorageTotal`, `vStorageUsed`, `version_c`, `vlanReserved`, `vlanUsed`) VALUES (-1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-7', '2.0.3', '3:6bee14978f59c4c0246e57db5acd1f54', 115);
-
--- Changeset src/2.0ga/data.xml::1335522749701-8::destevezg (generated)::(Checksum: 3:cd8857111c2fccaff489ea361fc63b31)
-INSERT INTO `kinton`.`auth_group` (`description`, `id`, `name`, `version_c`) VALUES ('Generic', 1, 'GENERIC', 0);
-
-INSERT INTO `kinton`.`auth_group` (`description`, `id`, `name`, `version_c`) VALUES ('Flex client main menu group', 2, 'MAIN', 0);
-
-INSERT INTO `kinton`.`auth_group` (`description`, `id`, `name`, `version_c`) VALUES ('Flex and server Users Management', 3, 'USER', 0);
-
-INSERT INTO `kinton`.`auth_group` (`description`, `id`, `name`, `version_c`) VALUES ('Flex and server Appliance Library Management', 4, 'APPLIANCE_LIBRARY', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x4)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-8', '2.0.3', '3:cd8857111c2fccaff489ea361fc63b31', 116);
-
--- Changeset src/2.0ga/data.xml::1335522749701-9::destevezg (generated)::(Checksum: 3:fb31e2ba074d9a7bc9ba7688e9706dc8)
-INSERT INTO `kinton`.`auth_serverresource` (`description`, `id`, `idGroup`, `idRole`, `name`, `version_c`) VALUES ('Login Service', 1, 1, 2, 'LOGIN', 0);
-
-INSERT INTO `kinton`.`auth_serverresource` (`description`, `id`, `idGroup`, `idRole`, `name`, `version_c`) VALUES ('Security to retrieve the whole list of enterprises', 2, 3, 1, 'ENTERPRISE_GET_ALL_ENTERPRISES', 0);
-
-INSERT INTO `kinton`.`auth_serverresource` (`description`, `id`, `idGroup`, `idRole`, `name`, `version_c`) VALUES ('Security to call method getEnterprises in UserCommand', 3, 3, 3, 'ENTERPRISE_GET_ENTERPRISES', 0);
-
-INSERT INTO `kinton`.`auth_serverresource` (`description`, `id`, `idGroup`, `idRole`, `name`, `version_c`) VALUES ('Security to call method getUsers in UserCommand', 4, 3, 3, 'USER_GETUSERS', 0);
-
-INSERT INTO `kinton`.`auth_serverresource` (`description`, `id`, `idGroup`, `idRole`, `name`, `version_c`) VALUES ('Security to retrieve the whole list of users', 5, 3, 1, 'USER_GET_ALL_USERS', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x5)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-9', '2.0.3', '3:fb31e2ba074d9a7bc9ba7688e9706dc8', 117);
-
--- Changeset src/2.0ga/data.xml::1335522749701-10::destevezg (generated)::(Checksum: 3:01a0899358975c7e845845aaf5fb68c0)
-INSERT INTO `kinton`.`enterprise_properties_map` (`enterprise_properties`, `map_key`, `value`, `version_c`) VALUES (1, 'Support e-mail', 'support@abiquo.com', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-10', '2.0.3', '3:01a0899358975c7e845845aaf5fb68c0', 118);
-
--- Changeset src/2.0ga/data.xml::1335522749701-11::destevezg (generated)::(Checksum: 3:4e1226a6a36ae74e4ed982725b2d4c54)
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (1, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (2, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (3, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (4, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (5, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (6, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (7, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (8, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (9, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (10, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (11, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (12, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (13, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (14, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (15, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (16, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (17, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (18, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (19, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (20, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (21, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (22, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (23, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (24, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (25, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (26, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (27, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (28, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (29, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (30, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (31, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (32, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (33, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (34, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (35, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (36, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (37, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (38, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (39, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (40, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (41, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (42, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (43, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (44, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (45, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (47, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (48, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (49, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (50, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (3, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (12, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (13, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (14, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (15, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (16, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (17, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (18, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (19, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (20, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (21, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (22, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (23, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (24, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (25, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (26, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (27, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (28, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (29, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (30, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (32, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (34, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (43, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (48, 3, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (12, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (14, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (17, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (18, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (19, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (20, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (21, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (22, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (23, 2, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (43, 2, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x83)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-11', '2.0.3', '3:4e1226a6a36ae74e4ed982725b2d4c54', 119);
-
--- Changeset src/2.0ga/data.xml::1335522749701-12::destevezg (generated)::(Checksum: 3:038b8f4afc535e869fd3474162ffdb8b)
-INSERT INTO `kinton`.`role` (`blocked`, `idEnterprise`, `idRole`, `name`, `version_c`) VALUES (1, NULL, 1, 'CLOUD_ADMIN', 0);
-
-INSERT INTO `kinton`.`role` (`blocked`, `idEnterprise`, `idRole`, `name`, `version_c`) VALUES (0, NULL, 2, 'USER', 0);
-
-INSERT INTO `kinton`.`role` (`blocked`, `idEnterprise`, `idRole`, `name`, `version_c`) VALUES (0, NULL, 3, 'ENTERPRISE_ADMIN', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-12', '2.0.3', '3:038b8f4afc535e869fd3474162ffdb8b', 120);
-
--- Changeset src/2.0ga/data.xml::1335522749701-13::destevezg (generated)::(Checksum: 3:089c056314989f6686309ead50938bcb)
-INSERT INTO `kinton`.`enterprise_properties` (`enterprise`, `idProperties`, `version_c`) VALUES (1, 1, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-13', '2.0.3', '3:089c056314989f6686309ead50938bcb', 121);
-
--- Changeset src/2.0ga/data.xml::1335522749701-14::destevezg (generated)::(Checksum: 3:488515bb737e87d54efc39654c6bc22a)
-INSERT INTO `kinton`.`category` (`idCategory`, `isDefault`, `isErasable`, `name`, `version_c`) VALUES (1, 1, 0, 'Others', 0);
-
-INSERT INTO `kinton`.`category` (`idCategory`, `isDefault`, `isErasable`, `name`, `version_c`) VALUES (2, 0, 1, 'Database servers', 0);
-
-INSERT INTO `kinton`.`category` (`idCategory`, `isDefault`, `isErasable`, `name`, `version_c`) VALUES (4, 0, 1, 'Applications servers', 0);
-
-INSERT INTO `kinton`.`category` (`idCategory`, `isDefault`, `isErasable`, `name`, `version_c`) VALUES (5, 0, 1, 'Web servers', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x4)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-14', '2.0.3', '3:488515bb737e87d54efc39654c6bc22a', 122);
-
--- Changeset src/2.0ga/data.xml::1335522749701-15::destevezg (generated)::(Checksum: 3:f01c1cb4f6bf52b684078287b4b72312)
-INSERT INTO `kinton`.`network` (`network_id`, `uuid`, `version_c`) VALUES (1, '6cd20366-72e5-11df-8f9d-002564aeca80', 1);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-15', '2.0.3', '3:f01c1cb4f6bf52b684078287b4b72312', 123);
-
--- Changeset src/2.0ga/data.xml::1335522749701-16::destevezg (generated)::(Checksum: 3:82bf294985b44cab8f8c9ce2114366c7)
-INSERT INTO `kinton`.`alerts` (`description`, `id`, `tstamp`, `type`, `value`, `version_c`) VALUES (NULL, '1', '2012-04-23 10:25:41.0', 'REGISTER', 'LATER', 0);
-
-INSERT INTO `kinton`.`alerts` (`description`, `id`, `tstamp`, `type`, `value`, `version_c`) VALUES (NULL, '2', '2012-04-23 10:25:41.0', 'HEARTBEAT', 'YES', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-16', '2.0.3', '3:82bf294985b44cab8f8c9ce2114366c7', 124);
-
--- Changeset src/2.0ga/data.xml::1335522749701-17::destevezg (generated)::(Checksum: 3:1671992947b92f05f598e92f29b3de10)
-INSERT INTO `kinton`.`user` (`active`, `authType`, `availableVirtualDatacenters`, `creationDate`, `description`, `email`, `idEnterprise`, `idRole`, `idUser`, `locale`, `name`, `password`, `surname`, `user`, `version_c`) VALUES (1, 'ABIQUO', NULL, '2012-04-27 10:25:34.0', 'Main administrator', '', 1, 1, 1, 'en_US', 'Cloud', 'c69a39bd64ffb77ea7ee3369dce742f3', 'Administrator', 'admin', 0);
-
-INSERT INTO `kinton`.`user` (`active`, `authType`, `availableVirtualDatacenters`, `creationDate`, `description`, `email`, `idEnterprise`, `idRole`, `idUser`, `locale`, `name`, `password`, `surname`, `user`, `version_c`) VALUES (1, 'ABIQUO', NULL, '2012-04-27 10:25:34.0', 'Standard user', '', 1, 2, 2, 'en_US', 'Standard', 'c69a39bd64ffb77ea7ee3369dce742f3', 'User', 'user', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-17', '2.0.3', '3:1671992947b92f05f598e92f29b3de10', 125);
-
--- Changeset src/2.0ga/data.xml::1335522749701-18::destevezg (generated)::(Checksum: 3:2b477b3eddc17cd40dc60c24f7c11e64)
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds', 'client.applibrary.ovfpackagesDownloadingProgressUpdateInterval', 1, '10', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds', 'client.applibrary.virtualimageUploadProgressUpdateInterval', 2, '10', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('URL of Abiquo web page', 'client.dashboard.abiquoURL', 3, 'http://www.abiquo.org', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Allow (1) or deny (0) access to the ''Users'' section', 'client.dashboard.allowUsersAccess', 4, '1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Set to 1 to show an Alert with the text found in Startup_Alert.txt file', 'client.dashboard.showStartUpAlert', 5, '1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Google Maps will be centered by default at this longitude value', 'client.infra.googleMapsDefaultLatitude', 6, '41.3825', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Google Maps will be centered by default at this latitude value', 'client.infra.googleMapsDefaultLongitude', 7, '2.176944', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Google Maps will be centered by default with this zoom level value', 'client.infra.googleMapsDefaultZoom', 8, '4', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('The map''s Google key used in infrastructure section', 'client.infra.googleMapskey', 9, '0', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time, in seconds, that applications waits Google Maps to load. After that, application considers that Google Maps service is temporarily unavailable, and is not used', 'client.infra.googleMapsLadTimeOut', 10, '10', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds', 'client.infra.InfrastructureUpdateInterval', 11, '30', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('URL to display UCS Manager Interface', 'client.infra.ucsManagerLink', 12, '/ucsm/ucsm.jnlp', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds', 'client.metering.meteringUpdateInterval', 13, '10', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Number entries that will appear when listing IP addresses in different parts of the application', 'client.network.numberIpAdressesPerPage', 14, '25', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('This is the path to the Enterprise logo used in the app', 'client.theme.defaultEnterpriseLogoPath', 15, 'themes/abicloudDefault/logo.png', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Number of enterprises per page that will appear in User Management', 'client.user.numberEnterprisesPerPage', 16, '25', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Number of users per page that will appear in User Management', 'client.user.numberUsersPerPage', 17, '25', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Allow (1) or deny (0) virtual machine remote access', 'client.virtual.allowVMRemoteAccess', 18, '1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds', 'client.virtual.virtualApplianceDeployingUpdateInterval', 19, '5', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds', 'client.virtual.virtualAppliancesUpdateInterval', 20, '30', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('URL of Abiquo virtual image upload limitations web page', 'client.virtual.moreInfoAboutUploadLimitations', 21, 'http://wiki.abiquo.com/display/ABI20/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Minimum value for vlan ID', 'client.infra.vlanIdMin', 22, '2', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Maximum value for vlan ID', 'client.infra.vlanIdMax', 23, '4094', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds', 'client.dashboard.dashboardUpdateInterval', 24, '30', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Default Hypervisor password used when creating Physical Machines', 'client.infra.defaultHypervisorPassword', 25, 'temporal', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Default Hypervisor port used when creating Physical Machines', 'client.infra.defaultHypervisorPort', 26, '8889', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Default Hypervisor user used when creating Physical Machines', 'client.infra.defaultHypervisorUser', 27, 'root', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Comma separated values, with the allowed sizes when creating or editing a VolumeManagement', 'client.storage.volumeMaxSizeValues', 28, '1,2,4,8,16,32,64,128,256', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Time interval in seconds to refresh missing virtual image conversions', 'client.virtual.virtualImagesRefreshConversionsInterval', 29, '5', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('URL displayed when the header enterprise logo is clicked', 'client.main.enterpriseLogoURL', 30, 'http://www.abiquo.com', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('URL displayed when the report header logo is clicked, if empty the report button will not be displayed', 'client.main.billingUrl', 31, '', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Allow (1) or deny (0) user to change their password', 'client.main.disableChangePassword', 32, '1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Redirect to this URL after logout (empty -> login screen)', 'client.logout.url', 33, '', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Allow (1) or deny (0) user to logout', 'client.main.allowLogout', 34, '1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Show (1) or hide (0) the help icon within the plateform', 'client.wiki.showHelp', 35, '1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Use (1) or not (0) the default help URL within the plateform', 'client.wiki.showDefaultHelp', 36, '0', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('The default URL opened when not specific help URL is specified', 'client.wiki.defaultURL', 37, 'http://community.abiquo.com/display/ABI20/Abiquo+Documentation+Home', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('datacenter creation wiki', 'client.wiki.infra.createDatacenter', 38, 'http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('datacenter edition wiki', 'client.wiki.infra.editDatacenter', 39, 'http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('remote service edition wiki', 'client.wiki.infra.editRemoteService', 40, 'http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-RemoteServices', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('physical machine creation wiki', 'client.wiki.infra.createPhysicalMachine', 41, 'http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingPhysicalMachinesonStandardRacks', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('mail notification wiki', 'client.wiki.infra.mailNotification', 42, 'http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-SendingEmailNotifications', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Datastore manager wiki', 'client.wiki.infra.addDatastore', 43, 'http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DatastoreManagement', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('rack creation wiki', 'client.wiki.infra.createRack', 44, 'http://community.abiquo.com/display/ABI20/Manage+Racks#ManageRacks-CreatingRacks', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('multiple physical machine creation wiki', 'client.wiki.infra.createMultiplePhysicalMachine', 45, 'http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingMultiplePhysicalMachines', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('public vlan creation wiki', 'client.wiki.network.publicVlan', 46, 'http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('static routes wiki', 'client.wiki.network.staticRoutes', 47, 'http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCP', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('storage device creation wiki', 'client.wiki.storage.storageDevice', 48, 'http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-ManagedStorage', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('storage pool creation wiki', 'client.wiki.storage.storagePool', 49, 'http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-StoragePools', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('tier edition wiki', 'client.wiki.storage.tier', 50, 'http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-TierManagement', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('global rules wiki', 'client.wiki.allocation.global', 51, 'http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('datacenter rules wiki', 'client.wiki.allocation.datacenter', 52, 'http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('virtual datacenter creation wiki', 'client.wiki.vdc.createVdc', 53, 'http://community.abiquo.com/display/ABI20/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('virtual app creation wiki', 'client.wiki.vdc.createVapp', 54, 'http://community.abiquo.com/display/ABI20/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('VDC private network creation wiki', 'client.wiki.vdc.createPrivateNetwork', 55, 'http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-CreateaPrivateVLAN', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('VDC public network creation wiki', 'client.wiki.vdc.createPublicNetwork', 56, 'http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-PublicIPReservation', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('VDC virtual volume creation wiki', 'client.wiki.vdc.createVolume', 57, 'http://community.abiquo.com/display/ABI20/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Virtual Machine edition wiki', 'client.wiki.vm.editVirtualMachine', 58, 'http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Bundles VM wiki', 'client.wiki.vm.bundleVirtualMachine', 59, 'http://community.abiquo.com/display/ABI20/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanInstance', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Network Interface creation wiki', 'client.wiki.vm.createNetworkInterface', 60, 'http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Virtual Machine instance creation wiki', 'client.wiki.vm.createInstance', 61, 'http://community.abiquo.com/display/ABI20/Create+Virtual+Machine+instances', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Virtual Machine stateful creation wiki', 'client.wiki.vm.createStateful', 62, 'http://community.abiquo.com/display/ABI20/Create+Persistent+Virtual+Machines', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Capture Virtual Machine wiki', 'client.wiki.vm.captureVirtualMachine', 63, 'http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-WorkingwithImportedVirtualMachines', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Show more info when deploying', 'client.wiki.vm.deployInfo', 64, '', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Virtual Image upload wiki', 'client.wiki.apps.uploadVM', 65, 'http://community.abiquo.com/display/ABI20/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Enterprise creation wiki', 'client.wiki.user.createEnterprise', 66, 'http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-CreatingorEditinganEnterprise', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Datacenter Limits wiki', 'client.wiki.user.dataCenterLimits', 67, 'http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-EdittheEnterprise%27sDatacenters', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('User creation wiki', 'client.wiki.user.createUser', 68, 'http://community.abiquo.com/display/ABI20/Manage+Users#ManageUsers-CreatingorEditingaUser', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Role creation wiki', 'client.wiki.user.createRole', 69, 'http://community.abiquo.com/display/ABI20/Manage+Roles+and+Privileges', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Currency creation wiki', 'client.wiki.pricing.createCurrency', 70, 'http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CurrenciesTab', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('create pricing template wiki', 'client.wiki.pricing.createTemplate', 71, 'http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-PricingModelsTab', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('create pricing cost code wiki', 'client.wiki.pricing.createCostCode', 72, 'http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CostCodesTab', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Configuration wiki', 'client.wiki.config.general', 73, 'http://community.abiquo.com/display/ABI20/Configuration+view', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Heartbeat configuration wiki', 'client.wiki.config.heartbeat', 74, 'http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-Heartbeating', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Licence configuration wiki', 'client.wiki.config.licence', 75, 'http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-LicenseManagement', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('Registration wiki', 'client.wiki.config.registration', 76, 'http://community.abiquo.com/display/ABI20/Configuration+view#Configurationview-ProductRegistration', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('discover UCS blades wiki', 'client.wiki.infra.discoverBlades', 77, 'http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DiscoveringBladesonManagedRacks', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('default private vlan name', 'client.network.defaultName', 78, 'default_private_network', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('index of available netmask', 'client.network.defaultNetmask', 79, '2', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('default private vlan address', 'client.network.defaultAddress', 80, '192.168.0.0', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('default private vlan gateway', 'client.network.defaultGateway', 81, '192.168.0.1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('default primary DNS', 'client.network.defaultPrimaryDNS', 82, '', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('default secondary DNS', 'client.network.defaultSecondaryDNS', 83, '', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `systemPropertyId`, `value`, `version_c`) VALUES ('default sufix DNS', 'client.network.defaultSufixDNS', 84, '', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x84)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-18', '2.0.3', '3:2b477b3eddc17cd40dc60c24f7c11e64', 126);
-
--- Changeset src/2.0ga/data.xml::1335522749701-19::destevezg (generated)::(Checksum: 3:b03d4b735795188e0cc3a94276a7f3da)
-INSERT INTO `kinton`.`currency` (`digits`, `idCurrency`, `name`, `symbol`, `version_c`) VALUES (2, 1, 'Dollar - $', 'USD', 0);
-
-INSERT INTO `kinton`.`currency` (`digits`, `idCurrency`, `name`, `symbol`, `version_c`) VALUES (2, 2, 'Euro - 0xE282AC', 'EUR', 0);
-
-INSERT INTO `kinton`.`currency` (`digits`, `idCurrency`, `name`, `symbol`, `version_c`) VALUES (0, 3, 'Yen - 0xc2a5', 'JPY', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0ga/data.xml', '1335522749701-19', '2.0.3', '3:b03d4b735795188e0cc3a94276a7f3da', 127);
-
--- Changeset src/2.0ga/triggers.xml::datacenter_created::destevez::(Checksum: 3:b50721ed54ab4d7c0f85bbbd1d29118a)
-DROP TRIGGER IF EXISTS datacenter_created;
-
-DELIMITER |
-CREATE TRIGGER datacenter_created AFTER INSERT ON datacenter
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      INSERT IGNORE INTO cloud_usage_stats (idDataCenter) VALUES (NEW.idDataCenter);
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'datacenter_created', '2.0.3', '3:b50721ed54ab4d7c0f85bbbd1d29118a', 128);
-
--- Changeset src/2.0ga/triggers.xml::datacenter_deleted::destevez::(Checksum: 3:40f90e4bb446751c5a026acb2369301a)
-DROP TRIGGER IF EXISTS datacenter_deleted;
-
-DELIMITER |
-CREATE TRIGGER datacenter_deleted AFTER DELETE ON datacenter
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-	DELETE FROM dc_enterprise_stats WHERE idDataCenter = OLD.idDataCenter;
-      	DELETE FROM cloud_usage_stats WHERE idDataCenter = OLD.idDataCenter;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'datacenter_deleted', '2.0.3', '3:40f90e4bb446751c5a026acb2369301a', 129);
-
--- Changeset src/2.0ga/triggers.xml::virtualapp_created::destevez::(Checksum: 3:3396427a9e720f559ac8c70d2bd4a9a1)
-DROP TRIGGER IF EXISTS virtualapp_created;
-
-DELIMITER |
-CREATE TRIGGER virtualapp_created AFTER INSERT ON virtualapp
-  FOR EACH ROW BEGIN
-    DECLARE vdcNameObj VARCHAR(50);
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      SELECT vdc.name INTO vdcNameObj
-      FROM virtualdatacenter vdc
-      WHERE NEW.idVirtualDataCenter = vdc.idVirtualDataCenter;
-      INSERT IGNORE INTO vapp_enterprise_stats (idVirtualApp, idEnterprise, idVirtualDataCenter, vappName, vdcName) VALUES(NEW.idVirtualApp, NEW.idEnterprise, NEW.idVirtualDataCenter, NEW.name, vdcNameObj);
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualapp_created', '2.0.3', '3:3396427a9e720f559ac8c70d2bd4a9a1', 130);
-
--- Changeset src/2.0ga/triggers.xml::virtualapp_deleted::destevez::(Checksum: 3:07ce61b5949424284da109fe23b8c678)
-DROP TRIGGER IF EXISTS virtualapp_deleted;
-
-DELIMITER |
-CREATE TRIGGER virtualapp_deleted AFTER DELETE ON virtualapp
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    DELETE FROM vapp_enterprise_stats WHERE idVirtualApp = OLD.idVirtualApp;
-  END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualapp_deleted', '2.0.3', '3:07ce61b5949424284da109fe23b8c678', 131);
-
--- Changeset src/2.0ga/triggers.xml::enterprise_created::destevez::(Checksum: 3:de998f3bdcdabbae102a01355413f942)
-DROP TRIGGER IF EXISTS enterprise_created;
-
-DELIMITER |
-CREATE TRIGGER enterprise_created AFTER INSERT ON enterprise
-    FOR EACH ROW BEGIN      
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN       
-            --  Creates a New row in enterprise_resources_stats to store this enterprise's statistics
-            INSERT IGNORE INTO enterprise_resources_stats (idEnterprise) VALUES (NEW.idEnterprise);
-            --  Initializes stats for reserved resources (by Enterprise & by DataCenter)            
-            UPDATE IGNORE cloud_usage_stats SET numEnterprisesCreated = numEnterprisesCreated+1 WHERE idDataCenter = -1;
-            UPDATE IGNORE enterprise_resources_stats 
-                SET     vCpuReserved = vCpuReserved + NEW.cpuHard,
-                    memoryReserved = memoryReserved + NEW.ramHard,
-                    localStorageReserved = localStorageReserved + NEW.hdHard,
-                    extStorageReserved = extStorageReserved + NEW.storageHard,
-                    vlanReserved = vlanReserved + NEW.vlanHard
-            WHERE idEnterprise = NEW.idEnterprise;  
-            --  Updates enterprises created (in Fake DataCenter) for Full Cloud Statistics
-            UPDATE IGNORE cloud_usage_stats 
-                SET vCpuReserved=vCpuReserved + NEW.cpuHard,
-                    vMemoryReserved=vMemoryReserved + NEW.ramHard,
-                    vStorageReserved=vStorageReserved + NEW.hdHard,
-                    storageReserved = storageReserved + NEW.storageHard,
-                    publicIPsReserved = publicIPsReserved + NEW.publicIPHard
-            WHERE idDataCenter = -1;                        
-        END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'enterprise_created', '2.0.3', '3:de998f3bdcdabbae102a01355413f942', 132);
-
--- Changeset src/2.0ga/triggers.xml::enterprise_updated::destevez::(Checksum: 3:ec4f7a3307a524986b254b77296dff2f)
-DROP TRIGGER IF EXISTS enterprise_updated;
-
-DELIMITER |
-CREATE TRIGGER enterprise_updated AFTER UPDATE ON enterprise
--- WARN: Enterprises are not deleted, logical delete (delete field) 
+USE kinton;-- MySQL dump 10.13  Distrib 5.1.52, for unknown-linux-gnu (x86_64)
+--
+-- Host: 10.60.20.42    Database: kinton
+-- ------------------------------------------------------
+-- Server version	5.1.52
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_LIST`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_LIST`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_LIST`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_LIST` (
+  `idDataCenter` bigint(20) unsigned,
+  `uuid` varchar(40),
+  `name` varchar(20),
+  `situation` varchar(100),
+  `network_id` int(11) unsigned,
+  `version_c` int(11)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_PUBLIC_IP_STATS`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_PUBLIC_IP_STATS`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_PUBLIC_IP_STATS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_PUBLIC_IP_STATS` (
+  `idDataCenter` int(10) unsigned,
+  `publicIPsTotal` bigint(21),
+  `publicIPsReserved` decimal(23,0),
+  `publicIPsUsed` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_SERVER_STATS`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_SERVER_STATS`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_SERVER_STATS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_SERVER_STATS` (
+  `idDatacenter` int(10) unsigned,
+  `serversTotal` decimal(23,0),
+  `serversRunning` decimal(23,0),
+  `vCpuTotal` decimal(32,0),
+  `vMemoryTotal` decimal(32,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_STOARGE`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_STOARGE`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STOARGE`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_STOARGE` (
+  `idDataCenter` int(10) unsigned,
+  `vStorageTotal` decimal(42,0),
+  `vStorageUsed` decimal(42,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_STOARGE_INNER`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_STOARGE_INNER`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STOARGE_INNER`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_STOARGE_INNER` (
+  `idDataCenter` int(10) unsigned,
+  `datastoreUuid` varchar(255),
+  `size` bigint(20) unsigned,
+  `datastoreUsed` bigint(20) unsigned
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_STORAGE_TOTAL`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_STORAGE_TOTAL`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STORAGE_TOTAL`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_STORAGE_TOTAL` (
+  `idDataCenter` int(10) unsigned,
+  `storageTotal` decimal(41,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_STORAGE_USED`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_STORAGE_USED`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STORAGE_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_STORAGE_USED` (
+  `idDataCenter` int(10) unsigned,
+  `storageUsed` decimal(41,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_VLAN_RES`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_VLAN_RES`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_VLAN_RES`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_VLAN_RES` (
+  `idDataCenter` int(10) unsigned,
+  `vlanReserved` decimal(41,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_DC_VM_STATS`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_DC_VM_STATS`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_VM_STATS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_DC_VM_STATS` (
+  `idDataCenter` int(10) unsigned,
+  `vMachinesRunning` decimal(23,0),
+  `vMachinesTotal` decimal(23,0),
+  `vCpuUsed` decimal(33,0),
+  `vMemoryUsed` decimal(33,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_ENT_COUNT`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_ENT_COUNT`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_ENT_COUNT`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_ENT_COUNT` (
+  `idDataCenter` int(1),
+  `numEnterprisesCreated` bigint(21)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_EXTRA_HD_USED`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_EXTRA_HD_USED`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_EXTRA_HD_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_EXTRA_HD_USED` (
+  `idDatacenter` int(10) unsigned,
+  `extraHDUsed` decimal(48,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_RESERVED`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_RESERVED`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_RESERVED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_RESERVED` (
+  `idDataCenter` int(1),
+  `vCpuReserved` decimal(41,0),
+  `vMemoryReserved` decimal(41,0),
+  `vStorageReserved` decimal(41,0),
+  `storageReserved` decimal(41,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_SERV_WKLOAD_TOTALS`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_SERV_WKLOAD_TOTALS` (
+  `idDatacenter` int(10) unsigned,
+  `vCPUTotal` decimal(47,4),
+  `vMemoryTotal` decimal(47,4)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER` (
+  `idDatacenter` int(11) unsigned,
+  `idPhysicalMachine` int(11) unsigned,
+  `load_rule` int(11) unsigned,
+  `cpu` int(11),
+  `ram` int(11),
+  `cpuLoadPercentage` int(11) unsigned,
+  `ramLoadPercentage` int(11) unsigned
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_USER_COUNT`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_USER_COUNT`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_USER_COUNT`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_USER_COUNT` (
+  `idDataCenter` int(1),
+  `numUsersCreated` bigint(21)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_VDC_COUNT`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_VDC_COUNT`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_VDC_COUNT`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_VDC_COUNT` (
+  `idDataCenter` int(1),
+  `numVDCCreated` bigint(21)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `CLOUD_STAT_VLAN_USAGE`
+--
+
+DROP TABLE IF EXISTS `CLOUD_STAT_VLAN_USAGE`;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_VLAN_USAGE`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `CLOUD_STAT_VLAN_USAGE` (
+  `idDataCenter` int(1),
+  `vlanUsed` bigint(21)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `DATABASECHANGELOG`
+--
+
+DROP TABLE IF EXISTS `DATABASECHANGELOG`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `DATABASECHANGELOG` (
+  `ID` varchar(63) NOT NULL,
+  `AUTHOR` varchar(63) NOT NULL,
+  `FILENAME` varchar(200) NOT NULL,
+  `DATEEXECUTED` datetime NOT NULL,
+  `ORDEREXECUTED` int(11) NOT NULL,
+  `EXECTYPE` varchar(10) NOT NULL,
+  `MD5SUM` varchar(35) DEFAULT NULL,
+  `DESCRIPTION` varchar(255) DEFAULT NULL,
+  `COMMENTS` varchar(255) DEFAULT NULL,
+  `TAG` varchar(255) DEFAULT NULL,
+  `LIQUIBASE` varchar(20) DEFAULT NULL,
+  PRIMARY KEY (`ID`,`AUTHOR`,`FILENAME`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `DATABASECHANGELOG`
+--
+
+LOCK TABLES `DATABASECHANGELOG` WRITE;
+/*!40000 ALTER TABLE `DATABASECHANGELOG` DISABLE KEYS */;
+INSERT INTO `DATABASECHANGELOG` VALUES ('sql_mode','destevez','src/kinton_master_changelog.xml','2013-04-09 14:51:58',1,'EXECUTED','3:825e3d2ad2e776f91586d6a0f1f70155','Custom SQL','',NULL,'2.0.3'),('1337848104277-1','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',2,'EXECUTED','3:1fa499c79ccc8dd6441f5be160a8a20a','Create Table','',NULL,'2.0.3'),('1337848104277-2','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',3,'EXECUTED','3:a5b0a4d26eaffc3be0bb048d99cf20d1','Create Table','',NULL,'2.0.3'),('1337848104277-3','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',4,'EXECUTED','3:4e9ef329616b20821f92e3b940adbc15','Create Table','',NULL,'2.0.3'),('1337848104277-4','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',5,'EXECUTED','3:a033f02497669d24b6ed860cb02c221c','Create Table','',NULL,'2.0.3'),('1337848104277-5','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',6,'EXECUTED','3:47f51627ad81dc49264f67b42f543ba2','Create Table','',NULL,'2.0.3'),('1337848104277-6','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',7,'EXECUTED','3:8c73779c204ec6278df878eddd80b77f','Create Table','',NULL,'2.0.3'),('1337848104277-7','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',8,'EXECUTED','3:787fd9772c35d842e8fd632d6268028b','Create Table','',NULL,'2.0.3'),('1337848104277-8','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',9,'EXECUTED','3:2f2cf3e39a6718ebebb7479456783cec','Create Table','',NULL,'2.0.3'),('1337848104277-9','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',10,'EXECUTED','3:c061c7bf09669bd5f7beaa3673089e9c','Create Table','',NULL,'2.0.3'),('1337848104277-10','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',11,'EXECUTED','3:1b46903b83f80f738d133f73f614035e','Create Table','',NULL,'2.0.3'),('1337848104277-11','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',12,'EXECUTED','3:a18dcd1a1be857c76cd9eea2a9884cd2','Create Table','',NULL,'2.0.3'),('1337848104277-12','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',13,'EXECUTED','3:479e5e3af9e6a44f4fc9dbed80e6a997','Create Table','',NULL,'2.0.3'),('1337848104277-13','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:58',14,'EXECUTED','3:d6d05a87d471ea3396b72755a678b96f','Create Table','',NULL,'2.0.3'),('1337848104277-14','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',15,'EXECUTED','3:96dd6e407f119eb964fe42c62c2ca79e','Create Table','',NULL,'2.0.3'),('1337848104277-15','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',16,'EXECUTED','3:760ab69dd396ccb94f6918d55a485cca','Create Table','',NULL,'2.0.3'),('1337848104277-16','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',17,'EXECUTED','3:350a5d3c65c40a8fd81b1130a9114c49','Create Table','',NULL,'2.0.3'),('1337848104277-17','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',18,'EXECUTED','3:52e834853212606010797cd36204c702','Create Table','',NULL,'2.0.3'),('1337848104277-18','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',19,'EXECUTED','3:777e471b83d5a83febb9f9808983a265','Create Table','',NULL,'2.0.3'),('1337848104277-19','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',20,'EXECUTED','3:d68cedf4ba1325816fbcdb17e78f4bb4','Create Table','',NULL,'2.0.3'),('1337848104277-20','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',21,'EXECUTED','3:53a123366dce86c925fde8ee9bbf5cfb','Create Table','',NULL,'2.0.3'),('1337848104277-21','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',22,'EXECUTED','3:d2145318a654660d2fbaf801a8359041','Create Table','',NULL,'2.0.3'),('1337848104277-22','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',23,'EXECUTED','3:9e463f91eba996f9ffea2d3d0d60c578','Create Table','',NULL,'2.0.3'),('1337848104277-23','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',24,'EXECUTED','3:d988c667cb5fb43d55ceea415d9d5205','Create Table','',NULL,'2.0.3'),('1337848104277-24','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',25,'EXECUTED','3:0f2fd84257dfbe356711b4ca8cd305a7','Create Table','',NULL,'2.0.3'),('1337848104277-25','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',26,'EXECUTED','3:130b6dc57dfad1397c35625d5d1463c2','Create Table','',NULL,'2.0.3'),('1337848104277-26','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',27,'EXECUTED','3:69bfe558818115ac4b4dfa84d3d8de1e','Create Table','',NULL,'2.0.3'),('1337848104277-27','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',28,'EXECUTED','3:81c8e8fb31d3d86128542bfe21e002a9','Create Table','',NULL,'2.0.3'),('1337848104277-28','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',29,'EXECUTED','3:5e0b809fab55e8118cc216e1d306bf3a','Create Table','',NULL,'2.0.3'),('1337848104277-29','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',30,'EXECUTED','3:3efb70d74c36d5683996dfd24c8ddf12','Create Table','',NULL,'2.0.3'),('1337848104277-30','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',31,'EXECUTED','3:59245dc17805f9917702e777dece5d96','Create Table','',NULL,'2.0.3'),('1337848104277-31','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',32,'EXECUTED','3:cb53ef7e84b6a2edd5eb4c691b082e2e','Create Table','',NULL,'2.0.3'),('1337848104277-32','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',33,'EXECUTED','3:a54346d08d039caf856158c98342047a','Create Table','',NULL,'2.0.3'),('1337848104277-33','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:51:59',34,'EXECUTED','3:4553169cea18f126cd0add78eac0a8a7','Create Table','',NULL,'2.0.3'),('1337848104277-34','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',35,'EXECUTED','3:b2a4028100a7a39f1d1020a793a2bd9f','Create Table','',NULL,'2.0.3'),('1337848104277-35','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',36,'EXECUTED','3:114b963b04c30bcc8c4d309ae5680cc3','Create Table','',NULL,'2.0.3'),('1337848104277-36','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',37,'EXECUTED','3:ee7e8564f9a6f927ba5cd46c21a88d36','Create Table','',NULL,'2.0.3'),('1337848104277-37','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',38,'EXECUTED','3:2afd5ca9c33785df19d5bb7d1ea1c7e8','Create Table','',NULL,'2.0.3'),('1337848104277-38','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',39,'EXECUTED','3:2b979f45c26c5d78a80ceeab7e7f109b','Create Table','',NULL,'2.0.3'),('1337848104277-39','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',40,'EXECUTED','3:bc49a7c19baf45004bf6519288bbfa37','Create Table','',NULL,'2.0.3'),('1337848104277-40','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',41,'EXECUTED','3:6b91194ab89222dcf4e42dcf86a9b16c','Create Table','',NULL,'2.0.3'),('1337848104277-41','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',42,'EXECUTED','3:5649c82dca080d57f5e9f1ded0f7fa8a','Create Table','',NULL,'2.0.3'),('1337848104277-42','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',43,'EXECUTED','3:1be16468c3ddde51bd8426c9aeb9b373','Create Table','',NULL,'2.0.3'),('1337848104277-43','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',44,'EXECUTED','3:d45df511418af4a35e7902e37d7109b8','Create Table','',NULL,'2.0.3'),('1337848104277-44','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',45,'EXECUTED','3:bcf1d9ce455ec5a034d49f8cdc77bbae','Create Table','',NULL,'2.0.3'),('1337848104277-45','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',46,'EXECUTED','3:4299e545c98449bcf16aaba9d3dd5af8','Create Table','',NULL,'2.0.3'),('1337848104277-46','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',47,'EXECUTED','3:0905951d123429ef1a7b0017106c8ee9','Create Table','',NULL,'2.0.3'),('1337848104277-47','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',48,'EXECUTED','3:de0b803f07cd4aa3007ffbf9668a63ea','Create Table','',NULL,'2.0.3'),('1337848104277-48','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',49,'EXECUTED','3:0b09400a24f84219969aad8045a2a18e','Create Table','',NULL,'2.0.3'),('1337848104277-49','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',50,'EXECUTED','3:5f1327b65c8ac5737d7b7c3e1081b8ee','Create Table','',NULL,'2.0.3'),('1337848104277-50','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',51,'EXECUTED','3:024157dffa5204f1647087501ae70c0e','Create Table','',NULL,'2.0.3'),('1337848104277-51','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',52,'EXECUTED','3:806f7e446f68098dd0d41c0105a24438','Create Table','',NULL,'2.0.3'),('1337848104277-52','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:00',53,'EXECUTED','3:56295e26860afbba5936ef2dc472e0a0','Create Table','',NULL,'2.0.3'),('1337848104277-53','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',54,'EXECUTED','3:047c5fbafa97112cfa815ca57b7d9136','Create Table','',NULL,'2.0.3'),('1337848104277-54','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',55,'EXECUTED','3:4796cbed4e74dd02dcc2f68df1794d79','Create Table','',NULL,'2.0.3'),('1337848104277-55','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',56,'EXECUTED','3:f196649f225ac654a9587ceb1878b586','Create Table','',NULL,'2.0.3'),('1337848104277-56','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',57,'EXECUTED','3:253740b8f537edc756c126a302f88433','Create Table','',NULL,'2.0.3'),('1337848104277-57','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',58,'EXECUTED','3:73427f139a1db872852342e290eef17f','Create Table','',NULL,'2.0.3'),('1337848104277-58','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',59,'EXECUTED','3:e458e4c5fa8663a002b73404936feaac','Create Table','',NULL,'2.0.3'),('1337848104277-59','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',60,'EXECUTED','3:4290f1bf5e82a9c984a4c2f45aa39289','Create Table','',NULL,'2.0.3'),('1337848104277-60','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',61,'EXECUTED','3:106c340f4a0e9c1c846366d46ead4b3f','Create Table','',NULL,'2.0.3'),('1337848104277-61','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',62,'EXECUTED','3:7c35032bce567fc743c7560c27367c0f','Create Table','',NULL,'2.0.3'),('1337848104277-62','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',63,'EXECUTED','3:42731c72cb6d0e17604237240fc0562e','Create Table','',NULL,'2.0.3'),('1337848104277-63','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',64,'EXECUTED','3:e0e26dde37f9d7d63c09fd55968c0977','Create Table','',NULL,'2.0.3'),('1337848104277-64','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',65,'EXECUTED','3:0d056c8aecd4026dcda8627ad06d634c','Create Table','',NULL,'2.0.3'),('1337848104277-65','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',66,'EXECUTED','3:86505391e8081fdbbef2365031e93a74','Create Table','',NULL,'2.0.3'),('1337848104277-66','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',67,'EXECUTED','3:32239c8a6898e6748abd20b04a51e0a1','Create Table','',NULL,'2.0.3'),('1337848104277-67','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',68,'EXECUTED','3:6f8230da5dbd7b92cce93f40529c836e','Create Table','',NULL,'2.0.3'),('1337848104277-68','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',69,'EXECUTED','3:ae0cb00375718d9e76a33ef29b7bf6be','Create Table','',NULL,'2.0.3'),('1337848104277-69','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',70,'EXECUTED','3:062eb2720262e56cfe8c260344e5de20','Create Table','',NULL,'2.0.3'),('1337848104277-70','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',71,'EXECUTED','3:59dc8765f11cc6fde61d76ad1654aafb','Create Table','',NULL,'2.0.3'),('1337848104277-71','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:01',72,'EXECUTED','3:27d3915c699b72899dd8d35e3de536f3','Create Table','',NULL,'2.0.3'),('1337848104277-72','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',73,'EXECUTED','3:580ee3ec6feb35780f7165b1b284eaa7','Create Table','',NULL,'2.0.3'),('1337848104277-73','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',74,'EXECUTED','3:0b96fb1106b6a6757d5536412fa985e5','Create Table','',NULL,'2.0.3'),('1337848104277-74','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',75,'EXECUTED','3:08886937fc7101c1a6cee4d8c80ed3fa','Create Table','',NULL,'2.0.3'),('1337848104277-75','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',76,'EXECUTED','3:063283fb7dbf433f93070fe153c9a135','Create Table','',NULL,'2.0.3'),('1337848104277-76','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',77,'EXECUTED','3:22888bcaa7edf918356316881c639995','Create Table','',NULL,'2.0.3'),('1337848104277-77','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',78,'EXECUTED','3:5115c624b35d8bb58fc4b20ccc127e13','Create Table','',NULL,'2.0.3'),('1337848104277-78','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',79,'EXECUTED','3:4bf4da8397db1467955f7367abc244d0','Create Table','',NULL,'2.0.3'),('1337848104277-79','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',80,'EXECUTED','3:a4f5454fefbf871ee9892ce6776f2078','Create Table','',NULL,'2.0.3'),('1337848104277-80','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',81,'EXECUTED','3:03eb1ec9b1cea36680f39207ec0cb265','Create Table','',NULL,'2.0.3'),('1337848104277-81','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',82,'EXECUTED','3:aaeeca88536c792823792daff78fc302','Create Table','',NULL,'2.0.3'),('1337848104277-82','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',83,'EXECUTED','3:26947b00d958299de2b04874501cb62d','Create Table','',NULL,'2.0.3'),('1337848104277-83','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',84,'EXECUTED','3:7e17f77ecfd27b92c4f31099bab23263','Create Table','',NULL,'2.0.3'),('1337848104277-84','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',85,'EXECUTED','3:ad296e1cb54e03f2bca4d616edbad6cd','Create Table','',NULL,'2.0.3'),('1337848104277-85','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',86,'EXECUTED','3:0c21699680283121de7813315629e44f','Create Table','',NULL,'2.0.3'),('1337848104277-86','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',87,'EXECUTED','3:7a8b4908fb9d95a66944fee41a1203c6','Create Table','',NULL,'2.0.3'),('1337848104277-87','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',88,'EXECUTED','3:a92b34c47f2346398f5b8b119fc7e530','Create Table','',NULL,'2.0.3'),('1337848104277-88','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',89,'EXECUTED','3:1730d1e6ce407813be6ceb6d424317f6','Create Table','',NULL,'2.0.3'),('1337848104277-89','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:02',90,'EXECUTED','3:aa74d712d9cfccf4c578872a99fa0e59','Add Primary Key','',NULL,'2.0.3'),('1337848104277-90','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',91,'EXECUTED','3:22e25d11ab6124ead2cbb6fde07eeb66','Add Primary Key','',NULL,'2.0.3'),('1337848104277-194','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',92,'EXECUTED','3:a380c7f9fc0bc3ea9fe1e4be4d4fcd2c','Create Index','',NULL,'2.0.3'),('1337848104277-195','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',93,'EXECUTED','3:4eff3205127c7bc1a520db1b06261792','Create Index','',NULL,'2.0.3'),('1337865595474-1','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',94,'EXECUTED','3:465179a94d1a28d6942f8bb44a9beceb','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337865595474-2','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',95,'EXECUTED','3:9fcade3f621d8902edd5fe7e0cd7c864','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337865595474-3','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',96,'EXECUTED','3:e863feedebe5753f3d3c3f6bf637ee52','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337865595474-4','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',97,'EXECUTED','3:eca37028c90adad85e58e56a696eef03','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337865595474-5','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',98,'EXECUTED','3:04401822cd01707f6c95c5e8385714ab','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337865595474-6','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:03',99,'EXECUTED','3:9ec41f0bf6e618839b6b3b24e0073770','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337865595474-7','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:04',100,'EXECUTED','3:2481e182d0b6ad7dfcdaadf1d3e0b3fb','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337865595474-8','destevezg (generated)','src/2.0ga/schema.xml','2013-04-09 14:52:04',101,'EXECUTED','3:c9ea354150730436040615b45ad45cbf','Drop Not-Null Constraint','',NULL,'2.0.3'),('1335522742615-197','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',102,'EXECUTED','3:19045b95150d1691be2db56be4b2a037','Create View','',NULL,'2.0.3'),('1335522742615-196','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',103,'EXECUTED','3:9869fe725c330aa37e6e07da68d16c25','Create View','',NULL,'2.0.3'),('1335522742615-198','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',104,'EXECUTED','3:c09f0be5aab0442e34c330d4cbc466f6','Create View','',NULL,'2.0.3'),('1335522742615-199','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',105,'EXECUTED','3:d8e3551adcbbdbf1d7f4b285400ab942','Create View','',NULL,'2.0.3'),('1335522742615-200','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',106,'EXECUTED','3:0dcf936b3a90f923643fa62ab50905d4','Create View','',NULL,'2.0.3'),('1335522742615-201','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',107,'EXECUTED','3:fba05e70c0fb9525cb0e32d895418d15','Create View','',NULL,'2.0.3'),('1335522742615-202','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',108,'EXECUTED','3:7d1bf8364c8de37fe3e228b6ea35d56a','Create View','',NULL,'2.0.3'),('1335522742615-203','destevezg (generated)','src/2.0ga/views.xml','2013-04-09 14:52:04',109,'EXECUTED','3:3525d4780909590966ee84aa2034fbe7','Create View','',NULL,'2.0.3'),('1335522749701-5','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',110,'EXECUTED','3:b3f0c67b2f6f4cac3086fefc627fe152','Insert Row','',NULL,'2.0.3'),('1335522749701-1','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',111,'EXECUTED','3:de8cf3a70531e851e5914cc06037b9b4','Insert Row','',NULL,'2.0.3'),('1335522749701-2','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',112,'EXECUTED','3:6ee2a7bfbc6e05a148230fba90faca87','Insert Row','',NULL,'2.0.3'),('1335522749701-4','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',113,'EXECUTED','3:1b6e28cec49ba1fe6aa832e958625b61','Insert Row (x50)','',NULL,'2.0.3'),('1335522749701-6','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',114,'EXECUTED','3:d8fe6ecf9187dc7c3fb35d05bdb8ef4b','Insert Row','',NULL,'2.0.3'),('1335522749701-7','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',115,'EXECUTED','3:6bee14978f59c4c0246e57db5acd1f54','Insert Row','',NULL,'2.0.3'),('1335522749701-8','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',116,'EXECUTED','3:cd8857111c2fccaff489ea361fc63b31','Insert Row (x4)','',NULL,'2.0.3'),('1335522749701-9','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',117,'EXECUTED','3:fb31e2ba074d9a7bc9ba7688e9706dc8','Insert Row (x5)','',NULL,'2.0.3'),('1335522749701-10','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',118,'EXECUTED','3:01a0899358975c7e845845aaf5fb68c0','Insert Row','',NULL,'2.0.3'),('1335522749701-11','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',119,'EXECUTED','3:4e1226a6a36ae74e4ed982725b2d4c54','Insert Row (x83)','',NULL,'2.0.3'),('1335522749701-12','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',120,'EXECUTED','3:038b8f4afc535e869fd3474162ffdb8b','Insert Row (x3)','',NULL,'2.0.3'),('1335522749701-13','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',121,'EXECUTED','3:089c056314989f6686309ead50938bcb','Insert Row','',NULL,'2.0.3'),('1335522749701-14','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',122,'EXECUTED','3:488515bb737e87d54efc39654c6bc22a','Insert Row (x4)','',NULL,'2.0.3'),('1335522749701-15','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:04',123,'EXECUTED','3:f01c1cb4f6bf52b684078287b4b72312','Insert Row','',NULL,'2.0.3'),('1335522749701-16','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:05',124,'EXECUTED','3:82bf294985b44cab8f8c9ce2114366c7','Insert Row (x2)','',NULL,'2.0.3'),('1335522749701-17','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:05',125,'EXECUTED','3:1671992947b92f05f598e92f29b3de10','Insert Row (x2)','',NULL,'2.0.3'),('1335522749701-18','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:05',126,'EXECUTED','3:2b477b3eddc17cd40dc60c24f7c11e64','Insert Row (x84)','',NULL,'2.0.3'),('1335522749701-19','destevezg (generated)','src/2.0ga/data.xml','2013-04-09 14:52:05',127,'EXECUTED','3:b03d4b735795188e0cc3a94276a7f3da','Insert Row (x3)','',NULL,'2.0.3'),('create_virtualmachine_update_stats','destevez','src/2.0ga/triggers.xml','2013-04-09 14:52:05',128,'EXECUTED','3:b4974986747712028c438c1d6396d632','Custom SQL, SQL From File','',NULL,'2.0.3'),('delete_virtualmachine_update_stats','destevez','src/2.0ga/triggers.xml','2013-04-09 14:52:05',129,'EXECUTED','3:5120ec32cead387a721e49d2046ebbfa','Custom SQL, SQL From File','',NULL,'2.0.3'),('get_datastore_size_by_dc','destevez','src/2.0ga/procedures.xml','2013-04-09 14:52:05',130,'EXECUTED','3:56f165bb9a3b9e122a24bdfa33793533','Custom SQL, SQL From File','',NULL,'2.0.3'),('get_datastore_used_size_by_dc','destevez','src/2.0ga/procedures.xml','2013-04-09 14:52:05',131,'EXECUTED','3:70b261691f20459c61cde2182940c814','Custom SQL, SQL From File','',NULL,'2.0.3'),('add_version_column_to_all','destevez','src/2.0ga/procedures.xml','2013-04-09 14:52:05',132,'EXECUTED','3:28232591f7d936ca502b7f812c0eadd8','Custom SQL, SQL From File','',NULL,'2.0.3'),('1337848104277-92','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:05',133,'EXECUTED','3:61865568b5c369334126d98f2cbe9ca2','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-93','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:05',134,'EXECUTED','3:4a2fb0e70026d6bfe34d2eea6989c1cf','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-94','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:05',135,'EXECUTED','3:25f0b96d5511b61ebff630df02f7f80e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-95','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:05',136,'EXECUTED','3:f4199d4c8ef6d658b47e268c5b179975','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-96','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:05',137,'EXECUTED','3:c07a9802053c16ea4ff6ed536da64a49','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-97','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',138,'EXECUTED','3:c1380d095c438a19d05b61b4fbcfe7fa','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-98','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',139,'EXECUTED','3:96c71c89d367921fd04f4fed07442eac','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-99','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',140,'EXECUTED','3:a6695e1d09254cd47b2bd905e433c15f','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-100','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',141,'EXECUTED','3:162a67a515a4b894be24ea92677a4ec2','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-102','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',142,'EXECUTED','3:9cc3b6aa2c32810c3af8841bcf75d057','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-103','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',143,'EXECUTED','3:f110c901d46203476b26407f34a20553','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-104','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',144,'EXECUTED','3:0a90424859d5c751e009a52788fbd5c7','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-105','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:06',145,'EXECUTED','3:c6f97a64d3bbaf7e4b704612fb2da6e8','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-106','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',146,'EXECUTED','3:f12c60cd95ff11d2437444a8202c5bd4','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-107','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',147,'EXECUTED','3:6754b7abce5397c7844d687884732683','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-109','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',148,'EXECUTED','3:2067c951c3aa82d24eb4324e3d90f25e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-110','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',149,'EXECUTED','3:09da99c4e6e31595f34ec2be25b43dc8','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-111','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',150,'EXECUTED','3:e52fa216c74824b00447bb18025d3958','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-112','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',151,'EXECUTED','3:e6034e81d4247717b894501b1e5f2077','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-113','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',152,'EXECUTED','3:c0ef24d86a2e36e3f18678ecf98a4fd1','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-116','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',153,'EXECUTED','3:87401343ba30f95853096f53f2145d4c','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-117','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',154,'EXECUTED','3:241f9a9ba6ee93b09a7bee6372e2a99f','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-118','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:07',155,'EXECUTED','3:babee5873b113a16e3d247c4a8b7d5ae','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-119','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',156,'EXECUTED','3:2e37837fbfb14dfc4499ce39e4e45d0f','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-120','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',157,'EXECUTED','3:224c98605877be44c1a4b7772f40139d','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-121','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',158,'EXECUTED','3:7add768133119551554b8e3fe4eabcfe','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-122','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',159,'EXECUTED','3:4c513d9af35d89264d6426523832b0bf','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-123','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',160,'EXECUTED','3:cdbd03b583ae11a990b14cee938029af','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-124','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',161,'EXECUTED','3:e19d2a8d15b2698983ec2bd3244da199','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-125','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',162,'EXECUTED','3:e7542966e2a4262fcd6d94d9eab2d31d','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-126','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:08',163,'EXECUTED','3:c4d6eb8f3294ff8dc825f8dcb0694229','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-127','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',164,'EXECUTED','3:588d684f716fac4248a78f84b20e1848','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-128','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',165,'EXECUTED','3:a6664c8e00e9f84735691bc9f65ffdae','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-129','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',166,'EXECUTED','3:401d7128c9685671b8132c2be2f3b51c','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-130','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',167,'EXECUTED','3:7bd171095093a31d90a52130c93b4361','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-131','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',168,'EXECUTED','3:8aac24d3878f2cf143029245d36bc718','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-132','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',169,'EXECUTED','3:0d408de63c791d1d72e1ca6ed5b37115','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-133','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',170,'EXECUTED','3:7f40febbf510e024517380fd5e5aef48','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-134','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',171,'EXECUTED','3:b582521bf03ee8d5ea05c684578c7034','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-135','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',172,'EXECUTED','3:aeb0ded36caf7b4870a9cbda8cb62771','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-136','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:09',173,'EXECUTED','3:0abce3e30f01b6ddf819b8e30ee635a9','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-137','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',174,'EXECUTED','3:01ea4328ecb4f1edfcffece4bd1019d1','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-138','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',175,'EXECUTED','3:79755fa4b03184aaf81ed902878886e3','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-139','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',176,'EXECUTED','3:3b7a36fc3de222b2827dd624bbf188df','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-140','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',177,'EXECUTED','3:cecf006c92ac717d6c86487c837a9718','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-141','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',178,'EXECUTED','3:afe3ffec74162088a0854a7f70d46f00','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-142','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',179,'EXECUTED','3:dc4c00c7d2f82ac51a5bd20c136d466f','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-143','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',180,'EXECUTED','3:9759ca65a44a631f100713776f858563','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-144','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',181,'EXECUTED','3:41352352d930fd662d1d7d363bc4f719','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-145','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:10',182,'EXECUTED','3:45727eba271f8926bf7e2d794169d7e4','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-146','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',183,'EXECUTED','3:41cc38e6af909e00988ea3e2ed9f9a11','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-147','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',184,'EXECUTED','3:89446970e88861750073ca38aecd7221','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-148','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',185,'EXECUTED','3:4fb61370d6709dbdad6cb8912d78d147','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-149','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',186,'EXECUTED','3:ce3759c45c6e5e0957bdf286928ddfd6','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-150','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',187,'EXECUTED','3:6a2e1beff7657d80b3ddc590c6afb4ff','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-151','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',188,'EXECUTED','3:4c49355453f85109bc9fdaaa7d9c8f9d','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-152','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',189,'EXECUTED','3:c69b44279fe35ae4d5357530fa58f98c','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-153','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:11',190,'EXECUTED','3:55d5fcfd88c84da2d8e8b047fbe4ca74','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-154','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',191,'EXECUTED','3:5a8a82475af9f6cd7f2dd53d712f7772','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-155','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',192,'EXECUTED','3:28bb4e87b926a15b198c9c3f0ed9a41e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-156','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',193,'EXECUTED','3:3338ded640346300fe6fc834f29cd573','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-157','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',194,'EXECUTED','3:21c1084c13f597df7b8ae0b17661bec8','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-158','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',195,'EXECUTED','3:b69eabf2c2c54d2b3fca684c10307674','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-159','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',196,'EXECUTED','3:cc83157e9e8f124153e80effb9d51efb','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-160','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',197,'EXECUTED','3:b16109dedffbd117d36f5b77cd4afd47','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-161','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',198,'EXECUTED','3:ada5fd43eb881ae2b2c0a4ae26e8b60b','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-162','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:12',199,'EXECUTED','3:c1c9a3d9a6cd5f576dba7bec3898158f','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-163','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',200,'EXECUTED','3:bcb0e0250107a0123f8ea29709d18132','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-164','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',201,'EXECUTED','3:da457c42797f29326ae68a0f6ef932c7','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-165','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',202,'EXECUTED','3:66e0aecdb3e6496bd6014ddd811aedd7','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-166','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',203,'EXECUTED','3:490d988acc72011b15b3cdd2c054c1d0','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-167','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',204,'EXECUTED','3:8d0283f48802ab658df52a67d2b84168','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-168','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',205,'EXECUTED','3:43369b643b83dbf4abc3cdd88dea9e55','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-169','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',206,'EXECUTED','3:0e024cd1c55e694b36db28daef7be341','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-170','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',207,'EXECUTED','3:448b288afac7932843f109c4c8150cf7','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-171','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:13',208,'EXECUTED','3:fe98b32bbffe0d24efb06fbbee891dd5','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-172','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',209,'EXECUTED','3:039a3cb6e568637b87fa0c4d1fd751fb','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-173','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',210,'EXECUTED','3:89b532248fcd75b771983698562696a0','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-174','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',211,'EXECUTED','3:648895356db22362b96054e955327394','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-175','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',212,'EXECUTED','3:45fabe26bed9e78a381e00f57a8106fe','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-176','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',213,'EXECUTED','3:29df9763e7f45787933eedc0d93753a0','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-177','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',214,'EXECUTED','3:e82153ad84d182e5f828cd744af702fd','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-178','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',215,'EXECUTED','3:8ba1097cdbd056308fd5aba20d89345e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-179','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',216,'EXECUTED','3:b5b66d52f3615106dbf5b81be8aeead0','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-180','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',217,'EXECUTED','3:10999a3fbaadde9cf33ad4b3dabdad36','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-181','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:14',218,'EXECUTED','3:e0bcbb3f28283f516bd242be82ac242c','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-182','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',219,'EXECUTED','3:eda88ebcb0ae4b0237caab929c1aea15','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-183','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',220,'EXECUTED','3:8261f126803cf01ac95fc860bf05683c','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-184','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',221,'EXECUTED','3:2e17ee385fe1756792aa18f36c7cf467','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-185','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',222,'EXECUTED','3:80a62ee2317a6712e5807f3f6d0ba197','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-186','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',223,'EXECUTED','3:7aae02e0bacd25676d9e6dd34e96732e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-187','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',224,'EXECUTED','3:b623134004ac65bccbd18f8b166a65a3','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-188','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',225,'EXECUTED','3:727265749266ca7e5cd2363a313d6423','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-189','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',226,'EXECUTED','3:6ff99a1ad8e39d4f80c918cefe816932','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-190','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',227,'EXECUTED','3:c2b5d1e4466e21627abaa7ad015fff4e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-191','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:15',228,'EXECUTED','3:f6bf190b5e4a59f02bcc3db933b369ec','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-192','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:16',229,'EXECUTED','3:19d7e4f37a06adf14f372a57f894026d','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337848104277-193','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:16',230,'EXECUTED','3:98e3e9fbffc688e3cdf0a6f62cc886ab','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337866919799-3','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:16',231,'EXECUTED','3:87349e83626f9fb90db22db902f3b164','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337866919799-4','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:16',232,'EXECUTED','3:ac5709e413466a1f11ac597a7c5a585e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337866919799-5','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:16',233,'EXECUTED','3:258283ddc293a5413837c04174818f97','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337866919799-6','destevezg (generated)','src/2.0ga/kinton-2.0ga.xml','2013-04-09 14:52:16',234,'EXECUTED','3:4026921db5863970af971d6346b563ed','Add Foreign Key Constraint','',NULL,'2.0.3'),('1336469245439-1','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:16',235,'EXECUTED','3:e2dcb29ad5406df0802012ef391de0ff','Add Column','',NULL,'2.0.3'),('1336469245439-2','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:16',236,'EXECUTED','3:7c8e1ea0630376b5d6124083673e4b1e','Add Foreign Key Constraint','',NULL,'2.0.3'),('1336469245439-3','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:17',237,'EXECUTED','3:9fa54ec9f24cfe1738d991eb1ba27029','Drop Index','',NULL,'2.0.3'),('1336469245439-4','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:17',238,'EXECUTED','3:d395cdedeb298779d6b6ffe8227a3145','Create Index','',NULL,'2.0.3'),('new_roles','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:17',239,'EXECUTED','3:af3b0c4fbec8b55829ccb6bb719d853f','Insert Row (x3)','',NULL,'2.0.3'),('new_roles_privileges','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:17',240,'EXECUTED','3:47cd29b2bef41ce1030a4ff606a13247','Insert Row (x3)','',NULL,'2.0.3'),('new_system_properties','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:17',241,'EXECUTED','3:fd220730402f42a743fb053338d61469','Insert Row','',NULL,'2.0.3'),('fix_availableVirtualDatacenters','destevezg (generated)','src/2.0.0-HF1/kinton-2.0.0-HF1.xml','2013-04-09 14:52:17',242,'EXECUTED','3:db92fadc2e165d504c60c4a50b2647ab','Custom SQL','Change to NULL to avoid an empty string for the property availableVirtualDatacenters',NULL,'2.0.3'),('ABICLOUDPREMIUM-3908-calculate_cloud_usage_stats','destevez','src/2.0.0-HF3/kinton-2.0.0-HF3.xml','2013-04-09 14:52:17',243,'EXECUTED','3:3a6c4542d482125622a634a6172462b4','Custom SQL, SQL From File, Custom SQL, SQL From File','',NULL,'2.0.3'),('1336485500618-1','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:17',244,'EXECUTED','3:4441c84bd8a0fcebb40e9bb65aaf5191','Add Column, Custom SQL, Drop Column','',NULL,'2.0.3'),('1336485500618-2','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:17',245,'EXECUTED','3:3e028861a9cd184465e4b26a3cfcb777','Add Not-Null Constraint','',NULL,'2.0.3'),('1336485500618-5','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:17',246,'EXECUTED','3:c79a9d931d4ba6ccb61f1169afba19a8','Add Foreign Key Constraint','',NULL,'2.0.3'),('1336485500618-7','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:17',247,'EXECUTED','3:5b51a053210935c51c948d0c7fa381dc','Set Column as Auto-Increment, Add Foreign Key Constraint','',NULL,'2.0.3'),('1336485500618-8','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',248,'EXECUTED','3:18db5a13981a0ab6234d17f46e8eda05','Add Foreign Key Constraint','',NULL,'2.0.3'),('1336485500618-9','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',249,'EXECUTED','3:51b22321576067fff7232c38f0ab65c8','Add Foreign Key Constraint','',NULL,'2.0.3'),('1336485500618-11','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',250,'EXECUTED','3:219c18769d18cef1d17381ba4a1bb5ce','Drop Table','',NULL,'2.0.3'),('1337940808955-1','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',251,'EXECUTED','3:6f998f6f3e1878a5b204ced6fe8c34e4','Drop Not-Null Constraint','',NULL,'2.0.3'),('1337940808955-5','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',252,'EXECUTED','3:6e1b2afc755e1e0933c651e6b5ee8eb7','Add Foreign Key Constraint','',NULL,'2.0.3'),('1337940808955-6','destevezg (generated)','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',253,'EXECUTED','3:db624edc38a2e1cacb2ebe3a6156bccc','Add Foreign Key Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3856','sacedo','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',254,'EXECUTED','3:58ee105e73f736fa89b0804f646f73e4','Add Column','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3698','zmalik','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',255,'EXECUTED','3:ccd5c84bb742930df6ccd39f8fb552e5','Create Table (x2)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3698-columns','zmalik','src/2.2/kinton-2.2.xml','2013-04-09 14:52:18',256,'EXECUTED','3:0d7c4b7edc6c4c10d3f13e101d1151cf','Add Column','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3698-constraints','zmalik','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',257,'EXECUTED','3:8afd9227de5253e2a04506ad214a6931','Add Foreign Key Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3698-constraints1','zmalik','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',258,'EXECUTED','3:bd3389b3752100eb6a4262004441e391','Add Foreign Key Constraint','',NULL,'2.0.3'),('fixWrongDBEngine','destevez','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',259,'EXECUTED','3:c2313c070f2d1d0c561c27d2b46995ba','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3698-update-and-inserts','zmalik','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',260,'EXECUTED','3:2d4ecdd62de718f0b6f8e4b653909ebf','Insert Row (x2), Update Data','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3698-admin','zmalik','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',261,'EXECUTED','3:af289f7006bdc919bc053d038cbdbf25','Insert Row','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3875-0','jdevesa','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',262,'EXECUTED','3:8d84d03c13f8b54bc6f46b47b3b4c6f2','Create Table','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3875-1','jdevesa','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',263,'EXECUTED','3:6a705cc1e1c2c2ba4a9eec6a0a430623','Add Foreign Key Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3875-2','jdevesa','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',264,'EXECUTED','3:423310274c7be31be9d4435fca0d23f6','Add Foreign Key Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4033','xthevenot','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',265,'EXECUTED','3:ee17d425d7bbd7981fff90e0876dec5f','Insert Row','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4344','xthevenot','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',266,'EXECUTED','3:413e9afa18ea719bd4c58a7c468fdd6e','Insert Row (x2)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3910','xthevenot','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',267,'EXECUTED','3:d6ef777a6b393e0a780b4a233d4c6884','Insert Row (x2)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4407','xthevenot','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',268,'EXECUTED','3:7eb210f7ec2e3d8c4db8200a88d892bd','Update Data (x40)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3658','scastro','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',269,'EXECUTED','3:76559c1d1d91c98c23197868335d8b30','Drop Table (x3)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3898','destevez','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',270,'EXECUTED','3:5d1988e116ad4889e344d5e42b3554cf','Custom SQL, SQL From File','',NULL,'2.0.3'),('ABICLOUDPREMIUM-3727','destevez','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',271,'EXECUTED','3:93be65e6c75988e987412b90cc3550bc','Custom SQL, SQL From File','',NULL,'2.0.3'),('ABICLOUDPREMIUM-2435','destevez','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',272,'EXECUTED','3:5d70797c0bd2660c67b85c205e9cf413','Custom SQL, SQL From File, Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4217','jdevesa','src/2.2/kinton-2.2.xml','2013-04-09 14:52:19',273,'EXECUTED','3:b388a8f15cdd350e02dc8622a13bfdb9','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4502_compatibility_table_link','xthevenot','src/2.3/kinton-2.3.xml','2013-04-09 14:52:19',274,'EXECUTED','3:f5c5781f062fcb8e962abd34da8f199a','Update Data','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4457_scopeWikiLink','xthevenot','src/2.3/kinton-2.3.xml','2013-04-09 14:52:19',275,'EXECUTED','3:0ce2ae36cfd7ae00c397eca6f54b1c42','Insert Row','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_table1','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',276,'EXECUTED','3:f8806ce2349f6238e81baef8b3fed45b','Create Table','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_constraint1','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',277,'EXECUTED','3:dc7739bc0462d274b73cdfe8cb8b1d40','Add Foreign Key Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4869-Privilege related to the viewing enterpris','zmalik','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',278,'EXECUTED','3:c2b5b10d83decc37659b4f558839d70d','Insert Row','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4869','zmalik','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',279,'EXECUTED','3:660f4cf314d2dedc2746b4e36dd3314b','Insert Row (x3)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_data1','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',280,'EXECUTED','3:8b7edd2b2388227b6353709aaf863119','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_vlan_networkServiceType-column','zmalik','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',281,'EXECUTED','3:02f513250ebcf01b8239b705fc4b6396','Add Column','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076-vlan_networkServiceType-data_1','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',282,'EXECUTED','3:3bfcc8601cc16cccc093369cabb5195e','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076-vlan_networkServiceType-data_2','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',283,'EXECUTED','3:ef889a00f39be7ea88b9883504343068','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_vlan_networkServiceType-fk','zmalik','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',284,'EXECUTED','3:4918df9ffbb96386a3f55f0013782051','Add Foreign Key Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_table2','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',285,'EXECUTED','3:eea01dac847e771083746fee7fc59c6e','Create Table','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_constraint2','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',286,'EXECUTED','3:a513efcff90639090bc48c7491e9e425','Add Foreign Key Constraint (x2)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076-data2','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',287,'EXECUTED','3:d3c62dd7caf83c907c41c3c0ede9f7cf','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4076_table3','jdevesa','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',288,'EXECUTED','3:9502de062240993ec13a507734733e76','Drop Column','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4496_dvdmagementPurge','scastro','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',289,'EXECUTED','3:4151b298ce9d4a28d5a454effc182bba','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4602_2.3_wiki_links','xthevenot','src/2.3/kinton-2.3.xml','2013-04-09 14:52:20',290,'EXECUTED','3:117298167e6a3dbb9cf88700120aefdc','Update Data (x40)','',NULL,'2.0.3'),('scheduledResources','destevezg','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:20',291,'EXECUTED','3:06a0784940e437127f55e3705336624c','Create Table','',NULL,'2.0.3'),('scheduledResourcesIndex','ssedano','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:21',292,'EXECUTED','3:5a816764e753eecd08ef863537443a71','Create Index','',NULL,'2.0.3'),('scheduledResources_migration','destevez','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:21',293,'EXECUTED','3:2a987ca881187d8a12206e15a5183f14','Custom SQL, SQL From File, Custom SQL','',NULL,'2.0.3'),('scheduledResources_drops','destevezg','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:21',294,'EXECUTED','3:54a8be962c7963b6f8437ba05d202ea1','Drop Column (x3), Drop Table','',NULL,'2.0.3'),('statisticsViews','destevezg','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',295,'EXECUTED','3:9f92bf9abad690b8d1bab2464b1d814f','SQL From File (x4), Drop Table (x4), Custom SQL (x4)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4068-layer','sacedo','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',296,'EXECUTED','3:f4416156b1f57fc50f01767a18093741','Add Column','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4068-pricingTemplate','sacedo','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',297,'EXECUTED','3:a66751e95fe5ef2c119c9b5039fd0748','Add Column','',NULL,'2.0.3'),('wizard_license_url','xthevenot','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',298,'EXECUTED','3:d224d80d933c8fd89fc1bc938c80fcce','Insert Row','',NULL,'2.0.3'),('wizardNewWikiLinks','xthevenot','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',299,'EXECUTED','3:3f987075bb9ef0b0c7de3282eac66a00','Insert Row (x3)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4973_wikilink_layer','xthevenot','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',300,'EXECUTED','3:d8390a9f3e5f3d1e7de2e5d0fb773f78','Insert Row','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4760-Privilege related to the Anti Affinity fea','aprete','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',301,'EXECUTED','3:dba2262e856c8d5eee41a3fd0dc1723d','Insert Row','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4760','aprete','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',302,'EXECUTED','3:08f65eeeb43c0e0adfcd992c9263961a','Insert Row (x3)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4956 -Delete privileges to assign volume/nic to','aprete','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',303,'EXECUTED','3:32b2c9c42350d5e8a82c148f7eb2fd6f','Custom SQL (x2)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4683_2.4_wiki_links','xthevenot','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',304,'EXECUTED','3:ad033e2443199f4413b97fe094b26a7e','Update Data (x39), Custom SQL (x2)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4986_disable_wizard','xthevenot','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:22',305,'EXECUTED','3:7b86dc315355b626d8a741bdd6b427c5','Update Data','',NULL,'2.0.3'),('deprecateStatsTriggers','destevezg','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:23',306,'EXECUTED','3:d0e55c310d5bf21d5171e5e7c5252b60','Custom SQL (x29), SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Cus...','',NULL,'2.0.3'),('AccunoteTask-2658 Extend accounting resources','acooper','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:23',307,'EXECUTED','3:597ddb4222f191398343b0374643d1d8','Custom SQL (x7), SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File','',NULL,'2.0.3'),('Acunote Task 2836(archive table)','acooper','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:23',308,'EXECUTED','3:68606d93699ae27b63d263a774e807cb','Create Table','',NULL,'2.0.3'),('Acunote Task 2836(new indexes)','acooper','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',309,'EXECUTED','3:95d2fc3559d2ed1076473616218121d7','Create Index (x6)','',NULL,'2.0.3'),('Acunote Task 2836(new views and SPs)','acooper','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',310,'EXECUTED','3:e120aeae3ea2dab22c3c3a3d84139d21','Custom SQL, SQL From File (x2)','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4631','scastro','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',311,'EXECUTED','3:e57dd0a061c3b9c1770e0ee22cc4b803','Create Table','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4631-constraints','scastro','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',312,'EXECUTED','3:bd9cfdf298060536ff5a98ad06155d22','Add Foreign Key Constraint (x2), Add Unique Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4631-tier-column','scastro','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',313,'EXECUTED','3:9a2284a2331699024cee559381ffc426','Add Column','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4631-upgrade-enterprises','scastro','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',314,'EXECUTED','3:760ad000a62aca92d43f0fab5ee2c48a','Custom SQL','',NULL,'2.0.3'),('ABICLOUDPREMIUM-2028','destevezg','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',315,'EXECUTED','3:daf61bc5190601039ac50aad6afc05e4','Add Not-Null Constraint','',NULL,'2.0.3'),('ABICLOUDPREMIUM-4206','destevezg','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:24',316,'EXECUTED','3:a12203c803c6846e8a44f88655dc7d4e','Update Data (x2)','',NULL,'2.0.3'),('templates-need-more-info','apuig','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:27',317,'EXECUTED','3:de8c3978e55279dc2f6c5d0611c61ba0','Drop Column, Add Column (x2)','',NULL,'2.0.3'),('strong-license','ibarrera','src/2.4.0/kinton-2.4.0.xml','2013-04-09 14:52:27',318,'EXECUTED','3:3e124237b1bc1d18e015cbedaf90d3df','Delete Data, Modify data type','',NULL,'2.0.3'),('1335522749701-3','destevezg (generated)','src/kinton-license.xml','2013-04-09 14:52:27',319,'EXECUTED','3:efd9e092e3f80ed174330e7acb9fa1dc','Insert Row','',NULL,'2.0.3');
+/*!40000 ALTER TABLE `DATABASECHANGELOG` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `DATABASECHANGELOGLOCK`
+--
+
+DROP TABLE IF EXISTS `DATABASECHANGELOGLOCK`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `DATABASECHANGELOGLOCK` (
+  `ID` int(11) NOT NULL,
+  `LOCKED` tinyint(1) NOT NULL,
+  `LOCKGRANTED` datetime DEFAULT NULL,
+  `LOCKEDBY` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`ID`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `DATABASECHANGELOGLOCK`
+--
+
+LOCK TABLES `DATABASECHANGELOGLOCK` WRITE;
+/*!40000 ALTER TABLE `DATABASECHANGELOGLOCK` DISABLE KEYS */;
+INSERT INTO `DATABASECHANGELOGLOCK` VALUES (1,0,NULL,NULL);
+/*!40000 ALTER TABLE `DATABASECHANGELOGLOCK` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `ENT_STAT_EXTRA_HD_USED`
+--
+
+DROP TABLE IF EXISTS `ENT_STAT_EXTRA_HD_USED`;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_EXTRA_HD_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `ENT_STAT_EXTRA_HD_USED` (
+  `idEnterprise` int(10) unsigned,
+  `extraHDUsed` decimal(48,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `ENT_STAT_PUBLIC_IP_STATS`
+--
+
+DROP TABLE IF EXISTS `ENT_STAT_PUBLIC_IP_STATS`;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_PUBLIC_IP_STATS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `ENT_STAT_PUBLIC_IP_STATS` (
+  `idEnterprise` int(10) unsigned,
+  `publicIPsReserved` decimal(23,0),
+  `publicIPsUsed` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `ENT_STAT_STORAGE_USED`
+--
+
+DROP TABLE IF EXISTS `ENT_STAT_STORAGE_USED`;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_STORAGE_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `ENT_STAT_STORAGE_USED` (
+  `idEnterprise` int(10) unsigned,
+  `extStorageUsed` decimal(41,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `ENT_STAT_VLANS_USED`
+--
+
+DROP TABLE IF EXISTS `ENT_STAT_VLANS_USED`;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_VLANS_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `ENT_STAT_VLANS_USED` (
+  `idEnterprise` int(10) unsigned,
+  `vlanUsed` bigint(21)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `ENT_STAT_VM_RESOURCES`
+--
+
+DROP TABLE IF EXISTS `ENT_STAT_VM_RESOURCES`;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_VM_RESOURCES`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `ENT_STAT_VM_RESOURCES` (
+  `idEnterprise` int(10) unsigned,
+  `vCpuUsed` decimal(33,0),
+  `memoryUsed` decimal(33,0),
+  `localStorageUsed` decimal(42,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `METERING_ALL_VW`
+--
+
+DROP TABLE IF EXISTS `METERING_ALL_VW`;
+/*!50001 DROP VIEW IF EXISTS `METERING_ALL_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `METERING_ALL_VW` (
+  `idMeter` bigint(20) unsigned,
+  `idDatacenter` int(11) unsigned,
+  `datacenter` varchar(20),
+  `idRack` int(11) unsigned,
+  `rack` varchar(20),
+  `idPhysicalMachine` int(11) unsigned,
+  `physicalmachine` varchar(256),
+  `idStorageSystem` int(11) unsigned,
+  `storageSystem` varchar(256),
+  `idStoragePool` varchar(40),
+  `storagePool` varchar(256),
+  `idVolume` varchar(50),
+  `volume` varchar(256),
+  `idNetwork` int(11) unsigned,
+  `network` varchar(256),
+  `idSubnet` int(11) unsigned,
+  `subnet` varchar(256),
+  `idEnterprise` int(11) unsigned,
+  `enterprise` varchar(40),
+  `idUser` int(11) unsigned,
+  `user` varchar(128),
+  `idVirtualDataCenter` int(11) unsigned,
+  `virtualDataCenter` varchar(40),
+  `idVirtualApp` int(11) unsigned,
+  `virtualApp` varchar(30),
+  `idVirtualMachine` int(11) unsigned,
+  `virtualmachine` varchar(256),
+  `severity` varchar(100),
+  `timestamp` timestamp,
+  `performedby` varchar(255),
+  `actionperformed` varchar(100),
+  `component` varchar(255),
+  `stacktrace` text,
+  `version_c` int(11)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VAPP_STAT_ASSOC_VOLUMES`
+--
+
+DROP TABLE IF EXISTS `VAPP_STAT_ASSOC_VOLUMES`;
+/*!50001 DROP VIEW IF EXISTS `VAPP_STAT_ASSOC_VOLUMES`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VAPP_STAT_ASSOC_VOLUMES` (
+  `idVirtualApp` int(10) unsigned,
+  `volAssociated` bigint(21)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VAPP_STAT_ATTACH_VOLUMES`
+--
+
+DROP TABLE IF EXISTS `VAPP_STAT_ATTACH_VOLUMES`;
+/*!50001 DROP VIEW IF EXISTS `VAPP_STAT_ATTACH_VOLUMES`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VAPP_STAT_ATTACH_VOLUMES` (
+  `idVirtualApp` int(10) unsigned,
+  `volAttached` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VAPP_STAT_VM_COUNTS`
+--
+
+DROP TABLE IF EXISTS `VAPP_STAT_VM_COUNTS`;
+/*!50001 DROP VIEW IF EXISTS `VAPP_STAT_VM_COUNTS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VAPP_STAT_VM_COUNTS` (
+  `idVirtualApp` int(10) unsigned,
+  `vmCreated` decimal(23,0),
+  `vmActive` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_ASSOC_VOLUMES`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_ASSOC_VOLUMES`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_ASSOC_VOLUMES`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_ASSOC_VOLUMES` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `volCreated` bigint(21),
+  `volAssociated` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_ATTACH_VOLUMES`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_ATTACH_VOLUMES`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_ATTACH_VOLUMES`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_ATTACH_VOLUMES` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `volAttached` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_EXTRA_HD_USED`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_EXTRA_HD_USED`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_EXTRA_HD_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_EXTRA_HD_USED` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `extraHDUsed` decimal(48,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_PUBLIC_IP_STATS`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_PUBLIC_IP_STATS`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_PUBLIC_IP_STATS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_PUBLIC_IP_STATS` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `publicIPsReserved` decimal(23,0),
+  `publicIPsUsed` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_STORAGE_USED`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_STORAGE_USED`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_STORAGE_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_STORAGE_USED` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `extStorageUsed` decimal(41,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_VLANS_USED`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_VLANS_USED`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_VLANS_USED`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_VLANS_USED` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `vlanUsed` bigint(21)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_VM_COUNTS`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_VM_COUNTS`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_VM_COUNTS`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_VM_COUNTS` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `vmCreated` decimal(23,0),
+  `vmActive` decimal(23,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `VDC_STAT_VM_RESOURCES`
+--
+
+DROP TABLE IF EXISTS `VDC_STAT_VM_RESOURCES`;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_VM_RESOURCES`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `VDC_STAT_VM_RESOURCES` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `vCpuUsed` decimal(33,0),
+  `memoryUsed` decimal(33,0),
+  `localStorageUsed` decimal(42,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `accounting_event_detail_deprecated`
+--
+
+DROP TABLE IF EXISTS `accounting_event_detail_deprecated`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_detail_deprecated` (
+  `idAccountingEvent` bigint(20) NOT NULL AUTO_INCREMENT,
+  `startTime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `endTime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `idAccountingResourceType` tinyint(4) NOT NULL,
+  `resourceType` varchar(255) NOT NULL,
+  `resourceUnits` bigint(20) NOT NULL,
+  `resourceName` varchar(511) NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `idVirtualApp` int(10) unsigned DEFAULT NULL,
+  `idVirtualMachine` int(10) unsigned DEFAULT NULL,
+  `enterpriseName` varchar(255) NOT NULL,
+  `virtualDataCenter` varchar(255) NOT NULL,
+  `virtualApp` varchar(255) DEFAULT NULL,
+  `virtualMachine` varchar(255) DEFAULT NULL,
+  `costCode` int(11) DEFAULT NULL,
+  `idStorageTier` int(11) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_detail_deprecated`
+--
+
+LOCK TABLES `accounting_event_detail_deprecated` WRITE;
+/*!40000 ALTER TABLE `accounting_event_detail_deprecated` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_detail_deprecated` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_ips_deprecated`
+--
+
+DROP TABLE IF EXISTS `accounting_event_ips_deprecated`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_ips_deprecated` (
+  `idIPsAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idManagement` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `ip` varchar(20) NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idIPsAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_ips_deprecated`
+--
+
+LOCK TABLES `accounting_event_ips_deprecated` WRITE;
+/*!40000 ALTER TABLE `accounting_event_ips_deprecated` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_ips_deprecated` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_storage_deprecated`
+--
+
+DROP TABLE IF EXISTS `accounting_event_storage_deprecated`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_storage_deprecated` (
+  `idStorageAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idResource` varchar(50) DEFAULT NULL,
+  `resourceName` varchar(511) DEFAULT NULL,
+  `idVM` int(10) unsigned DEFAULT NULL,
+  `idStorageTier` int(10) unsigned DEFAULT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `idVirtualApp` int(10) unsigned DEFAULT NULL,
+  `sizeReserved` bigint(20) unsigned NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idStorageAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_storage_deprecated`
+--
+
+LOCK TABLES `accounting_event_storage_deprecated` WRITE;
+/*!40000 ALTER TABLE `accounting_event_storage_deprecated` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_storage_deprecated` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_vlan_deprecated`
+--
+
+DROP TABLE IF EXISTS `accounting_event_vlan_deprecated`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_vlan_deprecated` (
+  `idVLANAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `vlan_network_id` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `network_name` varchar(40) NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idVLANAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_vlan_deprecated`
+--
+
+LOCK TABLES `accounting_event_vlan_deprecated` WRITE;
+/*!40000 ALTER TABLE `accounting_event_vlan_deprecated` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_vlan_deprecated` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_vm_deprecated`
+--
+
+DROP TABLE IF EXISTS `accounting_event_vm_deprecated`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_vm_deprecated` (
+  `idVMAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idVM` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `idVirtualApp` int(10) unsigned NOT NULL,
+  `cpu` int(10) unsigned NOT NULL,
+  `ram` int(10) unsigned NOT NULL,
+  `hd` bigint(20) unsigned NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `costCode` int(11) DEFAULT NULL,
+  `hypervisorType` varchar(255) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idVMAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_vm_deprecated`
+--
+
+LOCK TABLES `accounting_event_vm_deprecated` WRITE;
+/*!40000 ALTER TABLE `accounting_event_vm_deprecated` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_vm_deprecated` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `alerts`
+--
+
+DROP TABLE IF EXISTS `alerts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `alerts` (
+  `id` char(36) NOT NULL,
+  `type` varchar(60) NOT NULL,
+  `value` varchar(60) NOT NULL,
+  `description` varchar(240) DEFAULT NULL,
+  `tstamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `alerts`
+--
+
+LOCK TABLES `alerts` WRITE;
+/*!40000 ALTER TABLE `alerts` DISABLE KEYS */;
+INSERT INTO `alerts` VALUES ('1','REGISTER','LATER',NULL,'2012-04-23 08:25:41',0),('2','HEARTBEAT','YES',NULL,'2012-04-23 08:25:41',0);
+/*!40000 ALTER TABLE `alerts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `allowed_tier_by_enterprise`
+--
+
+DROP TABLE IF EXISTS `allowed_tier_by_enterprise`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `allowed_tier_by_enterprise` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idDatacenterLimit` int(10) unsigned NOT NULL,
+  `idTier` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_allowed_tier` (`idDatacenterLimit`,`idTier`),
+  KEY `FK_allowed_tier_by_enterprise_tier` (`idTier`),
+  CONSTRAINT `FK_allowed_tier_by_enterprise_datacenter_limit` FOREIGN KEY (`idDatacenterLimit`) REFERENCES `enterprise_limits_by_datacenter` (`idDatacenterLimit`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `FK_allowed_tier_by_enterprise_tier` FOREIGN KEY (`idTier`) REFERENCES `tier` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `allowed_tier_by_enterprise`
+--
+
+LOCK TABLES `allowed_tier_by_enterprise` WRITE;
+/*!40000 ALTER TABLE `allowed_tier_by_enterprise` DISABLE KEYS */;
+/*!40000 ALTER TABLE `allowed_tier_by_enterprise` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `apps_library`
+--
+
+DROP TABLE IF EXISTS `apps_library`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `apps_library` (
+  `id_apps_library` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id_apps_library`),
+  KEY `fk_idEnterpriseApps` (`idEnterprise`),
+  CONSTRAINT `fk_idEnterpriseApps` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `apps_library`
+--
+
+LOCK TABLES `apps_library` WRITE;
+/*!40000 ALTER TABLE `apps_library` DISABLE KEYS */;
+INSERT INTO `apps_library` VALUES (1,1,0);
+/*!40000 ALTER TABLE `apps_library` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `auth_group`
+--
+
+DROP TABLE IF EXISTS `auth_group`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `auth_group` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(20) DEFAULT NULL,
+  `description` varchar(50) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `auth_group`
+--
+
+LOCK TABLES `auth_group` WRITE;
+/*!40000 ALTER TABLE `auth_group` DISABLE KEYS */;
+INSERT INTO `auth_group` VALUES (1,'GENERIC','Generic',0),(2,'MAIN','Flex client main menu group',0),(3,'USER','Flex and server Users Management',0),(4,'APPLIANCE_LIBRARY','Flex and server Appliance Library Management',0);
+/*!40000 ALTER TABLE `auth_group` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `auth_serverresource`
+--
+
+DROP TABLE IF EXISTS `auth_serverresource`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `auth_serverresource` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) DEFAULT NULL,
+  `description` varchar(100) DEFAULT NULL,
+  `idGroup` int(10) unsigned DEFAULT NULL,
+  `idRole` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `auth_serverresourceFK1` (`idGroup`),
+  KEY `auth_serverresourceFK2` (`idRole`),
+  CONSTRAINT `auth_serverresourceFK2` FOREIGN KEY (`idRole`) REFERENCES `role` (`idRole`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `auth_serverresourceFK1` FOREIGN KEY (`idGroup`) REFERENCES `auth_group` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `auth_serverresource`
+--
+
+LOCK TABLES `auth_serverresource` WRITE;
+/*!40000 ALTER TABLE `auth_serverresource` DISABLE KEYS */;
+INSERT INTO `auth_serverresource` VALUES (1,'LOGIN','Login Service',1,2,0),(2,'ENTERPRISE_GET_ALL_ENTERPRISES','Security to retrieve the whole list of enterprises',3,1,0),(3,'ENTERPRISE_GET_ENTERPRISES','Security to call method getEnterprises in UserCommand',3,3,0),(4,'USER_GETUSERS','Security to call method getUsers in UserCommand',3,3,0),(5,'USER_GET_ALL_USERS','Security to retrieve the whole list of users',3,1,0);
+/*!40000 ALTER TABLE `auth_serverresource` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `auth_serverresource_exception`
+--
+
+DROP TABLE IF EXISTS `auth_serverresource_exception`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `auth_serverresource_exception` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idResource` int(10) unsigned NOT NULL,
+  `idUser` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `auth_serverresource_exceptionFK1` (`idResource`),
+  KEY `auth_serverresource_exceptionFK2` (`idUser`),
+  CONSTRAINT `auth_serverresource_exceptionFK2` FOREIGN KEY (`idUser`) REFERENCES `user` (`idUser`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `auth_serverresource_exceptionFK1` FOREIGN KEY (`idResource`) REFERENCES `auth_serverresource` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `auth_serverresource_exception`
+--
+
+LOCK TABLES `auth_serverresource_exception` WRITE;
+/*!40000 ALTER TABLE `auth_serverresource_exception` DISABLE KEYS */;
+/*!40000 ALTER TABLE `auth_serverresource_exception` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `category`
+--
+
+DROP TABLE IF EXISTS `category`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `category` (
+  `idCategory` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(30) NOT NULL,
+  `isErasable` int(10) unsigned NOT NULL DEFAULT '1',
+  `isDefault` int(10) unsigned NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idCategory`),
+  UNIQUE KEY `name` (`name`,`idEnterprise`),
+  KEY `category_enterprise_FK` (`idEnterprise`),
+  CONSTRAINT `category_enterprise_FK` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `category`
+--
+
+LOCK TABLES `category` WRITE;
+/*!40000 ALTER TABLE `category` DISABLE KEYS */;
+INSERT INTO `category` VALUES (1,'Others',0,1,0,NULL),(2,'Database servers',1,0,0,NULL),(4,'Applications servers',1,0,0,NULL),(5,'Web servers',1,0,0,NULL);
+/*!40000 ALTER TABLE `category` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `chargeback_simple`
+--
+
+DROP TABLE IF EXISTS `chargeback_simple`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `chargeback_simple` (
+  `idAccountingResourceType` tinyint(4) NOT NULL,
+  `resourceType` varchar(20) NOT NULL,
+  `costPerHour` decimal(15,12) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idAccountingResourceType`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chargeback_simple`
+--
+
+LOCK TABLES `chargeback_simple` WRITE;
+/*!40000 ALTER TABLE `chargeback_simple` DISABLE KEYS */;
+/*!40000 ALTER TABLE `chargeback_simple` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `chef_runlist`
+--
+
+DROP TABLE IF EXISTS `chef_runlist`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `chef_runlist` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idVM` int(10) unsigned NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `priority` int(11) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `chef_runlist_FK1` (`idVM`),
+  CONSTRAINT `chef_runlist_FK1` FOREIGN KEY (`idVM`) REFERENCES `virtualmachine` (`idVM`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `chef_runlist`
+--
+
+LOCK TABLES `chef_runlist` WRITE;
+/*!40000 ALTER TABLE `chef_runlist` DISABLE KEYS */;
+/*!40000 ALTER TABLE `chef_runlist` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `cloud_usage_stats_vw`
+--
+
+DROP TABLE IF EXISTS `cloud_usage_stats_vw`;
+/*!50001 DROP VIEW IF EXISTS `cloud_usage_stats_vw`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `cloud_usage_stats_vw` (
+  `idDataCenter` decimal(20,0),
+  `serversTotal` bigint(24) unsigned,
+  `serversRunning` bigint(24) unsigned,
+  `storageTotal` bigint(42) unsigned,
+  `storageReserved` bigint(42) unsigned,
+  `storageUsed` bigint(42) unsigned,
+  `publicIPsTotal` bigint(20) unsigned,
+  `publicIPsReserved` bigint(24) unsigned,
+  `publicIPsUsed` bigint(24) unsigned,
+  `vlanReserved` bigint(42) unsigned,
+  `vlanUsed` bigint(20) unsigned,
+  `vMachinesTotal` bigint(24) unsigned,
+  `vMachinesRunning` bigint(24) unsigned,
+  `vCpuTotal` bigint(49) unsigned,
+  `vCpuReserved` bigint(42) unsigned,
+  `vCpuUsed` bigint(34) unsigned,
+  `vMemoryTotal` bigint(49) unsigned,
+  `vMemoryReserved` bigint(42) unsigned,
+  `vMemoryUsed` bigint(34) unsigned,
+  `vStorageReserved` bigint(42) unsigned,
+  `vStorageUsed` bigint(50) unsigned,
+  `vStorageTotal` bigint(43) unsigned,
+  `numUsersCreated` bigint(20) unsigned,
+  `numVDCCreated` bigint(20) unsigned,
+  `numEnterprisesCreated` bigint(20) unsigned,
+  `version_c` int(1)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `costCode`
+--
+
+DROP TABLE IF EXISTS `costCode`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `costCode` (
+  `idCostCode` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(20) NOT NULL,
+  `description` varchar(100) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idCostCode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `costCode`
+--
+
+LOCK TABLES `costCode` WRITE;
+/*!40000 ALTER TABLE `costCode` DISABLE KEYS */;
+/*!40000 ALTER TABLE `costCode` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `costCodeCurrency`
+--
+
+DROP TABLE IF EXISTS `costCodeCurrency`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `costCodeCurrency` (
+  `idCostCodeCurrency` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idCostCode` int(10) unsigned DEFAULT NULL,
+  `idCurrency` int(10) unsigned DEFAULT NULL,
+  `price` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`idCostCodeCurrency`),
+  KEY `idCurrency_FK` (`idCurrency`),
+  KEY `idCostCode_FK` (`idCostCode`),
+  CONSTRAINT `idCostCode_FK` FOREIGN KEY (`idCostCode`) REFERENCES `costCode` (`idCostCode`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `idCurrency_FK` FOREIGN KEY (`idCurrency`) REFERENCES `currency` (`idCurrency`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `costCodeCurrency`
+--
+
+LOCK TABLES `costCodeCurrency` WRITE;
+/*!40000 ALTER TABLE `costCodeCurrency` DISABLE KEYS */;
+/*!40000 ALTER TABLE `costCodeCurrency` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `currency`
+--
+
+DROP TABLE IF EXISTS `currency`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `currency` (
+  `idCurrency` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `symbol` varchar(10) NOT NULL,
+  `name` varchar(20) NOT NULL,
+  `digits` int(11) NOT NULL DEFAULT '2',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idCurrency`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `currency`
+--
+
+LOCK TABLES `currency` WRITE;
+/*!40000 ALTER TABLE `currency` DISABLE KEYS */;
+INSERT INTO `currency` VALUES (1,'USD','Dollar - $',2,0),(2,'EUR','Euro - €',2,0),(3,'JPY','Yen - ¥',0,0);
+/*!40000 ALTER TABLE `currency` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `datacenter`
+--
+
+DROP TABLE IF EXISTS `datacenter`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `datacenter` (
+  `idDataCenter` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(40) DEFAULT NULL,
+  `name` varchar(20) NOT NULL,
+  `situation` varchar(100) DEFAULT NULL,
+  `network_id` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idDataCenter`),
+  KEY `datacenternetwork_FK1` (`network_id`),
+  CONSTRAINT `datacenternetwork_FK1` FOREIGN KEY (`network_id`) REFERENCES `network` (`network_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `datacenter`
+--
+
+LOCK TABLES `datacenter` WRITE;
+/*!40000 ALTER TABLE `datacenter` DISABLE KEYS */;
+/*!40000 ALTER TABLE `datacenter` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `datastore`
+--
+
+DROP TABLE IF EXISTS `datastore`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `datastore` (
+  `idDatastore` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `rootPath` varchar(42) NOT NULL,
+  `directory` varchar(255) NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT '0',
+  `size` bigint(20) unsigned NOT NULL,
+  `datastoreUuid` varchar(255) DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`idDatastore`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `datastore`
+--
+
+LOCK TABLES `datastore` WRITE;
+/*!40000 ALTER TABLE `datastore` DISABLE KEYS */;
+/*!40000 ALTER TABLE `datastore` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `dc_enterprise_stats`
+--
+
+DROP TABLE IF EXISTS `dc_enterprise_stats`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dc_enterprise_stats` (
+  `idDCEnterpriseStats` int(11) NOT NULL AUTO_INCREMENT,
+  `idDataCenter` int(11) NOT NULL,
+  `idEnterprise` int(11) NOT NULL,
+  `vCpuReserved` bigint(20) unsigned DEFAULT '0',
+  `vCpuUsed` bigint(20) unsigned DEFAULT '0',
+  `memoryReserved` bigint(20) unsigned DEFAULT '0',
+  `memoryUsed` bigint(20) unsigned DEFAULT '0',
+  `localStorageReserved` bigint(20) unsigned DEFAULT '0',
+  `localStorageUsed` bigint(20) unsigned DEFAULT '0',
+  `extStorageReserved` bigint(20) unsigned DEFAULT '0',
+  `extStorageUsed` bigint(20) unsigned DEFAULT '0',
+  `repositoryReserved` bigint(20) unsigned DEFAULT '0',
+  `repositoryUsed` bigint(20) unsigned DEFAULT '0',
+  `publicIPsReserved` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `publicIPsUsed` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `vlanReserved` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `vlanUsed` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`idDCEnterpriseStats`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dc_enterprise_stats`
+--
+
+LOCK TABLES `dc_enterprise_stats` WRITE;
+/*!40000 ALTER TABLE `dc_enterprise_stats` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dc_enterprise_stats` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `dhcpOption`
+--
+
+DROP TABLE IF EXISTS `dhcpOption`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dhcpOption` (
+  `idDhcpOption` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `dhcp_opt` int(11) NOT NULL,
+  `gateway` varchar(40) DEFAULT NULL,
+  `network_address` varchar(40) NOT NULL,
+  `mask` int(11) NOT NULL,
+  `netmask` varchar(20) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idDhcpOption`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dhcpOption`
+--
+
+LOCK TABLES `dhcpOption` WRITE;
+/*!40000 ALTER TABLE `dhcpOption` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dhcpOption` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `disk_management`
+--
+
+DROP TABLE IF EXISTS `disk_management`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `disk_management` (
+  `idManagement` int(10) unsigned NOT NULL,
+  `idDatastore` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  KEY `disk_datastore_FK` (`idDatastore`),
+  KEY `disk_idManagement_FK` (`idManagement`),
+  CONSTRAINT `disk_idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `rasd_management` (`idManagement`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `disk_datastore_FK` FOREIGN KEY (`idDatastore`) REFERENCES `datastore` (`idDatastore`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `disk_management`
+--
+
+LOCK TABLES `disk_management` WRITE;
+/*!40000 ALTER TABLE `disk_management` DISABLE KEYS */;
+/*!40000 ALTER TABLE `disk_management` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `dvd_management`
+--
+
+DROP TABLE IF EXISTS `dvd_management`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dvd_management` (
+  `idManagement` int(10) unsigned NOT NULL,
+  `idImage` int(10) unsigned DEFAULT NULL,
+  KEY `dvd_management_image_FK` (`idImage`),
+  KEY `dvd_idManagement_FK` (`idManagement`),
+  CONSTRAINT `dvd_idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `rasd_management` (`idManagement`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `dvd_management_image_FK` FOREIGN KEY (`idImage`) REFERENCES `virtualimage` (`idImage`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dvd_management`
+--
+
+LOCK TABLES `dvd_management` WRITE;
+/*!40000 ALTER TABLE `dvd_management` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dvd_management` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `enterprise`
+--
+
+DROP TABLE IF EXISTS `enterprise`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `enterprise` (
+  `idEnterprise` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(40) NOT NULL,
+  `ramSoft` bigint(20) NOT NULL DEFAULT '0',
+  `cpuSoft` bigint(20) NOT NULL DEFAULT '0',
+  `hdSoft` bigint(20) NOT NULL DEFAULT '0',
+  `storageSoft` bigint(20) NOT NULL DEFAULT '0',
+  `repositorySoft` bigint(20) NOT NULL DEFAULT '0',
+  `vlanSoft` bigint(20) NOT NULL DEFAULT '0',
+  `publicIPSoft` bigint(20) NOT NULL DEFAULT '0',
+  `ramHard` bigint(20) NOT NULL DEFAULT '0',
+  `cpuHard` bigint(20) NOT NULL DEFAULT '0',
+  `hdHard` bigint(20) NOT NULL DEFAULT '0',
+  `storageHard` bigint(20) NOT NULL DEFAULT '0',
+  `repositoryHard` bigint(20) NOT NULL DEFAULT '0',
+  `vlanHard` bigint(20) NOT NULL DEFAULT '0',
+  `publicIPHard` bigint(20) NOT NULL DEFAULT '0',
+  `chef_url` varchar(255) DEFAULT NULL,
+  `chef_client` varchar(50) DEFAULT NULL,
+  `chef_validator` varchar(50) DEFAULT NULL,
+  `chef_client_certificate` text,
+  `chef_validator_certificate` text,
+  `isReservationRestricted` tinyint(1) DEFAULT '0',
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  `idPricingTemplate` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idEnterprise`),
+  KEY `enterprise_pricing_FK` (`idPricingTemplate`),
+  CONSTRAINT `enterprise_pricing_FK` FOREIGN KEY (`idPricingTemplate`) REFERENCES `pricingTemplate` (`idPricingTemplate`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `enterprise`
+--
+
+LOCK TABLES `enterprise` WRITE;
+/*!40000 ALTER TABLE `enterprise` DISABLE KEYS */;
+INSERT INTO `enterprise` VALUES (1,'Abiquo',0,0,0,0,0,0,0,0,0,0,0,0,0,0,NULL,NULL,NULL,NULL,NULL,0,1,NULL);
+/*!40000 ALTER TABLE `enterprise` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `enterprise_limits_by_datacenter`
+--
+
+DROP TABLE IF EXISTS `enterprise_limits_by_datacenter`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `enterprise_limits_by_datacenter` (
+  `idDatacenterLimit` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `idDataCenter` int(10) unsigned DEFAULT NULL,
+  `ramSoft` bigint(20) NOT NULL,
+  `cpuSoft` bigint(20) NOT NULL,
+  `hdSoft` bigint(20) NOT NULL,
+  `storageSoft` bigint(20) NOT NULL,
+  `repositorySoft` bigint(20) NOT NULL,
+  `vlanSoft` bigint(20) NOT NULL,
+  `publicIPSoft` bigint(20) NOT NULL,
+  `ramHard` bigint(20) NOT NULL,
+  `cpuHard` bigint(20) NOT NULL,
+  `hdHard` bigint(20) NOT NULL,
+  `storageHard` bigint(20) NOT NULL,
+  `repositoryHard` bigint(20) NOT NULL,
+  `vlanHard` bigint(20) NOT NULL,
+  `publicIPHard` bigint(20) NOT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  `default_vlan_network_id` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idDatacenterLimit`),
+  KEY `enterprise_FK7` (`default_vlan_network_id`),
+  CONSTRAINT `enterprise_FK7` FOREIGN KEY (`default_vlan_network_id`) REFERENCES `vlan_network` (`vlan_network_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `enterprise_limits_by_datacenter`
+--
+
+LOCK TABLES `enterprise_limits_by_datacenter` WRITE;
+/*!40000 ALTER TABLE `enterprise_limits_by_datacenter` DISABLE KEYS */;
+/*!40000 ALTER TABLE `enterprise_limits_by_datacenter` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `enterprise_properties`
+--
+
+DROP TABLE IF EXISTS `enterprise_properties`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `enterprise_properties` (
+  `idProperties` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `enterprise` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idProperties`),
+  KEY `FK_enterprise` (`enterprise`),
+  CONSTRAINT `FK_enterprise` FOREIGN KEY (`enterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `enterprise_properties`
+--
+
+LOCK TABLES `enterprise_properties` WRITE;
+/*!40000 ALTER TABLE `enterprise_properties` DISABLE KEYS */;
+INSERT INTO `enterprise_properties` VALUES (1,1,0);
+/*!40000 ALTER TABLE `enterprise_properties` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `enterprise_properties_map`
+--
+
+DROP TABLE IF EXISTS `enterprise_properties_map`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `enterprise_properties_map` (
+  `enterprise_properties` int(10) unsigned NOT NULL,
+  `map_key` varchar(30) NOT NULL,
+  `value` varchar(50) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  KEY `FK2_enterprise_properties` (`enterprise_properties`),
+  CONSTRAINT `FK2_enterprise_properties` FOREIGN KEY (`enterprise_properties`) REFERENCES `enterprise_properties` (`idProperties`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `enterprise_properties_map`
+--
+
+LOCK TABLES `enterprise_properties_map` WRITE;
+/*!40000 ALTER TABLE `enterprise_properties_map` DISABLE KEYS */;
+INSERT INTO `enterprise_properties_map` VALUES (1,'Support e-mail','support@abiquo.com',0);
+/*!40000 ALTER TABLE `enterprise_properties_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `enterprise_resources_stats_vw`
+--
+
+DROP TABLE IF EXISTS `enterprise_resources_stats_vw`;
+/*!50001 DROP VIEW IF EXISTS `enterprise_resources_stats_vw`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `enterprise_resources_stats_vw` (
+  `idEnterprise` int(10) unsigned,
+  `vCpuReserved` bigint(20) unsigned,
+  `vCpuUsed` bigint(34) unsigned,
+  `memoryReserved` bigint(20) unsigned,
+  `memoryUsed` bigint(34) unsigned,
+  `localStorageReserved` bigint(20) unsigned,
+  `localStorageUsed` bigint(50) unsigned,
+  `extStorageReserved` bigint(20) unsigned,
+  `extStorageUsed` bigint(42) unsigned,
+  `repositoryReserved` bigint(20) unsigned,
+  `repositoryUsed` bigint(20) unsigned,
+  `publicIPsReserved` bigint(24) unsigned,
+  `publicIPsUsed` bigint(24) unsigned,
+  `vlanReserved` bigint(20) unsigned,
+  `vlanUsed` bigint(20) unsigned,
+  `version_c` int(1)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `enterprise_theme`
+--
+
+DROP TABLE IF EXISTS `enterprise_theme`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `enterprise_theme` (
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `company_logo_path` text,
+  `theme` text,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idEnterprise`),
+  CONSTRAINT `THEME_FK1` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `enterprise_theme`
+--
+
+LOCK TABLES `enterprise_theme` WRITE;
+/*!40000 ALTER TABLE `enterprise_theme` DISABLE KEYS */;
+/*!40000 ALTER TABLE `enterprise_theme` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `heartbeatlog`
+--
+
+DROP TABLE IF EXISTS `heartbeatlog`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `heartbeatlog` (
+  `id` char(36) NOT NULL,
+  `abicloud_id` varchar(60) DEFAULT NULL,
+  `client_ip` varchar(16) NOT NULL,
+  `physical_servers` int(11) NOT NULL,
+  `virtual_machines` int(11) NOT NULL,
+  `volumes` int(11) NOT NULL,
+  `virtual_datacenters` int(11) NOT NULL,
+  `virtual_appliances` int(11) NOT NULL,
+  `organizations` int(11) NOT NULL,
+  `total_virtual_cores_allocated` bigint(20) NOT NULL,
+  `total_virtual_cores_used` bigint(20) NOT NULL,
+  `total_virtual_cores` bigint(20) NOT NULL DEFAULT '0',
+  `total_virtual_memory_allocated` bigint(20) NOT NULL,
+  `total_virtual_memory_used` bigint(20) NOT NULL,
+  `total_virtual_memory` bigint(20) NOT NULL DEFAULT '0',
+  `total_volume_space_allocated` bigint(20) NOT NULL,
+  `total_volume_space_used` bigint(20) NOT NULL,
+  `total_volume_space` bigint(20) NOT NULL DEFAULT '0',
+  `virtual_images` bigint(20) NOT NULL,
+  `operating_system_name` varchar(60) NOT NULL,
+  `operating_system_version` varchar(60) NOT NULL,
+  `database_name` varchar(60) NOT NULL,
+  `database_version` varchar(60) NOT NULL,
+  `application_server_name` varchar(60) NOT NULL,
+  `application_server_version` varchar(60) NOT NULL,
+  `java_version` varchar(60) NOT NULL,
+  `abicloud_version` varchar(60) NOT NULL,
+  `abicloud_distribution` varchar(60) NOT NULL,
+  `tstamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `heartbeatlog`
+--
+
+LOCK TABLES `heartbeatlog` WRITE;
+/*!40000 ALTER TABLE `heartbeatlog` DISABLE KEYS */;
+/*!40000 ALTER TABLE `heartbeatlog` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `hypervisor`
+--
+
+DROP TABLE IF EXISTS `hypervisor`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hypervisor` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idPhysicalMachine` int(10) unsigned NOT NULL,
+  `ip` varchar(39) NOT NULL,
+  `ipService` varchar(39) NOT NULL,
+  `port` int(11) NOT NULL,
+  `user` varchar(255) NOT NULL DEFAULT 'user',
+  `password` varchar(255) NOT NULL DEFAULT 'password',
+  `version_c` int(11) DEFAULT '0',
+  `type` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `Hypervisor_FK1` (`idPhysicalMachine`),
+  CONSTRAINT `Hypervisor_FK1` FOREIGN KEY (`idPhysicalMachine`) REFERENCES `physicalmachine` (`idPhysicalMachine`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hypervisor`
+--
+
+LOCK TABLES `hypervisor` WRITE;
+/*!40000 ALTER TABLE `hypervisor` DISABLE KEYS */;
+/*!40000 ALTER TABLE `hypervisor` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `initiator_mapping`
+--
+
+DROP TABLE IF EXISTS `initiator_mapping`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `initiator_mapping` (
+  `idInitiatorMapping` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idManagement` int(10) unsigned NOT NULL,
+  `initiatorIqn` varchar(256) NOT NULL,
+  `targetIqn` varchar(256) NOT NULL,
+  `targetLun` int(11) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idInitiatorMapping`),
+  KEY `volume_managementFK_1` (`idManagement`),
+  CONSTRAINT `volume_managementFK_1` FOREIGN KEY (`idManagement`) REFERENCES `volume_management` (`idManagement`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `initiator_mapping`
+--
+
+LOCK TABLES `initiator_mapping` WRITE;
+/*!40000 ALTER TABLE `initiator_mapping` DISABLE KEYS */;
+/*!40000 ALTER TABLE `initiator_mapping` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ip_pool_management`
+--
+
+DROP TABLE IF EXISTS `ip_pool_management`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ip_pool_management` (
+  `idManagement` int(10) unsigned NOT NULL,
+  `mac` varchar(20) DEFAULT NULL,
+  `name` varchar(30) DEFAULT NULL,
+  `ip` varchar(20) NOT NULL,
+  `vlan_network_name` varchar(40) DEFAULT NULL,
+  `vlan_network_id` int(10) unsigned DEFAULT NULL,
+  `quarantine` tinyint(1) NOT NULL DEFAULT '0',
+  `available` tinyint(1) NOT NULL DEFAULT '1',
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  KEY `id_management_FK` (`idManagement`),
+  KEY `ippool_vlan_network_FK` (`vlan_network_id`),
+  CONSTRAINT `ippool_vlan_network_FK` FOREIGN KEY (`vlan_network_id`) REFERENCES `vlan_network` (`vlan_network_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `id_management_FK` FOREIGN KEY (`idManagement`) REFERENCES `rasd_management` (`idManagement`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ip_pool_management`
+--
+
+LOCK TABLES `ip_pool_management` WRITE;
+/*!40000 ALTER TABLE `ip_pool_management` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ip_pool_management` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER update_ip_pool_management_update_stats AFTER UPDATE ON ip_pool_management
     FOR EACH ROW BEGIN
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN       
-        -- get DataCenter
-        -- calculates resources increase        
-        UPDATE IGNORE enterprise_resources_stats 
-            SET vCpuReserved = vCpuReserved + NEW.cpuHard - OLD.cpuHard,
-                memoryReserved = memoryReserved + NEW.ramHard - OLD.ramHard,
-                localStorageReserved = localStorageReserved + NEW.hdHard - OLD.hdHard,
-                extStorageReserved = extStorageReserved + NEW.storageHard - OLD.storageHard,
-                repositoryReserved = repositoryReserved + NEW.repositoryHard - OLD.repositoryHard,
-                -- To be updated when IP is actually reserved/freed
-                -- publicIPsReserved = publicIPsReserved + NEW.publicIPHard - OLD.publicIPHard,
-                vlanReserved = vlanReserved + NEW.vlanHard - OLD.vlanHard
-        WHERE idEnterprise = NEW.idEnterprise;
-        UPDATE IGNORE cloud_usage_stats 
-        SET vCpuReserved = vCpuReserved  + NEW.cpuHard - OLD.cpuHard,
-            vMemoryReserved=vMemoryReserved + NEW.ramHard - OLD.ramHard,            
-            vStorageReserved = vStorageReserved + NEW.hdHard - OLD.hdHard,
-            storageReserved=storageReserved + NEW.storageHard - OLD.storageHard,
-            publicIPsReserved = publicIPsReserved + NEW.publicIPHard - OLD.publicIPHard
-        WHERE idDataCenter = -1;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'enterprise_updated', '2.0.3', '3:ec4f7a3307a524986b254b77296dff2f', 133);
-
--- Changeset src/2.0ga/triggers.xml::enterprise_deleted::destevez::(Checksum: 3:a55c636cdabddeb46b11206c5dc3849b)
-DROP TRIGGER IF EXISTS enterprise_deleted;
-
-DELIMITER |
-CREATE TRIGGER enterprise_deleted AFTER DELETE ON enterprise
-    FOR EACH ROW BEGIN      
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-        DELETE FROM enterprise_resources_stats WHERE idEnterprise = OLD.idEnterprise;           
-        UPDATE IGNORE cloud_usage_stats SET numEnterprisesCreated = numEnterprisesCreated-1 WHERE idDataCenter = -1;
-        -- init reserved stats
-        UPDATE IGNORE cloud_usage_stats 
-            SET     vCpuReserved=vCpuReserved - OLD.cpuHard,
-                vMemoryReserved=vMemoryReserved - OLD.ramHard,
-                vStorageReserved = vStorageReserved - OLD.hdHard,
-                storageReserved=storageReserved - OLD.storageHard,                
-                -- repositoryReserved = repositoryReserved - OLD.repositoryHard
-                -- To be updated when IP is actually reserved/freed
-                publicIPsReserved = publicIPsReserved - OLD.publicIPHard
-        WHERE idDataCenter = -1;
-    END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'enterprise_deleted', '2.0.3', '3:a55c636cdabddeb46b11206c5dc3849b', 134);
-
--- Changeset src/2.0ga/triggers.xml::create_physicalmachine_update_stats::destevez::(Checksum: 3:66a50b5f2c32b730c41a8589dd1f8c7a)
-DROP TRIGGER IF EXISTS create_physicalmachine_update_stats;
-
-DELIMITER |
-CREATE TRIGGER create_physicalmachine_update_stats AFTER INSERT ON physicalmachine
-FOR EACH ROW BEGIN
-IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    IF NEW.idState = 3 THEN
-        UPDATE IGNORE cloud_usage_stats SET serversRunning = serversRunning+1,
-               vCpuUsed=vCpuUsed+NEW.cpuUsed, vMemoryUsed=vMemoryUsed+NEW.ramUsed
-        WHERE idDataCenter = NEW.idDataCenter;
-    END IF;
-    IF NEW.idState != 2 THEN
-        UPDATE IGNORE cloud_usage_stats SET serversTotal = serversTotal+1, 
-               vCpuTotal=vCpuTotal+NEW.cpu, vMemoryTotal=vMemoryTotal+NEW.ram
-        WHERE idDataCenter = NEW.idDataCenter;
-    END IF;
-END IF;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'create_physicalmachine_update_stats', '2.0.3', '3:66a50b5f2c32b730c41a8589dd1f8c7a', 135);
-
--- Changeset src/2.0ga/triggers.xml::create_datastore_update_stats::destevez::(Checksum: 3:63b76dc59ee95e078b89e6e9f9af5d8a)
-DROP TRIGGER IF EXISTS create_datastore_update_stats;
-
-DELIMITER |
-CREATE TRIGGER create_datastore_update_stats AFTER INSERT ON datastore_assignment
-FOR EACH ROW BEGIN
-DECLARE machineState INT UNSIGNED;
-DECLARE idDatacenter INT UNSIGNED;
-DECLARE enabled INT UNSIGNED;
-DECLARE usedSize BIGINT UNSIGNED;
-DECLARE size BIGINT UNSIGNED;
-DECLARE datastoreuuid VARCHAR(255);
-SELECT pm.idState, pm.idDatacenter INTO machineState, idDatacenter FROM physicalmachine pm WHERE pm.idPhysicalMachine = NEW.idPhysicalmachine;
-SELECT d.enabled, d.usedSize, d.size, d.datastoreUUID INTO enabled, usedSize, size, datastoreuuid FROM datastore d WHERE d.idDatastore = NEW.idDatastore;
-IF (@DISABLED_STATS_TRIGGERS IS NULL) THEN
-    IF (SELECT count(*) FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore
-        LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
-        WHERE pm.idDatacenter = idDatacenter AND d.datastoreUUID = datastoreuuid AND d.idDatastore != NEW.idDatastore
-        AND d.enabled = 1) = 0 THEN
-        IF machineState = 3 THEN
-            IF enabled = 1 THEN
-                UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageUsed = cus.vStorageUsed + usedSize
-                WHERE cus.idDataCenter = idDatacenter;
-            END IF;
-        END IF;
-        IF machineState != 2 THEN
-            IF enabled = 1 THEN
-                UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal + size
-                WHERE cus.idDataCenter = idDatacenter;
-            END IF;
-        END IF;
-    END IF;
-END IF;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'create_datastore_update_stats', '2.0.3', '3:63b76dc59ee95e078b89e6e9f9af5d8a', 136);
-
--- Changeset src/2.0ga/triggers.xml::delete_physicalmachine_update_stats::destevez::(Checksum: 3:ad7b8173967a8f2e5be03830b9135c0d)
-DROP TRIGGER IF EXISTS delete_physicalmachine_update_stats;
-
-DELIMITER |
-CREATE TRIGGER delete_physicalmachine_update_stats AFTER DELETE ON physicalmachine
-FOR EACH ROW BEGIN
-IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    IF OLD.idState = 3 THEN
-        UPDATE IGNORE cloud_usage_stats SET serversRunning = serversRunning-1,
-               vCpuUsed=vCpuUsed-OLD.cpuUsed, vMemoryUsed=vMemoryUsed-OLD.ramUsed
-        WHERE idDataCenter = OLD.idDataCenter;
-    END IF;
-    IF OLD.idState NOT IN (2, 6, 7) THEN
-        UPDATE IGNORE cloud_usage_stats SET serversTotal=serversTotal-1,
-               vCpuTotal=vCpuTotal-OLD.cpu, vMemoryTotal=vMemoryTotal-OLD.ram
-        WHERE idDataCenter = OLD.idDataCenter;
-    END IF;
-END IF;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_physicalmachine_update_stats', '2.0.3', '3:ad7b8173967a8f2e5be03830b9135c0d', 137);
-
--- Changeset src/2.0ga/triggers.xml::delete_datastore_update_stats::destevez::(Checksum: 3:3e53176b454b32cb5456e03d7edca066)
-DROP TRIGGER IF EXISTS delete_datastore_update_stats;
-
-DELIMITER |
-CREATE TRIGGER delete_datastore_update_stats BEFORE DELETE ON datastore
-FOR EACH ROW BEGIN
-DECLARE machineState INT UNSIGNED;
-DECLARE idDatacenter INT UNSIGNED;
-SELECT pm.idState, pm.idDatacenter INTO machineState, idDatacenter FROM physicalmachine pm LEFT OUTER JOIN datastore_assignment da ON pm.idPhysicalMachine = da.idPhysicalMachine
-WHERE da.idDatastore = OLD.idDatastore;
-IF (@DISABLED_STATS_TRIGGERS IS NULL) THEN
-    IF (SELECT count(*) FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore
-        LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
-        WHERE pm.idDatacenter = idDatacenter AND d.datastoreUUID = OLD.datastoreuuid AND d.idDatastore != OLD.idDatastore
-        AND d.enabled = 1) = 0 THEN
-        IF machineState = 3 THEN
-            IF OLD.enabled = 1 THEN
-                UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageUsed = cus.vStorageUsed - OLD.usedSize
-                WHERE cus.idDataCenter = idDatacenter;
-            END IF;
-        END IF;
-        IF machineState NOT IN (2, 6, 7) THEN
-            IF OLD.enabled = 1 THEN
-                UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size
-                WHERE cus.idDataCenter = idDatacenter;
-            END IF;
-        END IF;
-    END IF;
-END IF;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_datastore_update_stats', '2.0.3', '3:3e53176b454b32cb5456e03d7edca066', 138);
-
--- Changeset src/2.0ga/triggers.xml::update_physicalmachine_update_stats::destevez::(Checksum: 3:c33a43d75bb96e97f5a752dc0bffdda7)
-DROP TRIGGER IF EXISTS update_physicalmachine_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_physicalmachine_update_stats AFTER UPDATE ON physicalmachine
-FOR EACH ROW BEGIN
-DECLARE datastoreSize BIGINT UNSIGNED;
-DECLARE oldDatastoreSize BIGINT UNSIGNED;
-IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    IF OLD.idState != NEW.idState THEN
-        IF OLD.idState IN (2, 7) THEN
-            -- Machine not managed changes into managed; or disabled_by_ha to Managed
-            UPDATE IGNORE cloud_usage_stats SET serversTotal=serversTotal+1,
-                   vCpuTotal=vCpuTotal + NEW.cpu,
-                   vMemoryTotal=vMemoryTotal + NEW.ram
-            WHERE idDataCenter = NEW.idDataCenter;
-        END IF;
-        IF NEW.idState IN (2,7) THEN
-            -- Machine managed changes into not managed or DisabledByHA
-            UPDATE IGNORE cloud_usage_stats SET serversTotal=serversTotal-1,
-                   vCpuTotal=vCpuTotal-OLD.cpu,
-                   vMemoryTotal=vMemoryTotal-OLD.ram
-            WHERE idDataCenter = OLD.idDataCenter;
-        END IF;
-        IF NEW.idState = 3 THEN
-            -- Stopped / Halted / Not provisioned passes to Managed (Running)
-            UPDATE IGNORE cloud_usage_stats SET serversRunning = serversRunning+1,
-                   vCpuUsed=vCpuUsed+NEW.cpuUsed,
-                   vMemoryUsed=vMemoryUsed+NEW.ramUsed
-            WHERE idDataCenter = NEW.idDataCenter;
-        ELSEIF OLD.idState = 3 THEN
-            -- Managed (Running) passes to Stopped / Halted / Not provisioned
-            UPDATE IGNORE cloud_usage_stats SET serversRunning = serversRunning-1,
-                   vCpuUsed=vCpuUsed-OLD.cpuUsed,
-                   vMemoryUsed=vMemoryUsed-OLD.ramUsed
-            WHERE idDataCenter = OLD.idDataCenter;
-        END IF;
-    ELSE
-        -- No State Changes
-        IF NEW.idState NOT IN (2, 6, 7) THEN
-            -- If Machine is in a not managed state, changes into resources are ignored, Should we add 'Disabled' state to this condition?
-            UPDATE IGNORE cloud_usage_stats SET vCpuTotal=vCpuTotal+(NEW.cpu-OLD.cpu),
-                   vMemoryTotal=vMemoryTotal + (NEW.ram-OLD.ram)
-            WHERE idDataCenter = OLD.idDataCenter;
-        END IF;
-        --
-        IF NEW.idState = 3 THEN
-            UPDATE IGNORE cloud_usage_stats SET vCpuUsed=vCpuUsed + (NEW.cpuUsed-OLD.cpuUsed),
-                   vMemoryUsed=vMemoryUsed + (NEW.ramUsed-OLD.ramUsed)
-            WHERE idDataCenter = OLD.idDataCenter;
-        END IF;
-    END IF;
-END IF;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_physicalmachine_update_stats', '2.0.3', '3:c33a43d75bb96e97f5a752dc0bffdda7', 139);
-
--- Changeset src/2.0ga/triggers.xml::create_virtualmachine_update_stats::destevez::(Checksum: 3:b4974986747712028c438c1d6396d632)
-DROP TRIGGER IF EXISTS create_virtualmachine_update_stats;
-
-DELIMITER |
-CREATE TRIGGER create_virtualmachine_update_stats AFTER INSERT ON virtualmachine
-    FOR EACH ROW BEGIN
-	IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-		INSERT INTO virtualmachinetrackedstate (idVM) VALUES (NEW.idVM);
-	END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'create_virtualmachine_update_stats', '2.0.3', '3:b4974986747712028c438c1d6396d632', 140);
-
--- Changeset src/2.0ga/triggers.xml::delete_virtualmachine_update_stats::destevez::(Checksum: 3:5120ec32cead387a721e49d2046ebbfa)
-DROP TRIGGER IF EXISTS delete_virtualmachine_update_stats;
-
-DELIMITER |
-CREATE TRIGGER delete_virtualmachine_update_stats AFTER DELETE ON virtualmachine
-    FOR EACH ROW BEGIN
-	IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-		DELETE FROM virtualmachinetrackedstate WHERE idVM = OLD.idVM;
-	END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_virtualmachine_update_stats', '2.0.3', '3:5120ec32cead387a721e49d2046ebbfa', 141);
-
--- Changeset src/2.0ga/triggers.xml::update_virtualmachine_update_stats::destevez::(Checksum: 3:ce98b001ef068af5bcb4f1c2e37d5a28)
-DROP TRIGGER IF EXISTS update_virtualmachine_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_virtualmachine_update_stats AFTER UPDATE ON virtualmachine
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idVirtualAppObj INTEGER;
-        DECLARE idVirtualDataCenterObj INTEGER;	
-        DECLARE costCodeObj int(4);
-	DECLARE previousState VARCHAR(50);
-	DECLARE extraHDSize BIGINT DEFAULT 0;
-	-- For debugging purposes only        
+        DECLARE idVirtualDataCenterObj INTEGER;
+        DECLARE idEnterpriseObj INTEGER;
         IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
-	-- We always store previous state when starting a transaction
-	IF NEW.state != OLD.state AND NEW.state='LOCKED' THEN
-		UPDATE virtualmachinetrackedstate SET previousState=OLD.state WHERE idVM=NEW.idVM;
-	END IF;
-	--
-	SELECT vmts.previousState INTO previousState
-        FROM virtualmachinetrackedstate vmts
-	WHERE vmts.idVM = NEW.idVM;
-	-- -- INSERT INTO debug_msg (msg) VALUES (CONCAT('UPDATE: ', NEW.idVM, ' - ', OLD.idType, ' - ', NEW.idType, ' - ', OLD.state, ' - ', NEW.state, ' - ', previousState));	
-        --  Updating enterprise_resources_stats: VCPU Used, Memory Used, Local Storage Used
-        IF OLD.idHypervisor IS NULL OR (OLD.idHypervisor != NEW.idHypervisor) THEN
-            SELECT pm.idDataCenter INTO idDataCenterObj
-            FROM hypervisor hy, physicalmachine pm
-            WHERE NEW.idHypervisor=hy.id
-            AND hy.idPhysicalMachine=pm.idPhysicalMachine;
-        ELSE 
-            SELECT pm.idDataCenter INTO idDataCenterObj
-            FROM hypervisor hy, physicalmachine pm
-            WHERE OLD.idHypervisor=hy.id
-            AND hy.idPhysicalMachine=pm.idPhysicalMachine;
-        END IF;     
-        --
-        SELECT n.idVirtualApp, vapp.idVirtualDataCenter INTO idVirtualAppObj, idVirtualDataCenterObj
-        FROM nodevirtualimage nvi, node n, virtualapp vapp
-        WHERE NEW.idVM = nvi.idVM
-        AND nvi.idNode = n.idNode
-        AND vapp.idVirtualApp = n.idVirtualApp;   
--- -- INSERT INTO debug_msg (msg) VALUES (CONCAT('update values ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL'), ' - ',IFNULL(previousState,'NULL')));
-	--
-	-- Imported VMs will be updated on create_node_virtual_image
-	-- Used Stats (vCpuUsed, vMemoryUsed, vStorageUsed) are updated from delete_nodevirtualimage_update_stats ON DELETE nodevirtualimage when updating the VApp
-	-- Main case: an imported VM changes its state (from LOCKED to ...)
-	IF NEW.idType = 1 AND (NEW.state != OLD.state) THEN
-            IF NEW.state = "ON" AND (previousState != "ON" OR OLD.state="UNKNOWN") THEN 
-                -- New Active		
-                UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive+1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive+1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning+1
-                WHERE idDataCenter = idDataCenterObj;       
-		SELECT IFNULL(SUM(limitResource),0) * 1048576 INTO extraHDSize 
-		FROM rasd_management rm, rasd r 
-		WHERE rm.idResource = r.instanceID AND rm.idVM = NEW.idVM AND rm.idResourceType=17;    
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW ExtraHDs added ', extraHDSize));
-                UPDATE IGNORE enterprise_resources_stats 
-                    SET vCpuUsed = vCpuUsed + NEW.cpu,
-                        memoryUsed = memoryUsed + NEW.ram,
-                        localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed + NEW.cpu,
-                    memoryUsed = memoryUsed + NEW.ram,
-                    localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed + NEW.cpu,
-                    memoryUsed = memoryUsed + NEW.ram,
-                    localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;		
-	    ELSEIF (NEW.state IN ("PAUSED","OFF","NOT_ALLOCATED","UNKNOWN") AND OLD.state="LOCKED" AND previousState = "ON") OR 
-	    		  (NEW.state IN ("PAUSED","OFF","NOT_ALLOCATED","UNKNOWN") AND OLD.state="ON") THEN
-                -- When Undeploying a full Vapp
-                -- Undeploying the Vapp implies OLD.state = LOCKED + previousState = ON 
-                -- Powering OFF the VM implies  OLD.state = LOCKED + previousState = ON
-                -- Destroying the VM implies OLD.state = ON
-                UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive-1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive-1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning-1
-                WHERE idDataCenter = idDataCenterObj;
-				SELECT IFNULL(SUM(limitResource),0) * 1048576 INTO extraHDSize 
-				FROM rasd_management rm, rasd r 
-				WHERE rm.idResource = r.instanceID AND rm.idVM = NEW.idVM AND rm.idResourceType=17;    
-				-- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW ExtraHDs removed ', extraHDSize));
-                UPDATE IGNORE enterprise_resources_stats 
-                    SET vCpuUsed = vCpuUsed - NEW.cpu,
-                        memoryUsed = memoryUsed - NEW.ram,
-                        localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed - NEW.cpu,
-                    memoryUsed = memoryUsed - NEW.ram,
-                    localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed - NEW.cpu,
-                    memoryUsed = memoryUsed - NEW.ram,
-                    localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj; 
-                -- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW state is NOT_RUNNING ', OLD.state, ' - ', previousState));
+	    -- Checks for public available 
+            -- Checks for reserved IPs		
+            IF OLD.mac IS NULL AND NEW.mac IS NOT NULL THEN
+                -- Query for datacenter
+                SELECT vdc.idVirtualDataCenter, vdc.idEnterprise  INTO idVirtualDataCenterObj, idEnterpriseObj
+                FROM rasd_management rm, virtualdatacenter vdc, vlan_network vn
+                WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
+                    AND NEW.vlan_network_id = vn.vlan_network_id
+                    AND vn.networktype = 'PUBLIC'
+                    AND NEW.idManagement = rm.idManagement;
+                -- New Public IP assignment for a VDC ---> Reserved
+                IF (idVirtualDataCenterObj IS NOT NULL AND idEnterpriseObj IS NOT NULL) THEN
+                    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Reserved IP: ',IFNULL(idEnterpriseObj,'entnull'),IFNULL(idDataCenterObj,'dcnull'),IFNULL(idVirtualDataCenterObj,'vdcnull')));
+                    IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
+                      CALL kinton_accounting.AccountingIPsRegisterEvents('IP_RESERVED',NEW.idManagement,NEW.ip,idVirtualDataCenterObj, idEnterpriseObj);
+                    END IF;
+                END IF;
             END IF;
         END IF;
-        --
-        SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
-        FROM virtualimage vi
-        WHERE vi.idImage = NEW.idImage;
-        -- Register Accounting Events
-        IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       		 IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=NEW.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(NEW.idVM, NEW.idType, OLD.state, NEW.state, previousState, NEW.ram, NEW.cpu, NEW.hd + extraHDSize, costCodeObj);
-       		 END IF;              
-	    END IF;
-      END IF;
-    END;
-|
+    END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_virtualmachine_update_stats', '2.0.3', '3:ce98b001ef068af5bcb4f1c2e37d5a28', 142);
+--
+-- Table structure for table `license`
+--
 
--- Changeset src/2.0ga/triggers.xml::create_nodevirtualimage_update_stats::destevez::(Checksum: 3:cc6a1d71c80071d4e4d2ec5cdad805f2)
-DROP TRIGGER IF EXISTS create_nodevirtualimage_update_stats;
+DROP TABLE IF EXISTS `license`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `license` (
+  `idLicense` int(11) NOT NULL AUTO_INCREMENT,
+  `data` text,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idLicense`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-DELIMITER |
-CREATE TRIGGER create_nodevirtualimage_update_stats AFTER INSERT ON nodevirtualimage
+--
+-- Dumping data for table `license`
+--
+
+LOCK TABLES `license` WRITE;
+/*!40000 ALTER TABLE `license` DISABLE KEYS */;
+/*!40000 ALTER TABLE `license` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `metering`
+--
+
+DROP TABLE IF EXISTS `metering`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `metering` (
+  `idMeter` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idDatacenter` int(10) unsigned DEFAULT NULL,
+  `datacenter` varchar(20) DEFAULT NULL,
+  `idRack` int(10) unsigned DEFAULT NULL,
+  `rack` varchar(20) DEFAULT NULL,
+  `idPhysicalMachine` int(10) unsigned DEFAULT NULL,
+  `physicalmachine` varchar(256) DEFAULT NULL,
+  `idStorageSystem` int(10) unsigned DEFAULT NULL,
+  `storageSystem` varchar(256) DEFAULT NULL,
+  `idStoragePool` varchar(40) DEFAULT NULL,
+  `storagePool` varchar(256) DEFAULT NULL,
+  `idVolume` varchar(50) DEFAULT NULL,
+  `volume` varchar(256) DEFAULT NULL,
+  `idNetwork` int(10) unsigned DEFAULT NULL,
+  `network` varchar(256) DEFAULT NULL,
+  `idSubnet` int(10) unsigned DEFAULT NULL,
+  `subnet` varchar(256) DEFAULT NULL,
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `enterprise` varchar(40) DEFAULT NULL,
+  `idUser` int(10) unsigned DEFAULT NULL,
+  `user` varchar(128) DEFAULT NULL,
+  `idVirtualDataCenter` int(10) unsigned DEFAULT NULL,
+  `virtualDataCenter` varchar(40) DEFAULT NULL,
+  `idVirtualApp` int(10) unsigned DEFAULT NULL,
+  `virtualApp` varchar(30) DEFAULT NULL,
+  `idVirtualMachine` int(10) unsigned DEFAULT NULL,
+  `virtualmachine` varchar(256) DEFAULT NULL,
+  `severity` varchar(100) NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `performedby` varchar(255) NOT NULL,
+  `actionperformed` varchar(100) NOT NULL,
+  `component` varchar(255) DEFAULT NULL,
+  `stacktrace` text,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idMeter`),
+  KEY `idx_metering_timestamp` (`timestamp`),
+  KEY `idx_metering_enterprise` (`enterprise`),
+  KEY `idx_metering_idEnterprise` (`idEnterprise`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `metering`
+--
+
+LOCK TABLES `metering` WRITE;
+/*!40000 ALTER TABLE `metering` DISABLE KEYS */;
+/*!40000 ALTER TABLE `metering` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `metering_archive`
+--
+
+DROP TABLE IF EXISTS `metering_archive`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `metering_archive` (
+  `idMeter` bigint(20) unsigned NOT NULL,
+  `idDatacenter` int(10) unsigned DEFAULT NULL,
+  `datacenter` varchar(20) DEFAULT NULL,
+  `idRack` int(10) unsigned DEFAULT NULL,
+  `rack` varchar(20) DEFAULT NULL,
+  `idPhysicalMachine` int(10) unsigned DEFAULT NULL,
+  `physicalmachine` varchar(256) DEFAULT NULL,
+  `idStorageSystem` int(10) unsigned DEFAULT NULL,
+  `storageSystem` varchar(256) DEFAULT NULL,
+  `idStoragePool` varchar(40) DEFAULT NULL,
+  `storagePool` varchar(256) DEFAULT NULL,
+  `idVolume` varchar(50) DEFAULT NULL,
+  `volume` varchar(256) DEFAULT NULL,
+  `idNetwork` int(10) unsigned DEFAULT NULL,
+  `network` varchar(256) DEFAULT NULL,
+  `idSubnet` int(10) unsigned DEFAULT NULL,
+  `subnet` varchar(256) DEFAULT NULL,
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `enterprise` varchar(40) DEFAULT NULL,
+  `idUser` int(10) unsigned DEFAULT NULL,
+  `user` varchar(128) DEFAULT NULL,
+  `idVirtualDataCenter` int(10) unsigned DEFAULT NULL,
+  `virtualDataCenter` varchar(40) DEFAULT NULL,
+  `idVirtualApp` int(10) unsigned DEFAULT NULL,
+  `virtualApp` varchar(30) DEFAULT NULL,
+  `idVirtualMachine` int(10) unsigned DEFAULT NULL,
+  `virtualmachine` varchar(256) DEFAULT NULL,
+  `severity` varchar(100) NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `performedby` varchar(255) NOT NULL,
+  `actionperformed` varchar(100) NOT NULL,
+  `component` varchar(255) DEFAULT NULL,
+  `stacktrace` text,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idMeter`),
+  KEY `idx_metering_archive_timestamp` (`timestamp`),
+  KEY `idx_metering_archive_enterprise` (`enterprise`),
+  KEY `idx_metering_archive_idEnterprise` (`idEnterprise`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `metering_archive`
+--
+
+LOCK TABLES `metering_archive` WRITE;
+/*!40000 ALTER TABLE `metering_archive` DISABLE KEYS */;
+/*!40000 ALTER TABLE `metering_archive` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `network`
+--
+
+DROP TABLE IF EXISTS `network`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `network` (
+  `network_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` varchar(40) NOT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`network_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `network`
+--
+
+LOCK TABLES `network` WRITE;
+/*!40000 ALTER TABLE `network` DISABLE KEYS */;
+INSERT INTO `network` VALUES (1,'6cd20366-72e5-11df-8f9d-002564aeca80',1);
+/*!40000 ALTER TABLE `network` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `network_configuration`
+--
+
+DROP TABLE IF EXISTS `network_configuration`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `network_configuration` (
+  `network_configuration_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `gateway` varchar(40) DEFAULT NULL,
+  `network_address` varchar(40) NOT NULL,
+  `mask` int(11) NOT NULL,
+  `netmask` varchar(20) NOT NULL,
+  `primary_dns` varchar(20) DEFAULT NULL,
+  `secondary_dns` varchar(20) DEFAULT NULL,
+  `sufix_dns` varchar(40) DEFAULT NULL,
+  `fence_mode` varchar(20) NOT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`network_configuration_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `network_configuration`
+--
+
+LOCK TABLES `network_configuration` WRITE;
+/*!40000 ALTER TABLE `network_configuration` DISABLE KEYS */;
+/*!40000 ALTER TABLE `network_configuration` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `network_interface`
+--
+
+DROP TABLE IF EXISTS `network_interface`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `network_interface` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(25) NOT NULL,
+  `mac` varchar(25) DEFAULT NULL,
+  `network_service_type_id` int(10) unsigned DEFAULT NULL,
+  `physicalmachine_id` int(10) unsigned NOT NULL,
+  `shared_ip` varchar(25) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `network_interface_FK1` (`network_service_type_id`),
+  KEY `network_interface_FK2` (`physicalmachine_id`),
+  CONSTRAINT `network_interface_FK2` FOREIGN KEY (`physicalmachine_id`) REFERENCES `physicalmachine` (`idPhysicalMachine`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `network_interface_FK1` FOREIGN KEY (`network_service_type_id`) REFERENCES `network_service_type` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `network_interface`
+--
+
+LOCK TABLES `network_interface` WRITE;
+/*!40000 ALTER TABLE `network_interface` DISABLE KEYS */;
+/*!40000 ALTER TABLE `network_interface` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `network_service_type`
+--
+
+DROP TABLE IF EXISTS `network_service_type`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `network_service_type` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `datacenter_id` int(10) unsigned NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `default_nst` tinyint(1) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `network_service_type_FK1` (`datacenter_id`),
+  CONSTRAINT `network_service_type_FK1` FOREIGN KEY (`datacenter_id`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `network_service_type`
+--
+
+LOCK TABLES `network_service_type` WRITE;
+/*!40000 ALTER TABLE `network_service_type` DISABLE KEYS */;
+/*!40000 ALTER TABLE `network_service_type` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `node`
+--
+
+DROP TABLE IF EXISTS `node`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `node` (
+  `idVirtualApp` int(10) unsigned NOT NULL,
+  `idNode` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `modified` int(11) NOT NULL,
+  `posX` int(11) NOT NULL DEFAULT '0',
+  `posY` int(11) NOT NULL DEFAULT '0',
+  `type` varchar(50) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `ip` varchar(15) DEFAULT NULL,
+  `mac` varchar(17) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idNode`),
+  KEY `node_FK2` (`idVirtualApp`),
+  CONSTRAINT `node_FK2` FOREIGN KEY (`idVirtualApp`) REFERENCES `virtualapp` (`idVirtualApp`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `node`
+--
+
+LOCK TABLES `node` WRITE;
+/*!40000 ALTER TABLE `node` DISABLE KEYS */;
+/*!40000 ALTER TABLE `node` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `nodenetwork`
+--
+
+DROP TABLE IF EXISTS `nodenetwork`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `nodenetwork` (
+  `idNode` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idNode`),
+  CONSTRAINT `nodeNetwork_FK1` FOREIGN KEY (`idNode`) REFERENCES `node` (`idNode`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `nodenetwork`
+--
+
+LOCK TABLES `nodenetwork` WRITE;
+/*!40000 ALTER TABLE `nodenetwork` DISABLE KEYS */;
+/*!40000 ALTER TABLE `nodenetwork` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `noderelationtype`
+--
+
+DROP TABLE IF EXISTS `noderelationtype`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `noderelationtype` (
+  `idNodeRelationType` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(20) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idNodeRelationType`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `noderelationtype`
+--
+
+LOCK TABLES `noderelationtype` WRITE;
+/*!40000 ALTER TABLE `noderelationtype` DISABLE KEYS */;
+/*!40000 ALTER TABLE `noderelationtype` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `nodestorage`
+--
+
+DROP TABLE IF EXISTS `nodestorage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `nodestorage` (
+  `idNode` int(10) unsigned NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idNode`),
+  CONSTRAINT `nodeStorage_FK1` FOREIGN KEY (`idNode`) REFERENCES `node` (`idNode`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `nodestorage`
+--
+
+LOCK TABLES `nodestorage` WRITE;
+/*!40000 ALTER TABLE `nodestorage` DISABLE KEYS */;
+/*!40000 ALTER TABLE `nodestorage` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `nodevirtualimage`
+--
+
+DROP TABLE IF EXISTS `nodevirtualimage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `nodevirtualimage` (
+  `idNode` int(10) unsigned NOT NULL,
+  `idVM` int(10) unsigned DEFAULT NULL,
+  `idImage` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  KEY `nodevirtualImage_FK1` (`idImage`),
+  KEY `nodevirtualimage_FK3` (`idNode`),
+  KEY `nodevirtualImage_FK2` (`idVM`),
+  CONSTRAINT `nodevirtualImage_FK2` FOREIGN KEY (`idVM`) REFERENCES `virtualmachine` (`idVM`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `nodevirtualImage_FK1` FOREIGN KEY (`idImage`) REFERENCES `virtualimage` (`idImage`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `nodevirtualimage_FK3` FOREIGN KEY (`idNode`) REFERENCES `node` (`idNode`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `nodevirtualimage`
+--
+
+LOCK TABLES `nodevirtualimage` WRITE;
+/*!40000 ALTER TABLE `nodevirtualimage` DISABLE KEYS */;
+/*!40000 ALTER TABLE `nodevirtualimage` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER create_nodevirtualimage_update_stats AFTER INSERT ON nodevirtualimage
   FOR EACH ROW BEGIN
-    DECLARE idDataCenterObj INTEGER;
-    DECLARE idVirtualAppObj INTEGER;
-    DECLARE idVirtualDataCenterObj INTEGER;
-    DECLARE idEnterpriseObj INTEGER;
     DECLARE costCodeObj int(4);
     DECLARE type INTEGER;
     DECLARE state VARCHAR(50);
     DECLARE ram INTEGER;
     DECLARE cpu INTEGER;
     DECLARE hd bigint;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    SELECT vapp.idVirtualApp, vapp.idVirtualDataCenter, vdc.idDataCenter, vdc.idEnterprise  INTO idVirtualAppObj, idVirtualDataCenterObj, idDataCenterObj, idEnterpriseObj
-      FROM node n, virtualapp vapp, virtualdatacenter vdc
-      WHERE vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-      AND n.idNode = NEW.idNode
-      AND n.idVirtualApp = vapp.idVirtualApp;
-      SELECT vm.idType, vm.state, vm.cpu, vm.ram, vm.hd INTO type, state, cpu, ram, hd
-     FROM virtualmachine vm
-	WHERE vm.idVM = NEW.idVM;
-      --  INSERT INTO debug_msg (msg) VALUES (CONCAT('createNVI ', type, ' - ', state, ' - ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL')));
-    IF type=1 THEN
-    	-- Imported !!!
-		UPDATE IGNORE cloud_usage_stats SET vMachinesTotal = vMachinesTotal+1
-                WHERE idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vapp_enterprise_stats SET vmCreated = vmCreated+1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmCreated = vmCreated+1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-          IF state = "ON" THEN 	
-			UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive+1
-		        WHERE idVirtualApp = idVirtualAppObj;
-		        UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive+1
-		        WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-		        UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning+1
-		        WHERE idDataCenter = idDataCenterObj;       
-		        UPDATE IGNORE enterprise_resources_stats 
-		            SET vCpuUsed = vCpuUsed + cpu,
-		                memoryUsed = memoryUsed + ram,
-		                localStorageUsed = localStorageUsed + hd
-		        WHERE idEnterprise = idEnterpriseObj;
-		        UPDATE IGNORE dc_enterprise_stats 
-		        SET     vCpuUsed = vCpuUsed + cpu,
-		            memoryUsed = memoryUsed + ram,
-		            localStorageUsed = localStorageUsed + hd
-		        WHERE idEnterprise = idEnterpriseObj AND idDataCenter = idDataCenterObj;
-		        UPDATE IGNORE vdc_enterprise_stats 
-		        SET     vCpuUsed = vCpuUsed + cpu,
-		            memoryUsed = memoryUsed + ram,
-		            localStorageUsed = localStorageUsed + hd
-		        WHERE idVirtualDataCenter = idVirtualDataCenterObj;	
-		END IF;
-    END IF;    
-    SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
+    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN    
+		SELECT vm.idType, vm.state, vm.cpu, vm.ram, vm.hd INTO type, state, cpu, ram, hd
+		FROM virtualmachine vm
+		WHERE vm.idVM = NEW.idVM;
+		--
+	    SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
         FROM virtualimage vi
         WHERE vi.idImage = NEW.idImage;
-    IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=NEW.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(NEW.idVM, type, "NOT_ALLOCATED", state, "NOT_ALLOCATED", ram, cpu, hd, costCodeObj);
-        END IF;              
-     END IF;
+        --
+    	IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
+       		IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=NEW.idImage) THEN 
+	        	CALL kinton_accounting.AccountingVMRegisterEvents(NEW.idVM, type, "NOT_ALLOCATED", state, "NOT_ALLOCATED", ram, cpu, hd, costCodeObj);
+        	END IF;              
+     	END IF;
     END IF;
-  END;
-|
+  END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'create_nodevirtualimage_update_stats', '2.0.3', '3:cc6a1d71c80071d4e4d2ec5cdad805f2', 143);
-
--- Changeset src/2.0ga/triggers.xml::delete_nodevirtualimage_update_stats::destevez::(Checksum: 3:de10ff87abd570bc74a50ce7455b7720)
-DROP TRIGGER IF EXISTS delete_nodevirtualimage_update_stats;
-
-DELIMITER |
-CREATE TRIGGER delete_nodevirtualimage_update_stats AFTER DELETE ON nodevirtualimage
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER delete_nodevirtualimage_update_stats AFTER DELETE ON nodevirtualimage
   FOR EACH ROW BEGIN
-    DECLARE idDataCenterObj INTEGER;
-    DECLARE idVirtualAppObj INTEGER;
-    DECLARE idVirtualDataCenterObj INTEGER;
-    DECLARE idEnterpriseObj INTEGER;   
     DECLARE costCodeObj int(4); 
     DECLARE previousState VARCHAR(50);
     DECLARE state VARCHAR(50);
@@ -1702,1754 +2167,2276 @@ CREATE TRIGGER delete_nodevirtualimage_update_stats AFTER DELETE ON nodevirtuali
     DECLARE cpu INTEGER;
     DECLARE hd bigint;
     DECLARE type INTEGER;
-    DECLARE isUsingIP INTEGER;
     IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    SELECT vapp.idVirtualApp, vapp.idVirtualDataCenter, vdc.idDataCenter, vdc.idEnterprise INTO idVirtualAppObj, idVirtualDataCenterObj, idDataCenterObj, idEnterpriseObj
-      FROM node n, virtualapp vapp, virtualdatacenter vdc
-      WHERE vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-      AND n.idNode = OLD.idNode
-      AND n.idVirtualApp = vapp.idVirtualApp;
-      SELECT vm.idType, vm.cpu, vm.ram, vm.hd, vm.state INTO type, cpu, ram, hd, state
-     FROM virtualmachine vm
-	WHERE vm.idVM = OLD.idVM;
-    SELECT vmts.previousState INTO previousState
-     FROM virtualmachinetrackedstate vmts
-	WHERE vmts.idVM = OLD.idVM;
-    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('deleteNVI ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL'), ' - ',IFNULL(previousState,'NULL')));
--- INSERT INTO debug_msg (msg) VALUES (CONCAT('deleteNVI values', IFNULL(cpu,'NULL'), ' - ',IFNULL(ram,'NULL'), ' - ',IFNULL(hd,'NULL')));						
-    --
-    IF type = 1 THEN
-      IF previousState != "NOT_ALLOCATED" THEN      
-        UPDATE IGNORE cloud_usage_stats SET vMachinesTotal = vMachinesTotal-1
-          WHERE idDataCenter = idDataCenterObj;
-        UPDATE IGNORE vapp_enterprise_stats SET vmCreated = vmCreated-1
-          WHERE idVirtualApp = idVirtualAppObj;
-        UPDATE IGNORE vdc_enterprise_stats SET vmCreated = vmCreated-1
-          WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-           UPDATE IGNORE enterprise_resources_stats 
-               SET vCpuUsed = vCpuUsed - cpu,
-                   memoryUsed = memoryUsed - ram,
-                   localStorageUsed = localStorageUsed - hd
-           WHERE idEnterprise = idEnterpriseObj;
-           UPDATE IGNORE dc_enterprise_stats 
-           SET     vCpuUsed = vCpuUsed - cpu,
-               memoryUsed = memoryUsed - ram,
-               localStorageUsed = localStorageUsed - hd
-           WHERE idEnterprise = idEnterpriseObj AND idDataCenter = idDataCenterObj;
-           UPDATE IGNORE vdc_enterprise_stats 
-           SET     vCpuUsed = vCpuUsed - cpu,
-               memoryUsed = memoryUsed - ram,
-               localStorageUsed = localStorageUsed - hd
-           WHERE idVirtualDataCenter = idVirtualDataCenterObj;                 
-      END IF;
-      --
-      IF previousState = "ON" THEN
-        UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning-1
-        WHERE idDataCenter = idDataCenterObj;
-        UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive-1
-        WHERE idVirtualApp = idVirtualAppObj;
-        UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive-1
-        WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-      END IF;
-    END IF;
-    SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
-        FROM virtualimage vi
-        WHERE vi.idImage = OLD.idImage;
-    IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=OLD.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(OLD.idVM, type, "-", "NOT_ALLOCATED", previousState, ram, cpu, hd, costCodeObj);
-        END IF;              
-     END IF;
-  END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_nodevirtualimage_update_stats', '2.0.3', '3:de10ff87abd570bc74a50ce7455b7720', 144);
-
--- Changeset src/2.0ga/triggers.xml::create_volume_management_update_stats::destevez::(Checksum: 3:1cccc879fa605c617e11a1a76de5c641)
-DROP TRIGGER IF EXISTS create_volume_management_update_stats;
-
-DELIMITER |
-CREATE TRIGGER create_volume_management_update_stats AFTER INSERT ON volume_management
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idVirtualDataCenterObj INTEGER;
-        DECLARE idThisEnterprise INTEGER;
-        DECLARE limitResourceObj BIGINT;
-        DECLARE idResourceObj VARCHAR(50);
-        DECLARE idResourceTypeObj VARCHAR(5);
-	DECLARE idStorageTier INTEGER;
-        DECLARE resourceName VARCHAR(255);
-        SELECT vdc.idDataCenter, vdc.idEnterprise, vdc.idVirtualDataCenter INTO idDataCenterObj, idThisEnterprise, idVirtualDataCenterObj
-        FROM virtualdatacenter vdc, rasd_management rm
-        WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-        AND NEW.idManagement = rm.idManagement;
-        --
-        SELECT r.elementName, r.limitResource, rm.idResource, rm.idResourceType INTO resourceName, limitResourceObj, idResourceObj, idResourceTypeObj
-        FROM rasd r, rasd_management rm
-        WHERE r.instanceID = rm.idResource
-        AND NEW.idManagement = rm.idManagement;
-        --
-        SELECT sp.idTier INTO idStorageTier
-        FROM storage_pool sp
-        WHERE sp.idStorage = NEW.idStorage;
-        -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Create VOL idDataCenterObj ',IFNULL(idDataCenterObj,'-')));
-        -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Create VOL limitResourceObj ',IFNULL(limitResourceObj,'-')));
-        -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Create VOL idResourceObj ',IFNULL(idResourceObj,'-')));
-        -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Create VOL idStorageTier ',IFNULL(idStorageTier,'-')));
-        -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Create VOL resourceName: ',IFNULL(resourceName,'-')));
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN           
-            IF idResourceTypeObj='8' THEN 
-                UPDATE IGNORE cloud_usage_stats SET storageTotal = storageTotal+limitResourceObj WHERE idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated+1 WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingStorageRegisterEvents' ) THEN
-                    CALL AccountingStorageRegisterEvents('CREATE_STORAGE', idResourceObj, resourceName, idStorageTier, idVirtualDataCenterObj, idThisEnterprise, limitResourceObj);
-                END IF;               
-            END IF;
-        END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'create_volume_management_update_stats', '2.0.3', '3:1cccc879fa605c617e11a1a76de5c641', 145);
-
--- Changeset src/2.0ga/triggers.xml::delete_rasd_management_update_stats::destevez::(Checksum: 3:d72e7eb693e36fd8b50bbf2959badde8)
-DROP TRIGGER IF EXISTS delete_rasd_management_update_stats;
-
-DELIMITER |
-CREATE TRIGGER delete_rasd_management_update_stats AFTER DELETE ON rasd_management
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idThisEnterprise INTEGER;
-        DECLARE limitResourceObj BIGINT;    
-        DECLARE resourceName VARCHAR(255);  
-	DECLARE currentState VARCHAR(50);
-	DECLARE previousState VARCHAR(50);
-	DECLARE extraHDSize BIGINT DEFAULT 0;
-	SELECT vdc.idDataCenter, vdc.idEnterprise INTO idDataCenterObj, idThisEnterprise
-        FROM virtualdatacenter vdc
-        WHERE vdc.idVirtualDataCenter = OLD.idVirtualDataCenter;
-	SELECT vm.state INTO currentState
-        FROM virtualmachine vm
-        WHERE vm.idVM = OLD.idVM;
-	SELECT vmts.previousState INTO previousState
-        FROM virtualmachinetrackedstate vmts
-	WHERE vmts.idVM = OLD.idVM;
-        SELECT elementName, limitResource INTO resourceName, limitResourceObj
-        FROM rasd r
-        WHERE r.instanceID = OLD.idResource;
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN           
-            IF OLD.idResourceType='8' THEN 
-                UPDATE IGNORE cloud_usage_stats SET storageTotal = storageTotal-limitResourceObj WHERE idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-                IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingStorageRegisterEvents' ) THEN
-                    CALL AccountingStorageRegisterEvents('DELETE_STORAGE', OLD.idResource, resourceName, 0, OLD.idVirtualDataCenter, idThisEnterprise, limitResourceObj);
-                END IF;                  
-            END IF;
-            IF OLD.idResourceType='17' AND previousState = 'ON' THEN
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Removed ExtraHDs ', limitResourceObj, ' for idVM ', OLD.idVM, ' with state ', previousState));  
-		SELECT limitResourceObj * 1048576 INTO extraHDSize;
-		UPDATE IGNORE enterprise_resources_stats 
-                SET localStorageUsed = localStorageUsed - extraHDSize 
-                WHERE idEnterprise = idThisEnterprise;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET localStorageUsed = localStorageUsed - extraHDSize
-                WHERE idEnterprise = idThisEnterprise AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET localStorageUsed = localStorageUsed - extraHDSize
-                WHERE idVirtualDataCenter = OLD.idVirtualDataCenter; 		
-	    END IF;
-        END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_rasd_management_update_stats', '2.0.3', '3:d72e7eb693e36fd8b50bbf2959badde8', 146);
-
--- Changeset src/2.0ga/triggers.xml::virtualdatacenter_created::destevez::(Checksum: 3:aad1479f52e2c84a12067d06472a16bb)
-DROP TRIGGER IF EXISTS virtualdatacenter_created;
-
-DELIMITER |
-CREATE TRIGGER virtualdatacenter_created AFTER INSERT ON virtualdatacenter
-    FOR EACH ROW BEGIN
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-        UPDATE IGNORE cloud_usage_stats SET numVDCCreated = numVDCCreated + 1 WHERE idDataCenter = NEW.idDataCenter;    
-        -- Init Stats
-        INSERT IGNORE INTO vdc_enterprise_stats 
-            (idVirtualDataCenter,idEnterprise,vdcName,
-            vCpuReserved,vCpuUsed,memoryReserved,memoryUsed,localStorageReserved,localStorageUsed,
-            extStorageReserved, extStorageUsed, publicIPsReserved,publicIPsUsed,vlanReserved,vlanUsed) 
-        VALUES 
-            (NEW.idVirtualDataCenter, NEW.idEnterprise, NEW.name,
-            NEW.cpuHard, 0, NEW.ramHard, 0, NEW.hdHard, 0,
-            NEW.storageHard, 0, 0, 0, NEW.vlanHard, 0);          
-    END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualdatacenter_created', '2.0.3', '3:aad1479f52e2c84a12067d06472a16bb', 147);
-
--- Changeset src/2.0ga/triggers.xml::virtualdatacenter_updated::destevez::(Checksum: 3:b28dcbbbf64fc2044efa37976e97dd23)
-DROP TRIGGER IF EXISTS virtualdatacenter_updated;
-
-DELIMITER |
-CREATE TRIGGER virtualdatacenter_updated AFTER UPDATE ON virtualdatacenter
-    FOR EACH ROW BEGIN
-    DECLARE vlanNetworkIdObj INTEGER;    
-        	  DECLARE networkNameObj VARCHAR(40);
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
-            -- INSERT INTO debug_msg (msg) VALUES (CONCAT('OLD.networktypeID ', IFNULL(OLD.networktypeID,'NULL'),'NEW.networktypeID ', IFNULL(NEW.networktypeID,'NULL')));
-            -- Checks for changes
-            IF OLD.name != NEW.name THEN
-                -- Name changed !!!
-                UPDATE IGNORE vdc_enterprise_stats SET vdcName = NEW.name
-                WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-                -- Changes also in Vapp stats
-                UPDATE IGNORE vapp_enterprise_stats SET vdcName = NEW.name
-                WHERE idVirtualApp IN (SELECT idVirtualApp FROM virtualapp WHERE idVirtualDataCenter=NEW.idVirtualDataCenter);
-            END IF; 
-            UPDATE IGNORE vdc_enterprise_stats 
-            SET vCpuReserved = vCpuReserved - OLD.cpuHard + NEW.cpuHard,
-                memoryReserved = memoryReserved - OLD.ramHard + NEW.ramHard,
-                localStorageReserved = localStorageReserved - OLD.hdHard + NEW.hdHard,
-                -- publicIPsReserved = publicIPsReserved - OLD.publicIPHard + NEW.publicIPHard,
-                extStorageReserved = extStorageReserved - OLD.storageHard + NEW.storageHard,
-                vlanReserved = vlanReserved - OLD.vlanHard + NEW.vlanHard
-            WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;            
-        END IF;
-        IF OLD.networktypeID IS NOT NULL AND NEW.networktypeID IS NULL THEN
-        -- Remove VlanUsed
-	    BEGIN
-		DECLARE done INTEGER DEFAULT 0;
-		DECLARE cursorVlan CURSOR FOR SELECT DISTINCT vn.vlan_network_id, vn.network_name FROM vlan_network vn WHERE vn.network_id = OLD.networktypeID;
-		DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
-		    
-		OPEN cursorVlan;
-		    
-		REPEAT
-		   FETCH cursorVlan into vlanNetworkIdObj, networkNameObj;
-		   IF NOT done THEN
-
-		    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('VDC UPDATED -> OLD.networktypeID ', IFNULL(OLD.networktypeID,'NULL'), 'Enterprise: ',IFNULL(OLD.idEnterprise,'NULL'),' VDC: ',IFNULL(OLD.idVirtualDataCenter,'NULL'),IFNULL(vlanNetworkIdObj,'NULL'),IFNULL(networkNameObj,'NULL')));
-			IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVLANRegisterEvents' ) THEN
-				CALL AccountingVLANRegisterEvents('DELETE_VLAN',vlanNetworkIdObj, networkNameObj, OLD.idVirtualDataCenter,OLD.idEnterprise);
-			END IF;
-			-- Statistics
-			UPDATE IGNORE cloud_usage_stats
-				SET     vlanUsed = vlanUsed - 1
-				WHERE idDataCenter = -1;
-			UPDATE IGNORE enterprise_resources_stats 
-				SET     vlanUsed = vlanUsed - 1
-				WHERE idEnterprise = OLD.idEnterprise;
-			UPDATE IGNORE vdc_enterprise_stats 
-				SET     vlanUsed = vlanUsed - 1
-			    WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-		   END IF;    
-		UNTIL done END REPEAT;
-		CLOSE cursorVlan;
-	    END ;
-        END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualdatacenter_updated', '2.0.3', '3:b28dcbbbf64fc2044efa37976e97dd23', 148);
-
--- Changeset src/2.0ga/triggers.xml::virtualdatacenter_deleted::destevez::(Checksum: 3:5cb6a7ee8228db181d3c413dcaf8f221)
-DROP TRIGGER IF EXISTS virtualdatacenter_deleted;
-
-DELIMITER |
-CREATE TRIGGER virtualdatacenter_deleted BEFORE DELETE ON virtualdatacenter
-    FOR EACH ROW BEGIN
-    DECLARE currentIdManagement INTEGER DEFAULT -1;
-    DECLARE currentDataCenter INTEGER DEFAULT -1;
-    DECLARE currentIpAddress VARCHAR(20) DEFAULT '';
-    DECLARE no_more_ipsfreed INT;
-    DECLARE curIpFreed CURSOR FOR SELECT dc.idDataCenter, ipm.ip, ra.idManagement   
-           FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management ra
-           WHERE ipm.vlan_network_id = vn.vlan_network_id
-           AND vn.network_configuration_id = nc.network_configuration_id
-           AND vn.network_id = dc.network_id
-       AND vn.networktype = 'PUBLIC'
-           AND ra.idManagement = ipm.idManagement
-           AND ra.idVirtualDataCenter = OLD.idVirtualDataCenter;
-       DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_ipsfreed = 1;   
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-            UPDATE IGNORE cloud_usage_stats SET numVDCCreated = numVDCCreated-1 WHERE idDataCenter = OLD.idDataCenter;  
-            -- Remove Stats
-            DELETE FROM vdc_enterprise_stats WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;   
-           --   
-    SET no_more_ipsfreed = 0;       
-        OPEN curIpFreed;            
-        my_loop:WHILE(no_more_ipsfreed=0) DO 
-        FETCH curIpFreed INTO currentDataCenter, currentIpAddress, currentIdManagement;
-        IF no_more_ipsfreed=1 THEN
-                    LEAVE my_loop;
-             END IF;
---      INSERT INTO debug_msg (msg) VALUES (CONCAT('IP_FREED: ',currentIpAddress, ' - idManagement: ', currentIdManagement, ' - OLD.idVirtualDataCenter: ', OLD.idVirtualDataCenter, ' - idEnterpriseObj: ', OLD.idEnterprise));
-        -- We reset MAC and NAME for the reserved IPs. Java code should do this!
-        UPDATE ip_pool_management set mac=NULL, name=NULL WHERE idManagement = currentIdManagement;
-        IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
-                    CALL AccountingIPsRegisterEvents('IP_FREED',currentIdManagement,currentIpAddress,OLD.idVirtualDataCenter, OLD.idEnterprise);
-            END IF;                    
-        UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed-1 WHERE idDataCenter = currentDataCenter;
-        UPDATE IGNORE dc_enterprise_stats SET publicIPsReserved = publicIPsReserved-1 WHERE idDataCenter = currentDataCenter;
-        UPDATE IGNORE enterprise_resources_stats SET publicIPsReserved = publicIPsReserved-1 WHERE idEnterprise = OLD.idEnterprise; 
-        END WHILE my_loop;         
-        CLOSE curIpFreed;
-        END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'virtualdatacenter_deleted', '2.0.3', '3:5cb6a7ee8228db181d3c413dcaf8f221', 149);
-
--- Changeset src/2.0ga/triggers.xml::user_created::destevez::(Checksum: 3:282865b0ac508e4a9e42b987f7038046)
-DROP TRIGGER IF EXISTS user_created;
-
-DELIMITER |
-CREATE TRIGGER user_created AFTER INSERT ON user
-  FOR EACH ROW BEGIN
-    -- DECLARE idDataCenterObj INTEGER;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    -- SELECT vc.idDataCenter INTO idDataCenterObj
-    -- FROM virtualdatacenter vc, enterprise e
-    -- WHERE vc.idEnterprise = e.idEnterprise
-    -- AND NEW.idEnterprise = e.idEnterprise;
-    UPDATE IGNORE cloud_usage_stats SET numUsersCreated = numUsersCreated+1 WHERE idDataCenter = -1;
-   END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'user_created', '2.0.3', '3:282865b0ac508e4a9e42b987f7038046', 150);
-
--- Changeset src/2.0ga/triggers.xml::user_deleted::destevez::(Checksum: 3:875783cf32349a58b2b57f473f1a06fa)
-DROP TRIGGER IF EXISTS user_deleted;
-
-DELIMITER |
-CREATE TRIGGER user_deleted AFTER DELETE ON user
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    UPDATE IGNORE cloud_usage_stats SET numUsersCreated = numUsersCreated-1 WHERE idDataCenter = -1;
-  END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'user_deleted', '2.0.3', '3:875783cf32349a58b2b57f473f1a06fa', 151);
-
--- Changeset src/2.0ga/triggers.xml::update_volume_management_update_stats::destevez::(Checksum: 3:6db070bc2c50a69e7252bc95baf96cd6)
-DROP TRIGGER IF EXISTS update_volume_management_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_volume_management_update_stats AFTER UPDATE ON volume_management
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idVirtualAppObj INTEGER;
-        DECLARE idVirtualDataCenterObj INTEGER;
-        DECLARE idEnterpriseObj INTEGER;
-        DECLARE reservedSize BIGINT;
-        DECLARE incr INTEGER;
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN       
-        SET incr = NEW.usedSize-OLD.usedSize;
-        SELECT sd.idDataCenter INTO idDataCenterObj
-        FROM storage_pool sp, storage_device sd
-        WHERE OLD.idStorage = sp.idStorage
-        AND sp.idStorageDevice = sd.id;
-        --      
-        SELECT vapp.idVirtualApp, vapp.idVirtualDataCenter INTO idVirtualAppObj, idVirtualDataCenterObj
-        FROM rasd_management rasd, virtualapp vapp
-        WHERE OLD.idManagement = rasd.idManagement
-        AND rasd.idVirtualApp = vapp.idVirtualApp;
-        --
-        SELECT vdc.idEnterprise INTO idEnterpriseObj
-        FROM virtualdatacenter vdc
-        WHERE vdc.idVirtualDataCenter = idVirtualDataCenterObj;
-        --
-        SELECT r.limitResource INTO reservedSize
-        FROM rasd_management rm, rasd r
-        WHERE rm.idManagement = NEW.idManagement
-        AND r.instanceID = rm.idResource;
-        --
-	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('UpdateVol: ',IFNULL(idEnterpriseObj, 'idEnterpriseObj es NULL'), IFNULL(idVirtualDataCenterObj, 'idVirtualDataCenterObj es NULL'), IFNULL(idDataCenterObj, 'idDataCenterObj es NULL')));
-	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('UpdateVol: ',OLD.state, NEW.state, reservedSize));
-	-- 
-        IF NEW.state != OLD.state THEN
-            IF NEW.state = 1 THEN 
-                UPDATE IGNORE cloud_usage_stats SET storageUsed = storageUsed+reservedSize WHERE idDataCenter = idDataCenterObj;
-		UPDATE IGNORE vapp_enterprise_stats SET volAttached = volAttached+1 WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE enterprise_resources_stats 
-                    SET     extStorageUsed = extStorageUsed +  reservedSize
-                    WHERE idEnterprise = idEnterpriseObj;
-                UPDATE IGNORE dc_enterprise_stats 
-                    SET     extStorageUsed = extStorageUsed +  reservedSize
-                    WHERE idDataCenter = idDataCenterObj AND idEnterprise = idEnterpriseObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                    SET     volAttached = volAttached + 1, extStorageUsed = extStorageUsed +  reservedSize
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-            END IF;     
-	-- IF OLD.state = 1 ====> This is done in update_rasd_management_update_stats
-        END IF;
-    END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_volume_management_update_stats', '2.0.3', '3:6db070bc2c50a69e7252bc95baf96cd6', 152);
-
--- Changeset src/2.0ga/triggers.xml::update_rasd_management_update_stats::destevez::(Checksum: 3:08d5f873bfce3ea37a605eaf44e9386a)
-DROP TRIGGER IF EXISTS update_rasd_management_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_rasd_management_update_stats AFTER UPDATE ON rasd_management
-    FOR EACH ROW BEGIN
-        DECLARE state VARCHAR(50) CHARACTER SET utf8;
-        DECLARE idState INTEGER;
-        DECLARE idImage INTEGER;
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idEnterpriseObj INTEGER;
-        DECLARE reservedSize BIGINT;
-        DECLARE ipAddress VARCHAR(20) CHARACTER SET utf8;
-	DECLARE type INTEGER;
-	DECLARE currentVMState VARCHAR(50);
-	DECLARE extraHDSize BIGINT;
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN                                   
-            --     
-            IF OLD.idResourceType = 8 THEN
-                -- vol Attached ?? -- is stateful
-                SELECT IF(count(*) = 0, 0, vm.state), idImage INTO idState, idImage
-                FROM volume_management vm
-                WHERE vm.idManagement = OLD.idManagement;     
-                --
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('UpdateRASD: ',idState,' - ', IFNULL(OLD.idVirtualApp, 'OLD.idVirtualApp es NULL'), IFNULL(NEW.idVirtualApp, 'NEW.idVirtualApp es NULL')));	
-		-- Detectamos cambios de VDC: V2V
-		IF OLD.idVirtualDataCenter IS NOT NULL AND NEW.idVirtualDataCenter IS NOT NULL AND OLD.idVirtualDataCenter != NEW.idVirtualDataCenter AND OLD.idVirtualApp = NEW.idVirtualApp THEN
-			UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated-1, volAssociated = volAssociated-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-			UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated+1, volAssociated = volAssociated+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			IF idState = 1 THEN
-				UPDATE IGNORE vdc_enterprise_stats SET volAttached = volAttached-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-				UPDATE IGNORE vdc_enterprise_stats SET volAttached = volAttached+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			END IF;
-		ELSE 			
-		        IF OLD.idVirtualDataCenter IS NOT NULL AND NEW.idVirtualDataCenter IS NOT NULL AND OLD.idVirtualDataCenter != NEW.idVirtualDataCenter THEN
-				-- Volume was changed to another VDC not in a V2V operation (cold move)
-		            UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			    UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-			END IF;
-			-- Volume added from a Vapp
-			IF OLD.idVirtualApp IS NULL AND NEW.idVirtualApp IS NOT NULL THEN       
-			    UPDATE IGNORE vapp_enterprise_stats SET volAssociated = volAssociated+1 WHERE idVirtualApp = NEW.idVirtualApp;      
-			    UPDATE IGNORE vdc_enterprise_stats SET volAssociated = volAssociated+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			    IF idState = 1 THEN
-			        UPDATE IGNORE vapp_enterprise_stats SET volAttached = volAttached+1 WHERE idVirtualApp = NEW.idVirtualApp;
-			        UPDATE IGNORE vdc_enterprise_stats SET volAttached = volAttached+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			    END IF;                         
-			END IF;
-			-- Volume removed from a Vapp
-			IF OLD.idVirtualApp IS NOT NULL AND NEW.idVirtualApp IS NULL THEN
-			    UPDATE IGNORE vapp_enterprise_stats SET volAssociated = volAssociated-1 WHERE idVirtualApp = OLD.idVirtualApp;
-			    UPDATE IGNORE vdc_enterprise_stats SET volAssociated = volAssociated-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-		            UPDATE IGNORE vapp_enterprise_stats SET volAttached = volAttached-1 WHERE idVirtualApp = OLD.idVirtualApp;
-			    IF idState = 1 THEN
-				SELECT vdc.idEnterprise, vdc.idDataCenter INTO idEnterpriseObj, idDataCenterObj
-				FROM virtualdatacenter vdc
-				WHERE vdc.idVirtualDataCenter = OLD.idVirtualDataCenter;
-				SELECT r.limitResource INTO reservedSize
-				FROM rasd r
-				WHERE r.instanceID = OLD.idResource;
-				--  INSERT INTO debug_msg (msg) VALUES (CONCAT('Updating ExtStorage: ',idState,' - ', IFNULL(idDataCenterObj, 'idDataCenterObj es NULL'), IFNULL(idEnterpriseObj, 'idEnterpriseObj es NULL'), reservedSize));	
-				UPDATE IGNORE cloud_usage_stats SET storageUsed = storageUsed-reservedSize WHERE idDataCenter = idDataCenterObj;			
-				UPDATE IGNORE enterprise_resources_stats 
-				    SET     extStorageUsed = extStorageUsed - reservedSize
-				    WHERE idEnterprise = idEnterpriseObj;
-				UPDATE IGNORE dc_enterprise_stats 
-				    SET     extStorageUsed = extStorageUsed - reservedSize
-				    WHERE idDataCenter = idDataCenterObj AND idEnterprise = idEnterpriseObj;
-				UPDATE IGNORE vdc_enterprise_stats 
-				    SET     volAttached = volAttached - 1, extStorageUsed = extStorageUsed - reservedSize
-				WHERE idVirtualDataCenter = OLD.idVirtualDatacenter;
-			    END IF;                 
-			END IF;
-			-- Volume added to VDC
-			IF OLD.idVirtualDataCenter IS NULL AND NEW.idVirtualDataCenter IS NOT NULL THEN        
-			    UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			    UPDATE IGNORE vdc_enterprise_stats SET volAssociated = volAssociated+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			    -- Stateful are always Attached 
-			    IF idState = 1 THEN
-			        UPDATE IGNORE vdc_enterprise_stats SET volAttached = volAttached+1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;                     
-			    END IF;
-			END IF;
-			-- Volume removed from VDC
-			IF OLD.idVirtualDataCenter IS NOT NULL AND NEW.idVirtualDataCenter IS NULL THEN                 
-			    UPDATE IGNORE vdc_enterprise_stats SET volCreated = volCreated-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;   
-			    UPDATE IGNORE vdc_enterprise_stats SET volAssociated = volAssociated-1 WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-			    -- Stateful are always Attached
-			    IF idState = 1 THEN
-			        UPDATE IGNORE vdc_enterprise_stats SET volAttached = volAttached-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;                     
-			    END IF;
-			END IF;                         
-                END IF;
-            END IF;
-            -- From old autoDetachVolume
-            -- UPDATE IGNORE volume_management v set v.state = 0
-            -- WHERE v.idManagement = OLD.idManagement;
-            -- Checks for used IPs
-            IF OLD.idVM IS NULL AND NEW.idVM IS NOT NULL THEN
-                -- Query for datacenter
-                SELECT dc.idDataCenter INTO idDataCenterObj
-                FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-                WHERE ipm.vlan_network_id = vn.vlan_network_id
-                AND vn.network_configuration_id = nc.network_configuration_id
-                AND vn.network_id = dc.network_id
-        	AND vn.networktype = 'PUBLIC'
-                AND NEW.idManagement = ipm.idManagement;
-                -- Datacenter found ---> PublicIPUsed
-                IF idDataCenterObj IS NOT NULL THEN
-                    -- Query for enterprise 
-                    SELECT vdc.idEnterprise INTO idEnterpriseObj
-                    FROM virtualdatacenter vdc
-                    WHERE vdc.idVirtualDataCenter = NEW.idVirtualDataCenter;
-                    -- 
-                    -- UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed + 1 WHERE idDataCenter = idDataCenterObj;
-                    UPDATE IGNORE enterprise_resources_stats 
-                        SET     publicIPsUsed = publicIPsUsed + 1
-                        WHERE idEnterprise = idEnterpriseObj;
-                    UPDATE IGNORE dc_enterprise_stats 
-                        SET     publicIPsUsed = publicIPsUsed + 1
-                        WHERE idDataCenter = idDataCenterObj AND idEnterprise = idEnterpriseObj;
-                    UPDATE IGNORE vdc_enterprise_stats 
-                        SET     publicIPsUsed = publicIPsUsed + 1
-                    WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-                END IF;
-		-- Added ExtraHD for Imported VM
-		-- Query for datacenter
-                SELECT vdc.idDataCenter, vdc.idEnterprise INTO idDataCenterObj, idEnterpriseObj
-                FROM virtualdatacenter vdc
-                WHERE vdc.idVirtualDatacenter = NEW.idVirtualDataCenter;
-		SELECT vm.state, vm.idType INTO currentVMState, type
+		SELECT vm.idType, vm.cpu, vm.ram, vm.hd, vm.state INTO type, cpu, ram, hd, state
 		FROM virtualmachine vm
-		WHERE vm.idVM = NEW.idVM;
-		SELECT IFNULL(r.limitResource,0) * 1048576 INTO extraHDSize
-		FROM rasd r
-		WHERE NEW.idResourceType=17 AND r.instanceID = NEW.idResource;
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Added ExtraHDs UpdateRASDMana ', IFNULL(extraHDSize,'NULL'), ' for idVM ', IFNULL(NEW.idVM,'NULL'), ' with state ', IFNULL(currentVMState,'NULL'), ' type ', IFNULL(type,'NULL')));  
-		IF extraHDSize IS NOT NULL  AND currentVMState = 'ON' THEN -- this is an imported machine
-		UPDATE IGNORE enterprise_resources_stats 
-                SET localStorageUsed = localStorageUsed + extraHDSize
-                WHERE idEnterprise = idEnterpriseObj;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET localStorageUsed = localStorageUsed + extraHDSize
-                WHERE idEnterprise = idEnterpriseObj AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET localStorageUsed = localStorageUsed + extraHDSize
-                WHERE idVirtualDataCenter = NEW.idVirtualDataCenter; 
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('INSERTED ExtraHDs stats ', IFNULL(extraHDSize,'NULL'), ' for idEnterpriseObj ', IFNULL(idEnterpriseObj,'NULL'), ' with idDataCenterObj ', IFNULL(idDataCenterObj,'NULL'), ' and NEW.idVirtualDataCenter ', IFNULL(NEW.idVirtualDataCenter,'NULL')));	
-		END IF;
+		WHERE vm.idVM = OLD.idVM;
+		--
+		SELECT vmts.previousState INTO previousState
+		 FROM virtualmachinetrackedstate vmts
+		WHERE vmts.idVM = OLD.idVM;
+	    --
+		SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
+		FROM virtualimage vi
+		WHERE vi.idImage = OLD.idImage;
+		--
+		IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
+			IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=OLD.idImage) THEN 
+				  CALL kinton_accounting.AccountingVMRegisterEvents(OLD.idVM, type, "-", "NOT_ALLOCATED", previousState, ram, cpu, hd, costCodeObj);
+			END IF;              
+     	END IF;
+ 	END IF;
+ END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `one_time_token`
+--
+
+DROP TABLE IF EXISTS `one_time_token`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `one_time_token` (
+  `idOneTimeTokenSession` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `token` varchar(128) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idOneTimeTokenSession`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `one_time_token`
+--
+
+LOCK TABLES `one_time_token` WRITE;
+/*!40000 ALTER TABLE `one_time_token` DISABLE KEYS */;
+/*!40000 ALTER TABLE `one_time_token` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ovf_package`
+--
+
+DROP TABLE IF EXISTS `ovf_package`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ovf_package` (
+  `id_ovf_package` int(11) NOT NULL AUTO_INCREMENT,
+  `id_apps_library` int(10) unsigned NOT NULL,
+  `url` varchar(255) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `iconUrl` varchar(255) DEFAULT NULL,
+  `productName` varchar(255) DEFAULT NULL,
+  `productUrl` varchar(45) DEFAULT NULL,
+  `productVersion` varchar(45) DEFAULT NULL,
+  `productVendor` varchar(45) DEFAULT NULL,
+  `idCategory` int(10) unsigned DEFAULT NULL,
+  `diskSizeMb` bigint(20) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  `type` varchar(50) NOT NULL,
+  `loginUser` varchar(45) DEFAULT NULL,
+  `loginPassword` varchar(90) DEFAULT NULL,
+  `osType` varchar(50) NOT NULL DEFAULT 'UNRECOGNIZED',
+  `osVersion` varchar(64) DEFAULT NULL,
+  `ethDriverType` varchar(16) DEFAULT NULL,
+  `diskCntrlType` varchar(16) DEFAULT NULL,
+  PRIMARY KEY (`id_ovf_package`),
+  KEY `fk_ovf_package_repository` (`id_apps_library`),
+  KEY `fk_ovf_package_category` (`idCategory`),
+  CONSTRAINT `fk_ovf_package_category` FOREIGN KEY (`idCategory`) REFERENCES `category` (`idCategory`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `fk_ovf_package_repository` FOREIGN KEY (`id_apps_library`) REFERENCES `apps_library` (`id_apps_library`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ovf_package`
+--
+
+LOCK TABLES `ovf_package` WRITE;
+/*!40000 ALTER TABLE `ovf_package` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ovf_package` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ovf_package_list`
+--
+
+DROP TABLE IF EXISTS `ovf_package_list`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ovf_package_list` (
+  `id_ovf_package_list` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(45) NOT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `id_apps_library` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id_ovf_package_list`),
+  KEY `fk_ovf_package_list_repository` (`id_apps_library`),
+  CONSTRAINT `fk_ovf_package_list_repository` FOREIGN KEY (`id_apps_library`) REFERENCES `apps_library` (`id_apps_library`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ovf_package_list`
+--
+
+LOCK TABLES `ovf_package_list` WRITE;
+/*!40000 ALTER TABLE `ovf_package_list` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ovf_package_list` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ovf_package_list_has_ovf_package`
+--
+
+DROP TABLE IF EXISTS `ovf_package_list_has_ovf_package`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ovf_package_list_has_ovf_package` (
+  `id_ovf_package_list` int(11) NOT NULL,
+  `id_ovf_package` int(11) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id_ovf_package_list`,`id_ovf_package`),
+  KEY `fk_ovf_package_list_has_ovf_package_ovf_package1` (`id_ovf_package`),
+  CONSTRAINT `fk_ovf_package_list_has_ovf_package_ovf_package_list1` FOREIGN KEY (`id_ovf_package_list`) REFERENCES `ovf_package_list` (`id_ovf_package_list`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `fk_ovf_package_list_has_ovf_package_ovf_package1` FOREIGN KEY (`id_ovf_package`) REFERENCES `ovf_package` (`id_ovf_package`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ovf_package_list_has_ovf_package`
+--
+
+LOCK TABLES `ovf_package_list_has_ovf_package` WRITE;
+/*!40000 ALTER TABLE `ovf_package_list_has_ovf_package` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ovf_package_list_has_ovf_package` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `physicalmachine`
+--
+
+DROP TABLE IF EXISTS `physicalmachine`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `physicalmachine` (
+  `idPhysicalMachine` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idRack` int(10) unsigned DEFAULT NULL,
+  `idDataCenter` int(10) unsigned NOT NULL,
+  `name` varchar(256) NOT NULL,
+  `description` varchar(100) DEFAULT NULL,
+  `ram` int(11) NOT NULL,
+  `cpu` int(11) NOT NULL,
+  `idState` int(10) unsigned NOT NULL DEFAULT '0',
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `initiatorIQN` varchar(256) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  `ipmiIP` varchar(39) DEFAULT NULL,
+  `ipmiPort` int(10) unsigned DEFAULT NULL,
+  `ipmiUser` varchar(255) DEFAULT NULL,
+  `ipmiPassword` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`idPhysicalMachine`),
+  KEY `PhysicalMachine_FK5` (`idDataCenter`),
+  KEY `PhysicalMachine_FK6` (`idEnterprise`),
+  KEY `PhysicalMachine_FK1` (`idRack`),
+  CONSTRAINT `PhysicalMachine_FK1` FOREIGN KEY (`idRack`) REFERENCES `rack` (`idRack`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `PhysicalMachine_FK5` FOREIGN KEY (`idDataCenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `PhysicalMachine_FK6` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE SET NULL ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `physicalmachine`
+--
+
+LOCK TABLES `physicalmachine` WRITE;
+/*!40000 ALTER TABLE `physicalmachine` DISABLE KEYS */;
+/*!40000 ALTER TABLE `physicalmachine` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER physicalmachine_insert AFTER INSERT ON physicalmachine
+    FOR EACH ROW BEGIN
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            -- TODO - Only add the reservation if the physical machine is in a good state...
+            IF (NEW.idEnterprise > 0) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingPMRegisterEvents' ) THEN
+                
+                CALL kinton_accounting.AccountingPMRegisterEvents('RESERVE_PM', NEW.idPhysicalMachine, NEW.idDataCenter, NEW.name, NEW.cpu, NEW.ram, NEW.idEnterprise);
             END IF;
-            -- Checks for unused IPs
-            IF OLD.idVM IS NOT NULL AND NEW.idVM IS NULL THEN
-                -- Query for datacenter
-                SELECT dc.idDataCenter INTO idDataCenterObj
-                FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-                WHERE ipm.vlan_network_id = vn.vlan_network_id
-                AND vn.network_configuration_id = nc.network_configuration_id
-                AND vn.network_id = dc.network_id
-        AND vn.networktype = 'PUBLIC'
-                AND NEW.idManagement = ipm.idManagement;
-                -- Datacenter found ---> Not PublicIPUsed
-                IF idDataCenterObj IS NOT NULL THEN
-                    -- Query for enterprise 
-                    SELECT vdc.idEnterprise INTO idEnterpriseObj
-                    FROM virtualdatacenter vdc
-                    WHERE vdc.idVirtualDataCenter = NEW.idVirtualDataCenter;
-                    -- 
-                    -- UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed-1 WHERE idDataCenter = idDataCenterObj;
-                    UPDATE IGNORE enterprise_resources_stats 
-                        SET     publicIPsUsed = publicIPsUsed - 1
-                        WHERE idEnterprise = idEnterpriseObj;
-                    UPDATE IGNORE dc_enterprise_stats 
-                        SET     publicIPsUsed = publicIPsUsed - 1
-                        WHERE idDataCenter = idDataCenterObj AND idEnterprise = idEnterpriseObj;
-                    UPDATE IGNORE vdc_enterprise_stats 
-                        SET     publicIPsUsed = publicIPsUsed - 1
-                    WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER physicalmachine_update AFTER UPDATE ON physicalmachine
+    FOR EACH ROW BEGIN
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            -- TODO - Add physical machine state change handling, so we can reserve/unreserve according to the PM state as well as changes of enterprise...
+            IF ((NEW.idEnterprise IS NOT NULL AND OLD.idEnterprise IS NULL) OR (NEW.idEnterprise IS NULL AND OLD.idEnterprise IS NOT NULL) OR
+                (NEW.idEnterprise != OLD.idEnterprise)) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingPMRegisterEvents' ) THEN
+                
+                -- The enterprise reservation has changed, so we need to UNRESERVE any previous records for the physical machine...
+                IF (OLD.idEnterprise > 0) THEN
+                    CALL kinton_accounting.AccountingPMRegisterEvents('UNRESERVE_PM', OLD.idPhysicalMachine, OLD.idDataCenter, OLD.name, OLD.cpu, OLD.ram, OLD.idEnterprise);
+                END IF;
+
+                -- And then register a new enterprise, if required...
+                IF (NEW.idEnterprise > 0) THEN
+                    CALL kinton_accounting.AccountingPMRegisterEvents('RESERVE_PM', NEW.idPhysicalMachine, NEW.idDataCenter, NEW.name, NEW.cpu, NEW.ram, NEW.idEnterprise);
                 END IF;
             END IF;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER physicalmachine_delete AFTER DELETE ON physicalmachine
+    FOR EACH ROW BEGIN
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            IF (OLD.idEnterprise > 0) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingPMRegisterEvents' ) THEN
+                
+                -- The machine deleted, so we need to UNRESERVE any existing records for the physical machine...
+                CALL kinton_accounting.AccountingPMRegisterEvents('UNRESERVE_PM', OLD.idPhysicalMachine, OLD.idDataCenter, OLD.name, OLD.cpu, OLD.ram, OLD.idEnterprise);
+            END IF;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `pricingCostCode`
+--
+
+DROP TABLE IF EXISTS `pricingCostCode`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pricingCostCode` (
+  `idPricingCostCode` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idPricingTemplate` int(10) unsigned NOT NULL,
+  `idCostCode` int(10) unsigned NOT NULL,
+  `price` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idPricingCostCode`),
+  KEY `pricingCostCode_FK2` (`idPricingTemplate`),
+  KEY `pricingCostCode_FK1` (`idCostCode`),
+  CONSTRAINT `pricingCostCode_FK1` FOREIGN KEY (`idCostCode`) REFERENCES `costCode` (`idCostCode`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `pricingCostCode_FK2` FOREIGN KEY (`idPricingTemplate`) REFERENCES `pricingTemplate` (`idPricingTemplate`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pricingCostCode`
+--
+
+LOCK TABLES `pricingCostCode` WRITE;
+/*!40000 ALTER TABLE `pricingCostCode` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pricingCostCode` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pricingTemplate`
+--
+
+DROP TABLE IF EXISTS `pricingTemplate`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pricingTemplate` (
+  `idPricingTemplate` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idCurrency` int(10) unsigned NOT NULL,
+  `name` varchar(256) NOT NULL,
+  `chargingPeriod` int(10) unsigned NOT NULL,
+  `minimumCharge` int(10) unsigned NOT NULL,
+  `showChangesBefore` tinyint(1) NOT NULL DEFAULT '0',
+  `standingChargePeriod` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `minimumChargePeriod` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `vcpu` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `hdGB` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `vlan` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `publicIp` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `defaultTemplate` tinyint(1) NOT NULL DEFAULT '0',
+  `description` varchar(1000) NOT NULL,
+  `last_update` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `version_c` int(11) DEFAULT '0',
+  `memoryGB` decimal(20,5) DEFAULT '0.00000',
+  `layer` decimal(20,5) DEFAULT '0.00000',
+  PRIMARY KEY (`idPricingTemplate`),
+  KEY `Pricing_FK2_Currency` (`idCurrency`),
+  CONSTRAINT `Pricing_FK2_Currency` FOREIGN KEY (`idCurrency`) REFERENCES `currency` (`idCurrency`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pricingTemplate`
+--
+
+LOCK TABLES `pricingTemplate` WRITE;
+/*!40000 ALTER TABLE `pricingTemplate` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pricingTemplate` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pricingTier`
+--
+
+DROP TABLE IF EXISTS `pricingTier`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pricingTier` (
+  `idPricingTier` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idPricingTemplate` int(10) unsigned NOT NULL,
+  `idTier` int(10) unsigned NOT NULL,
+  `price` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idPricingTier`),
+  KEY `pricingTier_FK2` (`idPricingTemplate`),
+  KEY `pricingTier_FK1` (`idTier`),
+  CONSTRAINT `pricingTier_FK1` FOREIGN KEY (`idTier`) REFERENCES `tier` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `pricingTier_FK2` FOREIGN KEY (`idPricingTemplate`) REFERENCES `pricingTemplate` (`idPricingTemplate`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pricingTier`
+--
+
+LOCK TABLES `pricingTier` WRITE;
+/*!40000 ALTER TABLE `pricingTier` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pricingTier` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `privilege`
+--
+
+DROP TABLE IF EXISTS `privilege`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `privilege` (
+  `idPrivilege` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idPrivilege`)
+) ENGINE=InnoDB AUTO_INCREMENT=58 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `privilege`
+--
+
+LOCK TABLES `privilege` WRITE;
+/*!40000 ALTER TABLE `privilege` DISABLE KEYS */;
+INSERT INTO `privilege` VALUES (1,'ENTERPRISE_ENUMERATE',0),(2,'ENTERPRISE_ADMINISTER_ALL',0),(3,'ENTERPRISE_RESOURCE_SUMMARY_ENT',0),(4,'PHYS_DC_ENUMERATE',0),(5,'PHYS_DC_RETRIEVE_RESOURCE_USAGE',0),(6,'PHYS_DC_MANAGE',0),(7,'PHYS_DC_RETRIEVE_DETAILS',0),(8,'PHYS_DC_ALLOW_MODIFY_SERVERS',0),(9,'PHYS_DC_ALLOW_MODIFY_NETWORK',0),(10,'PHYS_DC_ALLOW_MODIFY_STORAGE',0),(11,'PHYS_DC_ALLOW_MODIFY_ALLOCATION',0),(12,'VDC_ENUMERATE',0),(13,'VDC_MANAGE',0),(14,'VDC_MANAGE_VAPP',0),(15,'VDC_MANAGE_NETWORK',0),(16,'VDC_MANAGE_STORAGE',0),(17,'VAPP_CUSTOMISE_SETTINGS',0),(18,'VAPP_DEPLOY_UNDEPLOY',0),(21,'VAPP_PERFORM_ACTIONS',0),(22,'VAPP_CREATE_STATEFUL',0),(23,'VAPP_CREATE_INSTANCE',0),(24,'APPLIB_VIEW',0),(25,'APPLIB_ALLOW_MODIFY',0),(26,'APPLIB_UPLOAD_IMAGE',0),(27,'APPLIB_MANAGE_REPOSITORY',0),(28,'APPLIB_DOWNLOAD_IMAGE',0),(29,'APPLIB_MANAGE_CATEGORIES',0),(30,'USERS_VIEW',0),(31,'USERS_MANAGE_ENTERPRISE',0),(32,'USERS_MANAGE_USERS',0),(33,'USERS_MANAGE_OTHER_ENTERPRISES',0),(34,'USERS_PROHIBIT_VDC_RESTRICTION',0),(35,'USERS_VIEW_PRIVILEGES',0),(36,'USERS_MANAGE_ROLES',0),(37,'USERS_MANAGE_ROLES_OTHER_ENTERPRISES',0),(38,'USERS_MANAGE_SYSTEM_ROLES',0),(39,'USERS_MANAGE_LDAP_GROUP',0),(40,'USERS_ENUMERATE_CONNECTED',0),(41,'SYSCONFIG_VIEW',0),(42,'SYSCONFIG_ALLOW_MODIFY',0),(43,'EVENTLOG_VIEW_ENTERPRISE',0),(44,'EVENTLOG_VIEW_ALL',0),(45,'APPLIB_VM_COST_CODE',0),(46,'USERS_MANAGE_ENTERPRISE_BRANDING',0),(47,'SYSCONFIG_SHOW_REPORTS',0),(48,'USERS_DEFINE_AS_MANAGER',0),(49,'PRICING_VIEW',0),(50,'PRICING_MANAGE',0),(51,'USERS_MANAGE_CHEF_ENTERPRISE',0),(52,'MANAGE_HARD_DISKS',0),(53,'APPLIB_MANAGE_GLOBAL_CATEGORIES',0),(54,'USERS_MANAGE_SCOPES',0),(55,'USERS_MANAGE_RESERVED_MACHINES',0),(56,'VAPP_MANAGE_LAYERS',0),(57,'ENTERPRISE_SHOW_STATS_LIMITS',0);
+/*!40000 ALTER TABLE `privilege` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `rack`
+--
+
+DROP TABLE IF EXISTS `rack`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `rack` (
+  `idRack` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idDataCenter` int(10) unsigned NOT NULL,
+  `name` varchar(20) NOT NULL,
+  `shortDescription` varchar(30) DEFAULT NULL,
+  `largeDescription` varchar(100) DEFAULT NULL,
+  `vlan_id_min` int(10) unsigned DEFAULT '2',
+  `vlan_id_max` int(10) unsigned DEFAULT '4094',
+  `vlans_id_avoided` varchar(255) DEFAULT '',
+  `vlan_per_vdc_expected` int(10) unsigned DEFAULT '8',
+  `nrsq` int(10) unsigned DEFAULT '10',
+  `haEnabled` tinyint(1) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idRack`),
+  KEY `Rack_FK1` (`idDataCenter`),
+  CONSTRAINT `Rack_FK1` FOREIGN KEY (`idDataCenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `rack`
+--
+
+LOCK TABLES `rack` WRITE;
+/*!40000 ALTER TABLE `rack` DISABLE KEYS */;
+/*!40000 ALTER TABLE `rack` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER rack_update AFTER UPDATE ON rack
+    FOR EACH ROW BEGIN
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            -- check if ha flag has changes and accounting is enabled...
+            IF (NEW.haEnabled != OLD.haEnabled) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
+            BEGIN
+                DECLARE v_idVM INTEGER UNSIGNED;
+                DECLARE v_cpu INTEGER UNSIGNED;
+                DECLARE v_ram INTEGER UNSIGNED;
+                DECLARE v_hd BIGINT UNSIGNED;
+                DECLARE v_cc INTEGER UNSIGNED;
+                DECLARE done INT DEFAULT FALSE;
+                DECLARE cur1 CURSOR FOR SELECT vma.idVM, vma.cpu, vma.ram, vma.hd, vma.costCode
+                                        FROM kinton_accounting.accounting_event_vm vma, virtualmachine vm, hypervisor h, physicalmachine pm
+                                        WHERE   vm.idHypervisor=h.id AND h.idPhysicalMachine=pm.idPhysicalMachine AND pm.idRack=NEW.idRack AND
+                                                vma.idVM=vm.idVM AND vma.stopTime IS NULL;
+                DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+                OPEN cur1;
+                read_loop: LOOP
+                    FETCH cur1 INTO v_idVM, v_cpu, v_ram, v_hd, v_cc;
+                    IF done THEN
+                      LEAVE read_loop;
+                    END IF;
+
+                    CALL kinton_accounting.AccountingVMRegisterEvents(v_idVM, 1, "N/A", "HA_UPDATE", "N/A", v_ram, v_cpu, v_hd, v_cc);
+                END LOOP;
+                CLOSE cur1;
+            END ;
+            END IF;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `rasd`
+--
+
+DROP TABLE IF EXISTS `rasd`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `rasd` (
+  `address` varchar(256) DEFAULT NULL,
+  `addressOnParent` varchar(25) DEFAULT NULL,
+  `allocationUnits` varchar(15) DEFAULT NULL,
+  `automaticAllocation` int(11) DEFAULT NULL,
+  `automaticDeallocation` int(11) DEFAULT NULL,
+  `caption` varchar(15) DEFAULT NULL,
+  `changeableType` int(11) DEFAULT NULL,
+  `configurationName` varchar(15) DEFAULT NULL,
+  `connectionResource` varchar(256) DEFAULT NULL,
+  `consumerVisibility` int(11) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `elementName` varchar(255) NOT NULL,
+  `generation` bigint(20) DEFAULT NULL,
+  `hostResource` varchar(256) DEFAULT NULL,
+  `instanceID` varchar(50) NOT NULL,
+  `limitResource` bigint(20) DEFAULT NULL,
+  `mappingBehaviour` int(11) DEFAULT NULL,
+  `otherResourceType` varchar(50) DEFAULT NULL,
+  `parent` varchar(50) DEFAULT NULL,
+  `poolID` varchar(50) DEFAULT NULL,
+  `reservation` bigint(20) DEFAULT NULL,
+  `resourceSubType` varchar(15) DEFAULT NULL,
+  `resourceType` int(11) NOT NULL,
+  `virtualQuantity` int(11) DEFAULT NULL,
+  `weight` int(11) DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`instanceID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `rasd`
+--
+
+LOCK TABLES `rasd` WRITE;
+/*!40000 ALTER TABLE `rasd` DISABLE KEYS */;
+/*!40000 ALTER TABLE `rasd` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER update_rasd_update_stats AFTER UPDATE ON rasd
+    FOR EACH ROW BEGIN
+        DECLARE idThisEnterprise INTEGER;
+        DECLARE idThisVirtualDataCenter INTEGER;
+	DECLARE v_idTier INTEGER;
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN                                   
+            --
+            IF OLD.limitResource != NEW.limitResource THEN
+                SELECT vdc.idVirtualDataCenter, vdc.idEnterprise INTO idThisVirtualDataCenter, idThisEnterprise
+                FROM rasd_management rm, virtualdatacenter vdc
+                WHERE rm.idResource = NEW.instanceID
+                AND vdc.idVirtualDataCenter=rm.idVirtualDataCenter;
+                -- check if this is reserved
+                IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingStorageRegisterEvents' ) THEN
+        	    SELECT sp.idTier INTO v_idTier	
+		    FROM kinton.rasd r, kinton.rasd_management rm, kinton.volume_management volMgmt,
+ 	 		kinton.storage_pool sp
+ 	 	    WHERE rm.idResource = r.instanceID AND resourcetype=8 AND
+ 	     		volMgmt.idManagement=rm.idManagement AND
+ 	     		volMgmt.idStorage=sp.idStorage AND
+ 	     		r.instanceID=NEW.instanceID;
+                    CALL kinton_accounting.AccountingStorageRegisterEvents('UPDATE_STORAGE', NEW.instanceID, NEW.elementName, v_idTier, idThisVirtualDataCenter, idThisEnterprise, NEW.limitResource);
+                END IF;
+            END IF;
+        END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `rasd_management`
+--
+
+DROP TABLE IF EXISTS `rasd_management`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `rasd_management` (
+  `idManagement` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idResourceType` varchar(5) NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned DEFAULT NULL,
+  `idVM` int(10) unsigned DEFAULT NULL,
+  `idResource` varchar(50) DEFAULT NULL,
+  `idVirtualApp` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  `temporal` int(10) unsigned DEFAULT NULL,
+  `sequence` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idManagement`),
+  KEY `idResource_FK` (`idResource`),
+  KEY `idVirtualApp_FK` (`idVirtualApp`),
+  KEY `idVirtualDataCenter_FK` (`idVirtualDataCenter`),
+  KEY `idVM_FK` (`idVM`),
+  CONSTRAINT `idVM_FK` FOREIGN KEY (`idVM`) REFERENCES `virtualmachine` (`idVM`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `idResource_FK` FOREIGN KEY (`idResource`) REFERENCES `rasd` (`instanceID`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `idVirtualApp_FK` FOREIGN KEY (`idVirtualApp`) REFERENCES `virtualapp` (`idVirtualApp`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `idVirtualDataCenter_FK` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `virtualdatacenter` (`idVirtualDataCenter`) ON DELETE SET NULL ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `rasd_management`
+--
+
+LOCK TABLES `rasd_management` WRITE;
+/*!40000 ALTER TABLE `rasd_management` DISABLE KEYS */;
+/*!40000 ALTER TABLE `rasd_management` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER update_rasd_management_update_stats AFTER UPDATE ON rasd_management
+    FOR EACH ROW BEGIN
+        DECLARE idDataCenterObj INTEGER;
+        DECLARE idEnterpriseObj INTEGER;
+        DECLARE ipAddress VARCHAR(20) CHARACTER SET utf8;
+        DECLARE v_idTier INTEGER;
+        DECLARE v_elementName VARCHAR(256) CHARACTER SET utf8;
+        DECLARE v_limitResource BIGINT(20);
+
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN                                         
             -- Checks for unreserved IPs
-            IF OLD.idVirtualDataCenter IS NOT NULL AND NEW.idVirtualDataCenter IS NULL THEN
+            IF OLD.idResourceType = 10 AND OLD.idVirtualDataCenter IS NOT NULL AND NEW.idVirtualDataCenter IS NULL THEN
                 -- Query for datacenter
                 SELECT dc.idDataCenter, ipm.ip INTO idDataCenterObj, ipAddress
                 FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
                 WHERE ipm.vlan_network_id = vn.vlan_network_id
                 AND vn.network_configuration_id = nc.network_configuration_id
                 AND vn.network_id = dc.network_id
-        AND vn.networktype = 'PUBLIC'
+        		AND vn.networktype = 'PUBLIC'
                 AND OLD.idManagement = ipm.idManagement;
                 -- Datacenter found ---> Not PublicIPReserved
                 IF idDataCenterObj IS NOT NULL THEN
-                    UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed-1 WHERE idDataCenter = idDataCenterObj;
                     -- Registers Accounting Event
                     SELECT vdc.idEnterprise INTO idEnterpriseObj
                     FROM virtualdatacenter vdc
                     WHERE vdc.idVirtualDataCenter = OLD.idVirtualDataCenter;                    
-                    UPDATE IGNORE enterprise_resources_stats SET publicIPsReserved = publicIPsReserved-1 WHERE idEnterprise = idEnterpriseObj;
-                    UPDATE IGNORE vdc_enterprise_stats SET publicIPsReserved = publicIPsReserved-1 WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-                    UPDATE IGNORE dc_enterprise_stats SET publicIPsReserved = publicIPsReserved-1 WHERE idDataCenter = idDataCenterObj;
-                    IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
-                        CALL AccountingIPsRegisterEvents('IP_FREED',OLD.idManagement,ipAddress,OLD.idVirtualDataCenter, idEnterpriseObj);
+                    IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
+                        CALL kinton_accounting.AccountingIPsRegisterEvents('IP_FREED',OLD.idManagement,ipAddress,OLD.idVirtualDataCenter, idEnterpriseObj);
                     END IF;                    
                 END IF;
             END IF;
-        END IF;
-    END;
-|
-DELIMITER ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_rasd_management_update_stats', '2.0.3', '3:08d5f873bfce3ea37a605eaf44e9386a', 153);
+            -- Check to see if the Storage VDC has changed for a volume, and if so update the accounting tables to reflect the new owner�
+            IF (OLD.idResourceType = 8) AND
+               (OLD.idVirtualDataCenter IS NOT NULL) AND (NEW.idVirtualDataCenter != OLD.idVirtualDataCenter) THEN
 
--- Changeset src/2.0ga/triggers.xml::update_rasd_update_stats::destevez::(Checksum: 3:e628beb6120851ed8d307e81f3058518)
-DROP TRIGGER IF EXISTS update_rasd_update_stats;
+                SELECT vdc.idEnterprise INTO idEnterpriseObj
+                    FROM virtualdatacenter vdc
+                    WHERE vdc.idVirtualDataCenter = NEW.idVirtualDataCenter;
 
-DELIMITER |
-CREATE TRIGGER update_rasd_update_stats AFTER UPDATE ON rasd
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idThisEnterprise INTEGER;
-        DECLARE idThisVirtualDataCenter INTEGER;
-        DECLARE isReserved INTEGER;
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN                                   
-            --
-            IF OLD.limitResource != NEW.limitResource THEN
-                SELECT vdc.idDataCenter, vdc.idVirtualDataCenter, vdc.idEnterprise INTO idDataCenterObj, idThisVirtualDataCenter, idThisEnterprise
-                FROM rasd_management rm, virtualdatacenter vdc
-                WHERE rm.idResource = NEW.instanceID
-                AND vdc.idVirtualDataCenter=rm.idVirtualDataCenter;
-                -- check if this is reserved
-                SELECT count(*) INTO isReserved
-                FROM volume_management vm, rasd_management rm
-                WHERE vm.idManagement  = rm.idManagement
-                AND NEW.instanceID = rm.idResource
-                AND (vm.state = 1 OR vm.state = 2);
-                UPDATE IGNORE cloud_usage_stats SET storageTotal = storageTotal+ NEW.limitResource - OLD.limitResource WHERE idDataCenter = idDataCenterObj;                
-                IF isReserved != 0 THEN
-                -- si hay volAttached se debe actualizar el storageUsed
-                    UPDATE IGNORE cloud_usage_stats SET storageUsed = storageUsed +  NEW.limitResource - OLD.limitResource WHERE idDataCenter = idDataCenterObj;                    
-                    UPDATE IGNORE enterprise_resources_stats 
-                    SET     extStorageUsed = extStorageUsed +  NEW.limitResource - OLD.limitResource 
-                    WHERE idEnterprise = idThisEnterprise;
-                    UPDATE IGNORE dc_enterprise_stats 
-                    SET     extStorageUsed = extStorageUsed +  NEW.limitResource - OLD.limitResource 
-                    WHERE idDataCenter = idDataCenterObj AND idEnterprise = idThisEnterprise;
-                    UPDATE IGNORE vdc_enterprise_stats 
-                    SET     volCreated = volCreated - 1,
-                        extStorageUsed = extStorageUsed +  NEW.limitResource - OLD.limitResource 
-                    WHERE idVirtualDataCenter = idThisVirtualDataCenter;
-                END IF;        
-                IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingStorageRegisterEvents' ) THEN
-                    CALL AccountingStorageRegisterEvents('UPDATE_STORAGE', NEW.instanceID, NEW.elementName, 0, idThisVirtualDataCenter, idThisEnterprise, NEW.limitResource);
-                END IF;
+                SELECT r.elementName, r.limitResource INTO v_elementName, v_limitResource
+                    FROM rasd r
+                    WHERE r.instanceID=OLD.idResource;
+ 
+                SELECT sp.idTier INTO v_idTier
+                FROM kinton.rasd r, kinton.rasd_management rm, kinton.volume_management volMgmt,
+                    kinton.storage_pool sp
+                WHERE rm.idResource = OLD.idResource AND 
+                    r.instanceID=rm.idResource AND r.resourcetype=8 AND
+                    volMgmt.idManagement=rm.idManagement AND
+                    volMgmt.idStorage=sp.idStorage;
+
+                CALL kinton_accounting.AccountingStorageRegisterEvents('UPDATE_STORAGE', OLD.idResource, v_elementName, v_idTier, NEW.idVirtualDataCenter, idEnterpriseObj, v_limitResource);
             END IF;
         END IF;
-    END;
-|
+    END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_rasd_update_stats', '2.0.3', '3:e628beb6120851ed8d307e81f3058518', 154);
-
--- Changeset src/2.0ga/triggers.xml::create_ip_pool_management_update_stats::destevez::(Checksum: 3:1d97b3fafe9c0c1e9bb0bb2d8264330b)
-DROP TRIGGER IF EXISTS create_ip_pool_management_update_stats;
-
-DELIMITER |
-CREATE TRIGGER create_ip_pool_management_update_stats AFTER INSERT ON ip_pool_management
-  FOR EACH ROW BEGIN
-    DECLARE idDataCenterObj INTEGER;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      SELECT dc.idDataCenter INTO idDataCenterObj
-	FROM rasd_management rm, vlan_network vn, network_configuration nc, datacenter dc
-	WHERE NEW.vlan_network_id = vn.vlan_network_id
-	AND vn.networktype = 'PUBLIC'
-	AND vn.network_configuration_id = nc.network_configuration_id
-	AND dc.network_id = vn.network_id
-	AND NEW.idManagement = rm.idManagement;
-      IF idDataCenterObj IS NOT NULL THEN
-	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('create_ip_pool_management_update_stats +1 ', IFNULL(idDataCenterObj,'NULL')));
-        UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal+1 WHERE idDataCenter = idDataCenterObj;
-      END IF;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER delete_rasd_management_update_stats AFTER DELETE ON rasd_management
+    FOR EACH ROW BEGIN
+	DECLARE idThisEnterprise INTEGER;
+	DECLARE limitResourceObj BIGINT;    
+	DECLARE resourceName VARCHAR(255);  
+	--
+	SELECT vdc.idEnterprise INTO idThisEnterprise
+    FROM virtualdatacenter vdc
+    WHERE vdc.idVirtualDataCenter = OLD.idVirtualDataCenter;
+    -- 
+	SELECT elementName, limitResource INTO resourceName, limitResourceObj
+	FROM rasd r
+	WHERE r.instanceID = OLD.idResource;
+	--
+    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN           
+        IF (OLD.idResourceType='8')  AND (OLD.temporal IS NULL) THEN 
+            IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingStorageRegisterEvents' ) THEN
+                CALL kinton_accounting.AccountingStorageRegisterEvents('DELETE_STORAGE', OLD.idResource, resourceName, 0, OLD.idVirtualDataCenter, idThisEnterprise, limitResourceObj);
+            END IF;                  
+        END IF;
     END IF;
-  END;
-|
+    END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'create_ip_pool_management_update_stats', '2.0.3', '3:1d97b3fafe9c0c1e9bb0bb2d8264330b', 155);
+--
+-- Table structure for table `register`
+--
 
--- Changeset src/2.0ga/triggers.xml::delete_ip_pool_management_update_stats::destevez::(Checksum: 3:a406f30381d7e73da783a34075152f44)
-DROP TRIGGER IF EXISTS delete_ip_pool_management_update_stats;
+DROP TABLE IF EXISTS `register`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `register` (
+  `id` char(36) NOT NULL,
+  `company_name` varchar(60) NOT NULL,
+  `company_address` varchar(240) NOT NULL,
+  `company_state` varchar(60) NOT NULL,
+  `company_country_code` varchar(2) NOT NULL,
+  `company_industry` varchar(255) DEFAULT NULL,
+  `contact_title` varchar(60) NOT NULL,
+  `contact_name` varchar(60) NOT NULL,
+  `contact_email` varchar(60) NOT NULL,
+  `contact_phone` varchar(60) NOT NULL,
+  `company_size_revenue` varchar(60) NOT NULL,
+  `company_size_employees` varchar(60) NOT NULL,
+  `subscribe_development_news` tinyint(1) NOT NULL DEFAULT '0',
+  `subscribe_commercial_news` tinyint(1) NOT NULL DEFAULT '0',
+  `allow_commercial_contact` tinyint(1) NOT NULL DEFAULT '0',
+  `creation_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `last_updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-DELIMITER |
-CREATE TRIGGER delete_ip_pool_management_update_stats AFTER DELETE ON ip_pool_management
-  FOR EACH ROW BEGIN
-    DECLARE idDataCenterObj INTEGER;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      -- Query for Public Ips deleted (disabled)
-      SELECT dc.idDataCenter INTO idDataCenterObj
-	FROM rasd_management rm, vlan_network vn, network_configuration nc, datacenter dc
-	WHERE OLD.vlan_network_id = vn.vlan_network_id
-	AND vn.networktype = 'PUBLIC'
-	AND vn.network_configuration_id = nc.network_configuration_id
-	AND dc.network_id = vn.network_id
-	AND OLD.idManagement = rm.idManagement;
-      IF idDataCenterObj IS NOT NULL THEN
-    -- detects IP disabled/enabled at Edit Public Ips
-   	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('delete_ip_pool_management_update_stats -1 ', IFNULL(idDataCenterObj,'NULL')));
-        UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal-1 WHERE idDataCenter = idDataCenterObj;
-      END IF;
-    END IF;
-  END;
-|
+--
+-- Dumping data for table `register`
+--
+
+LOCK TABLES `register` WRITE;
+/*!40000 ALTER TABLE `register` DISABLE KEYS */;
+/*!40000 ALTER TABLE `register` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `remote_service`
+--
+
+DROP TABLE IF EXISTS `remote_service`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `remote_service` (
+  `idRemoteService` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `uri` varchar(255) NOT NULL,
+  `idDataCenter` int(10) unsigned NOT NULL,
+  `status` int(10) unsigned NOT NULL DEFAULT '0',
+  `remoteServiceType` varchar(255) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idRemoteService`),
+  KEY `idDatecenter_FK` (`idDataCenter`),
+  CONSTRAINT `idDatecenter_FK` FOREIGN KEY (`idDataCenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `remote_service`
+--
+
+LOCK TABLES `remote_service` WRITE;
+/*!40000 ALTER TABLE `remote_service` DISABLE KEYS */;
+/*!40000 ALTER TABLE `remote_service` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `repository`
+--
+
+DROP TABLE IF EXISTS `repository`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `repository` (
+  `idRepository` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idDataCenter` int(10) unsigned NOT NULL,
+  `name` varchar(30) DEFAULT NULL,
+  `URL` varchar(255) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idRepository`),
+  KEY `fk_idDataCenter` (`idDataCenter`),
+  CONSTRAINT `fk_idDataCenter` FOREIGN KEY (`idDataCenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `repository`
+--
+
+LOCK TABLES `repository` WRITE;
+/*!40000 ALTER TABLE `repository` DISABLE KEYS */;
+/*!40000 ALTER TABLE `repository` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `role`
+--
+
+DROP TABLE IF EXISTS `role`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `role` (
+  `idRole` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(40) NOT NULL DEFAULT 'auto_name',
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `blocked` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  `idScope` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idRole`),
+  KEY `fk_role_1` (`idEnterprise`),
+  KEY `fk_role_scope` (`idScope`),
+  CONSTRAINT `fk_role_scope` FOREIGN KEY (`idScope`) REFERENCES `scope` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_role_1` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `role`
+--
+
+LOCK TABLES `role` WRITE;
+/*!40000 ALTER TABLE `role` DISABLE KEYS */;
+INSERT INTO `role` VALUES (1,'CLOUD_ADMIN',NULL,1,0,1),(2,'USER',NULL,0,0,1),(3,'ENTERPRISE_ADMIN',NULL,0,0,1);
+/*!40000 ALTER TABLE `role` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `role_ldap`
+--
+
+DROP TABLE IF EXISTS `role_ldap`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `role_ldap` (
+  `idRole_ldap` int(11) NOT NULL AUTO_INCREMENT,
+  `idRole` int(10) unsigned NOT NULL,
+  `role_ldap` varchar(128) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idRole_ldap`),
+  KEY `fk_role_ldap_role` (`idRole`),
+  CONSTRAINT `fk_role_ldap_role` FOREIGN KEY (`idRole`) REFERENCES `role` (`idRole`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `role_ldap`
+--
+
+LOCK TABLES `role_ldap` WRITE;
+/*!40000 ALTER TABLE `role_ldap` DISABLE KEYS */;
+/*!40000 ALTER TABLE `role_ldap` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `roles_privileges`
+--
+
+DROP TABLE IF EXISTS `roles_privileges`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `roles_privileges` (
+  `idRole` int(10) unsigned NOT NULL,
+  `idPrivilege` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  KEY `fk_roles_privileges_privileges` (`idPrivilege`),
+  KEY `fk_roles_privileges_role` (`idRole`),
+  CONSTRAINT `fk_roles_privileges_role` FOREIGN KEY (`idRole`) REFERENCES `role` (`idRole`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_roles_privileges_privileges` FOREIGN KEY (`idPrivilege`) REFERENCES `privilege` (`idPrivilege`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `roles_privileges`
+--
+
+LOCK TABLES `roles_privileges` WRITE;
+/*!40000 ALTER TABLE `roles_privileges` DISABLE KEYS */;
+INSERT INTO `roles_privileges` VALUES (1,1,0),(1,2,0),(1,3,0),(1,4,0),(1,5,0),(1,6,0),(1,7,0),(1,8,0),(1,9,0),(1,10,0),(1,11,0),(1,12,0),(1,13,0),(1,14,0),(1,15,0),(1,16,0),(1,17,0),(1,18,0),(1,21,0),(1,22,0),(1,23,0),(1,24,0),(1,25,0),(1,26,0),(1,27,0),(1,28,0),(1,29,0),(1,30,0),(1,31,0),(1,32,0),(1,33,0),(1,34,0),(1,35,0),(1,36,0),(1,37,0),(1,38,0),(1,39,0),(1,40,0),(1,41,0),(1,42,0),(1,43,0),(1,44,0),(1,45,0),(1,47,0),(1,48,0),(1,49,0),(1,50,0),(3,3,0),(3,12,0),(3,13,0),(3,14,0),(3,15,0),(3,16,0),(3,17,0),(3,18,0),(3,21,0),(3,22,0),(3,23,0),(3,24,0),(3,25,0),(3,26,0),(3,27,0),(3,28,0),(3,29,0),(3,30,0),(3,32,0),(3,34,0),(3,43,0),(3,48,0),(2,12,0),(2,14,0),(2,17,0),(2,18,0),(2,21,0),(2,22,0),(2,23,0),(2,43,0),(1,51,0),(1,52,0),(1,53,0),(1,54,0),(1,55,0),(1,57,0),(2,57,0),(3,57,0),(1,56,0),(2,56,0),(3,56,0);
+/*!40000 ALTER TABLE `roles_privileges` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `scheduled_resources`
+--
+
+DROP TABLE IF EXISTS `scheduled_resources`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `scheduled_resources` (
+  `idPhysicalMachine` int(10) unsigned NOT NULL DEFAULT '0',
+  `idDatastore` int(10) unsigned NOT NULL DEFAULT '0',
+  `cpuUsed` int(10) unsigned NOT NULL DEFAULT '0',
+  `ramUsed` int(10) unsigned NOT NULL DEFAULT '0',
+  `datastoreUsed` bigint(20) unsigned NOT NULL DEFAULT '0',
+  KEY `SCH_PM_DATASTORE_IDX` (`idPhysicalMachine`,`idDatastore`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `scheduled_resources`
+--
+
+LOCK TABLES `scheduled_resources` WRITE;
+/*!40000 ALTER TABLE `scheduled_resources` DISABLE KEYS */;
+/*!40000 ALTER TABLE `scheduled_resources` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `scope`
+--
+
+DROP TABLE IF EXISTS `scope`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `scope` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL DEFAULT 'auto_name',
+  `autoEnt` tinyint(1) NOT NULL DEFAULT '0',
+  `autoDat` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `scope`
+--
+
+LOCK TABLES `scope` WRITE;
+/*!40000 ALTER TABLE `scope` DISABLE KEYS */;
+INSERT INTO `scope` VALUES (1,'Global scope',0,0,0);
+/*!40000 ALTER TABLE `scope` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `scope_resource`
+--
+
+DROP TABLE IF EXISTS `scope_resource`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `scope_resource` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idScope` int(10) unsigned NOT NULL,
+  `idResource` int(10) unsigned NOT NULL,
+  `resourceType` varchar(64) NOT NULL DEFAULT 'auto_name',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `fk_scope_resource_scope` (`idScope`),
+  CONSTRAINT `fk_scope_resource_scope` FOREIGN KEY (`idScope`) REFERENCES `scope` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `scope_resource`
+--
+
+LOCK TABLES `scope_resource` WRITE;
+/*!40000 ALTER TABLE `scope_resource` DISABLE KEYS */;
+/*!40000 ALTER TABLE `scope_resource` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `session`
+--
+
+DROP TABLE IF EXISTS `session`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `session` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user` varchar(128) NOT NULL,
+  `key` varchar(100) NOT NULL,
+  `expireDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `idUser` int(10) unsigned DEFAULT NULL,
+  `authType` varchar(20) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `fk_session_user` (`idUser`),
+  CONSTRAINT `fk_session_user` FOREIGN KEY (`idUser`) REFERENCES `user` (`idUser`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `session`
+--
+
+LOCK TABLES `session` WRITE;
+/*!40000 ALTER TABLE `session` DISABLE KEYS */;
+/*!40000 ALTER TABLE `session` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `storage_device`
+--
+
+DROP TABLE IF EXISTS `storage_device`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `storage_device` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(256) NOT NULL,
+  `idDataCenter` int(10) unsigned NOT NULL,
+  `management_ip` varchar(256) NOT NULL,
+  `management_port` int(10) unsigned NOT NULL DEFAULT '0',
+  `iscsi_ip` varchar(256) NOT NULL,
+  `iscsi_port` int(10) unsigned NOT NULL DEFAULT '0',
+  `storage_technology` varchar(256) DEFAULT NULL,
+  `username` varchar(256) DEFAULT NULL,
+  `password` varchar(256) DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `storage_device_FK_1` (`idDataCenter`),
+  CONSTRAINT `storage_device_FK_1` FOREIGN KEY (`idDataCenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `storage_device`
+--
+
+LOCK TABLES `storage_device` WRITE;
+/*!40000 ALTER TABLE `storage_device` DISABLE KEYS */;
+/*!40000 ALTER TABLE `storage_device` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `storage_pool`
+--
+
+DROP TABLE IF EXISTS `storage_pool`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `storage_pool` (
+  `idStorage` varchar(40) NOT NULL,
+  `idStorageDevice` int(10) unsigned NOT NULL,
+  `idTier` int(10) unsigned NOT NULL,
+  `isEnabled` tinyint(1) NOT NULL DEFAULT '1',
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  `totalSizeInMb` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `usedSizeInMb` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `availableSizeInMb` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `name` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`idStorage`),
+  KEY `storage_pool_FK1` (`idStorageDevice`),
+  KEY `storage_pool_FK2` (`idTier`),
+  CONSTRAINT `storage_pool_FK2` FOREIGN KEY (`idTier`) REFERENCES `tier` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `storage_pool_FK1` FOREIGN KEY (`idStorageDevice`) REFERENCES `storage_device` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `storage_pool`
+--
+
+LOCK TABLES `storage_pool` WRITE;
+/*!40000 ALTER TABLE `storage_pool` DISABLE KEYS */;
+/*!40000 ALTER TABLE `storage_pool` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `system_properties`
+--
+
+DROP TABLE IF EXISTS `system_properties`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `system_properties` (
+  `systemPropertyId` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `version_c` int(11) DEFAULT '0',
+  `name` varchar(255) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`systemPropertyId`)
+) ENGINE=InnoDB AUTO_INCREMENT=95 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_properties`
+--
+
+LOCK TABLES `system_properties` WRITE;
+/*!40000 ALTER TABLE `system_properties` DISABLE KEYS */;
+INSERT INTO `system_properties` VALUES (1,0,'client.applibrary.ovfpackagesDownloadingProgressUpdateInterval','10','Time interval in seconds'),(2,0,'client.applibrary.virtualimageUploadProgressUpdateInterval','10','Time interval in seconds'),(3,0,'client.dashboard.abiquoURL','http://www.abiquo.org','URL of Abiquo web page'),(4,0,'client.dashboard.allowUsersAccess','1','Allow (1) or deny (0) access to the \'Users\' section'),(5,0,'client.dashboard.showStartUpAlert','1','Set to 1 to enable wizard feature'),(6,0,'client.infra.googleMapsDefaultLatitude','41.3825','Google Maps will be centered by default at this longitude value'),(7,0,'client.infra.googleMapsDefaultLongitude','2.176944','Google Maps will be centered by default at this latitude value'),(8,0,'client.infra.googleMapsDefaultZoom','4','Google Maps will be centered by default with this zoom level value'),(9,0,'client.infra.googleMapskey','0','The map\'s Google key used in infrastructure section'),(10,0,'client.infra.googleMapsLadTimeOut','10','Time, in seconds, that applications waits Google Maps to load. After that, application considers that Google Maps service is temporarily unavailable, and is not used'),(11,0,'client.infra.InfrastructureUpdateInterval','30','Time interval in seconds'),(12,0,'client.infra.ucsManagerLink','/ucsm/ucsm.jnlp','URL to display UCS Manager Interface'),(13,0,'client.metering.meteringUpdateInterval','10','Time interval in seconds'),(14,0,'client.network.numberIpAdressesPerPage','25','Number entries that will appear when listing IP addresses in different parts of the application'),(15,0,'client.theme.defaultEnterpriseLogoPath','themes/abicloudDefault/logo.png','This is the path to the Enterprise logo used in the app'),(16,0,'client.user.numberEnterprisesPerPage','25','Number of enterprises per page that will appear in User Management'),(17,0,'client.user.numberUsersPerPage','25','Number of users per page that will appear in User Management'),(18,0,'client.virtual.allowVMRemoteAccess','1','Allow (1) or deny (0) virtual machine remote access'),(19,0,'client.virtual.virtualApplianceDeployingUpdateInterval','5','Time interval in seconds'),(20,0,'client.virtual.virtualAppliancesUpdateInterval','30','Time interval in seconds'),(21,0,'client.virtual.moreInfoAboutUploadLimitations','http://wiki.abiquo.com/display/ABI20/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem','URL of Abiquo virtual image upload limitations web page'),(22,0,'client.infra.vlanIdMin','2','Minimum value for vlan ID'),(23,0,'client.infra.vlanIdMax','4094','Maximum value for vlan ID'),(24,0,'client.dashboard.dashboardUpdateInterval','30','Time interval in seconds'),(25,0,'client.infra.defaultHypervisorPassword','temporal','Default Hypervisor password used when creating Physical Machines'),(26,0,'client.infra.defaultHypervisorPort','8889','Default Hypervisor port used when creating Physical Machines'),(27,0,'client.infra.defaultHypervisorUser','root','Default Hypervisor user used when creating Physical Machines'),(28,0,'client.storage.volumeMaxSizeValues','1,2,4,8,16,32,64,128,256','Comma separated values, with the allowed sizes when creating or editing a VolumeManagement'),(29,0,'client.virtual.virtualImagesRefreshConversionsInterval','5','Time interval in seconds to refresh missing virtual image conversions'),(30,0,'client.main.enterpriseLogoURL','http://www.abiquo.com','URL displayed when the header enterprise logo is clicked'),(31,0,'client.main.billingUrl','','URL displayed when the report header logo is clicked, if empty the report button will not be displayed'),(32,0,'client.main.disableChangePassword','1','Allow (1) or deny (0) user to change their password'),(33,0,'client.logout.url','','Redirect to this URL after logout (empty -> login screen)'),(34,0,'client.main.allowLogout','1','Allow (1) or deny (0) user to logout'),(35,0,'client.wiki.showHelp','1','Show (1) or hide (0) the help icon within the plateform'),(36,0,'client.wiki.showDefaultHelp','0','Use (1) or not (0) the default help URL within the plateform'),(37,0,'client.wiki.defaultURL','http://wiki.abiquo.com/display/ABI24/Abiquo+Documentation+Home','The default URL opened when not specific help URL is specified'),(38,0,'client.wiki.infra.createDatacenter','http://wiki.abiquo.com/display/ABI24/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter','datacenter creation wiki'),(39,0,'client.wiki.infra.editDatacenter','http://wiki.abiquo.com/display/ABI24/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter','datacenter edition wiki'),(40,0,'client.wiki.infra.editRemoteService','http://wiki.abiquo.com/display/ABI24/Managing+Datacenters#ManagingDatacenters-RemoteServices','remote service edition wiki'),(41,0,'client.wiki.infra.createPhysicalMachine','http://wiki.abiquo.com/display/ABI24/Manage+Machines+on+Standard+Racks#ManageMachinesonStandardRacks-CreateaMachineonaStandardRack','physical machine creation wiki'),(42,0,'client.wiki.infra.mailNotification','http://wiki.abiquo.com/display/ABI24/Managing+Racks+and+Machines#ManagingRacksandMachines-SendingEmailNotifications','mail notification wiki'),(43,0,'client.wiki.infra.addDatastore','http://wiki.abiquo.com/display/ABI24/Manage+Machines+on+Standard+Racks#ManageMachinesonStandardRacks-ManageDatastores','Datastore manager wiki'),(44,0,'client.wiki.infra.createRack','http://wiki.abiquo.com/display/ABI24/Managing+Racks+and+Machines#ManagingRacksandMachines-CreatingRacks','rack creation wiki'),(45,0,'client.wiki.infra.createMultiplePhysicalMachine','http://wiki.abiquo.com/display/ABI24/Manage+Machines+on+Standard+Racks#ManageMachinesonStandardRacks-CreatingMultiplePhysicalMachines','multiple physical machine creation wiki'),(46,0,'client.wiki.network.publicVlan','http://wiki.abiquo.com/display/ABI24/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks','public vlan creation wiki'),(47,0,'client.wiki.network.staticRoutes','http://wiki.abiquo.com/display/ABI24/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCPforPublicandExternalNetworks','static routes wiki'),(48,0,'client.wiki.storage.storageDevice','http://wiki.abiquo.com/display/ABI24/Managing+External+Storage#ManagingExternalStorage-ManagedStorage','storage device creation wiki'),(49,0,'client.wiki.storage.storagePool','http://wiki.abiquo.com/display/ABI24/Managing+External+Storage#ManagingExternalStorage-StoragePools','storage pool creation wiki'),(50,0,'client.wiki.storage.tier','http://wiki.abiquo.com/display/ABI24/Managing+External+Storage#ManagingExternalStorage-ManagingStorageServiceLevelswithTiers','tier edition wiki'),(51,0,'client.wiki.allocation.global','http://wiki.abiquo.com/display/ABI24/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement','global rules wiki'),(52,0,'client.wiki.allocation.datacenter','http://wiki.abiquo.com/display/ABI24/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement','datacenter rules wiki'),(53,0,'client.wiki.vdc.createVdc','http://wiki.abiquo.com/display/ABI24/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter','virtual datacenter creation wiki'),(54,0,'client.wiki.vdc.createVapp','http://wiki.abiquo.com/display/ABI24/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance','virtual app creation wiki'),(55,0,'client.wiki.vdc.createPrivateNetwork','http://wiki.abiquo.com/display/ABI24/Manage+Networks#ManageNetworks-CreateaPrivateVLAN','VDC private network creation wiki'),(56,0,'client.wiki.vdc.createPublicNetwork','http://wiki.abiquo.com/display/ABI24/Manage+Networks#ManageNetworks-ReservingPublicIPAddresses','VDC public network creation wiki'),(57,0,'client.wiki.vdc.createVolume','http://wiki.abiquo.com/display/ABI24/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage','VDC virtual volume creation wiki'),(58,0,'client.wiki.vm.editVirtualMachine','http://wiki.abiquo.com/display/ABI24/Configure+Virtual+Machines','Virtual Machine edition wiki'),(59,0,'client.wiki.vm.bundleVirtualMachine','http://wiki.abiquo.com/display/ABI24/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-AddInstancesofVirtualMachines','Bundles VM wiki'),(60,0,'client.wiki.vm.createNetworkInterface','http://wiki.abiquo.com/display/ABI24/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface','Network Interface creation wiki'),(61,0,'client.wiki.vm.createInstance','http://wiki.abiquo.com/display/ABI24/Create+Virtual+Machine+instances','Virtual Machine instance creation wiki'),(62,0,'client.wiki.vm.createStateful','http://wiki.abiquo.com/display/ABI24/Create+Persistent+Virtual+Machines','Virtual Machine stateful creation wiki'),(63,0,'client.wiki.vm.captureVirtualMachine','http://wiki.abiquo.com/display/ABI24/Manage+Imported+Virtual+Machines','Capture Virtual Machine wiki'),(64,0,'client.wiki.vm.deployInfo','','Show more info when deploying'),(65,0,'client.wiki.apps.uploadVM','http://wiki.abiquo.com/display/ABI24/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem','Virtual Image upload wiki'),(66,0,'client.wiki.user.createEnterprise','http://wiki.abiquo.com/display/ABI24/Manage+Enterprises#ManageEnterprises-CreatinganEnterprise','Enterprise creation wiki'),(67,0,'client.wiki.user.dataCenterLimits','http://wiki.abiquo.com/display/ABI24/Manage+Enterprises#ManageEnterprises-EdittheDatacenterstheEnterpriseisAllowedtoUse','Datacenter Limits wiki'),(68,0,'client.wiki.user.createUser','http://wiki.abiquo.com/display/ABI24/Manage+Users#ManageUsers-CreatingorEditingaUser','User creation wiki'),(69,0,'client.wiki.user.createRole','http://wiki.abiquo.com/display/ABI24/Manage+Roles','Role creation wiki'),(70,0,'client.wiki.pricing.createCurrency','http://wiki.abiquo.com/display/ABI24/Pricing+View#PricingView-ManageCurrencies','Currency creation wiki'),(71,0,'client.wiki.pricing.createTemplate','http://wiki.abiquo.com/display/ABI24/Pricing+View#PricingView-ManagePricingModels','create pricing template wiki'),(72,0,'client.wiki.pricing.createCostCode','http://wiki.abiquo.com/display/ABI24/Pricing+View#PricingView-ManageCostCodes','create pricing cost code wiki'),(73,0,'client.wiki.config.general','http://wiki.abiquo.com/display/ABI24/Configuration+view','Configuration wiki'),(75,0,'client.wiki.config.licence','http://wiki.abiquo.com/display/ABI24/Configuration+view#ConfigurationView-LicenseManagement','Licence configuration wiki'),(77,0,'client.wiki.infra.discoverBlades','http://wiki.abiquo.com/display/ABI24/Discover+and+Manage+Blades#DiscoverandManageBlades-DiscoveringBladesonManagedRacks','discover UCS blades wiki'),(78,0,'client.network.defaultName','default_private_network','default private vlan name'),(79,0,'client.network.defaultNetmask','2','index of available netmask'),(80,0,'client.network.defaultAddress','192.168.0.0','default private vlan address'),(81,0,'client.network.defaultGateway','192.168.0.1','default private vlan gateway'),(82,0,'client.network.defaultPrimaryDNS','','default primary DNS'),(83,0,'client.network.defaultSecondaryDNS','','default secondary DNS'),(84,0,'client.network.defaultSufixDNS','','default sufix DNS'),(85,0,'client.main.showHardDisk','1','Show (1) or hide (0) hard disk tab'),(86,0,'client.main.defaultView','0','Default index view (0 is the Home, 1 Infrastructure, ...)'),(87,0,'client.main.showSoftInfo','1','Show soft limit info (1 show, 0 hide)'),(88,0,'client.main.showHardInfo','1','Show hard limit info (1 show, 0 hide)'),(89,0,'client.wiki.user.createScope','http://wiki.abiquo.com/display/ABI24/Manage+Scopes','Wiki link for scope management'),(90,0,'client.dashboard.licenseUrl','http://www.abiquo.com/license','Url to purchase licenses (empty->disable link)'),(91,0,'client.wiki.infra.main','http://wiki.abiquo.com/display/ABI24/Infrastructure+View','Wiki link for infrastructure management'),(92,0,'client.wiki.virtualinfra.main','http://wiki.abiquo.com/display/ABI24/Virtual+Datacenters+View','Wiki link for virtual infrastructure management'),(93,0,'client.wiki.apps.main','http://wiki.abiquo.com/display/ABI24/Appliance+Library+View','Wiki link for apps library management'),(94,0,'client.wiki.vm.createLayer','http://wiki.abiquo.com/display/ABI24/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanAnti-affinityLayer','Wiki link for layer management');
+/*!40000 ALTER TABLE `system_properties` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tasks`
+--
+
+DROP TABLE IF EXISTS `tasks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tasks` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `status` varchar(20) NOT NULL,
+  `component` varchar(20) NOT NULL,
+  `action` varchar(20) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tasks`
+--
+
+LOCK TABLES `tasks` WRITE;
+/*!40000 ALTER TABLE `tasks` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tasks` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tier`
+--
+
+DROP TABLE IF EXISTS `tier`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tier` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(40) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `isEnabled` tinyint(1) NOT NULL DEFAULT '1',
+  `idDataCenter` int(10) unsigned NOT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  `isDefaultAllowed` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `tier_FK_1` (`idDataCenter`),
+  CONSTRAINT `tier_FK_1` FOREIGN KEY (`idDataCenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tier`
+--
+
+LOCK TABLES `tier` WRITE;
+/*!40000 ALTER TABLE `tier` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tier` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ucs_rack`
+--
+
+DROP TABLE IF EXISTS `ucs_rack`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ucs_rack` (
+  `idRack` int(10) unsigned NOT NULL,
+  `ip` varchar(20) NOT NULL,
+  `port` int(11) NOT NULL,
+  `user_rack` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `defaultTemplate` varchar(200) DEFAULT NULL,
+  `maxMachinesOn` int(11) DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  KEY `id_rack_FK` (`idRack`),
+  CONSTRAINT `id_rack_FK` FOREIGN KEY (`idRack`) REFERENCES `rack` (`idRack`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ucs_rack`
+--
+
+LOCK TABLES `ucs_rack` WRITE;
+/*!40000 ALTER TABLE `ucs_rack` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ucs_rack` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user`
+--
+
+DROP TABLE IF EXISTS `user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `user` (
+  `idUser` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idRole` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `user` varchar(128) NOT NULL,
+  `name` varchar(128) NOT NULL,
+  `surname` varchar(50) DEFAULT NULL,
+  `description` varchar(100) DEFAULT NULL,
+  `email` varchar(200) DEFAULT NULL,
+  `locale` varchar(10) NOT NULL,
+  `password` varchar(32) DEFAULT NULL,
+  `availableVirtualDatacenters` varchar(255) DEFAULT NULL,
+  `active` int(10) unsigned NOT NULL DEFAULT '0',
+  `authType` varchar(20) NOT NULL,
+  `creationDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idUser`),
+  UNIQUE KEY `user_auth_idx` (`user`,`authType`),
+  KEY `FK1_user` (`idEnterprise`),
+  KEY `User_FK1` (`idRole`),
+  CONSTRAINT `User_FK1` FOREIGN KEY (`idRole`) REFERENCES `role` (`idRole`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `FK1_user` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user`
+--
+
+LOCK TABLES `user` WRITE;
+/*!40000 ALTER TABLE `user` DISABLE KEYS */;
+INSERT INTO `user` VALUES (1,1,1,'admin','Cloud','Administrator','Main administrator','','en_US','c69a39bd64ffb77ea7ee3369dce742f3',NULL,1,'ABIQUO','2012-04-27 08:25:34',0),(2,2,1,'user','Standard','User','Standard user','','en_US','c69a39bd64ffb77ea7ee3369dce742f3',NULL,1,'ABIQUO','2012-04-27 08:25:34',0);
+/*!40000 ALTER TABLE `user` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `vapp_enterprise_stats_vw`
+--
+
+DROP TABLE IF EXISTS `vapp_enterprise_stats_vw`;
+/*!50001 DROP VIEW IF EXISTS `vapp_enterprise_stats_vw`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `vapp_enterprise_stats_vw` (
+  `idVirtualApp` int(10) unsigned,
+  `idEnterprise` int(10) unsigned,
+  `idVirtualDataCenter` int(10) unsigned,
+  `vappName` varchar(30),
+  `vdcName` varchar(40),
+  `vmCreated` decimal(12,0),
+  `vmActive` decimal(12,0),
+  `volAssociated` decimal(12,0),
+  `volAttached` decimal(12,0),
+  `version_c` int(1)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vdc_enterprise_stats_vw`
+--
+
+DROP TABLE IF EXISTS `vdc_enterprise_stats_vw`;
+/*!50001 DROP VIEW IF EXISTS `vdc_enterprise_stats_vw`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `vdc_enterprise_stats_vw` (
+  `idVirtualDataCenter` int(10) unsigned,
+  `idEnterprise` int(10) unsigned,
+  `vdcName` varchar(40),
+  `vmCreated` decimal(12,0),
+  `vmActive` decimal(12,0),
+  `volCreated` decimal(12,0),
+  `volAssociated` decimal(12,0),
+  `volAttached` decimal(12,0),
+  `vCpuReserved` bigint(20) unsigned,
+  `vCpuUsed` bigint(34) unsigned,
+  `memoryReserved` bigint(20) unsigned,
+  `memoryUsed` bigint(34) unsigned,
+  `localStorageReserved` bigint(20) unsigned,
+  `localStorageUsed` bigint(50) unsigned,
+  `extStorageReserved` bigint(20) unsigned,
+  `extStorageUsed` bigint(42) unsigned,
+  `publicIPsReserved` decimal(12,0),
+  `publicIPsUsed` decimal(12,0),
+  `vlanReserved` decimal(12,0),
+  `vlanUsed` decimal(12,0),
+  `version_c` int(1)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `virtual_appliance_conversions`
+--
+
+DROP TABLE IF EXISTS `virtual_appliance_conversions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `virtual_appliance_conversions` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idConversion` int(10) unsigned NOT NULL,
+  `idVirtualAppliance` int(10) unsigned NOT NULL,
+  `idUser` int(10) unsigned DEFAULT NULL,
+  `forceLimits` tinyint(1) DEFAULT NULL,
+  `idNode` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `virtualimage_conversions_FK` (`idConversion`),
+  KEY `virtual_appliance_conversions_node_FK` (`idNode`),
+  KEY `user_FK` (`idUser`),
+  KEY `virtualapp_FK` (`idVirtualAppliance`),
+  CONSTRAINT `virtualapp_FK` FOREIGN KEY (`idVirtualAppliance`) REFERENCES `virtualapp` (`idVirtualApp`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `user_FK` FOREIGN KEY (`idUser`) REFERENCES `user` (`idUser`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualimage_conversions_FK` FOREIGN KEY (`idConversion`) REFERENCES `virtualimage_conversions` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `virtual_appliance_conversions_node_FK` FOREIGN KEY (`idNode`) REFERENCES `nodevirtualimage` (`idNode`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `virtual_appliance_conversions`
+--
+
+LOCK TABLES `virtual_appliance_conversions` WRITE;
+/*!40000 ALTER TABLE `virtual_appliance_conversions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virtual_appliance_conversions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `virtualapp`
+--
+
+DROP TABLE IF EXISTS `virtualapp`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `virtualapp` (
+  `idVirtualApp` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `name` varchar(30) NOT NULL,
+  `public` int(10) unsigned NOT NULL,
+  `high_disponibility` int(10) unsigned NOT NULL,
+  `error` int(10) unsigned NOT NULL,
+  `nodeconnections` text,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`idVirtualApp`),
+  KEY `VirtualApp_FK5` (`idEnterprise`),
+  KEY `VirtualApp_FK4` (`idVirtualDataCenter`),
+  CONSTRAINT `VirtualApp_FK4` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `virtualdatacenter` (`idVirtualDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `VirtualApp_FK5` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `virtualapp`
+--
+
+LOCK TABLES `virtualapp` WRITE;
+/*!40000 ALTER TABLE `virtualapp` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virtualapp` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `virtualdatacenter`
+--
+
+DROP TABLE IF EXISTS `virtualdatacenter`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `virtualdatacenter` (
+  `idVirtualDataCenter` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `name` varchar(40) DEFAULT NULL,
+  `idDataCenter` int(10) unsigned NOT NULL,
+  `networktypeID` int(10) unsigned DEFAULT NULL,
+  `hypervisorType` varchar(255) NOT NULL,
+  `ramSoft` bigint(20) NOT NULL DEFAULT '0',
+  `cpuSoft` bigint(20) NOT NULL DEFAULT '0',
+  `hdSoft` bigint(20) NOT NULL DEFAULT '0',
+  `storageSoft` bigint(20) NOT NULL DEFAULT '0',
+  `vlanSoft` bigint(20) NOT NULL DEFAULT '0',
+  `publicIPSoft` bigint(20) NOT NULL DEFAULT '0',
+  `ramHard` bigint(20) NOT NULL DEFAULT '0',
+  `cpuHard` bigint(20) NOT NULL DEFAULT '0',
+  `hdHard` bigint(20) NOT NULL DEFAULT '0',
+  `storageHard` bigint(20) NOT NULL DEFAULT '0',
+  `vlanHard` bigint(20) NOT NULL DEFAULT '0',
+  `publicIPHard` bigint(20) NOT NULL DEFAULT '0',
+  `default_vlan_network_id` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`idVirtualDataCenter`),
+  KEY `virtualDataCenter_FK7` (`default_vlan_network_id`),
+  KEY `virtualDataCenter_FK6` (`idDataCenter`),
+  KEY `virtualDataCenter_FK1` (`idEnterprise`),
+  KEY `virtualDataCenter_FK4` (`networktypeID`),
+  CONSTRAINT `virtualDataCenter_FK4` FOREIGN KEY (`networktypeID`) REFERENCES `network` (`network_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualDataCenter_FK1` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualDataCenter_FK6` FOREIGN KEY (`idDataCenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualDataCenter_FK7` FOREIGN KEY (`default_vlan_network_id`) REFERENCES `vlan_network` (`vlan_network_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `virtualdatacenter`
+--
+
+LOCK TABLES `virtualdatacenter` WRITE;
+/*!40000 ALTER TABLE `virtualdatacenter` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virtualdatacenter` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER virtualdatacenter_updated AFTER UPDATE ON virtualdatacenter
+    FOR EACH ROW BEGIN
+		DECLARE vlanNetworkIdObj INTEGER;    
+		DECLARE networkNameObj VARCHAR(40);
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN           
+		    IF OLD.networktypeID IS NOT NULL AND NEW.networktypeID IS NULL THEN
+		    -- Remove VlanUsed
+			BEGIN
+				DECLARE done INTEGER DEFAULT 0;
+				DECLARE cursorVlan CURSOR FOR SELECT DISTINCT vn.network_id, vn.network_name FROM vlan_network vn WHERE vn.network_id = OLD.networktypeID;
+				DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;				
+				OPEN cursorVlan;				
+				REPEAT
+					FETCH cursorVlan into vlanNetworkIdObj, networkNameObj;
+				   	IF NOT done THEN
+						IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVLANRegisterEvents' ) THEN
+							CALL kinton_accounting.AccountingVLANRegisterEvents('DELETE_VLAN',vlanNetworkIdObj, networkNameObj, OLD.idVirtualDataCenter,OLD.idEnterprise);
+					   	END IF;    
+					END IF;
+					UNTIL done END REPEAT;
+					CLOSE cursorVlan;				 	
+			END ;
+		    END IF;
+        END IF;
+    END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER virtualdatacenter_deleted BEFORE DELETE ON virtualdatacenter
+    FOR EACH ROW BEGIN
+    DECLARE currentIdManagement INTEGER DEFAULT -1;
+    DECLARE currentIpAddress VARCHAR(20) DEFAULT '';
+    DECLARE no_more_ipsfreed INT;
+    DECLARE curIpFreed CURSOR FOR SELECT ipm.ip, ra.idManagement   
+       FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, rasd_management ra
+       WHERE ipm.vlan_network_id = vn.vlan_network_id
+       AND vn.network_configuration_id = nc.network_configuration_id
+       AND vn.networktype = 'PUBLIC'
+       AND ra.idManagement = ipm.idManagement
+       AND ra.idVirtualDataCenter = OLD.idVirtualDataCenter;
+       --
+       DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_ipsfreed = 1;   
+       IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
+			SET no_more_ipsfreed = 0;       
+		    OPEN curIpFreed;            
+		    my_loop:WHILE(no_more_ipsfreed=0) DO 
+				FETCH curIpFreed INTO currentIpAddress, currentIdManagement;
+				IF no_more_ipsfreed=1 THEN
+				            LEAVE my_loop;
+				     END IF;
+				-- We reset MAC and NAME for the reserved IPs. Java code should do this!
+				UPDATE ip_pool_management set mac=NULL, name=NULL WHERE idManagement = currentIdManagement;
+				IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
+					CALL kinton_accounting.AccountingIPsRegisterEvents('IP_FREED',currentIdManagement,currentIpAddress,OLD.idVirtualDataCenter, OLD.idEnterprise);
+				END IF;                    
+        	END WHILE my_loop;         
+        CLOSE curIpFreed;
+        END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_ip_pool_management_update_stats', '2.0.3', '3:a406f30381d7e73da783a34075152f44', 156);
+--
+-- Table structure for table `virtualimage`
+--
 
--- Changeset src/2.0ga/triggers.xml::create_vlan_network_update_stats::destevez::(Checksum: 3:c79a94e9399b3d273029fad4d7bc8432)
-DROP TRIGGER IF EXISTS create_vlan_network_update_stats;
+DROP TABLE IF EXISTS `virtualimage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `virtualimage` (
+  `idImage` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `pathName` varchar(255) NOT NULL,
+  `hd_required` bigint(20) DEFAULT NULL,
+  `ram_required` int(10) unsigned DEFAULT NULL,
+  `cpu_required` int(11) DEFAULT NULL,
+  `iconUrl` varchar(255) DEFAULT NULL,
+  `idCategory` int(10) unsigned NOT NULL,
+  `idRepository` int(10) unsigned DEFAULT NULL,
+  `type` varchar(50) NOT NULL,
+  `ethDriverType` varchar(16) DEFAULT NULL,
+  `idMaster` int(10) unsigned DEFAULT NULL,
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `shared` int(10) unsigned NOT NULL DEFAULT '0',
+  `ovfid` varchar(255) DEFAULT NULL,
+  `stateful` int(10) unsigned NOT NULL,
+  `diskFileSize` bigint(20) unsigned NOT NULL,
+  `chefEnabled` tinyint(1) NOT NULL DEFAULT '0',
+  `cost_code` int(11) DEFAULT '0',
+  `creation_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `creation_user` varchar(128) NOT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  `loginUser` varchar(45) DEFAULT NULL,
+  `loginPassword` varchar(90) DEFAULT NULL,
+  `osType` varchar(50) NOT NULL DEFAULT 'UNRECOGNIZED',
+  `osVersion` varchar(64) DEFAULT NULL,
+  `diskCntrlType` varchar(16) DEFAULT NULL,
+  PRIMARY KEY (`idImage`),
+  KEY `fk_virtualimage_category` (`idCategory`),
+  KEY `virtualImage_FK9` (`idEnterprise`),
+  KEY `virtualImage_FK8` (`idMaster`),
+  KEY `virtualImage_FK3` (`idRepository`),
+  CONSTRAINT `fk_virtualimage_category` FOREIGN KEY (`idCategory`) REFERENCES `category` (`idCategory`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualImage_FK3` FOREIGN KEY (`idRepository`) REFERENCES `repository` (`idRepository`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `virtualImage_FK8` FOREIGN KEY (`idMaster`) REFERENCES `virtualimage` (`idImage`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `virtualImage_FK9` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE SET NULL ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-DELIMITER |
-CREATE TRIGGER create_vlan_network_update_stats AFTER INSERT ON vlan_network
+--
+-- Dumping data for table `virtualimage`
+--
+
+LOCK TABLES `virtualimage` WRITE;
+/*!40000 ALTER TABLE `virtualimage` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virtualimage` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER virtualimage_insert AFTER INSERT ON virtualimage
+    FOR EACH ROW BEGIN
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            # Only include non-persistent images associated with an enterprise
+            # (persistent images are hosted on 'external' storage so are already charged for!)
+            IF ((NEW.idEnterprise > 0) AND (NEW.stateful=0)) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingRepositoryRegisterEvents' ) THEN
+                
+                CALL kinton_accounting.AccountingRepositoryRegisterEvents('ADD_IMAGE',
+                                                        NEW.idImage, NEW.idRepository, NEW.name, NEW.type,
+                                                        IF(NEW.idMaster IS NULL,'TEMPLATE','INSTANCE'), NEW.diskFileSize, NEW.idEnterprise);
+            END IF;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER virtualimage_update AFTER UPDATE ON virtualimage
+    FOR EACH ROW BEGIN
+    	DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
+
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            # Only include non-persistent images associated with an enterprise
+            # (persistent images are hosted on 'external' storage so are already charged for!)
+            IF ((NEW.idEnterprise > 0) AND (NEW.stateful=0)) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingRepositoryRegisterEvents' ) THEN
+                
+                IF (NEW.name != OLD.name) THEN
+                    # Image name has changed, update the accounting image name...
+                    CALL kinton_accounting.AccountingRepositoryRegisterEvents('UPDATE_IMAGE',
+                                                            NEW.idImage, NEW.idRepository, NEW.name, NEW.type,
+                                                            IF(NEW.idMaster IS NULL,'TEMPLATE','INSTANCE'), NEW.diskFileSize, NEW.idEnterprise);
+                END IF;
+                
+                IF (NEW.cost_code != OLD.cost_code) THEN
+                    # The image Cost Code has changed, update any image cost codes in the current running VMs. We do it here (in line) for efficiency
+                    # reasons, rather than forcing though inefficient calls to the AccountingVMRegisterEvents SP
+                BEGIN
+                    DECLARE v_idVM INTEGER UNSIGNED;
+                    DECLARE v_cpu INTEGER UNSIGNED;
+                    DECLARE v_ram INTEGER UNSIGNED;
+                    DECLARE v_hd BIGINT UNSIGNED;
+                    DECLARE done INT DEFAULT FALSE;
+                    DECLARE cur1 CURSOR FOR SELECT vma.idVM, vma.cpu, vma.ram, vma.hd
+                                            FROM kinton_accounting.accounting_event_vm vma, virtualmachine vm
+                                            WHERE   vm.idImage=NEW.idImage AND
+                                                    vma.idVM=vm.idVM AND vma.stopTime IS NULL;
+                    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+                    OPEN cur1;
+                    read_loop: LOOP
+                        FETCH cur1 INTO v_idVM, v_cpu, v_ram, v_hd;
+                        IF done THEN
+                          LEAVE read_loop;
+                        END IF;
+
+                        CALL kinton_accounting.AccountingVMRegisterEvents(v_idVM, 1, "N/A", "COST_CODE_UPDATE", "N/A", v_ram, v_cpu, v_hd, NEW.cost_code);
+                    END LOOP;
+                    CLOSE cur1;
+                END ;
+                END IF;
+            END IF;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER virtualimage_delete AFTER DELETE ON virtualimage
+    FOR EACH ROW BEGIN
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            IF ((OLD.idEnterprise > 0) AND (OLD.stateful=0)) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingRepositoryRegisterEvents' ) THEN
+                
+                CALL kinton_accounting.AccountingRepositoryRegisterEvents('DELETE_IMAGE',
+                                                        OLD.idImage, OLD.idRepository, OLD.name, OLD.type,
+                                                        IF(OLD.idMaster IS NULL,'TEMPLATE','INSTANCE'), OLD.diskFileSize, OLD.idEnterprise);
+            END IF;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `virtualimage_conversions`
+--
+
+DROP TABLE IF EXISTS `virtualimage_conversions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `virtualimage_conversions` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idImage` int(10) unsigned NOT NULL,
+  `sourceType` varchar(50) DEFAULT NULL,
+  `targetType` varchar(50) NOT NULL,
+  `sourcePath` varchar(255) DEFAULT NULL,
+  `targetPath` varchar(255) NOT NULL,
+  `state` varchar(50) NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `size` bigint(20) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idImage_FK` (`idImage`),
+  CONSTRAINT `idImage_FK` FOREIGN KEY (`idImage`) REFERENCES `virtualimage` (`idImage`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `virtualimage_conversions`
+--
+
+LOCK TABLES `virtualimage_conversions` WRITE;
+/*!40000 ALTER TABLE `virtualimage_conversions` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virtualimage_conversions` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER virtualimage_conversions_update AFTER UPDATE ON virtualimage_conversions
+    FOR EACH ROW BEGIN
+        DECLARE v_idEnterprise INT;
+        DECLARE v_idRepository INT;
+        DECLARE v_idMaster INT;
+        DECLARE v_name VARCHAR(255);
+        DECLARE v_stateful INT;
+
+		-- For debugging purposes only        
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+
+            # We only have an UPDATE trigger to map the image conversions - this is because we only start accounting for
+            # image conversions when they complete, and they are never INSERTed with a FINISHED state.
+            # Similarly, the 
+            IF ((NEW.state = 'FINISHED') AND (OLD.state != 'FINISHED')) AND
+                EXISTS( SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingRepositoryRegisterEvents' ) THEN
+
+                # READ the relevant image information from the related virtualimage record
+                SELECT      idEnterprise, idRepository, idMaster, name, stateful
+                    INTO    v_idEnterprise, v_idRepository, v_idMaster, v_name, v_stateful
+                FROM virtualimage vi
+                WHERE vi.idImage=NEW.idImage;
+
+                IF (v_stateful = 0) THEN 
+                    # Create a new row for the imsage conversion...
+                    CALL kinton_accounting.AccountingRepositoryRegisterEvents('ADD_IMAGE',
+                                                            NEW.idImage, v_idRepository, v_name, NEW.targetType,
+                                                            IF(v_idMaster IS NULL,'TEMPLATE-CONVERSION','INSTANCE-CONVERSION'), NEW.size, v_idEnterprise);
+                END IF;
+            END IF;
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `virtualmachine`
+--
+
+DROP TABLE IF EXISTS `virtualmachine`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `virtualmachine` (
+  `idVM` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idHypervisor` int(10) unsigned DEFAULT NULL,
+  `idImage` int(10) unsigned DEFAULT NULL,
+  `UUID` varchar(36) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `ram` int(10) unsigned DEFAULT NULL,
+  `cpu` int(10) unsigned DEFAULT NULL,
+  `hd` bigint(20) unsigned DEFAULT NULL,
+  `vdrpPort` int(10) unsigned DEFAULT NULL,
+  `vdrpIP` varchar(39) DEFAULT NULL,
+  `state` varchar(50) NOT NULL,
+  `subState` varchar(50) DEFAULT NULL,
+  `high_disponibility` int(10) unsigned NOT NULL,
+  `idConversion` int(10) unsigned DEFAULT NULL,
+  `idType` int(10) unsigned NOT NULL DEFAULT '0',
+  `idUser` int(10) unsigned DEFAULT NULL,
+  `idEnterprise` int(10) unsigned DEFAULT NULL,
+  `idDatastore` int(10) unsigned DEFAULT NULL,
+  `password` varchar(32) DEFAULT NULL,
+  `network_configuration_id` int(10) unsigned DEFAULT NULL,
+  `temporal` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  `keymap` varchar(255) DEFAULT NULL,
+  `layer` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`idVM`),
+  KEY `virtualmachine_conversion_FK` (`idConversion`),
+  KEY `virtualMachine_datastore_FK` (`idDatastore`),
+  KEY `virtualMachine_FK5` (`idEnterprise`),
+  KEY `virtualMachine_FK1` (`idHypervisor`),
+  KEY `virtualMachine_FK3` (`idImage`),
+  KEY `virtualMachine_FK4` (`idUser`),
+  KEY `virtualMachine_FK6` (`network_configuration_id`),
+  CONSTRAINT `virtualmachine_conversion_FK` FOREIGN KEY (`idConversion`) REFERENCES `virtualimage_conversions` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualMachine_datastore_FK` FOREIGN KEY (`idDatastore`) REFERENCES `datastore` (`idDatastore`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualMachine_FK1` FOREIGN KEY (`idHypervisor`) REFERENCES `hypervisor` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `virtualMachine_FK3` FOREIGN KEY (`idImage`) REFERENCES `virtualimage` (`idImage`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `virtualMachine_FK4` FOREIGN KEY (`idUser`) REFERENCES `user` (`idUser`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `virtualMachine_FK5` FOREIGN KEY (`idEnterprise`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE SET NULL ON UPDATE NO ACTION,
+  CONSTRAINT `virtualMachine_FK6` FOREIGN KEY (`network_configuration_id`) REFERENCES `network_configuration` (`network_configuration_id`) ON DELETE SET NULL ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `virtualmachine`
+--
+
+LOCK TABLES `virtualmachine` WRITE;
+/*!40000 ALTER TABLE `virtualmachine` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virtualmachine` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER create_virtualmachine_update_stats AFTER INSERT ON virtualmachine
+    FOR EACH ROW BEGIN
+	IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
+		INSERT INTO virtualmachinetrackedstate (idVM) VALUES (NEW.idVM);
+	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER update_virtualmachine_update_stats AFTER UPDATE ON virtualmachine
+    FOR EACH ROW BEGIN
+        DECLARE costCodeObj int(4);
+		DECLARE previousState VARCHAR(50);
+		DECLARE extraHDSize BIGINT DEFAULT 0;
+		-- For debugging purposes only        
+		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Changing from : ',OLD.state, ' to ', NEW.state));
+        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+			-- We always store previous state when starting a transaction
+			IF NEW.state != OLD.state AND OLD.state != 'LOCKED' THEN
+				UPDATE virtualmachinetrackedstate SET previousState=OLD.state WHERE idVM=NEW.idVM;
+			END IF;
+			--
+			SELECT vmts.previousState INTO previousState
+				FROM virtualmachinetrackedstate vmts
+			WHERE vmts.idVM = NEW.idVM;
+		    --
+			IF NEW.idType = 1 AND (NEW.state != OLD.state) THEN           
+				SELECT IFNULL(SUM(limitResource),0) * 1048576 INTO extraHDSize 
+				FROM rasd_management rm, rasd r 
+				WHERE rm.idResource = r.instanceID AND rm.idVM = NEW.idVM AND rm.idResourceType=17;    
+				--
+				SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
+				FROM virtualimage vi
+				WHERE vi.idImage = NEW.idImage;
+				-- Register Accounting Events
+				IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
+			   		 IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=NEW.idImage) THEN 
+					 	CALL kinton_accounting.AccountingVMRegisterEvents(NEW.idVM, NEW.idType, OLD.state, NEW.state, previousState, NEW.ram, NEW.cpu, NEW.hd + extraHDSize, costCodeObj);
+			   		 END IF;              
+				END IF;
+			END IF;			
+      	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER delete_virtualmachine_update_stats AFTER DELETE ON virtualmachine
+    FOR EACH ROW BEGIN
+	IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
+		DELETE FROM virtualmachinetrackedstate WHERE idVM = OLD.idVM;
+	END IF;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `virtualmachinetrackedstate`
+--
+
+DROP TABLE IF EXISTS `virtualmachinetrackedstate`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `virtualmachinetrackedstate` (
+  `idVM` int(10) unsigned NOT NULL,
+  `previousState` varchar(50) NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idVM`),
+  CONSTRAINT `VirtualMachineTrackedState_FK1` FOREIGN KEY (`idVM`) REFERENCES `virtualmachine` (`idVM`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `virtualmachinetrackedstate`
+--
+
+LOCK TABLES `virtualmachinetrackedstate` WRITE;
+/*!40000 ALTER TABLE `virtualmachinetrackedstate` DISABLE KEYS */;
+/*!40000 ALTER TABLE `virtualmachinetrackedstate` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `vlan_network`
+--
+
+DROP TABLE IF EXISTS `vlan_network`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vlan_network` (
+  `vlan_network_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `network_id` int(10) unsigned NOT NULL,
+  `network_configuration_id` int(10) unsigned NOT NULL,
+  `network_name` varchar(40) NOT NULL,
+  `vlan_tag` int(10) unsigned DEFAULT NULL,
+  `networktype` varchar(15) NOT NULL DEFAULT 'INTERNAL',
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  `enterprise_id` int(10) unsigned DEFAULT NULL,
+  `network_service_type_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`vlan_network_id`),
+  KEY `vlannetwork_enterprise_FK` (`enterprise_id`),
+  KEY `vlannetwork_configuration_FK` (`network_configuration_id`),
+  KEY `vlannetwork_network_FK` (`network_id`),
+  KEY `vlannetwork_nst_FK` (`network_service_type_id`),
+  CONSTRAINT `vlannetwork_nst_FK` FOREIGN KEY (`network_service_type_id`) REFERENCES `network_service_type` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `vlannetwork_configuration_FK` FOREIGN KEY (`network_configuration_id`) REFERENCES `network_configuration` (`network_configuration_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `vlannetwork_enterprise_FK` FOREIGN KEY (`enterprise_id`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `vlannetwork_network_FK` FOREIGN KEY (`network_id`) REFERENCES `network` (`network_id`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vlan_network`
+--
+
+LOCK TABLES `vlan_network` WRITE;
+/*!40000 ALTER TABLE `vlan_network` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vlan_network` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER create_vlan_network_update_stats AFTER INSERT ON vlan_network
 FOR EACH ROW BEGIN
     DECLARE idVirtualDataCenterObj INTEGER;
-    DECLARE idDataCenterObj INTEGER;
     DECLARE idEnterpriseObj INTEGER;
     SELECT vdc.idVirtualDataCenter, e.idEnterprise INTO idVirtualDataCenterObj, idEnterpriseObj
     FROM virtualdatacenter vdc, enterprise e
     WHERE vdc.networktypeID=NEW.network_id
     AND vdc.idEnterprise=e.idEnterprise;
-    -- Query for Datacenter
-    SELECT dc.idDataCenter INTO idDataCenterObj
-    FROM datacenter dc
-    WHERE dc.network_id = NEW.network_id;
-    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('PROCEDURE AccountingVLANRegisterEvents Activated: ',IFNULL(NEW.vlan_network_id,'NULL'),'-',IFNULL(NEW.network_name,'NULL'),'-',IFNULL(idVirtualDataCenterObj,'NULL'),'-',idEnterpriseObj,'-','CREATE_VLAN','-',now()));
-    IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVLANRegisterEvents' ) THEN
-            CALL AccountingVLANRegisterEvents('CREATE_VLAN',NEW.vlan_network_id, NEW.network_name, idVirtualDataCenterObj,idEnterpriseObj);
-        END IF;    
-    -- Statistics
-    UPDATE IGNORE cloud_usage_stats
-        SET     vlanUsed = vlanUsed + 1
-        WHERE idDataCenter = -1;
-    UPDATE IGNORE enterprise_resources_stats 
-        SET     vlanUsed = vlanUsed + 1
-        WHERE idEnterprise = idEnterpriseObj;
-    UPDATE IGNORE dc_enterprise_stats 
-        SET     vlanUsed = vlanUsed + 1
-        WHERE idDataCenter = idDataCenterObj AND idEnterprise = idEnterpriseObj;
-    UPDATE IGNORE vdc_enterprise_stats 
-        SET     vlanUsed = vlanUsed + 1
-    WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'create_vlan_network_update_stats', '2.0.3', '3:c79a94e9399b3d273029fad4d7bc8432', 157);
-
--- Changeset src/2.0ga/triggers.xml::delete_vlan_network_update_stats::destevez::(Checksum: 3:626e84bf949ec742c3ba79f5daadfdaa)
-DROP TRIGGER IF EXISTS delete_vlan_network_update_stats;
-
-DELIMITER |
-CREATE TRIGGER delete_vlan_network_update_stats AFTER DELETE ON vlan_network
-FOR EACH ROW
-BEGIN
-    DECLARE idVirtualDataCenterObj INTEGER;
-    DECLARE idEnterpriseObj INTEGER;
-    DECLARE idDataCenterObj INTEGER;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
-            -- Query for Datacenter
-            SELECT dc.idDataCenter INTO idDataCenterObj
-            FROM datacenter dc
-            WHERE dc.network_id = OLD.network_id;
-            -- Deleted PublicIps are deteceted in network_configuration
-            -- VLAN Accounting  
-            SELECT vdc.idVirtualDataCenter, e.idEnterprise INTO idVirtualDataCenterObj, idEnterpriseObj
-            FROM virtualdatacenter vdc, enterprise e
-            WHERE vdc.networktypeID=OLD.network_id
-            AND vdc.idEnterprise=e.idEnterprise;
-            IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVLANRegisterEvents' ) THEN
-                CALL AccountingVLANRegisterEvents('DELETE_VLAN',OLD.vlan_network_id, OLD.network_name, idVirtualDataCenterObj,idEnterpriseObj);
-            END IF;
-            -- Statistics
-            UPDATE IGNORE cloud_usage_stats
-                SET     vlanUsed = vlanUsed - 1
-                WHERE idDataCenter = -1;
-            UPDATE IGNORE enterprise_resources_stats 
-                SET     vlanUsed = vlanUsed - 1
-                WHERE idEnterprise = idEnterpriseObj;
-            UPDATE IGNORE dc_enterprise_stats 
-                SET     vlanUsed = vlanUsed - 1
-                WHERE idDataCenter = idDataCenterObj AND idEnterprise = idEnterpriseObj;
-            UPDATE IGNORE vdc_enterprise_stats 
-                SET     vlanUsed = vlanUsed - 1
-            WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-        END IF;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'delete_vlan_network_update_stats', '2.0.3', '3:626e84bf949ec742c3ba79f5daadfdaa', 158);
-
--- Changeset src/2.0ga/triggers.xml::update_ip_pool_management_update_stats::destevez::(Checksum: 3:9471ae96bcea8c0d126b5acc5f68db12)
-DROP TRIGGER IF EXISTS update_ip_pool_management_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_ip_pool_management_update_stats AFTER UPDATE ON ip_pool_management
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idVirtualDataCenterObj INTEGER;
-        DECLARE idEnterpriseObj INTEGER;
-	   DECLARE networkTypeObj VARCHAR(15);
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
-		SELECT vn.networktype, dc.idDataCenter INTO networkTypeObj, idDataCenterObj
-		FROM vlan_network vn, datacenter dc
-		WHERE dc.network_id = vn.network_id
-		AND OLD.vlan_network_id = vn.vlan_network_id;
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('update_ip_pool_management_update_stats', '-', OLD.ip, '-',OLD.available,'-', NEW.available,'-', IFNULL(networkTypeObj,'NULL'), '-', IFNULL(idDataCenterObj,'NULL')));
-		IF networkTypeObj = 'PUBLIC' THEN		
-			IF OLD.available=FALSE AND NEW.available=TRUE THEN
-				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal+1 WHERE idDataCenter = idDataCenterObj;
-			END IF;
-			IF OLD.available=TRUE AND NEW.available=FALSE THEN
-				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal-1 WHERE idDataCenter = idDataCenterObj;
-			END IF;
+    IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVLANRegisterEvents' ) THEN
+    	IF  NEW.networktype IN ('PUBLIC','INTERNAL') THEN
+			CALL kinton_accounting.AccountingVLANRegisterEvents('CREATE_VLAN',NEW.vlan_network_id, NEW.network_name, idVirtualDataCenterObj, idEnterpriseObj);
 		END IF;
-	    -- Checks for public available 
-            -- Checks for reserved IPs		
-            IF OLD.mac IS NULL AND NEW.mac IS NOT NULL THEN
-                -- Query for datacenter
-                SELECT vdc.idDataCenter, vdc.idVirtualDataCenter, vdc.idEnterprise  INTO idDataCenterObj, idVirtualDataCenterObj, idEnterpriseObj
-                FROM rasd_management rm, virtualdatacenter vdc, vlan_network vn
-                WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-			AND NEW.vlan_network_id = vn.vlan_network_id
-			AND vn.networktype = 'PUBLIC'
-			AND NEW.idManagement = rm.idManagement;
-                -- New Public IP assignment for a VDC ---> Reserved
-                UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed+1 WHERE idDataCenter = idDataCenterObj;
-                UPDATE IGNORE enterprise_resources_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idEnterprise = idEnterpriseObj;
-                UPDATE IGNORE vdc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE dc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idDataCenter = idDataCenterObj;
-                IF (idDataCenterObj IS NOT NULL AND idVirtualDataCenterObj IS NOT NULL AND idEnterpriseObj IS NOT NULL) THEN
-                	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Reserved IP: ',IFNULL(idEnterpriseObj,'entnull'),IFNULL(idDataCenterObj,'dcnull'),IFNULL(idVirtualDataCenterObj,'vdcnull')));
-                	IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
-                    	CALL AccountingIPsRegisterEvents('IP_RESERVED',NEW.idManagement,NEW.ip,idVirtualDataCenterObj, idEnterpriseObj);
-                	END IF;
+    END IF;    
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER delete_vlan_network_update_stats AFTER DELETE ON vlan_network
+	FOR EACH ROW
+	BEGIN
+		DECLARE idVirtualDataCenterObj INTEGER;
+		DECLARE idEnterpriseObj INTEGER;
+		IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
+		        -- Deleted PublicIps are deteceted in network_configuration
+		        -- VLAN Accounting  
+		        SELECT vdc.idVirtualDataCenter, e.idEnterprise INTO idVirtualDataCenterObj, idEnterpriseObj
+		        FROM virtualdatacenter vdc, enterprise e
+		        WHERE vdc.networktypeID=OLD.network_id
+		        AND vdc.idEnterprise=e.idEnterprise;
+		        IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVLANRegisterEvents' ) THEN
+		            CALL kinton_accounting.AccountingVLANRegisterEvents('DELETE_VLAN',OLD.vlan_network_id, OLD.network_name, idVirtualDataCenterObj, idEnterpriseObj);
+		        END IF;
+		    END IF;
+	END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `vlan_network_assignment`
+--
+
+DROP TABLE IF EXISTS `vlan_network_assignment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vlan_network_assignment` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `vlan_network_id` int(10) unsigned NOT NULL,
+  `idRack` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `vlan_network_assignment_idRack_FK` (`idRack`),
+  KEY `vlan_network_assignment_idVirtualDataCenter_FK` (`idVirtualDataCenter`),
+  KEY `vlan_network_assignment_networkid_FK` (`vlan_network_id`),
+  CONSTRAINT `vlan_network_assignment_networkid_FK` FOREIGN KEY (`vlan_network_id`) REFERENCES `vlan_network` (`vlan_network_id`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `vlan_network_assignment_idRack_FK` FOREIGN KEY (`idRack`) REFERENCES `rack` (`idRack`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `vlan_network_assignment_idVirtualDataCenter_FK` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `virtualdatacenter` (`idVirtualDataCenter`) ON DELETE SET NULL ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vlan_network_assignment`
+--
+
+LOCK TABLES `vlan_network_assignment` WRITE;
+/*!40000 ALTER TABLE `vlan_network_assignment` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vlan_network_assignment` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `vlans_dhcpOption`
+--
+
+DROP TABLE IF EXISTS `vlans_dhcpOption`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vlans_dhcpOption` (
+  `idVlan` int(10) unsigned NOT NULL,
+  `idDhcpOption` int(10) unsigned NOT NULL,
+  `version_c` int(11) DEFAULT '0',
+  KEY `fk_vlans_dhcp_dhcp` (`idDhcpOption`),
+  KEY `fk_vlans_dhcp_vlan` (`idVlan`),
+  CONSTRAINT `fk_vlans_dhcp_vlan` FOREIGN KEY (`idVlan`) REFERENCES `vlan_network` (`vlan_network_id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_vlans_dhcp_dhcp` FOREIGN KEY (`idDhcpOption`) REFERENCES `dhcpOption` (`idDhcpOption`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vlans_dhcpOption`
+--
+
+LOCK TABLES `vlans_dhcpOption` WRITE;
+/*!40000 ALTER TABLE `vlans_dhcpOption` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vlans_dhcpOption` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `volume_management`
+--
+
+DROP TABLE IF EXISTS `volume_management`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `volume_management` (
+  `idManagement` int(10) unsigned NOT NULL,
+  `usedSize` bigint(20) unsigned NOT NULL DEFAULT '0',
+  `idSCSI` varchar(256) NOT NULL,
+  `state` int(11) NOT NULL,
+  `idStorage` varchar(40) NOT NULL,
+  `idImage` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  KEY `volumemanagement_FK3` (`idImage`),
+  KEY `idManagement_FK` (`idManagement`),
+  KEY `idStorage_FK` (`idStorage`),
+  CONSTRAINT `idStorage_FK` FOREIGN KEY (`idStorage`) REFERENCES `storage_pool` (`idStorage`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `rasd_management` (`idManagement`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `volumemanagement_FK3` FOREIGN KEY (`idImage`) REFERENCES `virtualimage` (`idImage`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `volume_management`
+--
+
+LOCK TABLES `volume_management` WRITE;
+/*!40000 ALTER TABLE `volume_management` DISABLE KEYS */;
+/*!40000 ALTER TABLE `volume_management` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER create_volume_management_update_stats AFTER INSERT ON volume_management
+    FOR EACH ROW BEGIN
+        DECLARE idVirtualDataCenterObj INTEGER;
+        DECLARE idThisEnterprise INTEGER;
+        DECLARE limitResourceObj BIGINT;
+        DECLARE idResourceObj VARCHAR(50);
+        DECLARE idResourceTypeObj VARCHAR(5);
+        DECLARE idStorageTier INTEGER;
+        DECLARE resourceName VARCHAR(255);
+        DECLARE temporal INTEGER;
+
+        SELECT vdc.idEnterprise, vdc.idVirtualDataCenter, rm.temporal INTO idThisEnterprise, idVirtualDataCenterObj, temporal
+        FROM virtualdatacenter vdc, rasd_management rm
+        WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
+        AND NEW.idManagement = rm.idManagement;
+        --
+        IF temporal IS NULL THEN 
+            SELECT r.elementName, r.limitResource, rm.idResource, rm.idResourceType INTO resourceName, limitResourceObj, idResourceObj, idResourceTypeObj
+            FROM rasd r, rasd_management rm
+            WHERE r.instanceID = rm.idResource
+            AND NEW.idManagement = rm.idManagement;
+            --
+            SELECT sp.idTier INTO idStorageTier
+            FROM storage_pool sp
+            WHERE sp.idStorage = NEW.idStorage;
+            IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN           
+                IF idResourceTypeObj='8' THEN 
+                    IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingStorageRegisterEvents' ) THEN
+                        CALL kinton_accounting.AccountingStorageRegisterEvents('CREATE_STORAGE', idResourceObj, resourceName, idStorageTier, idVirtualDataCenterObj, idThisEnterprise, limitResourceObj);
+                    END IF;               
                 END IF;
             END IF;
         END IF;
-    END;
-|
+    END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_ip_pool_management_update_stats', '2.0.3', '3:9471ae96bcea8c0d126b5acc5f68db12', 159);
-
--- Changeset src/2.0ga/triggers.xml::dclimit_created::destevez::(Checksum: 3:bd480e1b74b09bfd09196b9a7e0201c3)
-DROP TRIGGER IF EXISTS dclimit_created;
-
-DELIMITER |
-CREATE TRIGGER dclimit_created AFTER INSERT ON enterprise_limits_by_datacenter
-    FOR EACH ROW BEGIN      
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN                   
-        		 IF (NEW.idEnterprise != 0 AND NEW.idDataCenter != 0) THEN
-        INSERT IGNORE INTO dc_enterprise_stats 
-                (idDataCenter,idEnterprise,vCpuReserved,vCpuUsed,memoryReserved,memoryUsed,localStorageReserved,localStorageUsed,
-                extStorageReserved,extStorageUsed,repositoryReserved,repositoryUsed,publicIPsReserved,publicIPsUsed,vlanReserved,vlanUsed)
-            VALUES 
-                (NEW.idDataCenter, NEW.idEnterprise, NEW.cpuHard, 0, NEW.ramHard, 0, NEW.hdHard, 0,
-                NEW.storageHard, 0, NEW.repositoryHard, 0, NEW.publicIPHard, 0, NEW.vlanHard, 0);
-                END IF;
-            -- cloud_usage_stats
-            UPDATE IGNORE cloud_usage_stats 
-                SET vCpuReserved = vCpuReserved + NEW.cpuHard,
-                    vMemoryReserved = vMemoryReserved + NEW.ramHard,
-                    vStorageReserved = vStorageReserved + NEW.hdHard,
-                    storageReserved = storageReserved + NEW.storageHard,
-                    publicIPsReserved = publicIPsReserved + NEW.publicIPHard,
-                    vlanReserved = vlanReserved + NEW.vlanHard
-                WHERE idDataCenter = NEW.idDataCenter;
-        END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'dclimit_created', '2.0.3', '3:bd480e1b74b09bfd09196b9a7e0201c3', 160);
-
--- Changeset src/2.0ga/triggers.xml::dclimit_updated::destevez::(Checksum: 3:54fe5ef168bb3ca1ea0b8cd51e21ad7b)
-DROP TRIGGER IF EXISTS dclimit_updated;
-
-DELIMITER |
-CREATE TRIGGER dclimit_updated AFTER UPDATE ON enterprise_limits_by_datacenter
-FOR EACH ROW BEGIN     
-	 IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN       
-                -- Limit is not used anymore. Statistics are removed
-                DELETE FROM dc_enterprise_stats WHERE idEnterprise = OLD.idEnterprise AND idDataCenter = OLD.idDataCenter;
-                IF (NEW.idEnterprise != 0 AND NEW.idDataCenter != 0) THEN
-                INSERT IGNORE INTO dc_enterprise_stats 
-	                (idDataCenter,idEnterprise,vCpuReserved,vCpuUsed,memoryReserved,memoryUsed,localStorageReserved,localStorageUsed,
-	                extStorageReserved,extStorageUsed,repositoryReserved,repositoryUsed,publicIPsReserved,publicIPsUsed,vlanReserved,vlanUsed)
-	            	VALUES 
-	                (NEW.idDataCenter, NEW.idEnterprise, NEW.cpuHard, 0, NEW.ramHard, 0, NEW.hdHard, 0,
-	                NEW.storageHard, 0, NEW.repositoryHard, 0, NEW.publicIPHard, 0, NEW.vlanHard, 0);       
-                END IF;
-		-- 
-                UPDATE IGNORE cloud_usage_stats 
-                SET vCpuReserved = vCpuReserved - OLD.cpuHard + NEW.cpuHard,
-                    vMemoryReserved = vMemoryReserved - OLD.ramHard + NEW.ramHard,
-                    vStorageReserved = vStorageReserved - OLD.hdHard + NEW.hdHard,
-                    storageReserved = storageReserved - OLD.storageHard + NEW.storageHard,
-                    publicIPsReserved = publicIPsReserved - OLD.publicIPHard + NEW.publicIPHard,
-                    vlanReserved = vlanReserved - OLD.vlanHard + NEW.vlanHard
-                WHERE idDataCenter = NEW.idDataCenter;                            
-        END IF;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'dclimit_updated', '2.0.3', '3:54fe5ef168bb3ca1ea0b8cd51e21ad7b', 161);
-
--- Changeset src/2.0ga/triggers.xml::dclimit_deleted::destevez::(Checksum: 3:e2b75fd2424213fccd78d3cee11addf2)
-DROP TRIGGER IF EXISTS dclimit_deleted;
-
-DELIMITER |
-CREATE TRIGGER dclimit_deleted AFTER DELETE ON enterprise_limits_by_datacenter
-    FOR EACH ROW BEGIN
-        DELETE FROM dc_enterprise_stats WHERE idEnterprise = OLD.idEnterprise AND idDataCenter = OLD.idDataCenter;
-        UPDATE IGNORE cloud_usage_stats 
-        SET vCpuReserved = vCpuReserved - OLD.cpuHard,
-            vMemoryReserved = vMemoryReserved - OLD.ramHard,
-            vStorageReserved = vStorageReserved - OLD.hdHard,
-            storageReserved = storageReserved - OLD.storageHard,
-            -- repositoryReserved = repositoryReserved - OLD.repositoryHard + NEW.repositoryHard,
-            publicIPsReserved = publicIPsReserved - OLD.publicIPHard,
-            vlanReserved = vlanReserved - OLD.vlanHard
-        WHERE idDataCenter = OLD.idDataCenter;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'dclimit_deleted', '2.0.3', '3:e2b75fd2424213fccd78d3cee11addf2', 162);
-
--- Changeset src/2.0ga/triggers.xml::update_datastore_update_stats::destevez::(Checksum: 3:b4a052860fe390ae67e5e5f417c66d7d)
-DROP TRIGGER IF EXISTS update_datastore_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_datastore_update_stats AFTER UPDATE ON datastore
-    FOR EACH ROW BEGIN
-	DECLARE idDatacenter INT UNSIGNED;
-	DECLARE machineState INT UNSIGNED;
-	SELECT pm.idDatacenter, pm.idState INTO idDatacenter, machineState FROM physicalmachine pm LEFT OUTER JOIN datastore_assignment da ON pm.idPhysicalMachine = da.idPhysicalMachine
-	WHERE da.idDatastore = NEW.idDatastore;
-	IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-            IF (SELECT count(*) FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore
-                LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
-                WHERE pm.idDatacenter = idDatacenter AND d.datastoreUUID = NEW.datastoreUUID AND d.idDatastore != NEW.idDatastore 
-                AND d.enabled = 1) = 0 THEN
-	        IF OLD.enabled = 1 THEN
-		    IF NEW.enabled = 1 THEN
-		        IF machineState IN (2, 6, 7) THEN
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size + NEW.size
-		            WHERE cus.idDatacenter = idDatacenter;
-		        ELSE
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size + NEW.size,
-		            cus.vStorageUsed = cus.vStorageUsed - OLD.usedSize + NEW.usedSize WHERE cus.idDatacenter = idDatacenter;
-		        END IF;
-	            ELSEIF NEW.enabled = 0 THEN
-		        IF machineState IN (2, 6, 7) THEN
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size
-		            WHERE cus.idDatacenter = idDatacenter;
-		        ELSE
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size,
-		            cus.vStorageUsed = cus.vStorageUsed - OLD.usedSize WHERE cus.idDatacenter = idDatacenter;
-		        END IF;
-		    END IF;
-	        ELSE
-		    IF NEW.enabled = 1 THEN
-		        IF machineState IN (2, 6, 7) THEN
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal + NEW.size
-		            WHERE cus.idDatacenter = idDatacenter;
-		        ELSE
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal + NEW.size,
-		            cus.vStorageUsed = cus.vStorageUsed + NEW.usedSize WHERE cus.idDatacenter = idDatacenter;
-		        END IF;
-		    END IF;
-	        END IF;
-            ELSEIF NEW.usedSize NOT IN (SELECT d.usedSize FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore
-                LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
-                WHERE pm.idDatacenter = idDatacenter AND d.datastoreUUID = NEW.datastoreUUID AND d.idDatastore != NEW.idDatastore 
-                AND d.enabled = 1) THEN
-                -- repeated code to update only the first shared datastore
-	        IF OLD.enabled = 1 THEN
-		    IF NEW.enabled = 1 THEN
-		        IF machineState IN (2, 6, 7) THEN
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size + NEW.size
-		            WHERE cus.idDatacenter = idDatacenter;
-		        ELSE
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size + NEW.size,
-		            cus.vStorageUsed = cus.vStorageUsed - OLD.usedSize + NEW.usedSize WHERE cus.idDatacenter = idDatacenter;
-		        END IF;
-	            ELSEIF NEW.enabled = 0 THEN
-		        IF machineState IN (2, 6, 7) THEN
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size
-		            WHERE cus.idDatacenter = idDatacenter;
-		        ELSE
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal - OLD.size,
-		            cus.vStorageUsed = cus.vStorageUsed - OLD.usedSize WHERE cus.idDatacenter = idDatacenter;
-		        END IF;
-		    END IF;
-	        ELSE
-		    IF NEW.enabled = 1 THEN
-		        IF machineState IN (2, 6, 7) THEN
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal + NEW.size
-		            WHERE cus.idDatacenter = idDatacenter;
-		        ELSE
-		            UPDATE IGNORE cloud_usage_stats cus SET cus.vStorageTotal = cus.vStorageTotal + NEW.size,
-		            cus.vStorageUsed = cus.vStorageUsed + NEW.usedSize WHERE cus.idDatacenter = idDatacenter;
-		        END IF;
-		    END IF;
-	        END IF;
-	    END IF;
-        END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'update_datastore_update_stats', '2.0.3', '3:b4a052860fe390ae67e5e5f417c66d7d', 163);
-
--- Changeset src/2.0ga/triggers.xml::cloud_usage_stats_negative_check::destevez::(Checksum: 3:9136f0051231a451110c49ef7d9ecb6b)
-DROP TRIGGER IF EXISTS cloud_usage_stats_negative_check;
-
-DELIMITER |
-CREATE TRIGGER cloud_usage_stats_negative_check BEFORE UPDATE ON cloud_usage_stats
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      IF (NEW.serversTotal > 16700000)  THEN SET NEW.serversTotal = 0; END IF;
-      IF (NEW.serversRunning > 16700000)  THEN SET NEW.serversRunning = 0; END IF;
-      IF (NEW.storageTotal > 18446000000000000000)  THEN SET NEW.storageTotal = 0; END IF;
-      IF (NEW.storageReserved > 18446000000000000000) THEN SET NEW.storageReserved = 0; END IF;
-      IF (NEW.storageUsed > 18446000000000000000)  THEN SET NEW.storageUsed = 0; END IF;
-      IF (NEW.publicIPsTotal > 16700000)  THEN SET NEW.publicIPsTotal = 0; END IF;
-      IF (NEW.publicIPsReserved > 16700000)  THEN SET NEW.publicIPsReserved = 0; END IF;
-      IF (NEW.publicIPsUsed > 16700000)  THEN SET NEW.publicIPsUsed = 0; END IF;
-      IF (NEW.vMachinesTotal > 16700000)  THEN SET NEW.vMachinesTotal = 0; END IF;
-      IF (NEW.vMachinesRunning > 16700000)  THEN SET NEW.vMachinesRunning = 0; END IF;
-      IF (NEW.vCpuTotal > 18446000000000000000)  THEN SET NEW.vCpuTotal = 0; END IF;
-      IF (NEW.vCpuReserved > 18446000000000000000)  THEN SET NEW.vCpuReserved = 0; END IF;
-      IF (NEW.vCpuUsed > 18446000000000000000)  THEN SET NEW.vCpuUsed = 0; END IF;
-      IF (NEW.vMemoryTotal > 18446000000000000000)  THEN SET NEW.vMemoryTotal = 0; END IF;
-      IF (NEW.vMemoryReserved > 18446000000000000000)  THEN SET NEW.vMemoryReserved = 0; END IF;
-      IF (NEW.vMemoryUsed > 18446000000000000000)  THEN SET NEW.vMemoryUsed = 0; END IF;
-      IF (NEW.vStorageTotal > 18446000000000000000)  THEN SET NEW.vStorageTotal = 0; END IF;
-      IF (NEW.vStorageReserved > 18446000000000000000)  THEN SET NEW.vStorageReserved = 0; END IF;
-      IF (NEW.vStorageUsed > 18446000000000000000)  THEN SET NEW.vStorageUsed = 0; END IF;
-      IF (NEW.numUsersCreated > 16700000)  THEN SET NEW.numUsersCreated = 0; END IF;
-      IF (NEW.numVDCCreated > 16700000)  THEN SET NEW.numVDCCreated = 0; END IF;
-      IF (NEW.numEnterprisesCreated > 16700000)  THEN SET NEW.numEnterprisesCreated = 0; END IF;
-      IF (NEW.vlanReserved > 16700000)  THEN SET NEW.vlanReserved = 0; END IF;
-      IF (NEW.vlanUsed > 16700000)  THEN SET NEW.vlanUsed = 0; END IF;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'cloud_usage_stats_negative_check', '2.0.3', '3:9136f0051231a451110c49ef7d9ecb6b', 164);
-
--- Changeset src/2.0ga/triggers.xml::enterprise_resources_stats_negative_check::destevez::(Checksum: 3:467f7eaf413b94462eaf534bbc669254)
-DROP TRIGGER IF EXISTS enterprise_resources_stats_negative_check;
-
-DELIMITER |
-CREATE TRIGGER enterprise_resources_stats_negative_check BEFORE UPDATE ON enterprise_resources_stats
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      IF (NEW.vCpuReserved > 18446000000000000000)  THEN SET NEW.vCpuReserved = 0; END IF;
-      IF (NEW.vCpuUsed > 18446000000000000000)  THEN SET NEW.vCpuUsed = 0; END IF;
-      IF (NEW.memoryReserved > 18446000000000000000)  THEN SET NEW.memoryReserved = 0; END IF;
-      IF (NEW.memoryUsed > 18446000000000000000)  THEN SET NEW.memoryUsed = 0; END IF;
-      IF (NEW.localStorageReserved > 18446000000000000000)  THEN SET NEW.localStorageReserved = 0; END IF;
-      IF (NEW.localStorageUsed > 18446000000000000000)  THEN SET NEW.localStorageUsed = 0; END IF;
-      IF (NEW.extStorageReserved > 18446000000000000000)  THEN SET NEW.extStorageReserved = 0; END IF;
-      IF (NEW.extStorageUsed > 18446000000000000000)  THEN SET NEW.extStorageUsed = 0; END IF;
-      IF (NEW.repositoryReserved > 18446000000000000000)  THEN SET NEW.repositoryReserved = 0; END IF;
-      IF (NEW.repositoryUsed > 18446000000000000000)  THEN SET NEW.repositoryUsed = 0; END IF;
-      IF (NEW.publicIPsReserved > 16700000)  THEN SET NEW.publicIPsReserved = 0; END IF;
-      IF (NEW.publicIPsUsed > 16700000)  THEN SET NEW.publicIPsUsed = 0; END IF;
-      IF (NEW.vlanReserved > 16700000)  THEN SET NEW.vlanReserved = 0; END IF;
-      IF (NEW.vlanUsed > 16700000)  THEN SET NEW.vlanUsed = 0; END IF;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'enterprise_resources_stats_negative_check', '2.0.3', '3:467f7eaf413b94462eaf534bbc669254', 165);
-
--- Changeset src/2.0ga/triggers.xml::dc_enterprise_stats_negative_check::destevez::(Checksum: 3:08b5d80293b1c07bd757f6903012b153)
-DROP TRIGGER IF EXISTS dc_enterprise_stats_negative_check;
-
-DELIMITER |
-CREATE TRIGGER dc_enterprise_stats_negative_check BEFORE UPDATE ON dc_enterprise_stats
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      IF (NEW.vCpuReserved > 18446000000000000000)  THEN SET NEW.vCpuReserved = 0; END IF;
-      IF (NEW.vCpuUsed > 18446000000000000000)  THEN SET NEW.vCpuUsed = 0; END IF;
-      IF (NEW.memoryReserved > 18446000000000000000)  THEN SET NEW.memoryReserved = 0; END IF;
-      IF (NEW.memoryUsed > 18446000000000000000)  THEN SET NEW.memoryUsed = 0; END IF;
-      IF (NEW.localStorageReserved > 18446000000000000000)  THEN SET NEW.localStorageReserved = 0; END IF;
-      IF (NEW.localStorageUsed > 18446000000000000000)  THEN SET NEW.localStorageUsed = 0; END IF;
-      IF (NEW.extStorageReserved > 18446000000000000000)  THEN SET NEW.extStorageReserved = 0; END IF;
-      IF (NEW.extStorageUsed > 18446000000000000000)  THEN SET NEW.extStorageUsed = 0; END IF;
-      IF (NEW.repositoryReserved > 18446000000000000000)  THEN SET NEW.repositoryReserved = 0; END IF;
-      IF (NEW.repositoryUsed > 18446000000000000000)  THEN SET NEW.repositoryUsed = 0; END IF;
-      IF (NEW.publicIPsReserved > 16700000)  THEN SET NEW.publicIPsReserved = 0; END IF;
-      IF (NEW.publicIPsUsed > 16700000)  THEN SET NEW.publicIPsUsed = 0; END IF;
-      IF (NEW.vlanReserved > 16700000)  THEN SET NEW.vlanReserved = 0; END IF;
-      IF (NEW.vlanUsed > 16700000)  THEN SET NEW.vlanUsed = 0; END IF;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'dc_enterprise_stats_negative_check', '2.0.3', '3:08b5d80293b1c07bd757f6903012b153', 166);
-
--- Changeset src/2.0ga/triggers.xml::vapp_enterprise_stats_negative_check::destevez::(Checksum: 3:970b243fa7dcd29428979925fd14efc6)
-DROP TRIGGER IF EXISTS vapp_enterprise_stats_negative_check;
-
-DELIMITER |
-CREATE TRIGGER vapp_enterprise_stats_negative_check BEFORE UPDATE ON vapp_enterprise_stats
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      IF (NEW.vmCreated > 16700000)  THEN SET NEW.vmCreated = 0; END IF;
-      IF (NEW.vmActive > 16700000)  THEN SET NEW.vmActive = 0; END IF;
-      IF (NEW.volAssociated > 16700000)  THEN SET NEW.volAssociated = 0; END IF;
-      IF (NEW.volAttached > 16700000)  THEN SET NEW.volAttached = 0; END IF;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'vapp_enterprise_stats_negative_check', '2.0.3', '3:970b243fa7dcd29428979925fd14efc6', 167);
-
--- Changeset src/2.0ga/triggers.xml::vdc_enterprise_stats_negative_check::destevez::(Checksum: 3:51ce50b5d69f33dbe62064ee7e60ec83)
-DROP TRIGGER IF EXISTS vdc_enterprise_stats_negative_check;
-
-DELIMITER |
-CREATE TRIGGER vdc_enterprise_stats_negative_check BEFORE UPDATE ON vdc_enterprise_stats
-  FOR EACH ROW BEGIN
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-      IF (NEW.vmCreated > 16700000)  THEN SET NEW.vmCreated = 0; END IF;
-      IF (NEW.vmActive > 16700000)  THEN SET NEW.vmActive = 0; END IF;
-      IF (NEW.volCreated > 16700000)  THEN SET NEW.volCreated = 0; END IF;
-      IF (NEW.volAssociated > 16700000)  THEN SET NEW.volAssociated = 0; END IF;
-      IF (NEW.volAttached > 16700000)  THEN SET NEW.volAttached = 0; END IF;
-      IF (NEW.vCpuReserved > 18446000000000000000)  THEN SET NEW.vCpuReserved = 0; END IF;
-      IF (NEW.vCpuUsed > 18446000000000000000)  THEN SET NEW.vCpuUsed = 0; END IF;
-      IF (NEW.memoryReserved > 18446000000000000000)  THEN SET NEW.memoryReserved = 0; END IF;
-      IF (NEW.memoryUsed > 18446000000000000000)  THEN SET NEW.memoryUsed = 0; END IF;
-      IF (NEW.localStorageReserved > 18446000000000000000)  THEN SET NEW.localStorageReserved = 0; END IF;
-      IF (NEW.localStorageUsed > 18446000000000000000)  THEN SET NEW.localStorageUsed = 0; END IF;                                 
-      IF (NEW.extStorageReserved > 18446000000000000000)  THEN SET NEW.extStorageReserved = 0; END IF;
-      IF (NEW.extStorageUsed > 18446000000000000000)  THEN SET NEW.extStorageUsed = 0; END IF;
-      IF (NEW.publicIPsReserved > 16700000)  THEN SET NEW.publicIPsReserved = 0; END IF;
-      IF (NEW.publicIPsUsed > 16700000)  THEN SET NEW.publicIPsUsed = 0; END IF;
-      IF (NEW.vlanReserved > 16700000)  THEN SET NEW.vlanReserved = 0; END IF;
-      IF (NEW.vlanUsed > 16700000)  THEN SET NEW.vlanUsed = 0; END IF;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/triggers.xml', 'vdc_enterprise_stats_negative_check', '2.0.3', '3:51ce50b5d69f33dbe62064ee7e60ec83', 168);
-
--- Changeset src/2.0ga/procedures.xml::calculate_cloud_usage_stats::destevez::(Checksum: 3:671d82a809e1fb9d7922843013e67c1c)
-DROP PROCEDURE IF EXISTS CalculateCloudUsageStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateCloudUsageStats()
-   BEGIN
-  DECLARE idDataCenterObj INTEGER;
-  DECLARE serversTotal BIGINT UNSIGNED;
-  DECLARE serversRunning BIGINT UNSIGNED;
-  DECLARE storageTotal BIGINT UNSIGNED;
-  DECLARE storageUsed BIGINT UNSIGNED;
-  DECLARE publicIPsTotal BIGINT UNSIGNED;
-  DECLARE publicIPsReserved BIGINT UNSIGNED;
-  DECLARE publicIPsUsed BIGINT UNSIGNED;
-  DECLARE vMachinesTotal BIGINT UNSIGNED;
-  DECLARE vMachinesRunning BIGINT UNSIGNED;
-  DECLARE vCpuTotal BIGINT UNSIGNED;
-  DECLARE vCpuReserved BIGINT UNSIGNED;
-  DECLARE vCpuUsed BIGINT UNSIGNED;
-  DECLARE vMemoryTotal BIGINT UNSIGNED;
-  DECLARE vMemoryReserved BIGINT UNSIGNED;
-  DECLARE vMemoryUsed BIGINT UNSIGNED;
-  DECLARE vStorageReserved BIGINT UNSIGNED;
-  DECLARE vStorageUsed BIGINT UNSIGNED;
-  DECLARE vStorageTotal BIGINT UNSIGNED;
-  DECLARE numUsersCreated BIGINT UNSIGNED;
-  DECLARE numVDCCreated BIGINT UNSIGNED;
-  DECLARE numEnterprisesCreated BIGINT UNSIGNED;
-  DECLARE storageReserved BIGINT UNSIGNED; 
-  DECLARE vlanReserved BIGINT UNSIGNED; 
-  DECLARE vlanUsed BIGINT UNSIGNED; 
-
-  DECLARE no_more_dcs INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT idDataCenter FROM datacenter;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_dcs=1;
-
-  SET no_more_dcs=0;
-  SET idDataCenterObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE cloud_usage_stats;
-
-  dept_loop:WHILE(no_more_dcs=0) DO
-    FETCH curDC INTO idDataCenterObj;
-    IF no_more_dcs=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO serversTotal
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState!=2;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO serversRunning
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState=3;
-    --
-    SELECT IF (SUM(limitResource) IS NULL, 0, SUM(limitResource))   INTO storageTotal
-    FROM rasd r, rasd_management rm, virtualdatacenter vdc
-    WHERE rm.idResource = r.instanceID
-    AND vdc.idVirtualDataCenter=rm.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (SUM(r.limitResource) IS NULL, 0, SUM(r.limitResource)) INTO storageUsed
-    FROM storage_pool sp, storage_device sd, volume_management vm, rasd_management rm, rasd r
-    WHERE vm.idStorage = sp.idStorage
-    AND sp.idStorageDevice = sd.id
-    AND vm.idManagement = rm.idManagement
-    AND r.instanceID = rm.idResource
-    AND rm.idResourceType = 8
-    AND rm.idResource IS NOT NULL
-    AND (vm.state = 1)
-    AND sd.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsTotal
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsReserved
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND vn.networktype = 'PUBLIC'             
-    AND ipm.mac IS NOT NULL
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsUsed
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND vn.networktype = 'PUBLIC'             
-    AND rm.idManagement = ipm.idManagement
-    AND ipm.mac IS NOT NULL
-    AND rm.idVM IS NOT NULL
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vMachinesTotal
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp, virtualdatacenter vdc
-    WHERE v.idVM = nvi.idVM
-    AND n.idNode=nvi.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj
-    AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN" 
-    and v.idType = 1;
-    --
-    SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vMachinesRunning
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp, virtualdatacenter vdc
-    WHERE v.idVM = nvi.idVM
-    AND n.idNode=nvi.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj
-    AND v.state = "ON"
-    and v.idType = 1;
-    --
-    SELECT IF (SUM(cpu) IS NULL,0,SUM(cpu)), IF (SUM(ram) IS NULL,0,SUM(ram)), IF (SUM(cpuUsed) IS NULL,0,SUM(cpuUsed)), IF (SUM(ramUsed) IS NULL,0,SUM(ramUsed)) 			INTO vCpuTotal, vMemoryTotal, vCpuUsed, vMemoryUsed
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState = 3; 
-    --
-    CALL get_datastore_size_by_dc(idDataCenterObj,vStorageTotal);
-    CALL get_datastore_used_size_by_dc(idDataCenterObj,vStorageUsed);
-    --
-    SELECT IF (SUM(vlanHard) IS NULL, 0, SUM(vlanHard))  INTO vlanReserved
-    FROM enterprise_limits_by_datacenter 
-    WHERE idDataCenter = idDataCenterObj AND idEnterprise IS NOT NULL;
-
-    -- Inserts stats row
-    INSERT INTO cloud_usage_stats
-    (idDataCenter,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,vCpuReserved,vCpuUsed,
-    vMemoryTotal,vMemoryReserved,vMemoryUsed,
-    vStorageReserved,vStorageUsed,vStorageTotal,
-    vlanReserved,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated)
-    VALUES
-    (idDataCenterObj,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,0,vCpuUsed,
-    vMemoryTotal,0,vMemoryUsed,
-    0,vStorageUsed,vStorageTotal,
-    vlanReserved,
-    0,0,0);
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-  -- All Cloud Stats (idDataCenter -1): vCpuReserved, VMemoryReserved, VStorageReserved, NumUsersCreated, NumVDCCreated, NumEnterprisesCreated
-  SELECT IF (SUM(cpuHard) IS NULL,0,SUM(cpuHard)), IF (SUM(ramHard) IS NULL,0,SUM(ramHard)), IF (SUM(hdHard) IS NULL,0,SUM(hdHard)), IF (SUM(storageHard) IS NULL,0,SUM(storageHard)) INTO vCpuReserved, vMemoryReserved, vStorageReserved, storageReserved
-  FROM enterprise e;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numUsersCreated
-  FROM user;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numVDCCreated
-  FROM virtualdatacenter vdc;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numEnterprisesCreated
-  FROM enterprise e;
-  --
-  SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vlanUsed
-  FROM vlan_network;
-
-  -- Inserts stats row
-    INSERT INTO cloud_usage_stats
-    (idDataCenter,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,vCpuReserved,vCpuUsed,
-    vMemoryTotal,vMemoryReserved,vMemoryUsed,
-    vStorageReserved,vStorageUsed,vStorageTotal,
-    vlanUsed,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated)
-    VALUES
-    (-1,
-    0,0,
-    0,0,
-    0,0,0,
-    0,0,
-    0,vCpuReserved,0,
-    0,vMemoryReserved,0,
-    vStorageReserved,0,0,
-    vlanUsed,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated);
-   END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'calculate_cloud_usage_stats', '2.0.3', '3:671d82a809e1fb9d7922843013e67c1c', 169);
-
--- Changeset src/2.0ga/procedures.xml::CalculateEnterpriseResourcesStats::destevez::(Checksum: 3:ce0db9bbe48b0e59292c3aa7ef1aae7a)
-DROP PROCEDURE IF EXISTS CalculateEnterpriseResourcesStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateEnterpriseResourcesStats()
-   BEGIN
-  DECLARE idEnterpriseObj INTEGER;
-  DECLARE vCpuReserved BIGINT UNSIGNED;
-  DECLARE vCpuUsed BIGINT UNSIGNED;
-  DECLARE memoryReserved BIGINT UNSIGNED;
-  DECLARE memoryUsed BIGINT UNSIGNED;
-  DECLARE localStorageReserved BIGINT UNSIGNED;
-  DECLARE localStorageUsed BIGINT UNSIGNED;
-  DECLARE extStorageReserved BIGINT UNSIGNED; 
-  DECLARE extStorageUsed BIGINT UNSIGNED; 
-  DECLARE publicIPsReserved BIGINT UNSIGNED;
-  DECLARE publicIPsUsed BIGINT UNSIGNED;
-  DECLARE vlanReserved BIGINT UNSIGNED; 
-  DECLARE vlanUsed BIGINT UNSIGNED; 
-  DECLARE extraHDUsed BIGINT UNSIGNED;
-
-  DECLARE no_more_enterprises INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT idEnterprise FROM enterprise;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_enterprises=1;
-
-  SET no_more_enterprises = 0;
-  SET idEnterpriseObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE enterprise_resources_stats;
-
-  dept_loop:WHILE(no_more_enterprises = 0) DO
-    FETCH curDC INTO idEnterpriseObj;
-    IF no_more_enterprises=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Iteracion Enterprise: ',idEnterpriseObj));
-    --
-    SELECT cpuHard, ramHard, hdHard, storageHard, vlanHard INTO vCpuReserved, memoryReserved, localStorageReserved, extStorageReserved, vlanReserved
-    FROM enterprise e
-    WHERE e.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IF (SUM(vm.cpu) IS NULL, 0, SUM(vm.cpu)), IF (SUM(vm.ram) IS NULL, 0, SUM(vm.ram)), IF (SUM(vm.hd) IS NULL, 0, SUM(vm.hd)) INTO vCpuUsed, memoryUsed, localStorageUsed
-    FROM virtualmachine vm
-    WHERE vm.state IN ("ON","OFF","PAUSED")
-    AND vm.idType = 1
-    AND vm.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IFNULL(SUM(limitResource),0) * 1048576  INTO extraHDUsed
-	FROM rasd_management rm, rasd r, virtualmachine vm 
-	WHERE rm.idResource = r.instanceID AND rm.idVM = vm.idVM AND rm.idResourceType=17
-	AND vm.state IN ("ON","OFF","PAUSED")
-	AND vm.idType=1
-	AND vm.idEnterprise = idEnterpriseObj;   
-	--
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vlanUsed
-    FROM virtualdatacenter vdc, vlan_network vn
-    WHERE vdc.networktypeID=vn.network_id
-    AND vdc.idEnterprise=idEnterpriseObj;
-    --
-    SELECT IF (SUM(r.limitResource) IS NULL, 0, SUM(r.limitResource)) INTO extStorageUsed
-    FROM rasd_management rm, rasd r, volume_management vm, virtualdatacenter vdc
-    WHERE rm.idManagement = vm.idManagement
-    AND vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-    AND r.instanceID = rm.idResource
-    AND (vm.state = 1 OR vm.state = 2)
-    AND rm.idResource IS NOT NULL
-    AND vdc.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsReserved
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm, virtualdatacenter vdc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id   
-    AND vn.networktype = 'PUBLIC'             
-    AND rm.idManagement = ipm.idManagement
-    AND vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-    AND vdc.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsUsed
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm, virtualdatacenter vdc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id            
-    AND vn.networktype = 'PUBLIC'    
-    AND rm.idManagement = ipm.idManagement
-    AND vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-    AND rm.idVM IS NOT NULL
-    AND vdc.idEnterprise = idEnterpriseObj;
-
-
-    -- Inserts stats row
-    INSERT INTO enterprise_resources_stats (idEnterprise,vCpuReserved,vCpuUsed,memoryReserved,memoryUsed,localStorageReserved,localStorageUsed,extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed)
-     VALUES (idEnterpriseObj,vCpuReserved,vCpuUsed,memoryReserved,memoryUsed,localStorageReserved,localStorageUsed+extraHDUsed,extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed);
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-   END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'CalculateEnterpriseResourcesStats', '2.0.3', '3:ce0db9bbe48b0e59292c3aa7ef1aae7a', 170);
-
--- Changeset src/2.0ga/procedures.xml::CalculateVdcEnterpriseStats::destevez::(Checksum: 3:be509954d54d99afb53946f5dcb9a2a6)
-DROP PROCEDURE IF EXISTS CalculateVdcEnterpriseStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateVdcEnterpriseStats()
-   BEGIN
-  DECLARE idVirtualDataCenterObj INTEGER;
-  DECLARE idEnterprise INTEGER;
-  DECLARE vdcName VARCHAR(45);
-  DECLARE vmCreated MEDIUMINT UNSIGNED;
-  DECLARE vmActive MEDIUMINT UNSIGNED;
-  DECLARE volCreated MEDIUMINT UNSIGNED;
-  DECLARE volAssociated MEDIUMINT UNSIGNED;
-  DECLARE volAttached MEDIUMINT UNSIGNED;
-  DECLARE vCpuReserved BIGINT UNSIGNED; 
-  DECLARE vCpuUsed BIGINT UNSIGNED; 
-  DECLARE memoryReserved BIGINT UNSIGNED;
-  DECLARE memoryUsed BIGINT UNSIGNED; 
-  DECLARE localStorageReserved BIGINT UNSIGNED; 
-  DECLARE localStorageUsed BIGINT UNSIGNED; 
-  DECLARE extStorageReserved BIGINT UNSIGNED; 
-  DECLARE extStorageUsed BIGINT UNSIGNED; 
-  DECLARE publicIPsReserved MEDIUMINT UNSIGNED;
-  DECLARE publicIPsUsed MEDIUMINT UNSIGNED;
-  DECLARE vlanReserved MEDIUMINT UNSIGNED; 
-  DECLARE vlanUsed MEDIUMINT UNSIGNED;   
-  DECLARE extraHDUsed BIGINT UNSIGNED;
-
-  DECLARE no_more_vdcs INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT vdc.idVirtualDataCenter, vdc.idEnterprise, vdc.name FROM virtualdatacenter vdc;
-
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_vdcs = 1;
-
-  SET no_more_vdcs = 0;
-  SET idVirtualDataCenterObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE vdc_enterprise_stats;
-
-  dept_loop:WHILE(no_more_vdcs = 0) DO
-    FETCH curDC INTO idVirtualDataCenterObj, idEnterprise, vdcName;
-    IF no_more_vdcs=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmCreated
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualDataCenter = idVirtualDataCenterObj
-    AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN";
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmActive
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualDataCenter = idVirtualDataCenterObj
-    AND v.state = "ON";
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volCreated
-    FROM rasd_management rm
-    WHERE rm.idVirtualDataCenter = idVirtualDataCenterObj
-    AND rm.idResource IS NOT NULL
-    AND rm.idResourceType=8;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAssociated
-    FROM rasd_management rm
-    WHERE rm.idVirtualApp IS NOT NULL
-    AND rm.idResource IS NOT NULL
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj
-    AND rm.idResourceType=8;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAttached
-    FROM volume_management vm, rasd_management rm
-    WHERE rm.idManagement = vm.idManagement
-    AND rm.idVirtualApp IS NOT NULL
-    AND rm.idResource IS NOT NULL
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj
-    AND state = 2;
-    --
-    SELECT IF (SUM(cpuHard) IS NULL, 0, SUM(cpuHard)), IF (SUM(ramHard) IS NULL, 0, SUM(ramHard)), IF (SUM(hdHard) IS NULL, 0, SUM(hdHard)), IF (SUM(storageHard) IS NULL, 0, SUM(storageHard)), IF (SUM(vlanHard) IS NULL, 0, SUM(vlanHard)) INTO vCpuReserved, memoryReserved, localStorageReserved, extStorageReserved, vlanReserved
-    FROM virtualdatacenter 
-    WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (SUM(vm.cpu) IS NULL, 0, SUM(vm.cpu)), IF (SUM(vm.ram) IS NULL, 0, SUM(vm.ram)), IF (SUM(vm.hd) IS NULL, 0, SUM(vm.hd)) INTO vCpuUsed, memoryUsed, localStorageUsed
-    FROM virtualmachine vm, nodevirtualimage nvi, node n, virtualapp vapp
-    WHERE vm.idVM = nvi.idVM
-    AND nvi.idNode = n.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vm.state = "ON"
-    AND vm.idType = 1
-    AND vapp.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (SUM(r.limitResource) IS NULL, 0, SUM(r.limitResource)) INTO extStorageUsed
-    FROM rasd_management rm, rasd r, volume_management vm
-    WHERE rm.idManagement = vm.idManagement    
-    AND r.instanceID = rm.idResource
-    AND (vm.state = 1 OR vm.state = 2)
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IFNULL(SUM(limitResource),0) * 1048576  INTO extraHDUsed
-	FROM rasd_management rm, rasd r, virtualmachine vm 
-	WHERE rm.idResource = r.instanceID AND rm.idVM = vm.idVM AND rm.idResourceType=17
-	AND vm.state="ON"
-	AND vm.idType=1
-	AND rm.idVirtualDataCenter = idVirtualDataCenterObj; 
-	--
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsUsed
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id           
-    AND vn.networktype = 'PUBLIC'     
-    AND rm.idManagement = ipm.idManagement
-    AND rm.idVM IS NOT NULL
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsReserved
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id                
-    AND vn.networktype = 'PUBLIC'
-    AND rm.idManagement = ipm.idManagement
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vlanUsed
-    FROM virtualdatacenter vdc, vlan_network vn
-    WHERE vdc.networktypeID = vn.network_id
-    AND vdc.idVirtualDataCenter = idVirtualDataCenterObj;
-   -- 
-
-
-    -- Inserts stats row
-    INSERT INTO vdc_enterprise_stats (idVirtualDataCenter,idEnterprise,vdcName,vmCreated,vmActive,volCreated,volAssociated,volAttached, vCpuReserved, vCpuUsed, memoryReserved, memoryUsed, localStorageReserved, localStorageUsed, extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed)
-    VALUES (idVirtualDataCenterObj,idEnterprise,vdcName,vmCreated,vmActive,volCreated,volAssociated,volAttached, vCpuReserved, vCpuUsed, memoryReserved, memoryUsed, localStorageReserved, localStorageUsed + extraHDUsed, extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed );
-
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-   END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'CalculateVdcEnterpriseStats', '2.0.3', '3:be509954d54d99afb53946f5dcb9a2a6', 171);
-
--- Changeset src/2.0ga/procedures.xml::CalculateVappEnterpriseStats::destevez::(Checksum: 3:937ed6beb842fc18972923d172ed79ab)
-DROP PROCEDURE IF EXISTS CalculateVappEnterpriseStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateVappEnterpriseStats()
-   BEGIN
-  DECLARE idVirtualAppObj INTEGER;
-  DECLARE idEnterprise INTEGER;
-  DECLARE idVirtualDataCenter INTEGER;
-  DECLARE vappName VARCHAR(45);
-  DECLARE vdcName VARCHAR(45);
-  DECLARE vmCreated MEDIUMINT UNSIGNED;
-  DECLARE vmActive MEDIUMINT UNSIGNED;
-  DECLARE volAssociated MEDIUMINT UNSIGNED;
-  DECLARE volAttached MEDIUMINT UNSIGNED;
-
-  DECLARE no_more_vapps INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT vapp.idVirtualApp, vapp.idEnterprise, vapp.idVirtualDataCenter, vapp.name, vdc.name FROM virtualapp vapp, virtualdatacenter vdc WHERE vdc.idVirtualDataCenter = vapp.idVirtualDataCenter;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_vapps = 1;
-
-  SET no_more_vapps = 0;
-  SET idVirtualAppObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE vapp_enterprise_stats;
-
-  dept_loop:WHILE(no_more_vapps = 0) DO
-    FETCH curDC INTO idVirtualAppObj, idEnterprise, idVirtualDataCenter, vappName, vdcName;
-    IF no_more_vapps=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmCreated
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualApp = idVirtualAppObj
-    AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN"
-    and v.idType = 1;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmActive
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualApp = idVirtualAppObj
-    AND v.state = "ON"
-    and v.idType = 1;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAssociated
-    FROM rasd_management rm
-    WHERE rm.idVirtualApp = idVirtualAppObj
-    AND rm.idResource IS NOT NULL
-    AND rm.idResourceType=8;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAttached
-    FROM volume_management vm, rasd_management rm
-    WHERE rm.idManagement = vm.idManagement
-    AND rm.idResource IS NOT NULL
-    AND rm.idVirtualApp = idVirtualAppObj
-    AND state = 2;
-
-    -- Inserts stats row
-    INSERT INTO vapp_enterprise_stats (idVirtualApp,idEnterprise,idVirtualDataCenter,vappName,vdcName,vmCreated,vmActive,volAssociated,volAttached)
-    VALUES (idVirtualAppObj, idEnterprise,idVirtualDataCenter,vappName,vdcName,vmCreated,vmActive,volAssociated,volAttached);
-
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-   END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'CalculateVappEnterpriseStats', '2.0.3', '3:937ed6beb842fc18972923d172ed79ab', 172);
-
--- Changeset src/2.0ga/procedures.xml::get_datastore_size_by_dc::destevez::(Checksum: 3:56f165bb9a3b9e122a24bdfa33793533)
-DROP PROCEDURE IF EXISTS get_datastore_size_by_dc;
-
-DELIMITER |
-CREATE PROCEDURE get_datastore_size_by_dc(IN idDC INT, OUT size BIGINT UNSIGNED)
-BEGIN
-    SELECT IF (SUM(ds_view.size) IS NULL,0,SUM(ds_view.size)) INTO size
-    FROM (SELECT d.size as size FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore 
-    LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
-    WHERE pm.idDataCenter = idDC AND d.enabled = 1 GROUP BY d.datastoreUuid) ds_view;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'get_datastore_size_by_dc', '2.0.3', '3:56f165bb9a3b9e122a24bdfa33793533', 173);
-
--- Changeset src/2.0ga/procedures.xml::get_datastore_used_size_by_dc::destevez::(Checksum: 3:70b261691f20459c61cde2182940c814)
-DROP PROCEDURE IF EXISTS get_datastore_used_size_by_dc;
-
-DELIMITER |
-CREATE PROCEDURE get_datastore_used_size_by_dc(IN idDC INT, OUT usedSize BIGINT UNSIGNED)
-BEGIN
-    SELECT IF (SUM(ds_view.usedSize) IS NULL,0,SUM(ds_view.usedSize)) INTO usedSize
-    FROM (SELECT d.usedSize as usedSize FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore
-    LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
-    WHERE pm.idDataCenter = idDC AND d.enabled = 1 GROUP BY d.datastoreUuid) ds_view;
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'get_datastore_used_size_by_dc', '2.0.3', '3:70b261691f20459c61cde2182940c814', 174);
-
--- Changeset src/2.0ga/procedures.xml::add_version_column_to_all::destevez::(Checksum: 3:28232591f7d936ca502b7f812c0eadd8)
-DROP PROCEDURE IF EXISTS add_version_column_to_all;
-
-DELIMITER |
-CREATE PROCEDURE add_version_column_to_all()
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `workload_enterprise_exclusion_rule`
+--
+
+DROP TABLE IF EXISTS `workload_enterprise_exclusion_rule`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `workload_enterprise_exclusion_rule` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idEnterprise1` int(10) unsigned NOT NULL,
+  `idEnterprise2` int(10) unsigned NOT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `FK_eerule_enterprise_1` (`idEnterprise1`),
+  KEY `FK_eerule_enterprise_2` (`idEnterprise2`),
+  CONSTRAINT `FK_eerule_enterprise_2` FOREIGN KEY (`idEnterprise2`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE CASCADE ON UPDATE NO ACTION,
+  CONSTRAINT `FK_eerule_enterprise_1` FOREIGN KEY (`idEnterprise1`) REFERENCES `enterprise` (`idEnterprise`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `workload_enterprise_exclusion_rule`
+--
+
+LOCK TABLES `workload_enterprise_exclusion_rule` WRITE;
+/*!40000 ALTER TABLE `workload_enterprise_exclusion_rule` DISABLE KEYS */;
+/*!40000 ALTER TABLE `workload_enterprise_exclusion_rule` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `workload_fit_policy_rule`
+--
+
+DROP TABLE IF EXISTS `workload_fit_policy_rule`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `workload_fit_policy_rule` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `fitPolicy` varchar(20) NOT NULL,
+  `idDatacenter` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `FK_fprule_datacenter` (`idDatacenter`),
+  CONSTRAINT `FK_fprule_datacenter` FOREIGN KEY (`idDatacenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE CASCADE ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `workload_fit_policy_rule`
+--
+
+LOCK TABLES `workload_fit_policy_rule` WRITE;
+/*!40000 ALTER TABLE `workload_fit_policy_rule` DISABLE KEYS */;
+INSERT INTO `workload_fit_policy_rule` VALUES (1,'PROGRESSIVE',NULL,1);
+/*!40000 ALTER TABLE `workload_fit_policy_rule` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `workload_machine_load_rule`
+--
+
+DROP TABLE IF EXISTS `workload_machine_load_rule`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `workload_machine_load_rule` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `ramLoadPercentage` int(10) unsigned NOT NULL,
+  `cpuLoadPercentage` int(10) unsigned NOT NULL,
+  `idDatacenter` int(10) unsigned DEFAULT NULL,
+  `idRack` int(10) unsigned DEFAULT NULL,
+  `idMachine` int(10) unsigned DEFAULT NULL,
+  `version_c` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `FK_mlrule_datacenter` (`idDatacenter`),
+  KEY `FK_mlrule_machine` (`idMachine`),
+  KEY `FK_mlrule_rack` (`idRack`),
+  CONSTRAINT `FK_mlrule_rack` FOREIGN KEY (`idRack`) REFERENCES `rack` (`idRack`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `FK_mlrule_datacenter` FOREIGN KEY (`idDatacenter`) REFERENCES `datacenter` (`idDataCenter`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `FK_mlrule_machine` FOREIGN KEY (`idMachine`) REFERENCES `physicalmachine` (`idPhysicalMachine`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `workload_machine_load_rule`
+--
+
+LOCK TABLES `workload_machine_load_rule` WRITE;
+/*!40000 ALTER TABLE `workload_machine_load_rule` DISABLE KEYS */;
+/*!40000 ALTER TABLE `workload_machine_load_rule` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping routines for database 'kinton'
+--
+/*!50003 DROP PROCEDURE IF EXISTS `add_version_column_to_all` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `add_version_column_to_all`()
 BEGIN
     DECLARE currentTableName VARCHAR(64);
     DECLARE no_more_tables INTEGER;
@@ -3469,2578 +4456,1886 @@ BEGIN
         END IF;
     END WHILE dept_loop;
     CLOSE curAllTables;
-END;
-|
+END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'add_version_column_to_all', '2.0.3', '3:28232591f7d936ca502b7f812c0eadd8', 175);
-
--- Changeset src/2.0ga/procedures.xml::AccountingVMRegisterEvents::destevez::(Checksum: 3:9c6058842d972f202cec4f0eafacb4ac)
-DROP PROCEDURE IF EXISTS AccountingVMRegisterEvents;
-
--- 
--- AccountingVMRegisterEvents: Registers Events related to DEPLOY or UNDEPLOY virtualmachines for Accounting
--- Inserts new rows with startTime=NOW() for each new DEPLOY_VM event
--- Updates existing rows with stopTime=NOW() for each new UNDEPLOY_VM event
--- 
-DELIMITER |
-CREATE PROCEDURE AccountingVMRegisterEvents(
-    IN idVirtualMachine INT(10) UNSIGNED, 
-    IN idType INT(1) UNSIGNED, 
-    IN oldState VARCHAR(50), 
-    IN newState VARCHAR(50), 
-    IN previousState VARCHAR(50), 
-    IN ramValue INT(7) unsigned,  
-    IN cpuValue INT(10) unsigned,
-    IN hdValue BIGINT(20) unsigned,
-    IN costCode int(4))
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `ArchiveMeteringData` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `ArchiveMeteringData`(daysOldToArchive INT)
 BEGIN
-    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
+    ##########################################################################################
+    #
+    # ArchiveMeteringData
+    # Procedure used to archive data in the metering table.   Data older than the supplied
+    # number of days is automatically moved from the 'metering' table into the
+    # 'metering_archive' table.
+    #
+    ##########################################################################################
+    DECLARE archive_ts TIMESTAMP;
 
-	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('newState: ',newState, 'previousState', previousState));
-    IF idType = 1 AND (oldState != newState) THEN
-    	-- We state changes only deal with captured or Abiquo generated VMs
-		IF previousState = "NOT_ALLOCATED" AND newState = "ON" THEN
-            -- Save away the appropriate names to ensure they are available when we add rows to the ..._detail table
-            SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name),
-                    kinton_accounting.ABQ_ADD_VAPP_NAME(vapp.idVirtualApp, vapp.name),
-                    kinton_accounting.ABQ_ADD_VM_NAME(vm.idVM, CONCAT(IF(ISNULL(vm.description),_utf8'',substr(vm.description,1,120)), _utf8' - ', vm.name))
-                    INTO idDummy, idDummy, idDummy, idDummy
-            FROM    nodevirtualimage nvi, node n, virtualapp vapp, virtualmachine vm, virtualdatacenter vdc, enterprise e
-		    WHERE   vm.idVM = nvi.idVM
-                    AND nvi.idNode = n.idNode
-                    AND vapp.idVirtualApp = n.idVirtualApp
-                    AND vm.idVM = idVirtualMachine
-                    AND vdc.idVirtualDataCenter=vapp.idVirtualDataCenter
-                    AND e.idEnterprise=vdc.idEnterprise;
-            
-		--  => DEPLOY Event Detected (1st PowerON)
-		    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('DEPLOY event detected -> newState: ',newState, 'previousState', previousState));
-		    INSERT INTO accounting_event_vm (idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,cpu,ram,hd,startTime,stopTime,costCode,hypervisorType) 
-		    SELECT
-		        vm.idVM, vapp.idEnterprise, vapp.idVirtualDataCenter, n.idVirtualApp,
-		        cpuValue,
-		        ramValue,           
-		        hdValue,
-		        now(),
-		        null,
-		        costCode,
-		        vdc.hypervisorType
-		      FROM nodevirtualimage nvi, node n, virtualapp vapp, virtualmachine vm, virtualdatacenter vdc
-		    WHERE vm.idVM = nvi.idVM
-		    AND nvi.idNode = n.idNode
-		    AND vapp.idVirtualApp = n.idVirtualApp
-		    AND vm.idVM = idVirtualMachine
-		    AND vdc.idVirtualDataCenter=vapp.idVirtualDataCenter;
-		END IF;
-		IF previousState = "OFF" AND newState ="ON" THEN
-			-- INSERT INTO debug_msg (msg) VALUES (CONCAT('POWER_ON  event detected -> newState: ',newState, 'previousState', previousState));          
-			-- Power ON detected (updating active row with data)
-			UPDATE
-		    	accounting_event_vm
-		    SET
-		    	cpu = cpuValue,
-		    	ram = ramValue,
-		    	hd = hdValue,
-		    	costCode = costCode
-		    WHERE
-		      accounting_event_vm.idVM = idVirtualMachine
-		      and
-		      accounting_event_vm.stopTime is null;
-		END IF;
-		IF previousState IN  ("ON","OFF") AND newState IN ("NOT_ALLOCATED","UNKNOWN") THEN          
-			-- INSERT INTO debug_msg (msg) VALUES (CONCAT('UNDEPLOY event detected -> newState: ',newState, 'previousState', previousState));          
-			-- => UNDEPLOY Event Detected 
-		    UPDATE
-		      accounting_event_vm
-		    SET
-		      stopTime=now()
-		    WHERE
-		      accounting_event_vm.idVM = idVirtualMachine
-		      and
-		      accounting_event_vm.stopTime is null;
-	    END IF;
-    END IF;    
-    --  
-END;
-|
+    SELECT TIMESTAMPADD(DAY,-daysOldToArchive, CURRENT_DATE()) INTO archive_ts;
+
+    # Copy data into the archive table
+    INSERT INTO metering_archive
+        SELECT *
+        FROM
+            metering
+        WHERE
+            timestamp < archive_ts;
+
+    # And then remove it from the current table...
+    DELETE FROM metering
+        WHERE
+            timestamp < archive_ts;
+END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingVMRegisterEvents', '2.0.3', '3:9c6058842d972f202cec4f0eafacb4ac', 176);
-
--- Changeset src/2.0ga/procedures.xml::AccountingStorageRegisterEvents::destevez::(Checksum: 3:8b2edbf4e9ed685822d65f62427c3d9f)
-DROP PROCEDURE IF EXISTS AccountingStorageRegisterEvents;
-
--- 
--- AccountingStorageRegisterEvents
---
--- Triggered when user creates, updates or deletes a volume in a VirtualDataCenter. All this events are stored in 'accounting_event_storage' with its timestamps.
--- This procedure performs different actions managed by 'action' parameter values:'CREATE_STORAGE','UPDATE_STORAGE','
--- 
-DELIMITER |
-CREATE PROCEDURE AccountingStorageRegisterEvents(
-    IN action VARCHAR(15),
-    IN idThisResource VARCHAR(50),
-    IN thisResourceName VARCHAR(255),
-    IN idStorageTier INT(10) UNSIGNED,
-    IN idThisVirtualDataCenter INT(10) UNSIGNED,
-    IN idThisEnterprise INT(10) UNSIGNED,  
-    IN sizeReserved BIGINT(20))
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `DeleteOldRegisteredEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `DeleteOldRegisteredEvents`(    
+IN hours INT(2) UNSIGNED)
 BEGIN   
-    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
+    DECLARE sp_param_enabled INT(1);
+    DECLARE param_hours INT(8);
 
-    -- Storage Creation Event Detected (table rasd_management). Storage is converted to Bytes
-    IF action = "CREATE_STORAGE" THEN
-        SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
-                    INTO idDummy, idDummy
-            FROM    virtualdatacenter vdc, enterprise e
-            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
+	IF EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='accounting_parameters') THEN
+        
+        SELECT paramValue INTO sp_param_enabled FROM kinton_accounting.accounting_parameters WHERE paramName='DeleteRegEventsUseSPParam';
+        SELECT paramValue INTO param_hours FROM kinton_accounting.accounting_parameters WHERE paramName='DeleteRegEventsDeleteHours';
+    ELSE
+        
+        SELECT 1 INTO sp_param_enabled;
+    END IF;
 
-        INSERT INTO accounting_event_storage (idResource, resourceName, idStorageTier, idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,sizeReserved,startTime, stopTime)
-        SELECT idThisResource, thisResourceName, idStorageTier, null, idThisEnterprise, idThisVirtualDataCenter, null, sizeReserved * 1048576, now(), null; 
+    IF (sp_param_enabled = 0) THEN
+        
+        SELECT param_hours INTO hours;
     END IF;
-    -- Storage Delete Event Detected (table rasd_management)
-    IF action = "DELETE_STORAGE" THEN   
-        UPDATE
-          accounting_event_storage
-        SET
-          stopTime=now()
-        WHERE
-          accounting_event_storage.idResource = idThisResource
-          AND
-          accounting_event_storage.stopTime is null;
-    END IF;
-    -- Storage Update Event Detected: update and insert a new one (table rasd)
-    IF action = "UPDATE_STORAGE" THEN   
-        UPDATE
-          accounting_event_storage
-        SET
-          stopTime=now()
-        WHERE
-          accounting_event_storage.idResource = idThisResource
-          AND
-          accounting_event_storage.stopTime is null;
-        INSERT INTO accounting_event_storage (idResource, resourceName, idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,sizeReserved,startTime, stopTime)
-            SELECT idThisResource,thisResourceName, null, idThisEnterprise, idThisVirtualDataCenter, null, sizeReserved * 1048576, now(), null; 
-    END IF;
-END;
-|
+
+    DELETE FROM kinton_accounting.accounting_event_vm  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
+    DELETE FROM kinton_accounting.accounting_event_storage  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
+    DELETE FROM kinton_accounting.accounting_event_ips  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
+    DELETE FROM kinton_accounting.accounting_event_vlan  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
+    DELETE FROM kinton_accounting.accounting_event_pm  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
+    DELETE FROM kinton_accounting.accounting_event_repository  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
+END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingStorageRegisterEvents', '2.0.3', '3:8b2edbf4e9ed685822d65f62427c3d9f', 177);
-
--- Changeset src/2.0ga/procedures.xml::AccountingIPsRegisterEvents::destevez::(Checksum: 3:e6f6edc61eb760b261e0b18621f105e8)
-DROP PROCEDURE IF EXISTS AccountingIPsRegisterEvents;
-
--- 
--- AccountingIPsRegisterEvents
---
--- Triggered when user creates, updates or deletes a volume in a VirtualDataCenter. All this events are stored in 'accounting_event_storage' with its timestamps.
--- This procedure performs different actions managed by 'action' parameter values:'CREATE_STORAGE','UPDATE_STORAGE','
--- 
-DELIMITER |
-CREATE PROCEDURE AccountingIPsRegisterEvents(
-    IN action VARCHAR(15),
-    IN idManagement INT(10) UNSIGNED,
-    IN ipAddress VARCHAR(20),
-    IN idThisVirtualDataCenter INT(10) UNSIGNED,
-    IN idThisEnterprise INT(10) UNSIGNED)
-BEGIN   
-    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
-
-    --  
-    -- IP Reserved Event Detected (table ip_pool_management)
-    IF action = "IP_RESERVED" THEN
-        SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
-                    INTO idDummy, idDummy
-            FROM    virtualdatacenter vdc, enterprise e
-            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
-
-        INSERT INTO accounting_event_ips (idManagement,idEnterprise,idVirtualDataCenter,ip,startTime,stopTime)
-        SELECT idManagement, idThisEnterprise, idThisVirtualDataCenter, ipAddress, now(), null; 
-    END IF;
-    -- IP Freed Event Detected (table rasd_management)
-    IF action = "IP_FREED" THEN 
-        UPDATE
-          accounting_event_ips
-        SET
-          stopTime=now()
-        WHERE
-          accounting_event_ips.idManagement = idManagement
-          AND
-          accounting_event_ips.stopTime is null;
-    END IF; 
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingIPsRegisterEvents', '2.0.3', '3:e6f6edc61eb760b261e0b18621f105e8', 178);
-
--- Changeset src/2.0ga/procedures.xml::AccountingVLANRegisterEvents::destevez::(Checksum: 3:ddf172bb852e2db7f7c022517ca99e8a)
-DROP PROCEDURE IF EXISTS AccountingVLANRegisterEvents;
-
--- 
--- AccountingVLANRegisterEvents
---
--- Triggered when user creates or deletes a VLAN in a VirtualDataCenter. All this events are stored in 'accounting_event_vlan' with its timestamps.
--- This procedure performs different actions managed by 'action' parameter values:'CREATE_VLAN','DELETE_VLAN','
--- 
-DELIMITER |
-CREATE PROCEDURE AccountingVLANRegisterEvents(
-    IN action VARCHAR(15),
-    IN vlan_network_id INT(11) UNSIGNED,
-    IN network_name VARCHAR(40),
-    IN idThisVirtualDataCenter INT(10) UNSIGNED,
-    IN idThisEnterprise INT(10) UNSIGNED)
-BEGIN   
-    DECLARE idDummy BIGINT; # Dummy variable to stop result set generation
-
-    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('PROCEDURE AccountingVLANRegisterEvents Activated: ',IFNULL(vlan_network_id,'NULL'),'-',IFNULL(network_name,'NULL'),'-',IFNULL(idThisVirtualDataCenter,'NULL'),'-',idThisEnterprise,'-',action,'-',now()));   
-    --  
-    -- VLAN Created Event Detected
-    IF action = "CREATE_VLAN" THEN
-        SELECT  kinton_accounting.ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), kinton_accounting.ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
-                    INTO idDummy, idDummy
-            FROM    virtualdatacenter vdc, enterprise e
-            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
-
-        INSERT INTO accounting_event_vlan (vlan_network_id,idEnterprise,idVirtualDataCenter,network_name,startTime,stopTime) 
-        SELECT vlan_network_id, idThisEnterprise, idThisVirtualDataCenter, network_name, now(), null; 
-    END IF;
-    -- VLAN Deleted Event Detected
-    IF action = "DELETE_VLAN" THEN  
-        UPDATE
-          accounting_event_vlan
-        SET
-          stopTime=now()
-        WHERE
-          accounting_event_vlan.vlan_network_id = vlan_network_id
-          AND
-          accounting_event_vlan.stopTime is null;
-    END IF; 
-END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.0ga/procedures.xml', 'AccountingVLANRegisterEvents', '2.0.3', '3:ddf172bb852e2db7f7c022517ca99e8a', 179);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-92::destevezg (generated)::(Checksum: 3:61865568b5c369334126d98f2cbe9ca2)
-ALTER TABLE `kinton`.`apps_library` ADD CONSTRAINT `fk_idEnterpriseApps` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-92', '2.0.3', '3:61865568b5c369334126d98f2cbe9ca2', 180);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-93::destevezg (generated)::(Checksum: 3:4a2fb0e70026d6bfe34d2eea6989c1cf)
-ALTER TABLE `kinton`.`auth_serverresource` ADD CONSTRAINT `auth_serverresourceFK1` FOREIGN KEY (`idGroup`) REFERENCES `kinton`.`auth_group` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-93', '2.0.3', '3:4a2fb0e70026d6bfe34d2eea6989c1cf', 181);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-94::destevezg (generated)::(Checksum: 3:25f0b96d5511b61ebff630df02f7f80e)
-ALTER TABLE `kinton`.`auth_serverresource` ADD CONSTRAINT `auth_serverresourceFK2` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-94', '2.0.3', '3:25f0b96d5511b61ebff630df02f7f80e', 182);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-95::destevezg (generated)::(Checksum: 3:f4199d4c8ef6d658b47e268c5b179975)
-ALTER TABLE `kinton`.`auth_serverresource_exception` ADD CONSTRAINT `auth_serverresource_exceptionFK1` FOREIGN KEY (`idResource`) REFERENCES `kinton`.`auth_serverresource` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-95', '2.0.3', '3:f4199d4c8ef6d658b47e268c5b179975', 183);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-96::destevezg (generated)::(Checksum: 3:c07a9802053c16ea4ff6ed536da64a49)
-ALTER TABLE `kinton`.`auth_serverresource_exception` ADD CONSTRAINT `auth_serverresource_exceptionFK2` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-96', '2.0.3', '3:c07a9802053c16ea4ff6ed536da64a49', 184);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-97::destevezg (generated)::(Checksum: 3:c1380d095c438a19d05b61b4fbcfe7fa)
-ALTER TABLE `kinton`.`chef_runlist` ADD CONSTRAINT `chef_runlist_FK1` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-97', '2.0.3', '3:c1380d095c438a19d05b61b4fbcfe7fa', 185);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-98::destevezg (generated)::(Checksum: 3:96c71c89d367921fd04f4fed07442eac)
-ALTER TABLE `kinton`.`datacenter` ADD CONSTRAINT `datacenternetwork_FK1` FOREIGN KEY (`network_id`) REFERENCES `kinton`.`network` (`network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-98', '2.0.3', '3:96c71c89d367921fd04f4fed07442eac', 186);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-99::destevezg (generated)::(Checksum: 3:a6695e1d09254cd47b2bd905e433c15f)
-ALTER TABLE `kinton`.`disk_management` ADD CONSTRAINT `disk_datastore_FK` FOREIGN KEY (`idDatastore`) REFERENCES `kinton`.`datastore` (`idDatastore`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-99', '2.0.3', '3:a6695e1d09254cd47b2bd905e433c15f', 187);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-100::destevezg (generated)::(Checksum: 3:162a67a515a4b894be24ea92677a4ec2)
-ALTER TABLE `kinton`.`disk_management` ADD CONSTRAINT `disk_idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-100', '2.0.3', '3:162a67a515a4b894be24ea92677a4ec2', 188);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-102::destevezg (generated)::(Checksum: 3:9cc3b6aa2c32810c3af8841bcf75d057)
-ALTER TABLE `kinton`.`enterprise` ADD CONSTRAINT `enterprise_pricing_FK` FOREIGN KEY (`idPricingTemplate`) REFERENCES `kinton`.`pricingTemplate` (`idPricingTemplate`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-102', '2.0.3', '3:9cc3b6aa2c32810c3af8841bcf75d057', 189);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-103::destevezg (generated)::(Checksum: 3:f110c901d46203476b26407f34a20553)
-ALTER TABLE `kinton`.`enterprise_limits_by_datacenter` ADD CONSTRAINT `enterprise_FK7` FOREIGN KEY (`default_vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-103', '2.0.3', '3:f110c901d46203476b26407f34a20553', 190);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-104::destevezg (generated)::(Checksum: 3:0a90424859d5c751e009a52788fbd5c7)
-ALTER TABLE `kinton`.`enterprise_properties` ADD CONSTRAINT `FK_enterprise` FOREIGN KEY (`enterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-104', '2.0.3', '3:0a90424859d5c751e009a52788fbd5c7', 191);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-105::destevezg (generated)::(Checksum: 3:c6f97a64d3bbaf7e4b704612fb2da6e8)
-ALTER TABLE `kinton`.`enterprise_properties_map` ADD CONSTRAINT `FK2_enterprise_properties` FOREIGN KEY (`enterprise_properties`) REFERENCES `kinton`.`enterprise_properties` (`idProperties`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-105', '2.0.3', '3:c6f97a64d3bbaf7e4b704612fb2da6e8', 192);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-106::destevezg (generated)::(Checksum: 3:f12c60cd95ff11d2437444a8202c5bd4)
-ALTER TABLE `kinton`.`enterprise_theme` ADD CONSTRAINT `THEME_FK1` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-106', '2.0.3', '3:f12c60cd95ff11d2437444a8202c5bd4', 193);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-107::destevezg (generated)::(Checksum: 3:6754b7abce5397c7844d687884732683)
-ALTER TABLE `kinton`.`hypervisor` ADD CONSTRAINT `Hypervisor_FK1` FOREIGN KEY (`idPhysicalMachine`) REFERENCES `kinton`.`physicalmachine` (`idPhysicalMachine`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-107', '2.0.3', '3:6754b7abce5397c7844d687884732683', 194);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-109::destevezg (generated)::(Checksum: 3:2067c951c3aa82d24eb4324e3d90f25e)
-ALTER TABLE `kinton`.`ip_pool_management` ADD CONSTRAINT `id_management_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-109', '2.0.3', '3:2067c951c3aa82d24eb4324e3d90f25e', 195);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-110::destevezg (generated)::(Checksum: 3:09da99c4e6e31595f34ec2be25b43dc8)
-ALTER TABLE `kinton`.`ip_pool_management` ADD CONSTRAINT `ippool_vlan_network_FK` FOREIGN KEY (`vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-110', '2.0.3', '3:09da99c4e6e31595f34ec2be25b43dc8', 196);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-111::destevezg (generated)::(Checksum: 3:e52fa216c74824b00447bb18025d3958)
-ALTER TABLE `kinton`.`log` ADD CONSTRAINT `log_FK1` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-111', '2.0.3', '3:e52fa216c74824b00447bb18025d3958', 197);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-112::destevezg (generated)::(Checksum: 3:e6034e81d4247717b894501b1e5f2077)
-ALTER TABLE `kinton`.`node` ADD CONSTRAINT `node_FK2` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-112', '2.0.3', '3:e6034e81d4247717b894501b1e5f2077', 198);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-113::destevezg (generated)::(Checksum: 3:c0ef24d86a2e36e3f18678ecf98a4fd1)
-ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idDiskStatefulConversion_FK4` FOREIGN KEY (`idDiskStatefulConversion`) REFERENCES `kinton`.`diskstateful_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-113', '2.0.3', '3:c0ef24d86a2e36e3f18678ecf98a4fd1', 199);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-116::destevezg (generated)::(Checksum: 3:87401343ba30f95853096f53f2145d4c)
-ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idTier_FK4` FOREIGN KEY (`idTier`) REFERENCES `kinton`.`tier` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-116', '2.0.3', '3:87401343ba30f95853096f53f2145d4c', 200);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-117::destevezg (generated)::(Checksum: 3:241f9a9ba6ee93b09a7bee6372e2a99f)
-ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idVirtualApplianceStatefulConversion_FK4` FOREIGN KEY (`idVirtualApplianceStatefulConversion`) REFERENCES `kinton`.`vappstateful_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-117', '2.0.3', '3:241f9a9ba6ee93b09a7bee6372e2a99f', 201);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-118::destevezg (generated)::(Checksum: 3:babee5873b113a16e3d247c4a8b7d5ae)
-ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idVirtualImageConversion_FK4` FOREIGN KEY (`idVirtualImageConversion`) REFERENCES `kinton`.`virtualimage_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-118', '2.0.3', '3:babee5873b113a16e3d247c4a8b7d5ae', 202);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-119::destevezg (generated)::(Checksum: 3:2e37837fbfb14dfc4499ce39e4e45d0f)
-ALTER TABLE `kinton`.`nodenetwork` ADD CONSTRAINT `nodeNetwork_FK1` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`node` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-119', '2.0.3', '3:2e37837fbfb14dfc4499ce39e4e45d0f', 203);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-120::destevezg (generated)::(Checksum: 3:224c98605877be44c1a4b7772f40139d)
-ALTER TABLE `kinton`.`nodestorage` ADD CONSTRAINT `nodeStorage_FK1` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`node` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-120', '2.0.3', '3:224c98605877be44c1a4b7772f40139d', 204);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-121::destevezg (generated)::(Checksum: 3:7add768133119551554b8e3fe4eabcfe)
-ALTER TABLE `kinton`.`nodevirtualimage` ADD CONSTRAINT `nodevirtualImage_FK1` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-121', '2.0.3', '3:7add768133119551554b8e3fe4eabcfe', 205);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-122::destevezg (generated)::(Checksum: 3:4c513d9af35d89264d6426523832b0bf)
-ALTER TABLE `kinton`.`nodevirtualimage` ADD CONSTRAINT `nodevirtualimage_FK3` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`node` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-122', '2.0.3', '3:4c513d9af35d89264d6426523832b0bf', 206);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-123::destevezg (generated)::(Checksum: 3:cdbd03b583ae11a990b14cee938029af)
-ALTER TABLE `kinton`.`nodevirtualimage` ADD CONSTRAINT `nodevirtualImage_FK2` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-123', '2.0.3', '3:cdbd03b583ae11a990b14cee938029af', 207);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-124::destevezg (generated)::(Checksum: 3:e19d2a8d15b2698983ec2bd3244da199)
-ALTER TABLE `kinton`.`ovf_package` ADD CONSTRAINT `fk_ovf_package_repository` FOREIGN KEY (`id_apps_library`) REFERENCES `kinton`.`apps_library` (`id_apps_library`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-124', '2.0.3', '3:e19d2a8d15b2698983ec2bd3244da199', 208);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-125::destevezg (generated)::(Checksum: 3:e7542966e2a4262fcd6d94d9eab2d31d)
-ALTER TABLE `kinton`.`ovf_package` ADD CONSTRAINT `fk_ovf_package_category` FOREIGN KEY (`idCategory`) REFERENCES `kinton`.`category` (`idCategory`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-125', '2.0.3', '3:e7542966e2a4262fcd6d94d9eab2d31d', 209);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-126::destevezg (generated)::(Checksum: 3:c4d6eb8f3294ff8dc825f8dcb0694229)
-ALTER TABLE `kinton`.`ovf_package_list` ADD CONSTRAINT `fk_ovf_package_list_repository` FOREIGN KEY (`id_apps_library`) REFERENCES `kinton`.`apps_library` (`id_apps_library`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-126', '2.0.3', '3:c4d6eb8f3294ff8dc825f8dcb0694229', 210);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-127::destevezg (generated)::(Checksum: 3:588d684f716fac4248a78f84b20e1848)
-ALTER TABLE `kinton`.`ovf_package_list_has_ovf_package` ADD CONSTRAINT `fk_ovf_package_list_has_ovf_package_ovf_package1` FOREIGN KEY (`id_ovf_package`) REFERENCES `kinton`.`ovf_package` (`id_ovf_package`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-127', '2.0.3', '3:588d684f716fac4248a78f84b20e1848', 211);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-128::destevezg (generated)::(Checksum: 3:a6664c8e00e9f84735691bc9f65ffdae)
-ALTER TABLE `kinton`.`ovf_package_list_has_ovf_package` ADD CONSTRAINT `fk_ovf_package_list_has_ovf_package_ovf_package_list1` FOREIGN KEY (`id_ovf_package_list`) REFERENCES `kinton`.`ovf_package_list` (`id_ovf_package_list`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-128', '2.0.3', '3:a6664c8e00e9f84735691bc9f65ffdae', 212);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-129::destevezg (generated)::(Checksum: 3:401d7128c9685671b8132c2be2f3b51c)
-ALTER TABLE `kinton`.`physicalmachine` ADD CONSTRAINT `PhysicalMachine_FK5` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-129', '2.0.3', '3:401d7128c9685671b8132c2be2f3b51c', 213);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-130::destevezg (generated)::(Checksum: 3:7bd171095093a31d90a52130c93b4361)
-ALTER TABLE `kinton`.`physicalmachine` ADD CONSTRAINT `PhysicalMachine_FK6` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-130', '2.0.3', '3:7bd171095093a31d90a52130c93b4361', 214);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-131::destevezg (generated)::(Checksum: 3:8aac24d3878f2cf143029245d36bc718)
-ALTER TABLE `kinton`.`physicalmachine` ADD CONSTRAINT `PhysicalMachine_FK1` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-131', '2.0.3', '3:8aac24d3878f2cf143029245d36bc718', 215);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-132::destevezg (generated)::(Checksum: 3:0d408de63c791d1d72e1ca6ed5b37115)
-ALTER TABLE `kinton`.`pricingTemplate` ADD CONSTRAINT `Pricing_FK2_Currency` FOREIGN KEY (`idCurrency`) REFERENCES `kinton`.`currency` (`idCurrency`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-132', '2.0.3', '3:0d408de63c791d1d72e1ca6ed5b37115', 216);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-133::destevezg (generated)::(Checksum: 3:7f40febbf510e024517380fd5e5aef48)
-ALTER TABLE `kinton`.`rack` ADD CONSTRAINT `Rack_FK1` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-133', '2.0.3', '3:7f40febbf510e024517380fd5e5aef48', 217);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-134::destevezg (generated)::(Checksum: 3:b582521bf03ee8d5ea05c684578c7034)
-ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idResource_FK` FOREIGN KEY (`idResource`) REFERENCES `kinton`.`rasd` (`instanceID`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-134', '2.0.3', '3:b582521bf03ee8d5ea05c684578c7034', 218);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-135::destevezg (generated)::(Checksum: 3:aeb0ded36caf7b4870a9cbda8cb62771)
-ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idVirtualApp_FK` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-135', '2.0.3', '3:aeb0ded36caf7b4870a9cbda8cb62771', 219);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-136::destevezg (generated)::(Checksum: 3:0abce3e30f01b6ddf819b8e30ee635a9)
-ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idVirtualDataCenter_FK` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `kinton`.`virtualdatacenter` (`idVirtualDataCenter`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-136', '2.0.3', '3:0abce3e30f01b6ddf819b8e30ee635a9', 220);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-137::destevezg (generated)::(Checksum: 3:01ea4328ecb4f1edfcffece4bd1019d1)
-ALTER TABLE `kinton`.`rasd_management` ADD CONSTRAINT `idVM_FK` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-137', '2.0.3', '3:01ea4328ecb4f1edfcffece4bd1019d1', 221);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-138::destevezg (generated)::(Checksum: 3:79755fa4b03184aaf81ed902878886e3)
-ALTER TABLE `kinton`.`remote_service` ADD CONSTRAINT `idDatecenter_FK` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-138', '2.0.3', '3:79755fa4b03184aaf81ed902878886e3', 222);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-139::destevezg (generated)::(Checksum: 3:3b7a36fc3de222b2827dd624bbf188df)
-ALTER TABLE `kinton`.`repository` ADD CONSTRAINT `fk_idDataCenter` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-139', '2.0.3', '3:3b7a36fc3de222b2827dd624bbf188df', 223);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-140::destevezg (generated)::(Checksum: 3:cecf006c92ac717d6c86487c837a9718)
-ALTER TABLE `kinton`.`role` ADD CONSTRAINT `fk_role_1` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-140', '2.0.3', '3:cecf006c92ac717d6c86487c837a9718', 224);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-141::destevezg (generated)::(Checksum: 3:afe3ffec74162088a0854a7f70d46f00)
-ALTER TABLE `kinton`.`role_ldap` ADD CONSTRAINT `fk_role_ldap_role` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-141', '2.0.3', '3:afe3ffec74162088a0854a7f70d46f00', 225);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-142::destevezg (generated)::(Checksum: 3:dc4c00c7d2f82ac51a5bd20c136d466f)
-ALTER TABLE `kinton`.`roles_privileges` ADD CONSTRAINT `fk_roles_privileges_privileges` FOREIGN KEY (`idPrivilege`) REFERENCES `kinton`.`privilege` (`idPrivilege`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-142', '2.0.3', '3:dc4c00c7d2f82ac51a5bd20c136d466f', 226);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-143::destevezg (generated)::(Checksum: 3:9759ca65a44a631f100713776f858563)
-ALTER TABLE `kinton`.`roles_privileges` ADD CONSTRAINT `fk_roles_privileges_role` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-143', '2.0.3', '3:9759ca65a44a631f100713776f858563', 227);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-144::destevezg (generated)::(Checksum: 3:41352352d930fd662d1d7d363bc4f719)
-ALTER TABLE `kinton`.`session` ADD CONSTRAINT `fk_session_user` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-144', '2.0.3', '3:41352352d930fd662d1d7d363bc4f719', 228);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-145::destevezg (generated)::(Checksum: 3:45727eba271f8926bf7e2d794169d7e4)
-ALTER TABLE `kinton`.`storage_device` ADD CONSTRAINT `storage_device_FK_1` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-145', '2.0.3', '3:45727eba271f8926bf7e2d794169d7e4', 229);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-146::destevezg (generated)::(Checksum: 3:41cc38e6af909e00988ea3e2ed9f9a11)
-ALTER TABLE `kinton`.`storage_pool` ADD CONSTRAINT `storage_pool_FK1` FOREIGN KEY (`idStorageDevice`) REFERENCES `kinton`.`storage_device` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-146', '2.0.3', '3:41cc38e6af909e00988ea3e2ed9f9a11', 230);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-147::destevezg (generated)::(Checksum: 3:89446970e88861750073ca38aecd7221)
-ALTER TABLE `kinton`.`storage_pool` ADD CONSTRAINT `storage_pool_FK2` FOREIGN KEY (`idTier`) REFERENCES `kinton`.`tier` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-147', '2.0.3', '3:89446970e88861750073ca38aecd7221', 231);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-148::destevezg (generated)::(Checksum: 3:4fb61370d6709dbdad6cb8912d78d147)
-ALTER TABLE `kinton`.`tier` ADD CONSTRAINT `tier_FK_1` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-148', '2.0.3', '3:4fb61370d6709dbdad6cb8912d78d147', 232);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-149::destevezg (generated)::(Checksum: 3:ce3759c45c6e5e0957bdf286928ddfd6)
-ALTER TABLE `kinton`.`ucs_rack` ADD CONSTRAINT `id_rack_FK` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-149', '2.0.3', '3:ce3759c45c6e5e0957bdf286928ddfd6', 233);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-150::destevezg (generated)::(Checksum: 3:6a2e1beff7657d80b3ddc590c6afb4ff)
-ALTER TABLE `kinton`.`user` ADD CONSTRAINT `FK1_user` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-150', '2.0.3', '3:6a2e1beff7657d80b3ddc590c6afb4ff', 234);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-151::destevezg (generated)::(Checksum: 3:4c49355453f85109bc9fdaaa7d9c8f9d)
-ALTER TABLE `kinton`.`user` ADD CONSTRAINT `User_FK1` FOREIGN KEY (`idRole`) REFERENCES `kinton`.`role` (`idRole`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-151', '2.0.3', '3:4c49355453f85109bc9fdaaa7d9c8f9d', 235);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-152::destevezg (generated)::(Checksum: 3:c69b44279fe35ae4d5357530fa58f98c)
-ALTER TABLE `kinton`.`vappstateful_conversions` ADD CONSTRAINT `idUser_FK3` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-152', '2.0.3', '3:c69b44279fe35ae4d5357530fa58f98c', 236);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-153::destevezg (generated)::(Checksum: 3:55d5fcfd88c84da2d8e8b047fbe4ca74)
-ALTER TABLE `kinton`.`vappstateful_conversions` ADD CONSTRAINT `idVirtualApp_FK3` FOREIGN KEY (`idVirtualApp`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-153', '2.0.3', '3:55d5fcfd88c84da2d8e8b047fbe4ca74', 237);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-154::destevezg (generated)::(Checksum: 3:5a8a82475af9f6cd7f2dd53d712f7772)
-ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `virtualimage_conversions_FK` FOREIGN KEY (`idConversion`) REFERENCES `kinton`.`virtualimage_conversions` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-154', '2.0.3', '3:5a8a82475af9f6cd7f2dd53d712f7772', 238);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-155::destevezg (generated)::(Checksum: 3:28bb4e87b926a15b198c9c3f0ed9a41e)
-ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `virtual_appliance_conversions_node_FK` FOREIGN KEY (`idNode`) REFERENCES `kinton`.`nodevirtualimage` (`idNode`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-155', '2.0.3', '3:28bb4e87b926a15b198c9c3f0ed9a41e', 239);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-156::destevezg (generated)::(Checksum: 3:3338ded640346300fe6fc834f29cd573)
-ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `user_FK` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-156', '2.0.3', '3:3338ded640346300fe6fc834f29cd573', 240);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-157::destevezg (generated)::(Checksum: 3:21c1084c13f597df7b8ae0b17661bec8)
-ALTER TABLE `kinton`.`virtual_appliance_conversions` ADD CONSTRAINT `virtualapp_FK` FOREIGN KEY (`idVirtualAppliance`) REFERENCES `kinton`.`virtualapp` (`idVirtualApp`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-157', '2.0.3', '3:21c1084c13f597df7b8ae0b17661bec8', 241);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-158::destevezg (generated)::(Checksum: 3:b69eabf2c2c54d2b3fca684c10307674)
-ALTER TABLE `kinton`.`virtualapp` ADD CONSTRAINT `VirtualApp_FK5` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-158', '2.0.3', '3:b69eabf2c2c54d2b3fca684c10307674', 242);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-159::destevezg (generated)::(Checksum: 3:cc83157e9e8f124153e80effb9d51efb)
-ALTER TABLE `kinton`.`virtualapp` ADD CONSTRAINT `VirtualApp_FK4` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `kinton`.`virtualdatacenter` (`idVirtualDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-159', '2.0.3', '3:cc83157e9e8f124153e80effb9d51efb', 243);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-160::destevezg (generated)::(Checksum: 3:b16109dedffbd117d36f5b77cd4afd47)
-ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK7` FOREIGN KEY (`default_vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-160', '2.0.3', '3:b16109dedffbd117d36f5b77cd4afd47', 244);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-161::destevezg (generated)::(Checksum: 3:ada5fd43eb881ae2b2c0a4ae26e8b60b)
-ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK6` FOREIGN KEY (`idDataCenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-161', '2.0.3', '3:ada5fd43eb881ae2b2c0a4ae26e8b60b', 245);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-162::destevezg (generated)::(Checksum: 3:c1c9a3d9a6cd5f576dba7bec3898158f)
-ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK1` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-162', '2.0.3', '3:c1c9a3d9a6cd5f576dba7bec3898158f', 246);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-163::destevezg (generated)::(Checksum: 3:bcb0e0250107a0123f8ea29709d18132)
-ALTER TABLE `kinton`.`virtualdatacenter` ADD CONSTRAINT `virtualDataCenter_FK4` FOREIGN KEY (`networktypeID`) REFERENCES `kinton`.`network` (`network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-163', '2.0.3', '3:bcb0e0250107a0123f8ea29709d18132', 247);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-164::destevezg (generated)::(Checksum: 3:da457c42797f29326ae68a0f6ef932c7)
-ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `fk_virtualimage_category` FOREIGN KEY (`idCategory`) REFERENCES `kinton`.`category` (`idCategory`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-164', '2.0.3', '3:da457c42797f29326ae68a0f6ef932c7', 248);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-165::destevezg (generated)::(Checksum: 3:66e0aecdb3e6496bd6014ddd811aedd7)
-ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `virtualImage_FK9` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-165', '2.0.3', '3:66e0aecdb3e6496bd6014ddd811aedd7', 249);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-166::destevezg (generated)::(Checksum: 3:490d988acc72011b15b3cdd2c054c1d0)
-ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `virtualImage_FK8` FOREIGN KEY (`idMaster`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-166', '2.0.3', '3:490d988acc72011b15b3cdd2c054c1d0', 250);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-167::destevezg (generated)::(Checksum: 3:8d0283f48802ab658df52a67d2b84168)
-ALTER TABLE `kinton`.`virtualimage` ADD CONSTRAINT `virtualImage_FK3` FOREIGN KEY (`idRepository`) REFERENCES `kinton`.`repository` (`idRepository`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-167', '2.0.3', '3:8d0283f48802ab658df52a67d2b84168', 251);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-168::destevezg (generated)::(Checksum: 3:43369b643b83dbf4abc3cdd88dea9e55)
-ALTER TABLE `kinton`.`virtualimage_conversions` ADD CONSTRAINT `idImage_FK` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-168', '2.0.3', '3:43369b643b83dbf4abc3cdd88dea9e55', 252);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-169::destevezg (generated)::(Checksum: 3:0e024cd1c55e694b36db28daef7be341)
-ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualmachine_conversion_FK` FOREIGN KEY (`idConversion`) REFERENCES `kinton`.`virtualimage_conversions` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-169', '2.0.3', '3:0e024cd1c55e694b36db28daef7be341', 253);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-170::destevezg (generated)::(Checksum: 3:448b288afac7932843f109c4c8150cf7)
-ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_datastore_FK` FOREIGN KEY (`idDatastore`) REFERENCES `kinton`.`datastore` (`idDatastore`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-170', '2.0.3', '3:448b288afac7932843f109c4c8150cf7', 254);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-171::destevezg (generated)::(Checksum: 3:fe98b32bbffe0d24efb06fbbee891dd5)
-ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK5` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-171', '2.0.3', '3:fe98b32bbffe0d24efb06fbbee891dd5', 255);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-172::destevezg (generated)::(Checksum: 3:039a3cb6e568637b87fa0c4d1fd751fb)
-ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK1` FOREIGN KEY (`idHypervisor`) REFERENCES `kinton`.`hypervisor` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-172', '2.0.3', '3:039a3cb6e568637b87fa0c4d1fd751fb', 256);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-173::destevezg (generated)::(Checksum: 3:89b532248fcd75b771983698562696a0)
-ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK3` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-173', '2.0.3', '3:89b532248fcd75b771983698562696a0', 257);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-174::destevezg (generated)::(Checksum: 3:648895356db22362b96054e955327394)
-ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK4` FOREIGN KEY (`idUser`) REFERENCES `kinton`.`user` (`idUser`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-174', '2.0.3', '3:648895356db22362b96054e955327394', 258);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-175::destevezg (generated)::(Checksum: 3:45fabe26bed9e78a381e00f57a8106fe)
-ALTER TABLE `kinton`.`virtualmachine` ADD CONSTRAINT `virtualMachine_FK6` FOREIGN KEY (`network_configuration_id`) REFERENCES `kinton`.`network_configuration` (`network_configuration_id`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-175', '2.0.3', '3:45fabe26bed9e78a381e00f57a8106fe', 259);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-176::destevezg (generated)::(Checksum: 3:29df9763e7f45787933eedc0d93753a0)
-ALTER TABLE `kinton`.`virtualmachinetrackedstate` ADD CONSTRAINT `VirtualMachineTrackedState_FK1` FOREIGN KEY (`idVM`) REFERENCES `kinton`.`virtualmachine` (`idVM`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-176', '2.0.3', '3:29df9763e7f45787933eedc0d93753a0', 260);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-177::destevezg (generated)::(Checksum: 3:e82153ad84d182e5f828cd744af702fd)
-ALTER TABLE `kinton`.`vlan_network` ADD CONSTRAINT `vlannetwork_enterprise_FK` FOREIGN KEY (`enterprise_id`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-177', '2.0.3', '3:e82153ad84d182e5f828cd744af702fd', 261);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-178::destevezg (generated)::(Checksum: 3:8ba1097cdbd056308fd5aba20d89345e)
-ALTER TABLE `kinton`.`vlan_network` ADD CONSTRAINT `vlannetwork_configuration_FK` FOREIGN KEY (`network_configuration_id`) REFERENCES `kinton`.`network_configuration` (`network_configuration_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-178', '2.0.3', '3:8ba1097cdbd056308fd5aba20d89345e', 262);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-179::destevezg (generated)::(Checksum: 3:b5b66d52f3615106dbf5b81be8aeead0)
-ALTER TABLE `kinton`.`vlan_network` ADD CONSTRAINT `vlannetwork_network_FK` FOREIGN KEY (`network_id`) REFERENCES `kinton`.`network` (`network_id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-179', '2.0.3', '3:b5b66d52f3615106dbf5b81be8aeead0', 263);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-180::destevezg (generated)::(Checksum: 3:10999a3fbaadde9cf33ad4b3dabdad36)
-ALTER TABLE `kinton`.`vlan_network_assignment` ADD CONSTRAINT `vlan_network_assignment_idRack_FK` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-180', '2.0.3', '3:10999a3fbaadde9cf33ad4b3dabdad36', 264);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-181::destevezg (generated)::(Checksum: 3:e0bcbb3f28283f516bd242be82ac242c)
-ALTER TABLE `kinton`.`vlan_network_assignment` ADD CONSTRAINT `vlan_network_assignment_idVirtualDataCenter_FK` FOREIGN KEY (`idVirtualDataCenter`) REFERENCES `kinton`.`virtualdatacenter` (`idVirtualDataCenter`) ON UPDATE NO ACTION ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-181', '2.0.3', '3:e0bcbb3f28283f516bd242be82ac242c', 265);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-182::destevezg (generated)::(Checksum: 3:eda88ebcb0ae4b0237caab929c1aea15)
-ALTER TABLE `kinton`.`vlan_network_assignment` ADD CONSTRAINT `vlan_network_assignment_networkid_FK` FOREIGN KEY (`vlan_network_id`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-182', '2.0.3', '3:eda88ebcb0ae4b0237caab929c1aea15', 266);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-183::destevezg (generated)::(Checksum: 3:8261f126803cf01ac95fc860bf05683c)
-ALTER TABLE `kinton`.`vlans_dhcpOption` ADD CONSTRAINT `fk_vlans_dhcp_dhcp` FOREIGN KEY (`idDhcpOption`) REFERENCES `kinton`.`dhcpOption` (`idDhcpOption`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-183', '2.0.3', '3:8261f126803cf01ac95fc860bf05683c', 267);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-184::destevezg (generated)::(Checksum: 3:2e17ee385fe1756792aa18f36c7cf467)
-ALTER TABLE `kinton`.`vlans_dhcpOption` ADD CONSTRAINT `fk_vlans_dhcp_vlan` FOREIGN KEY (`idVlan`) REFERENCES `kinton`.`vlan_network` (`vlan_network_id`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-184', '2.0.3', '3:2e17ee385fe1756792aa18f36c7cf467', 268);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-185::destevezg (generated)::(Checksum: 3:80a62ee2317a6712e5807f3f6d0ba197)
-ALTER TABLE `kinton`.`volume_management` ADD CONSTRAINT `volumemanagement_FK3` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-185', '2.0.3', '3:80a62ee2317a6712e5807f3f6d0ba197', 269);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-186::destevezg (generated)::(Checksum: 3:7aae02e0bacd25676d9e6dd34e96732e)
-ALTER TABLE `kinton`.`volume_management` ADD CONSTRAINT `idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-186', '2.0.3', '3:7aae02e0bacd25676d9e6dd34e96732e', 270);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-187::destevezg (generated)::(Checksum: 3:b623134004ac65bccbd18f8b166a65a3)
-ALTER TABLE `kinton`.`volume_management` ADD CONSTRAINT `idStorage_FK` FOREIGN KEY (`idStorage`) REFERENCES `kinton`.`storage_pool` (`idStorage`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-187', '2.0.3', '3:b623134004ac65bccbd18f8b166a65a3', 271);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-188::destevezg (generated)::(Checksum: 3:727265749266ca7e5cd2363a313d6423)
-ALTER TABLE `kinton`.`workload_enterprise_exclusion_rule` ADD CONSTRAINT `FK_eerule_enterprise_1` FOREIGN KEY (`idEnterprise1`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-188', '2.0.3', '3:727265749266ca7e5cd2363a313d6423', 272);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-189::destevezg (generated)::(Checksum: 3:6ff99a1ad8e39d4f80c918cefe816932)
-ALTER TABLE `kinton`.`workload_enterprise_exclusion_rule` ADD CONSTRAINT `FK_eerule_enterprise_2` FOREIGN KEY (`idEnterprise2`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-189', '2.0.3', '3:6ff99a1ad8e39d4f80c918cefe816932', 273);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-190::destevezg (generated)::(Checksum: 3:c2b5d1e4466e21627abaa7ad015fff4e)
-ALTER TABLE `kinton`.`workload_fit_policy_rule` ADD CONSTRAINT `FK_fprule_datacenter` FOREIGN KEY (`idDatacenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-190', '2.0.3', '3:c2b5d1e4466e21627abaa7ad015fff4e', 274);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-191::destevezg (generated)::(Checksum: 3:f6bf190b5e4a59f02bcc3db933b369ec)
-ALTER TABLE `kinton`.`workload_machine_load_rule` ADD CONSTRAINT `FK_mlrule_datacenter` FOREIGN KEY (`idDatacenter`) REFERENCES `kinton`.`datacenter` (`idDataCenter`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-191', '2.0.3', '3:f6bf190b5e4a59f02bcc3db933b369ec', 275);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-192::destevezg (generated)::(Checksum: 3:19d7e4f37a06adf14f372a57f894026d)
-ALTER TABLE `kinton`.`workload_machine_load_rule` ADD CONSTRAINT `FK_mlrule_machine` FOREIGN KEY (`idMachine`) REFERENCES `kinton`.`physicalmachine` (`idPhysicalMachine`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-192', '2.0.3', '3:19d7e4f37a06adf14f372a57f894026d', 276);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337848104277-193::destevezg (generated)::(Checksum: 3:98e3e9fbffc688e3cdf0a6f62cc886ab)
-ALTER TABLE `kinton`.`workload_machine_load_rule` ADD CONSTRAINT `FK_mlrule_rack` FOREIGN KEY (`idRack`) REFERENCES `kinton`.`rack` (`idRack`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337848104277-193', '2.0.3', '3:98e3e9fbffc688e3cdf0a6f62cc886ab', 277);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-3::destevezg (generated)::(Checksum: 3:87349e83626f9fb90db22db902f3b164)
-ALTER TABLE `kinton`.`diskstateful_conversions` ADD CONSTRAINT `idManagement_FK2` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`volume_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-3', '2.0.3', '3:87349e83626f9fb90db22db902f3b164', 278);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-4::destevezg (generated)::(Checksum: 3:ac5709e413466a1f11ac597a7c5a585e)
-ALTER TABLE `kinton`.`initiator_mapping` ADD CONSTRAINT `volume_managementFK_1` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`volume_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-4', '2.0.3', '3:ac5709e413466a1f11ac597a7c5a585e', 279);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-5::destevezg (generated)::(Checksum: 3:258283ddc293a5413837c04174818f97)
-ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idManagement_FK4` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`volume_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-5', '2.0.3', '3:258283ddc293a5413837c04174818f97', 280);
-
--- Changeset src/2.0ga/kinton-2.0ga.xml::1337866919799-6::destevezg (generated)::(Checksum: 3:4026921db5863970af971d6346b563ed)
-ALTER TABLE `kinton`.`node_virtual_image_stateful_conversions` ADD CONSTRAINT `idNodeVirtualImage_FK4` FOREIGN KEY (`idNodeVirtualImage`) REFERENCES `kinton`.`nodevirtualimage` (`idNode`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0ga/kinton-2.0ga.xml', '1337866919799-6', '2.0.3', '3:4026921db5863970af971d6346b563ed', 281);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-1::destevezg (generated)::(Checksum: 3:e2dcb29ad5406df0802012ef391de0ff)
-ALTER TABLE `kinton`.`category` ADD `idEnterprise` INT UNSIGNED;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-1', '2.0.3', '3:e2dcb29ad5406df0802012ef391de0ff', 282);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-2::destevezg (generated)::(Checksum: 3:7c8e1ea0630376b5d6124083673e4b1e)
-ALTER TABLE `kinton`.`category` ADD CONSTRAINT `category_enterprise_FK` FOREIGN KEY (`idEnterprise`) REFERENCES `kinton`.`enterprise` (`idEnterprise`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-2', '2.0.3', '3:7c8e1ea0630376b5d6124083673e4b1e', 283);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-3::destevezg (generated)::(Checksum: 3:9fa54ec9f24cfe1738d991eb1ba27029)
-DROP INDEX `name` ON `kinton`.`category`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Index', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-3', '2.0.3', '3:9fa54ec9f24cfe1738d991eb1ba27029', 284);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::1336469245439-4::destevezg (generated)::(Checksum: 3:d395cdedeb298779d6b6ffe8227a3145)
-CREATE UNIQUE INDEX `name` ON `kinton`.`category`(`name`, `idEnterprise`);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Create Index', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', '1336469245439-4', '2.0.3', '3:d395cdedeb298779d6b6ffe8227a3145', 285);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::new_roles::destevezg (generated)::(Checksum: 3:af3b0c4fbec8b55829ccb6bb719d853f)
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (51, 'USERS_MANAGE_CHEF_ENTERPRISE', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (52, 'MANAGE_HARD_DISKS', 0);
-
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (53, 'APPLIB_MANAGE_GLOBAL_CATEGORIES', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_roles', '2.0.3', '3:af3b0c4fbec8b55829ccb6bb719d853f', 286);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::new_roles_privileges::destevezg (generated)::(Checksum: 3:47cd29b2bef41ce1030a4ff606a13247)
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (51, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (52, 1, 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (53, 1, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row (x3)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_roles_privileges', '2.0.3', '3:47cd29b2bef41ce1030a4ff606a13247', 287);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::new_system_properties::destevezg (generated)::(Checksum: 3:fd220730402f42a743fb053338d61469)
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show (1) or hide (0) hard disk tab', 'client.main.showHardDisk', '1', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'new_system_properties', '2.0.3', '3:fd220730402f42a743fb053338d61469', 288);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::fix_availableVirtualDatacenters::destevezg (generated)::(Checksum: 3:db92fadc2e165d504c60c4a50b2647ab)
--- Change to NULL to avoid an empty string for the property availableVirtualDatacenters
-UPDATE IGNORE user SET availableVirtualDatacenters = NULL WHERE availableVirtualDatacenters = "";
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', 'Change to NULL to avoid an empty string for the property availableVirtualDatacenters', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'fix_availableVirtualDatacenters', '2.0.3', '3:db92fadc2e165d504c60c4a50b2647ab', 289);
-
--- Changeset src/2.0.0-HF1/kinton-2.0.0-HF1.xml::Triggerschangedfor2.0HF1::destevez::(Checksum: 3:5d23aff108d74c5aa470120df95d9ba1)
-DROP TRIGGER IF EXISTS create_nodevirtualimage_update_stats;
-
-DROP TRIGGER IF EXISTS delete_nodevirtualimage_update_stats;
-
-DROP TRIGGER IF EXISTS update_virtualmachine_update_stats;
-
-DROP TRIGGER IF EXISTS update_virtualapp_update_stats;
-
-DELIMITER |
-CREATE TRIGGER create_nodevirtualimage_update_stats AFTER INSERT ON nodevirtualimage
-  FOR EACH ROW BEGIN
-    DECLARE idDataCenterObj INTEGER;
-    DECLARE idVirtualAppObj INTEGER;
-    DECLARE idVirtualDataCenterObj INTEGER;
-    DECLARE idEnterpriseObj INTEGER;
-    DECLARE costCodeObj int(4);
-    DECLARE type INTEGER;
-    DECLARE state VARCHAR(50);
-    DECLARE ram INTEGER;
-    DECLARE cpu INTEGER;
-    DECLARE hd bigint;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    SELECT vapp.idVirtualApp, vapp.idVirtualDataCenter, vdc.idDataCenter, vdc.idEnterprise  INTO idVirtualAppObj, idVirtualDataCenterObj, idDataCenterObj, idEnterpriseObj
-      FROM node n, virtualapp vapp, virtualdatacenter vdc
-      WHERE vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-      AND n.idNode = NEW.idNode
-      AND n.idVirtualApp = vapp.idVirtualApp;
-      SELECT vm.idType, vm.state, vm.cpu, vm.ram, vm.hd INTO type, state, cpu, ram, hd
-     FROM virtualmachine vm
-	WHERE vm.idVM = NEW.idVM;
-      --  INSERT INTO debug_msg (msg) VALUES (CONCAT('createNVI ', type, ' - ', state, ' - ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL')));
-    IF type=1 THEN
-    	-- Imported !!!
-		UPDATE IGNORE cloud_usage_stats SET vMachinesTotal = vMachinesTotal+1
-                WHERE idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vapp_enterprise_stats SET vmCreated = vmCreated+1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmCreated = vmCreated+1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-          IF state = "ON" THEN 	
-			UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive+1
-		        WHERE idVirtualApp = idVirtualAppObj;
-		        UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive+1
-		        WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-		        UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning+1
-		        WHERE idDataCenter = idDataCenterObj;       
-		        UPDATE IGNORE enterprise_resources_stats 
-		            SET vCpuUsed = vCpuUsed + cpu,
-		                memoryUsed = memoryUsed + ram,
-		                localStorageUsed = localStorageUsed + hd
-		        WHERE idEnterprise = idEnterpriseObj;
-		        UPDATE IGNORE dc_enterprise_stats 
-		        SET     vCpuUsed = vCpuUsed + cpu,
-		            memoryUsed = memoryUsed + ram,
-		            localStorageUsed = localStorageUsed + hd
-		        WHERE idEnterprise = idEnterpriseObj AND idDataCenter = idDataCenterObj;
-		        UPDATE IGNORE vdc_enterprise_stats 
-		        SET     vCpuUsed = vCpuUsed + cpu,
-		            memoryUsed = memoryUsed + ram,
-		            localStorageUsed = localStorageUsed + hd
-		        WHERE idVirtualDataCenter = idVirtualDataCenterObj;	
-		END IF;
-    END IF;    
-    SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
-        FROM virtualimage vi
-        WHERE vi.idImage = NEW.idImage;
-    IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=NEW.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(NEW.idVM, type, "NOT_ALLOCATED", state, "NOT_ALLOCATED", ram, cpu, hd, costCodeObj);
-        END IF;              
-     END IF;
-    END IF;
-  END;
-|
-DELIMITER ;
-
-DELIMITER |
-CREATE TRIGGER delete_nodevirtualimage_update_stats AFTER DELETE ON nodevirtualimage
-  FOR EACH ROW BEGIN
-    DECLARE idDataCenterObj INTEGER;
-    DECLARE idVirtualAppObj INTEGER;
-    DECLARE idVirtualDataCenterObj INTEGER;
-    DECLARE idEnterpriseObj INTEGER;   
-    DECLARE costCodeObj int(4); 
-    DECLARE previousState VARCHAR(50);
-    DECLARE state VARCHAR(50);
-    DECLARE ram INTEGER;
-    DECLARE cpu INTEGER;
-    DECLARE hd bigint;
-    DECLARE type INTEGER;
-    DECLARE isUsingIP INTEGER;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    SELECT vapp.idVirtualApp, vapp.idVirtualDataCenter, vdc.idDataCenter, vdc.idEnterprise INTO idVirtualAppObj, idVirtualDataCenterObj, idDataCenterObj, idEnterpriseObj
-      FROM node n, virtualapp vapp, virtualdatacenter vdc
-      WHERE vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-      AND n.idNode = OLD.idNode
-      AND n.idVirtualApp = vapp.idVirtualApp;
-      SELECT vm.idType, vm.cpu, vm.ram, vm.hd, vm.state INTO type, cpu, ram, hd, state
-     FROM virtualmachine vm
-	WHERE vm.idVM = OLD.idVM;
-    SELECT vmts.previousState INTO previousState
-     FROM virtualmachinetrackedstate vmts
-	WHERE vmts.idVM = OLD.idVM;
-    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('deleteNVI ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL'), ' - ',IFNULL(previousState,'NULL')));
--- INSERT INTO debug_msg (msg) VALUES (CONCAT('deleteNVI values', IFNULL(cpu,'NULL'), ' - ',IFNULL(ram,'NULL'), ' - ',IFNULL(hd,'NULL')));						
-    --
-    IF type = 1 THEN
-      IF previousState != "NOT_ALLOCATED" THEN      
-        UPDATE IGNORE cloud_usage_stats SET vMachinesTotal = vMachinesTotal-1
-          WHERE idDataCenter = idDataCenterObj;
-        UPDATE IGNORE vapp_enterprise_stats SET vmCreated = vmCreated-1
-          WHERE idVirtualApp = idVirtualAppObj;
-        UPDATE IGNORE vdc_enterprise_stats SET vmCreated = vmCreated-1
-          WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-           UPDATE IGNORE enterprise_resources_stats 
-               SET vCpuUsed = vCpuUsed - cpu,
-                   memoryUsed = memoryUsed - ram,
-                   localStorageUsed = localStorageUsed - hd
-           WHERE idEnterprise = idEnterpriseObj;
-           UPDATE IGNORE dc_enterprise_stats 
-           SET     vCpuUsed = vCpuUsed - cpu,
-               memoryUsed = memoryUsed - ram,
-               localStorageUsed = localStorageUsed - hd
-           WHERE idEnterprise = idEnterpriseObj AND idDataCenter = idDataCenterObj;
-           UPDATE IGNORE vdc_enterprise_stats 
-           SET     vCpuUsed = vCpuUsed - cpu,
-               memoryUsed = memoryUsed - ram,
-               localStorageUsed = localStorageUsed - hd
-           WHERE idVirtualDataCenter = idVirtualDataCenterObj;                 
-      END IF;
-      --
-      IF previousState = "ON" THEN
-        UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning-1
-        WHERE idDataCenter = idDataCenterObj;
-        UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive-1
-        WHERE idVirtualApp = idVirtualAppObj;
-        UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive-1
-        WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-      END IF;
-    END IF;
-    SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
-        FROM virtualimage vi
-        WHERE vi.idImage = OLD.idImage;
-    IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=OLD.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(OLD.idVM, type, "-", "NOT_ALLOCATED", previousState, ram, cpu, hd, costCodeObj);
-        END IF;              
-     END IF;
-  END IF;
-  END;
-|
-DELIMITER ;
-
-DELIMITER |
-CREATE TRIGGER update_virtualmachine_update_stats AFTER UPDATE ON virtualmachine
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idVirtualAppObj INTEGER;
-        DECLARE idVirtualDataCenterObj INTEGER;	
-        DECLARE costCodeObj int(4);
-	DECLARE previousState VARCHAR(50);
-	DECLARE extraHDSize BIGINT DEFAULT 0;
-	-- For debugging purposes only        
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
-	-- We always store previous state when starting a transaction
-	IF NEW.state != OLD.state AND NEW.state='LOCKED' THEN
-		UPDATE virtualmachinetrackedstate SET previousState=OLD.state WHERE idVM=NEW.idVM;
-	END IF;
-	--
-	SELECT vmts.previousState INTO previousState
-        FROM virtualmachinetrackedstate vmts
-	WHERE vmts.idVM = NEW.idVM;
-	-- -- INSERT INTO debug_msg (msg) VALUES (CONCAT('UPDATE: ', NEW.idVM, ' - ', OLD.idType, ' - ', NEW.idType, ' - ', OLD.state, ' - ', NEW.state, ' - ', previousState));	
-        --  Updating enterprise_resources_stats: VCPU Used, Memory Used, Local Storage Used
-        IF OLD.idHypervisor IS NULL OR (OLD.idHypervisor != NEW.idHypervisor) THEN
-            SELECT pm.idDataCenter INTO idDataCenterObj
-            FROM hypervisor hy, physicalmachine pm
-            WHERE NEW.idHypervisor=hy.id
-            AND hy.idPhysicalMachine=pm.idPhysicalMachine;
-        ELSE 
-            SELECT pm.idDataCenter INTO idDataCenterObj
-            FROM hypervisor hy, physicalmachine pm
-            WHERE OLD.idHypervisor=hy.id
-            AND hy.idPhysicalMachine=pm.idPhysicalMachine;
-        END IF;     
-        --
-        SELECT n.idVirtualApp, vapp.idVirtualDataCenter INTO idVirtualAppObj, idVirtualDataCenterObj
-        FROM nodevirtualimage nvi, node n, virtualapp vapp
-        WHERE NEW.idVM = nvi.idVM
-        AND nvi.idNode = n.idNode
-        AND vapp.idVirtualApp = n.idVirtualApp;   
--- -- INSERT INTO debug_msg (msg) VALUES (CONCAT('update values ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL'), ' - ',IFNULL(previousState,'NULL')));
-	--
-	-- Imported VMs will be updated on create_node_virtual_image
-	-- Used Stats (vCpuUsed, vMemoryUsed, vStorageUsed) are updated from delete_nodevirtualimage_update_stats ON DELETE nodevirtualimage when updating the VApp
-	-- Main case: an imported VM changes its state (from LOCKED to ...)
-	IF NEW.idType = 1 AND (NEW.state != OLD.state) THEN
-            IF NEW.state = "ON" AND (previousState != "ON" OR OLD.state="UNKNOWN") THEN 
-                -- New Active		
-                UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive+1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive+1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning+1
-                WHERE idDataCenter = idDataCenterObj;       
-		SELECT IFNULL(SUM(limitResource),0) * 1048576 INTO extraHDSize 
-		FROM rasd_management rm, rasd r 
-		WHERE rm.idResource = r.instanceID AND rm.idVM = NEW.idVM AND rm.idResourceType=17;    
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW ExtraHDs added ', extraHDSize));
-                UPDATE IGNORE enterprise_resources_stats 
-                    SET vCpuUsed = vCpuUsed + NEW.cpu,
-                        memoryUsed = memoryUsed + NEW.ram,
-                        localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed + NEW.cpu,
-                    memoryUsed = memoryUsed + NEW.ram,
-                    localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed + NEW.cpu,
-                    memoryUsed = memoryUsed + NEW.ram,
-                    localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;		
-	    ELSEIF (NEW.state IN ("PAUSED","OFF","NOT_ALLOCATED","UNKNOWN") AND OLD.state="LOCKED" AND previousState = "ON") OR 
-	    		  (NEW.state IN ("PAUSED","OFF","NOT_ALLOCATED","UNKNOWN") AND OLD.state="ON") THEN
-                -- When Undeploying a full Vapp
-                -- Undeploying the Vapp implies OLD.state = LOCKED + previousState = ON 
-                -- Powering OFF the VM implies  OLD.state = LOCKED + previousState = ON
-                -- Destroying the VM implies OLD.state = ON
-                UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive-1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive-1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning-1
-                WHERE idDataCenter = idDataCenterObj;
-				SELECT IFNULL(SUM(limitResource),0) * 1048576 INTO extraHDSize 
-				FROM rasd_management rm, rasd r 
-				WHERE rm.idResource = r.instanceID AND rm.idVM = NEW.idVM AND rm.idResourceType=17;    
-				-- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW ExtraHDs removed ', extraHDSize));
-                UPDATE IGNORE enterprise_resources_stats 
-                    SET vCpuUsed = vCpuUsed - NEW.cpu,
-                        memoryUsed = memoryUsed - NEW.ram,
-                        localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed - NEW.cpu,
-                    memoryUsed = memoryUsed - NEW.ram,
-                    localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed - NEW.cpu,
-                    memoryUsed = memoryUsed - NEW.ram,
-                    localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj; 
-                -- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW state is NOT_RUNNING ', OLD.state, ' - ', previousState));
-            END IF;
-        END IF;
-        --
-        SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
-        FROM virtualimage vi
-        WHERE vi.idImage = NEW.idImage;
-        -- Register Accounting Events
-        IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       		 IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=NEW.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(NEW.idVM, NEW.idType, OLD.state, NEW.state, previousState, NEW.ram, NEW.cpu, NEW.hd + extraHDSize, costCodeObj);
-       		 END IF;              
-	    END IF;
-      END IF;
-    END;
-|
-DELIMITER ;
-
-DELIMITER |
-CREATE TRIGGER update_virtualapp_update_stats AFTER UPDATE ON virtualapp
-  FOR EACH ROW BEGIN
-    DECLARE numVMachinesCreated INTEGER;
-    DECLARE vdcNameObj VARCHAR(45);
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    -- V2V: Vmachines moved between VDC
-  IF NEW.idVirtualDataCenter != OLD.idVirtualDataCenter THEN
-	-- calculate vmachines total and running in this Vapp
-	SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numVMachinesCreated
-	FROM nodevirtualimage nvi, virtualmachine v, node n
-	WHERE nvi.idNode IS NOT NULL
-	AND v.idVM = nvi.idVM
-	AND n.idNode = nvi.idNode
-	AND n.idVirtualApp = NEW.idVirtualApp
-	AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN"
-	and v.idType = 1;
-	UPDATE IGNORE vdc_enterprise_stats SET vmCreated = vmCreated- numVMachinesCreated WHERE idVirtualDataCenter = OLD.idVirtualDataCenter;
-	UPDATE IGNORE vdc_enterprise_stats SET vmCreated = vmCreated+ numVMachinesCreated WHERE idVirtualDataCenter = NEW.idVirtualDataCenter;
-	-- Changing VDC name in VAppStats
-	SELECT vdc.name INTO vdcNameObj
-	FROM virtualdatacenter vdc
-	WHERE vdc.idVirtualDataCenter = NEW.idVirtualDataCenter;
-	UPDATE IGNORE vapp_enterprise_stats SET vdcName = vdcNameObj WHERE idVirtualApp = NEW.idVirtualApp;
-    END IF;
-    -- Checks for changes
-    IF OLD.name != NEW.name THEN
-      -- Name changed !!!
-      UPDATE IGNORE vapp_enterprise_stats SET vappName = NEW.name
-      WHERE idVirtualApp = NEW.idVirtualApp;
-    END IF;
-  END IF;
-  END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL (x4), SQL From File (x4)', 'EXECUTED', 'src/2.0.0-HF1/kinton-2.0.0-HF1.xml', 'Triggerschangedfor2.0HF1', '2.0.3', '3:5d23aff108d74c5aa470120df95d9ba1', 290);
-
--- Changeset src/2.0.0-HF3/kinton-2.0.0-HF3.xml::ABICLOUDPREMIUM-3908-calculate_cloud_usage_stats::destevez::(Checksum: 3:68385f363d412ac77ead3713a4cba021)
-DROP PROCEDURE IF EXISTS CalculateCloudUsageStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateCloudUsageStats()
-   BEGIN
-  DECLARE idDataCenterObj INTEGER;
-  DECLARE serversTotal BIGINT UNSIGNED;
-  DECLARE serversRunning BIGINT UNSIGNED;
-  DECLARE storageTotal BIGINT UNSIGNED;
-  DECLARE storageUsed BIGINT UNSIGNED;
-  DECLARE publicIPsTotal BIGINT UNSIGNED;
-  DECLARE publicIPsReserved BIGINT UNSIGNED;
-  DECLARE publicIPsUsed BIGINT UNSIGNED;
-  DECLARE vMachinesTotal BIGINT UNSIGNED;
-  DECLARE vMachinesRunning BIGINT UNSIGNED;
-  DECLARE vCpuTotal BIGINT UNSIGNED;
-  DECLARE vCpuReserved BIGINT UNSIGNED;
-  DECLARE vCpuUsed BIGINT UNSIGNED;
-  DECLARE vMemoryTotal BIGINT UNSIGNED;
-  DECLARE vMemoryReserved BIGINT UNSIGNED;
-  DECLARE vMemoryUsed BIGINT UNSIGNED;
-  DECLARE vStorageReserved BIGINT UNSIGNED;
-  DECLARE vStorageUsed BIGINT UNSIGNED;
-  DECLARE vStorageTotal BIGINT UNSIGNED;
-  DECLARE numUsersCreated BIGINT UNSIGNED;
-  DECLARE numVDCCreated BIGINT UNSIGNED;
-  DECLARE numEnterprisesCreated BIGINT UNSIGNED;
-  DECLARE storageReserved BIGINT UNSIGNED; 
-  DECLARE vlanReserved BIGINT UNSIGNED; 
-  DECLARE vlanUsed BIGINT UNSIGNED; 
-
-  DECLARE no_more_dcs INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT idDataCenter FROM datacenter;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_dcs=1;
-
-  SET no_more_dcs=0;
-  SET idDataCenterObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE cloud_usage_stats;
-
-  dept_loop:WHILE(no_more_dcs=0) DO
-    FETCH curDC INTO idDataCenterObj;
-    IF no_more_dcs=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO serversTotal
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState!=2;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO serversRunning
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState=3;
-    --
-    SELECT IF (SUM(limitResource) IS NULL, 0, SUM(limitResource))   INTO storageTotal
-    FROM rasd r, rasd_management rm, virtualdatacenter vdc
-    WHERE rm.idResource = r.instanceID
-    AND vdc.idVirtualDataCenter=rm.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (SUM(r.limitResource) IS NULL, 0, SUM(r.limitResource)) INTO storageUsed
-    FROM storage_pool sp, storage_device sd, volume_management vm, rasd_management rm, rasd r
-    WHERE vm.idStorage = sp.idStorage
-    AND sp.idStorageDevice = sd.id
-    AND vm.idManagement = rm.idManagement
-    AND r.instanceID = rm.idResource
-    AND rm.idResourceType = 8
-    AND rm.idResource IS NOT NULL
-    AND (vm.state = 1)
-    AND sd.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsTotal
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsReserved
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND vn.networktype = 'PUBLIC'             
-    AND ipm.mac IS NOT NULL
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsUsed
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND vn.networktype = 'PUBLIC'             
-    AND rm.idManagement = ipm.idManagement
-    AND ipm.mac IS NOT NULL
-    AND rm.idVM IS NOT NULL
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vMachinesTotal
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp, virtualdatacenter vdc
-    WHERE v.idVM = nvi.idVM
-    AND n.idNode=nvi.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj
-    AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN" 
-    and v.idType = 1;
-    --
-    SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vMachinesRunning
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp, virtualdatacenter vdc
-    WHERE v.idVM = nvi.idVM
-    AND n.idNode=nvi.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj
-    AND v.state = "ON"
-    and v.idType = 1;
-    --
-    SELECT IF (SUM(cpu) IS NULL,0,SUM(cpu)), IF (SUM(ram) IS NULL,0,SUM(ram)), IF (SUM(cpuUsed) IS NULL,0,SUM(cpuUsed)), IF (SUM(ramUsed) IS NULL,0,SUM(ramUsed)) 			INTO vCpuTotal, vMemoryTotal, vCpuUsed, vMemoryUsed
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState = 3; 
-    --
-    CALL get_datastore_size_by_dc(idDataCenterObj,vStorageTotal);
-    CALL get_datastore_used_size_by_dc(idDataCenterObj,vStorageUsed);
-    --
-    SELECT IF (SUM(vlanHard) IS NULL, 0, SUM(vlanHard))  INTO vlanReserved
-    FROM enterprise_limits_by_datacenter 
-    WHERE idDataCenter = idDataCenterObj AND idEnterprise IS NOT NULL;
-
-    -- Inserts stats row
-    INSERT INTO cloud_usage_stats
-    (idDataCenter,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,vCpuReserved,vCpuUsed,
-    vMemoryTotal,vMemoryReserved,vMemoryUsed,
-    vStorageReserved,vStorageUsed,vStorageTotal,
-    vlanReserved,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated)
-    VALUES
-    (idDataCenterObj,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,0,vCpuUsed,
-    vMemoryTotal,0,vMemoryUsed,
-    0,vStorageUsed,vStorageTotal,
-    vlanReserved,
-    0,0,0);
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-  -- All Cloud Stats (idDataCenter -1): vCpuReserved, VMemoryReserved, VStorageReserved, NumUsersCreated, NumVDCCreated, NumEnterprisesCreated
-  SELECT IF (SUM(cpuHard) IS NULL,0,SUM(cpuHard)), IF (SUM(ramHard) IS NULL,0,SUM(ramHard)), IF (SUM(hdHard) IS NULL,0,SUM(hdHard)), IF (SUM(storageHard) IS NULL,0,SUM(storageHard)) INTO vCpuReserved, vMemoryReserved, vStorageReserved, storageReserved
-  FROM enterprise e;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numUsersCreated
-  FROM user;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numVDCCreated
-  FROM virtualdatacenter vdc;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numEnterprisesCreated
-  FROM enterprise e;
-  --
-  SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vlanUsed
-  FROM vlan_network;
-
-  -- Inserts stats row
-    INSERT INTO cloud_usage_stats
-    (idDataCenter,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,vCpuReserved,vCpuUsed,
-    vMemoryTotal,vMemoryReserved,vMemoryUsed,
-    vStorageReserved,vStorageUsed,vStorageTotal,
-    vlanUsed,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated)
-    VALUES
-    (-1,
-    0,0,
-    0,0,
-    0,0,0,
-    0,0,
-    0,vCpuReserved,0,
-    0,vMemoryReserved,0,
-    vStorageReserved,0,0,
-    vlanUsed,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated);
-   END;
-|
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS get_datastore_size_by_dc;
-
-DELIMITER |
-CREATE PROCEDURE get_datastore_size_by_dc(IN idDC INT, OUT size BIGINT UNSIGNED)
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `get_datastore_size_by_dc` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `get_datastore_size_by_dc`(IN idDC INT, OUT size BIGINT UNSIGNED)
 BEGIN
     SELECT IF (SUM(ds_view.size) IS NULL,0,SUM(ds_view.size)) INTO size
     FROM (SELECT d.size as size FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore 
     LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
     WHERE pm.idDataCenter = idDC AND d.enabled = 1 GROUP BY d.datastoreUuid) ds_view;
-END;
-|
+END */;;
 DELIMITER ;
-
-DROP PROCEDURE IF EXISTS get_datastore_used_size_by_dc;
-
-DELIMITER |
-CREATE PROCEDURE get_datastore_used_size_by_dc(IN idDC INT, OUT usedSize BIGINT UNSIGNED)
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `get_datastore_used_size_by_dc` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `get_datastore_used_size_by_dc`(IN idDC INT, OUT usedSize BIGINT UNSIGNED)
 BEGIN
     SELECT IF (SUM(ds_view.usedSize) IS NULL,0,SUM(ds_view.usedSize)) INTO usedSize
     FROM (SELECT d.usedSize as usedSize FROM datastore d LEFT OUTER JOIN datastore_assignment da ON d.idDatastore = da.idDatastore
     LEFT OUTER JOIN physicalmachine pm ON da.idPhysicalMachine = pm.idPhysicalMachine
     WHERE pm.idDataCenter = idDC AND d.enabled = 1 GROUP BY d.datastoreUuid) ds_view;
-END;
-|
+END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.0.0-HF3/kinton-2.0.0-HF3.xml', 'ABICLOUDPREMIUM-3908-calculate_cloud_usage_stats', '2.0.3', '3:68385f363d412ac77ead3713a4cba021', 291);
-
--- Changeset src/2.2/kinton-2.2.xml::1336485500618-1::destevezg (generated)::(Checksum: 3:4441c84bd8a0fcebb40e9bb65aaf5191)
-ALTER TABLE `kinton`.`pricingTemplate` ADD `memoryGB` DECIMAL(20,5) DEFAULT '0';
-
-UPDATE pricingTemplate SET memoryGB = memoryMB/1024;
-
-ALTER TABLE `kinton`.`pricingTemplate` DROP COLUMN `memoryMB`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Column, Custom SQL, Drop Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-1', '2.0.3', '3:4441c84bd8a0fcebb40e9bb65aaf5191', 292);
-
--- Changeset src/2.2/kinton-2.2.xml::1336485500618-2::destevezg (generated)::(Checksum: 3:3e028861a9cd184465e4b26a3cfcb777)
-ALTER TABLE `kinton`.`metering` MODIFY `user` VARCHAR(128) NOT NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Not-Null Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-2', '2.0.3', '3:3e028861a9cd184465e4b26a3cfcb777', 293);
-
--- Changeset src/2.2/kinton-2.2.xml::1336485500618-5::destevezg (generated)::(Checksum: 3:c79a9d931d4ba6ccb61f1169afba19a8)
-ALTER TABLE `kinton`.`costCodeCurrency` ADD CONSTRAINT `idCurrency_FK` FOREIGN KEY (`idCurrency`) REFERENCES `kinton`.`currency` (`idCurrency`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-5', '2.0.3', '3:c79a9d931d4ba6ccb61f1169afba19a8', 294);
-
--- Changeset src/2.2/kinton-2.2.xml::1336485500618-7::destevezg (generated)::(Checksum: 3:5b51a053210935c51c948d0c7fa381dc)
-ALTER TABLE `kinton`.`costCode` MODIFY `idCostCode` INT UNSIGNED AUTO_INCREMENT;
-
-ALTER TABLE `kinton`.`pricingCostCode` ADD CONSTRAINT `pricingCostCode_FK2` FOREIGN KEY (`idPricingTemplate`) REFERENCES `kinton`.`pricingTemplate` (`idPricingTemplate`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Set Column as Auto-Increment, Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-7', '2.0.3', '3:5b51a053210935c51c948d0c7fa381dc', 295);
-
--- Changeset src/2.2/kinton-2.2.xml::1336485500618-8::destevezg (generated)::(Checksum: 3:18db5a13981a0ab6234d17f46e8eda05)
-ALTER TABLE `kinton`.`pricingTier` ADD CONSTRAINT `pricingTier_FK2` FOREIGN KEY (`idPricingTemplate`) REFERENCES `kinton`.`pricingTemplate` (`idPricingTemplate`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-8', '2.0.3', '3:18db5a13981a0ab6234d17f46e8eda05', 296);
-
--- Changeset src/2.2/kinton-2.2.xml::1336485500618-9::destevezg (generated)::(Checksum: 3:51b22321576067fff7232c38f0ab65c8)
-ALTER TABLE `kinton`.`pricingTier` ADD CONSTRAINT `pricingTier_FK1` FOREIGN KEY (`idTier`) REFERENCES `kinton`.`tier` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-9', '2.0.3', '3:51b22321576067fff7232c38f0ab65c8', 297);
-
--- Changeset src/2.2/kinton-2.2.xml::1336485500618-11::destevezg (generated)::(Checksum: 3:219c18769d18cef1d17381ba4a1bb5ce)
-DROP TABLE `kinton`.`log`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1336485500618-11', '2.0.3', '3:219c18769d18cef1d17381ba4a1bb5ce', 298);
-
--- Changeset src/2.2/kinton-2.2.xml::1337940808955-1::destevezg (generated)::(Checksum: 3:6f998f6f3e1878a5b204ced6fe8c34e4)
-ALTER TABLE `kinton`.`metering` MODIFY `user` VARCHAR(128) NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Drop Not-Null Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-1', '2.0.3', '3:6f998f6f3e1878a5b204ced6fe8c34e4', 299);
-
--- Changeset src/2.2/kinton-2.2.xml::1337940808955-5::destevezg (generated)::(Checksum: 3:6e1b2afc755e1e0933c651e6b5ee8eb7)
-ALTER TABLE `kinton`.`costCodeCurrency` ADD CONSTRAINT `idCostCode_FK` FOREIGN KEY (`idCostCode`) REFERENCES `kinton`.`costCode` (`idCostCode`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-5', '2.0.3', '3:6e1b2afc755e1e0933c651e6b5ee8eb7', 300);
-
--- Changeset src/2.2/kinton-2.2.xml::1337940808955-6::destevezg (generated)::(Checksum: 3:db624edc38a2e1cacb2ebe3a6156bccc)
-ALTER TABLE `kinton`.`pricingCostCode` ADD CONSTRAINT `pricingCostCode_FK1` FOREIGN KEY (`idCostCode`) REFERENCES `kinton`.`costCode` (`idCostCode`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevezg (generated)', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', '1337940808955-6', '2.0.3', '3:db624edc38a2e1cacb2ebe3a6156bccc', 301);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3856::sacedo::(Checksum: 3:58ee105e73f736fa89b0804f646f73e4)
-ALTER TABLE `kinton`.`virtualmachine` ADD `keymap` VARCHAR(255);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('sacedo', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3856', '2.0.3', '3:58ee105e73f736fa89b0804f646f73e4', 302);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698::zmalik::(Checksum: 3:ccd5c84bb742930df6ccd39f8fb552e5)
-CREATE TABLE `kinton`.`scope` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `name` VARCHAR(255) DEFAULT 'auto_name' NOT NULL, `autoEnt` TINYINT(1) DEFAULT 0 NOT NULL, `autoDat` TINYINT(1) DEFAULT 0 NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_SCOPE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-CREATE TABLE `kinton`.`scope_resource` (`id` INT UNSIGNED AUTO_INCREMENT NOT NULL, `idScope` INT UNSIGNED NOT NULL, `idResource` INT UNSIGNED NOT NULL, `resourceType` VARCHAR(64) DEFAULT 'auto_name' NOT NULL, `version_c` INT DEFAULT 0, CONSTRAINT `PK_SCOPE_RESOURCE` PRIMARY KEY (`id`)) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Create Table (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698', '2.0.3', '3:ccd5c84bb742930df6ccd39f8fb552e5', 303);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-columns::zmalik::(Checksum: 3:0d7c4b7edc6c4c10d3f13e101d1151cf)
-ALTER TABLE `kinton`.`role` ADD `idScope` INT UNSIGNED;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Column', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-columns', '2.0.3', '3:0d7c4b7edc6c4c10d3f13e101d1151cf', 304);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-constraints::zmalik::(Checksum: 3:8afd9227de5253e2a04506ad214a6931)
-ALTER TABLE `kinton`.`scope_resource` ADD CONSTRAINT `fk_scope_resource_scope` FOREIGN KEY (`idScope`) REFERENCES `kinton`.`scope` (`id`) ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-constraints', '2.0.3', '3:8afd9227de5253e2a04506ad214a6931', 305);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-constraints1::zmalik::(Checksum: 3:bd3389b3752100eb6a4262004441e391)
-ALTER TABLE `kinton`.`role` ADD CONSTRAINT `fk_role_scope` FOREIGN KEY (`idScope`) REFERENCES `kinton`.`scope` (`id`) ON DELETE SET NULL;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-constraints1', '2.0.3', '3:bd3389b3752100eb6a4262004441e391', 306);
-
--- Changeset src/2.2/kinton-2.2.xml::fixWrongDBEngine::destevez::(Checksum: 3:c2313c070f2d1d0c561c27d2b46995ba)
-ALTER TABLE metering ENGINE=InnoDB;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'fixWrongDBEngine', '2.0.3', '3:c2313c070f2d1d0c561c27d2b46995ba', 307);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-update-and-inserts::zmalik::(Checksum: 3:2d4ecdd62de718f0b6f8e4b653909ebf)
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (54, 'USERS_MANAGE_SCOPES', 0);
-
-INSERT INTO `kinton`.`scope` (`autoDat`, `autoEnt`, `id`, `name`, `version_c`) VALUES (0, 0, 1, 'Global scope', 0);
-
-UPDATE `kinton`.`role` SET `idScope` = '1';
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row (x2), Update Data', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-update-and-inserts', '2.0.3', '3:2d4ecdd62de718f0b6f8e4b653909ebf', 308);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3698-admin::zmalik::(Checksum: 3:af289f7006bdc919bc053d038cbdbf25)
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (54, 1, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('zmalik', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3698-admin', '2.0.3', '3:af289f7006bdc919bc053d038cbdbf25', 309);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-0::jdevesa::(Checksum: 3:8d84d03c13f8b54bc6f46b47b3b4c6f2)
-CREATE TABLE `kinton`.`dvd_management` (`idManagement` INT UNSIGNED NOT NULL, `idImage` INT UNSIGNED) engine innodb default charset=utf8;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Create Table', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-0', '2.0.3', '3:8d84d03c13f8b54bc6f46b47b3b4c6f2', 310);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-1::jdevesa::(Checksum: 3:6a705cc1e1c2c2ba4a9eec6a0a430623)
-ALTER TABLE `kinton`.`dvd_management` ADD CONSTRAINT `dvd_management_image_FK` FOREIGN KEY (`idImage`) REFERENCES `kinton`.`virtualimage` (`idImage`) ON UPDATE NO ACTION ON DELETE NO ACTION;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-1', '2.0.3', '3:6a705cc1e1c2c2ba4a9eec6a0a430623', 311);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3875-2::jdevesa::(Checksum: 3:423310274c7be31be9d4435fca0d23f6)
-ALTER TABLE `kinton`.`dvd_management` ADD CONSTRAINT `dvd_idManagement_FK` FOREIGN KEY (`idManagement`) REFERENCES `kinton`.`rasd_management` (`idManagement`) ON UPDATE NO ACTION ON DELETE CASCADE;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Add Foreign Key Constraint', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3875-2', '2.0.3', '3:423310274c7be31be9d4435fca0d23f6', 312);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4033::xthevenot::(Checksum: 3:ee17d425d7bbd7981fff90e0876dec5f)
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Default index view (0 is the Home, 1 Infrastructure, ...)', 'client.main.defaultView', '0', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4033', '2.0.3', '3:ee17d425d7bbd7981fff90e0876dec5f', 313);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4344::xthevenot::(Checksum: 3:413e9afa18ea719bd4c58a7c468fdd6e)
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show soft limit info (1 show, 0 hide)', 'client.main.showSoftInfo', '1', 0);
-
-INSERT INTO `kinton`.`system_properties` (`description`, `name`, `value`, `version_c`) VALUES ('Show hard limit info (1 show, 0 hide)', 'client.main.showHardInfo', '1', 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4344', '2.0.3', '3:413e9afa18ea719bd4c58a7c468fdd6e', 314);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3910::xthevenot::(Checksum: 3:d6ef777a6b393e0a780b4a233d4c6884)
-INSERT INTO `kinton`.`privilege` (`idPrivilege`, `name`, `version_c`) VALUES (55, 'USERS_MANAGE_RESERVED_MACHINES', 0);
-
-INSERT INTO `kinton`.`roles_privileges` (`idPrivilege`, `idRole`, `version_c`) VALUES (55, 1, 0);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Insert Row (x2)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3910', '2.0.3', '3:d6ef777a6b393e0a780b4a233d4c6884', 315);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4407::xthevenot::(Checksum: 3:7eb210f7ec2e3d8c4db8200a88d892bd)
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement' WHERE name='client.wiki.allocation.datacenter' AND value='http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-DatacenterRulesManagement';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement' WHERE name='client.wiki.allocation.global' AND value='http://community.abiquo.com/display/ABI20/Manage+Allocation+Rules#ManageAllocationRules-GlobalRulesManagement';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem' WHERE name='client.wiki.apps.uploadVM' AND value='http://community.abiquo.com/display/ABI20/Adding+VM+Templates+to+the+Appliance+Library#AddingVMTemplatestotheApplianceLibrary-UploadingfromtheLocalFilesystem';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view' WHERE name='client.wiki.config.general' AND value='http://community.abiquo.com/display/ABI20/Configuration+view';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view#ConfigurationView-Heartbeat' WHERE name='client.wiki.config.heartbeat' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-Heartbeating';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configuration+view#ConfigurationView-LicenseManagement' WHERE name='client.wiki.config.licence' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#ConfigurationView-LicenseManagement';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI20/Configuration+view#Configurationview-ProductRegistration' WHERE name='client.wiki.config.registration' AND value='http://community.abiquo.com/display/ABI20/Configuration+view#Configurationview-ProductRegistration';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Abiquo+Documentation+Home' WHERE name='client.wiki.defaultURL' AND value='http://community.abiquo.com/display/ABI20/Abiquo+Documentation+Home';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-DatastoreManagement' WHERE name='client.wiki.infra.addDatastore' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DatastoreManagement';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter' WHERE name='client.wiki.infra.createDatacenter' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-CreatingaDatacenter';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-CreatingMultiplePhysicalMachines' WHERE name='client.wiki.infra.createMultiplePhysicalMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingMultiplePhysicalMachines';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-CreatingPhysicalMachinesonStandardRacks' WHERE name='client.wiki.infra.createPhysicalMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-CreatingPhysicalMachinesonStandardRacks';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Racks#ManageRacks-CreatingRacks' WHERE name='client.wiki.infra.createRack' AND value='http://community.abiquo.com/display/ABI20/Manage+Racks#ManageRacks-CreatingRacks';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-DiscoveringBladesonManagedRacks' WHERE name='client.wiki.infra.discoverBlades' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-DiscoveringBladesonManagedRacks';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter' WHERE name='client.wiki.infra.editDatacenter' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-ModifyingaDatacenter';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+Datacenters#ManagingDatacenters-RemoteServices' WHERE name='client.wiki.infra.editRemoteService' AND value='http://community.abiquo.com/display/ABI20/Managing+Datacenters#ManagingDatacenters-RemoteServices';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Physical+Machines#ManagePhysicalMachines-SendingEmailNotifications' WHERE name='client.wiki.infra.mailNotification' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-SendingEmailNotifications';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks' WHERE name='client.wiki.network.publicVlan' AND value='http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-CreateVLANsforPublicNetworks';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCPforPublicandExternalNetworks' WHERE name='client.wiki.network.staticRoutes' AND value='http://community.abiquo.com/display/ABI20/Manage+Network+Configuration#ManageNetworkConfiguration-ConfiguringStaticRoutesUsingDHCP';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-CostCodesTab' WHERE name='client.wiki.pricing.createCostCode' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CostCodesTab';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-CurrenciesTab' WHERE name='client.wiki.pricing.createCurrency' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-CurrenciesTab';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Pricing+View#PricingView-PricingModelsTab' WHERE name='client.wiki.pricing.createTemplate' AND value='http://community.abiquo.com/display/ABI20/Pricing+View#PricingView-PricingModelsTab';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-ManagedStorage' WHERE name='client.wiki.storage.storageDevice' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-ManagedStorage';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-StoragePools' WHERE name='client.wiki.storage.storagePool' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-StoragePools';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Managing+External+Storage#ManagingExternalStorage-TierManagement' WHERE name='client.wiki.storage.tier' AND value='http://community.abiquo.com/display/ABI20/Managing+External+Storage#ManagingExternalStorage-TierManagement';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Enterprises#ManageEnterprises-CreatingorEditinganEnterprise' WHERE name='client.wiki.user.createEnterprise' AND value='http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-CreatingorEditinganEnterprise';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Roles' WHERE name='client.wiki.user.createRole' AND value='http://community.abiquo.com/display/ABI20/Manage+Roles+and+Privileges';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Users#ManageUsers-CreatingorEditingaUser' WHERE name='client.wiki.user.createUser' AND value='http://community.abiquo.com/display/ABI20/Manage+Users#ManageUsers-CreatingorEditingaUser';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Enterprises#ManageEnterprises-EdittheEnterprise%27sDatacenters' WHERE name='client.wiki.user.dataCenterLimits' AND value='http://community.abiquo.com/display/ABI20/Manage+Enterprises#ManageEnterprises-EdittheEnterprise%27sDatacenters';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Networks#ManageNetworks-CreateaPrivateVLAN' WHERE name='client.wiki.vdc.createPrivateNetwork' AND value='http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-CreateaPrivateVLAN';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Networks#ManageNetworks-PublicIPReservation' WHERE name='client.wiki.vdc.createPublicNetwork' AND value='http://community.abiquo.com/display/ABI20/Manage+Networks#ManageNetworks-PublicIPReservation';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance' WHERE name='client.wiki.vdc.createVapp' AND value='http://community.abiquo.com/display/ABI20/Basic+operations#BasicOperations-CreatingaNewVirtualAppliance';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter' WHERE name='client.wiki.vdc.createVdc' AND value='http://community.abiquo.com/display/ABI20/Manage+Virtual+Datacenters#ManageVirtualDatacenters-CreatingaVirtualDatacenter';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage' WHERE name='client.wiki.vdc.createVolume' AND value='http://community.abiquo.com/display/ABI20/Manage+Virtual+Storage#ManageVirtualStorage-CreatingaVolumeofManagedStorage';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanInstance' WHERE name='client.wiki.vm.bundleVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Configure+a+Virtual+Appliance#ConfigureaVirtualAppliance-CreateanInstance';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Manage+Imported+Virtual+Machines' WHERE name='client.wiki.vm.captureVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Manage+Physical+Machines#ManagePhysicalMachines-WorkingwithImportedVirtualMachines';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Create+Virtual+Machine+instances' WHERE name='client.wiki.vm.createInstance' AND value='http://community.abiquo.com/display/ABI20/Create+Virtual+Machine+instances';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface' WHERE name='client.wiki.vm.createNetworkInterface' AND value='http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines#ConfigureVirtualMachines-CreatingaNewNetworkInterface';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Create+Persistent+Virtual+Machines' WHERE name='client.wiki.vm.createStateful' AND value='http://community.abiquo.com/display/ABI20/Create+Persistent+Virtual+Machines';
-
-UPDATE `kinton`.`system_properties` SET `value` = 'http://community.abiquo.com/display/ABI22/Configure+Virtual+Machines' WHERE name='client.wiki.vm.editVirtualMachine' AND value='http://community.abiquo.com/display/ABI20/Configure+Virtual+Machines';
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('xthevenot', '', NOW(), 'Update Data (x40)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4407', '2.0.3', '3:7eb210f7ec2e3d8c4db8200a88d892bd', 316);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3658::scastro::(Checksum: 3:76559c1d1d91c98c23197868335d8b30)
-DROP TABLE `kinton`.`node_virtual_image_stateful_conversions`;
-
-DROP TABLE `kinton`.`diskstateful_conversions`;
-
-DROP TABLE `kinton`.`vappstateful_conversions`;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('scastro', '', NOW(), 'Drop Table (x3)', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3658', '2.0.3', '3:76559c1d1d91c98c23197868335d8b30', 317);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3898::destevez::(Checksum: 3:de10ff87abd570bc74a50ce7455b7720)
-DROP TRIGGER IF EXISTS delete_nodevirtualimage_update_stats;
-
-DELIMITER |
-CREATE TRIGGER delete_nodevirtualimage_update_stats AFTER DELETE ON nodevirtualimage
-  FOR EACH ROW BEGIN
-    DECLARE idDataCenterObj INTEGER;
-    DECLARE idVirtualAppObj INTEGER;
-    DECLARE idVirtualDataCenterObj INTEGER;
-    DECLARE idEnterpriseObj INTEGER;   
-    DECLARE costCodeObj int(4); 
-    DECLARE previousState VARCHAR(50);
-    DECLARE state VARCHAR(50);
-    DECLARE ram INTEGER;
-    DECLARE cpu INTEGER;
-    DECLARE hd bigint;
-    DECLARE type INTEGER;
-    DECLARE isUsingIP INTEGER;
-    IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN
-    SELECT vapp.idVirtualApp, vapp.idVirtualDataCenter, vdc.idDataCenter, vdc.idEnterprise INTO idVirtualAppObj, idVirtualDataCenterObj, idDataCenterObj, idEnterpriseObj
-      FROM node n, virtualapp vapp, virtualdatacenter vdc
-      WHERE vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-      AND n.idNode = OLD.idNode
-      AND n.idVirtualApp = vapp.idVirtualApp;
-      SELECT vm.idType, vm.cpu, vm.ram, vm.hd, vm.state INTO type, cpu, ram, hd, state
-     FROM virtualmachine vm
-	WHERE vm.idVM = OLD.idVM;
-    SELECT vmts.previousState INTO previousState
-     FROM virtualmachinetrackedstate vmts
-	WHERE vmts.idVM = OLD.idVM;
-    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('deleteNVI ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL'), ' - ',IFNULL(previousState,'NULL')));
--- INSERT INTO debug_msg (msg) VALUES (CONCAT('deleteNVI values', IFNULL(cpu,'NULL'), ' - ',IFNULL(ram,'NULL'), ' - ',IFNULL(hd,'NULL')));						
-    --
-    IF type = 1 THEN
-      IF previousState != "NOT_ALLOCATED" THEN      
-        UPDATE IGNORE cloud_usage_stats SET vMachinesTotal = vMachinesTotal-1
-          WHERE idDataCenter = idDataCenterObj;
-        UPDATE IGNORE vapp_enterprise_stats SET vmCreated = vmCreated-1
-          WHERE idVirtualApp = idVirtualAppObj;
-        UPDATE IGNORE vdc_enterprise_stats SET vmCreated = vmCreated-1
-          WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-           UPDATE IGNORE enterprise_resources_stats 
-               SET vCpuUsed = vCpuUsed - cpu,
-                   memoryUsed = memoryUsed - ram,
-                   localStorageUsed = localStorageUsed - hd
-           WHERE idEnterprise = idEnterpriseObj;
-           UPDATE IGNORE dc_enterprise_stats 
-           SET     vCpuUsed = vCpuUsed - cpu,
-               memoryUsed = memoryUsed - ram,
-               localStorageUsed = localStorageUsed - hd
-           WHERE idEnterprise = idEnterpriseObj AND idDataCenter = idDataCenterObj;
-           UPDATE IGNORE vdc_enterprise_stats 
-           SET     vCpuUsed = vCpuUsed - cpu,
-               memoryUsed = memoryUsed - ram,
-               localStorageUsed = localStorageUsed - hd
-           WHERE idVirtualDataCenter = idVirtualDataCenterObj;                 
-      END IF;
-      --
-      IF previousState = "ON" THEN
-        UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning-1
-        WHERE idDataCenter = idDataCenterObj;
-        UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive-1
-        WHERE idVirtualApp = idVirtualAppObj;
-        UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive-1
-        WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-      END IF;
-    END IF;
-    SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
-        FROM virtualimage vi
-        WHERE vi.idImage = OLD.idImage;
-    IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=OLD.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(OLD.idVM, type, "-", "NOT_ALLOCATED", previousState, ram, cpu, hd, costCodeObj);
-        END IF;              
-     END IF;
-  END IF;
-  END;
-|
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `migrate_used_resources` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `migrate_used_resources`()
+BEGIN		
+	DECLARE idPhysicalMachineObj INTEGER;
+	DECLARE idDatastoreObj INTEGER;
+	DECLARE cpuUsedObj INTEGER;
+	DECLARE ramUsedObj INTEGER;
+	DECLARE usedSizeObj BIGINT;
+	DECLARE no_more_ds INTEGER;
+	-- 
+	DECLARE curDS CURSOR FOR SELECT pm.idPhysicalMachine, ds.idDatastore, pm.cpuUsed, pm.ramUsed, ds.usedSize from physicalmachine pm, datastore ds, datastore_assignment dsa where ds.idDatastore = dsa.idDatastore and pm.idPhysicalMachine = dsa.idPhysicalMachine;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_ds=1;	 -- Shouldn't this be = 0?
+	SET no_more_ds=0;
+	OPEN curDS;
+	SELECT "Migrating scheduled resources..." as " ";
+	dept_loop:WHILE(no_more_ds=0) DO
+		FETCH curDS INTO idPhysicalMachineObj ,idDatastoreObj, cpuUsedObj, ramUsedObj, usedSizeObj;
+	     IF no_more_ds=1 THEN
+	     	LEAVE dept_loop;
+	     END IF;	     
+	     SELECT CONCAT("Migrating resources usage data from Machine ", idPhysicalMachineObj, " and Datastore ", idDatastoreObj, "...") as " ";	     
+	     INSERT INTO scheduled_resources (idPhysicalMachine ,idDatastore, cpuUsed, ramUsed, datastoreUsed) VALUES (idPhysicalMachineObj ,idDatastoreObj, cpuUsedObj, ramUsedObj, usedSizeObj);
+	   END WHILE dept_loop;	   
+  	CLOSE curDS;      
+END */;;
 DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3898', '2.0.3', '3:de10ff87abd570bc74a50ce7455b7720', 318);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-3727::destevez::(Checksum: 3:ce98b001ef068af5bcb4f1c2e37d5a28)
-DROP TRIGGER IF EXISTS update_virtualmachine_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_virtualmachine_update_stats AFTER UPDATE ON virtualmachine
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idVirtualAppObj INTEGER;
-        DECLARE idVirtualDataCenterObj INTEGER;	
-        DECLARE costCodeObj int(4);
-	DECLARE previousState VARCHAR(50);
-	DECLARE extraHDSize BIGINT DEFAULT 0;
-	-- For debugging purposes only        
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
-	-- We always store previous state when starting a transaction
-	IF NEW.state != OLD.state AND NEW.state='LOCKED' THEN
-		UPDATE virtualmachinetrackedstate SET previousState=OLD.state WHERE idVM=NEW.idVM;
-	END IF;
-	--
-	SELECT vmts.previousState INTO previousState
-        FROM virtualmachinetrackedstate vmts
-	WHERE vmts.idVM = NEW.idVM;
-	-- -- INSERT INTO debug_msg (msg) VALUES (CONCAT('UPDATE: ', NEW.idVM, ' - ', OLD.idType, ' - ', NEW.idType, ' - ', OLD.state, ' - ', NEW.state, ' - ', previousState));	
-        --  Updating enterprise_resources_stats: VCPU Used, Memory Used, Local Storage Used
-        IF OLD.idHypervisor IS NULL OR (OLD.idHypervisor != NEW.idHypervisor) THEN
-            SELECT pm.idDataCenter INTO idDataCenterObj
-            FROM hypervisor hy, physicalmachine pm
-            WHERE NEW.idHypervisor=hy.id
-            AND hy.idPhysicalMachine=pm.idPhysicalMachine;
-        ELSE 
-            SELECT pm.idDataCenter INTO idDataCenterObj
-            FROM hypervisor hy, physicalmachine pm
-            WHERE OLD.idHypervisor=hy.id
-            AND hy.idPhysicalMachine=pm.idPhysicalMachine;
-        END IF;     
-        --
-        SELECT n.idVirtualApp, vapp.idVirtualDataCenter INTO idVirtualAppObj, idVirtualDataCenterObj
-        FROM nodevirtualimage nvi, node n, virtualapp vapp
-        WHERE NEW.idVM = nvi.idVM
-        AND nvi.idNode = n.idNode
-        AND vapp.idVirtualApp = n.idVirtualApp;   
--- -- INSERT INTO debug_msg (msg) VALUES (CONCAT('update values ', IFNULL(idDataCenterObj,'NULL'), ' - ',IFNULL(idVirtualAppObj,'NULL'), ' - ',IFNULL(idVirtualDataCenterObj,'NULL'), ' - ',IFNULL(previousState,'NULL')));
-	--
-	-- Imported VMs will be updated on create_node_virtual_image
-	-- Used Stats (vCpuUsed, vMemoryUsed, vStorageUsed) are updated from delete_nodevirtualimage_update_stats ON DELETE nodevirtualimage when updating the VApp
-	-- Main case: an imported VM changes its state (from LOCKED to ...)
-	IF NEW.idType = 1 AND (NEW.state != OLD.state) THEN
-            IF NEW.state = "ON" AND (previousState != "ON" OR OLD.state="UNKNOWN") THEN 
-                -- New Active		
-                UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive+1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive+1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning+1
-                WHERE idDataCenter = idDataCenterObj;       
-		SELECT IFNULL(SUM(limitResource),0) * 1048576 INTO extraHDSize 
-		FROM rasd_management rm, rasd r 
-		WHERE rm.idResource = r.instanceID AND rm.idVM = NEW.idVM AND rm.idResourceType=17;    
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW ExtraHDs added ', extraHDSize));
-                UPDATE IGNORE enterprise_resources_stats 
-                    SET vCpuUsed = vCpuUsed + NEW.cpu,
-                        memoryUsed = memoryUsed + NEW.ram,
-                        localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed + NEW.cpu,
-                    memoryUsed = memoryUsed + NEW.ram,
-                    localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed + NEW.cpu,
-                    memoryUsed = memoryUsed + NEW.ram,
-                    localStorageUsed = localStorageUsed + NEW.hd + extraHDSize
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;		
-	    ELSEIF (NEW.state IN ("PAUSED","OFF","NOT_ALLOCATED","UNKNOWN") AND OLD.state="LOCKED" AND previousState = "ON") OR 
-	    		  (NEW.state IN ("PAUSED","OFF","NOT_ALLOCATED","UNKNOWN") AND OLD.state="ON") THEN
-                -- When Undeploying a full Vapp
-                -- Undeploying the Vapp implies OLD.state = LOCKED + previousState = ON 
-                -- Powering OFF the VM implies  OLD.state = LOCKED + previousState = ON
-                -- Destroying the VM implies OLD.state = ON
-                UPDATE IGNORE vapp_enterprise_stats SET vmActive = vmActive-1
-                WHERE idVirtualApp = idVirtualAppObj;
-                UPDATE IGNORE vdc_enterprise_stats SET vmActive = vmActive-1
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE cloud_usage_stats SET vMachinesRunning = vMachinesRunning-1
-                WHERE idDataCenter = idDataCenterObj;
-				SELECT IFNULL(SUM(limitResource),0) * 1048576 INTO extraHDSize 
-				FROM rasd_management rm, rasd r 
-				WHERE rm.idResource = r.instanceID AND rm.idVM = NEW.idVM AND rm.idResourceType=17;    
-				-- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW ExtraHDs removed ', extraHDSize));
-                UPDATE IGNORE enterprise_resources_stats 
-                    SET vCpuUsed = vCpuUsed - NEW.cpu,
-                        memoryUsed = memoryUsed - NEW.ram,
-                        localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise;
-                UPDATE IGNORE dc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed - NEW.cpu,
-                    memoryUsed = memoryUsed - NEW.ram,
-                    localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idEnterprise = NEW.idEnterprise AND idDataCenter = idDataCenterObj;
-                UPDATE IGNORE vdc_enterprise_stats 
-                SET     vCpuUsed = vCpuUsed - NEW.cpu,
-                    memoryUsed = memoryUsed - NEW.ram,
-                    localStorageUsed = localStorageUsed - NEW.hd - extraHDSize
-                WHERE idVirtualDataCenter = idVirtualDataCenterObj; 
-                -- INSERT INTO debug_msg (msg) VALUES (CONCAT('NEW state is NOT_RUNNING ', OLD.state, ' - ', previousState));
-            END IF;
-        END IF;
-        --
-        SELECT IF(vi.cost_code IS NULL, 0, vi.cost_code) INTO costCodeObj
-        FROM virtualimage vi
-        WHERE vi.idImage = NEW.idImage;
-        -- Register Accounting Events
-        IF EXISTS( SELECT * FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingVMRegisterEvents' ) THEN
-       		 IF EXISTS(SELECT * FROM virtualimage vi WHERE vi.idImage=NEW.idImage) THEN 
-	          CALL AccountingVMRegisterEvents(NEW.idVM, NEW.idType, OLD.state, NEW.state, previousState, NEW.ram, NEW.cpu, NEW.hd + extraHDSize, costCodeObj);
-       		 END IF;              
-	    END IF;
-      END IF;
-    END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-3727', '2.0.3', '3:ce98b001ef068af5bcb4f1c2e37d5a28', 319);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-2435::destevez::(Checksum: 3:04d9543a931fc7e2ff308c00600f48aa)
-DROP TRIGGER IF EXISTS update_ip_pool_management_update_stats;
-
-DELIMITER |
-CREATE TRIGGER update_ip_pool_management_update_stats AFTER UPDATE ON ip_pool_management
-    FOR EACH ROW BEGIN
-        DECLARE idDataCenterObj INTEGER;
-        DECLARE idVirtualDataCenterObj INTEGER;
-        DECLARE idEnterpriseObj INTEGER;
-	   DECLARE networkTypeObj VARCHAR(15);
-        IF (@DISABLE_STATS_TRIGGERS IS NULL) THEN   
-		SELECT vn.networktype, dc.idDataCenter INTO networkTypeObj, idDataCenterObj
-		FROM vlan_network vn, datacenter dc
-		WHERE dc.network_id = vn.network_id
-		AND OLD.vlan_network_id = vn.vlan_network_id;
-		-- INSERT INTO debug_msg (msg) VALUES (CONCAT('update_ip_pool_management_update_stats', '-', OLD.ip, '-',OLD.available,'-', NEW.available,'-', IFNULL(networkTypeObj,'NULL'), '-', IFNULL(idDataCenterObj,'NULL')));
-		IF networkTypeObj = 'PUBLIC' THEN		
-			IF OLD.available=FALSE AND NEW.available=TRUE THEN
-				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal+1 WHERE idDataCenter = idDataCenterObj;
-			END IF;
-			IF OLD.available=TRUE AND NEW.available=FALSE THEN
-				UPDATE IGNORE cloud_usage_stats SET publicIPsTotal = publicIPsTotal-1 WHERE idDataCenter = idDataCenterObj;
-			END IF;
-		END IF;
-	    -- Checks for public available 
-            -- Checks for reserved IPs		
-            IF OLD.mac IS NULL AND NEW.mac IS NOT NULL THEN
-                -- Query for datacenter
-                SELECT vdc.idDataCenter, vdc.idVirtualDataCenter, vdc.idEnterprise  INTO idDataCenterObj, idVirtualDataCenterObj, idEnterpriseObj
-                FROM rasd_management rm, virtualdatacenter vdc, vlan_network vn
-                WHERE vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-			AND NEW.vlan_network_id = vn.vlan_network_id
-			AND vn.networktype = 'PUBLIC'
-			AND NEW.idManagement = rm.idManagement;
-                -- New Public IP assignment for a VDC ---> Reserved
-                UPDATE IGNORE cloud_usage_stats SET publicIPsUsed = publicIPsUsed+1 WHERE idDataCenter = idDataCenterObj;
-                UPDATE IGNORE enterprise_resources_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idEnterprise = idEnterpriseObj;
-                UPDATE IGNORE vdc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-                UPDATE IGNORE dc_enterprise_stats SET publicIPsReserved = publicIPsReserved+1 WHERE idDataCenter = idDataCenterObj;
-                IF (idDataCenterObj IS NOT NULL AND idVirtualDataCenterObj IS NOT NULL AND idEnterpriseObj IS NOT NULL) THEN
-                	-- INSERT INTO debug_msg (msg) VALUES (CONCAT('Reserved IP: ',IFNULL(idEnterpriseObj,'entnull'),IFNULL(idDataCenterObj,'dcnull'),IFNULL(idVirtualDataCenterObj,'vdcnull')));
-                	IF EXISTS( SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='AccountingIPsRegisterEvents' ) THEN
-                    	CALL AccountingIPsRegisterEvents('IP_RESERVED',NEW.idManagement,NEW.ip,idVirtualDataCenterObj, idEnterpriseObj);
-                	END IF;
-                END IF;
-            END IF;
-        END IF;
-    END;
-|
-DELIMITER ;
-
-DELETE FROM accounting_event_ips WHERE idEnterprise=0 AND idVirtualDataCenter=0;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-2435', '2.0.3', '3:04d9543a931fc7e2ff308c00600f48aa', 320);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4059-4114-4417::destevez::(Checksum: 3:ce0db9bbe48b0e59292c3aa7ef1aae7a)
-DROP PROCEDURE IF EXISTS CalculateEnterpriseResourcesStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateEnterpriseResourcesStats()
-   BEGIN
-  DECLARE idEnterpriseObj INTEGER;
-  DECLARE vCpuReserved BIGINT UNSIGNED;
-  DECLARE vCpuUsed BIGINT UNSIGNED;
-  DECLARE memoryReserved BIGINT UNSIGNED;
-  DECLARE memoryUsed BIGINT UNSIGNED;
-  DECLARE localStorageReserved BIGINT UNSIGNED;
-  DECLARE localStorageUsed BIGINT UNSIGNED;
-  DECLARE extStorageReserved BIGINT UNSIGNED; 
-  DECLARE extStorageUsed BIGINT UNSIGNED; 
-  DECLARE publicIPsReserved BIGINT UNSIGNED;
-  DECLARE publicIPsUsed BIGINT UNSIGNED;
-  DECLARE vlanReserved BIGINT UNSIGNED; 
-  DECLARE vlanUsed BIGINT UNSIGNED; 
-  DECLARE extraHDUsed BIGINT UNSIGNED;
-
-  DECLARE no_more_enterprises INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT idEnterprise FROM enterprise;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_enterprises=1;
-
-  SET no_more_enterprises = 0;
-  SET idEnterpriseObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE enterprise_resources_stats;
-
-  dept_loop:WHILE(no_more_enterprises = 0) DO
-    FETCH curDC INTO idEnterpriseObj;
-    IF no_more_enterprises=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    -- INSERT INTO debug_msg (msg) VALUES (CONCAT('Iteracion Enterprise: ',idEnterpriseObj));
-    --
-    SELECT cpuHard, ramHard, hdHard, storageHard, vlanHard INTO vCpuReserved, memoryReserved, localStorageReserved, extStorageReserved, vlanReserved
-    FROM enterprise e
-    WHERE e.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IF (SUM(vm.cpu) IS NULL, 0, SUM(vm.cpu)), IF (SUM(vm.ram) IS NULL, 0, SUM(vm.ram)), IF (SUM(vm.hd) IS NULL, 0, SUM(vm.hd)) INTO vCpuUsed, memoryUsed, localStorageUsed
-    FROM virtualmachine vm
-    WHERE vm.state IN ("ON","OFF","PAUSED")
-    AND vm.idType = 1
-    AND vm.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IFNULL(SUM(limitResource),0) * 1048576  INTO extraHDUsed
-	FROM rasd_management rm, rasd r, virtualmachine vm 
-	WHERE rm.idResource = r.instanceID AND rm.idVM = vm.idVM AND rm.idResourceType=17
-	AND vm.state IN ("ON","OFF","PAUSED")
-	AND vm.idType=1
-	AND vm.idEnterprise = idEnterpriseObj;   
-	--
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vlanUsed
-    FROM virtualdatacenter vdc, vlan_network vn
-    WHERE vdc.networktypeID=vn.network_id
-    AND vdc.idEnterprise=idEnterpriseObj;
-    --
-    SELECT IF (SUM(r.limitResource) IS NULL, 0, SUM(r.limitResource)) INTO extStorageUsed
-    FROM rasd_management rm, rasd r, volume_management vm, virtualdatacenter vdc
-    WHERE rm.idManagement = vm.idManagement
-    AND vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-    AND r.instanceID = rm.idResource
-    AND (vm.state = 1 OR vm.state = 2)
-    AND rm.idResource IS NOT NULL
-    AND vdc.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsReserved
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm, virtualdatacenter vdc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id   
-    AND vn.networktype = 'PUBLIC'             
-    AND rm.idManagement = ipm.idManagement
-    AND vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-    AND vdc.idEnterprise = idEnterpriseObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsUsed
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm, virtualdatacenter vdc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id            
-    AND vn.networktype = 'PUBLIC'    
-    AND rm.idManagement = ipm.idManagement
-    AND vdc.idVirtualDataCenter = rm.idVirtualDataCenter
-    AND rm.idVM IS NOT NULL
-    AND vdc.idEnterprise = idEnterpriseObj;
-
-
-    -- Inserts stats row
-    INSERT INTO enterprise_resources_stats (idEnterprise,vCpuReserved,vCpuUsed,memoryReserved,memoryUsed,localStorageReserved,localStorageUsed,extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed)
-     VALUES (idEnterpriseObj,vCpuReserved,vCpuUsed,memoryReserved,memoryUsed,localStorageReserved,localStorageUsed+extraHDUsed,extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed);
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-   END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4059-4114-4417', '2.0.3', '3:ce0db9bbe48b0e59292c3aa7ef1aae7a', 321);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4127-4114::destevez::(Checksum: 3:be509954d54d99afb53946f5dcb9a2a6)
-DROP PROCEDURE IF EXISTS CalculateVdcEnterpriseStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateVdcEnterpriseStats()
-   BEGIN
-  DECLARE idVirtualDataCenterObj INTEGER;
-  DECLARE idEnterprise INTEGER;
-  DECLARE vdcName VARCHAR(45);
-  DECLARE vmCreated MEDIUMINT UNSIGNED;
-  DECLARE vmActive MEDIUMINT UNSIGNED;
-  DECLARE volCreated MEDIUMINT UNSIGNED;
-  DECLARE volAssociated MEDIUMINT UNSIGNED;
-  DECLARE volAttached MEDIUMINT UNSIGNED;
-  DECLARE vCpuReserved BIGINT UNSIGNED; 
-  DECLARE vCpuUsed BIGINT UNSIGNED; 
-  DECLARE memoryReserved BIGINT UNSIGNED;
-  DECLARE memoryUsed BIGINT UNSIGNED; 
-  DECLARE localStorageReserved BIGINT UNSIGNED; 
-  DECLARE localStorageUsed BIGINT UNSIGNED; 
-  DECLARE extStorageReserved BIGINT UNSIGNED; 
-  DECLARE extStorageUsed BIGINT UNSIGNED; 
-  DECLARE publicIPsReserved MEDIUMINT UNSIGNED;
-  DECLARE publicIPsUsed MEDIUMINT UNSIGNED;
-  DECLARE vlanReserved MEDIUMINT UNSIGNED; 
-  DECLARE vlanUsed MEDIUMINT UNSIGNED;   
-  DECLARE extraHDUsed BIGINT UNSIGNED;
-
-  DECLARE no_more_vdcs INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT vdc.idVirtualDataCenter, vdc.idEnterprise, vdc.name FROM virtualdatacenter vdc;
-
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_vdcs = 1;
-
-  SET no_more_vdcs = 0;
-  SET idVirtualDataCenterObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE vdc_enterprise_stats;
-
-  dept_loop:WHILE(no_more_vdcs = 0) DO
-    FETCH curDC INTO idVirtualDataCenterObj, idEnterprise, vdcName;
-    IF no_more_vdcs=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmCreated
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualDataCenter = idVirtualDataCenterObj
-    AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN";
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmActive
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualDataCenter = idVirtualDataCenterObj
-    AND v.state = "ON";
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volCreated
-    FROM rasd_management rm
-    WHERE rm.idVirtualDataCenter = idVirtualDataCenterObj
-    AND rm.idResource IS NOT NULL
-    AND rm.idResourceType=8;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAssociated
-    FROM rasd_management rm
-    WHERE rm.idVirtualApp IS NOT NULL
-    AND rm.idResource IS NOT NULL
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj
-    AND rm.idResourceType=8;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAttached
-    FROM volume_management vm, rasd_management rm
-    WHERE rm.idManagement = vm.idManagement
-    AND rm.idVirtualApp IS NOT NULL
-    AND rm.idResource IS NOT NULL
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj
-    AND state = 2;
-    --
-    SELECT IF (SUM(cpuHard) IS NULL, 0, SUM(cpuHard)), IF (SUM(ramHard) IS NULL, 0, SUM(ramHard)), IF (SUM(hdHard) IS NULL, 0, SUM(hdHard)), IF (SUM(storageHard) IS NULL, 0, SUM(storageHard)), IF (SUM(vlanHard) IS NULL, 0, SUM(vlanHard)) INTO vCpuReserved, memoryReserved, localStorageReserved, extStorageReserved, vlanReserved
-    FROM virtualdatacenter 
-    WHERE idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (SUM(vm.cpu) IS NULL, 0, SUM(vm.cpu)), IF (SUM(vm.ram) IS NULL, 0, SUM(vm.ram)), IF (SUM(vm.hd) IS NULL, 0, SUM(vm.hd)) INTO vCpuUsed, memoryUsed, localStorageUsed
-    FROM virtualmachine vm, nodevirtualimage nvi, node n, virtualapp vapp
-    WHERE vm.idVM = nvi.idVM
-    AND nvi.idNode = n.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vm.state = "ON"
-    AND vm.idType = 1
-    AND vapp.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (SUM(r.limitResource) IS NULL, 0, SUM(r.limitResource)) INTO extStorageUsed
-    FROM rasd_management rm, rasd r, volume_management vm
-    WHERE rm.idManagement = vm.idManagement    
-    AND r.instanceID = rm.idResource
-    AND (vm.state = 1 OR vm.state = 2)
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IFNULL(SUM(limitResource),0) * 1048576  INTO extraHDUsed
-	FROM rasd_management rm, rasd r, virtualmachine vm 
-	WHERE rm.idResource = r.instanceID AND rm.idVM = vm.idVM AND rm.idResourceType=17
-	AND vm.state="ON"
-	AND vm.idType=1
-	AND rm.idVirtualDataCenter = idVirtualDataCenterObj; 
-	--
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsUsed
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id           
-    AND vn.networktype = 'PUBLIC'     
-    AND rm.idManagement = ipm.idManagement
-    AND rm.idVM IS NOT NULL
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsReserved
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id                
-    AND vn.networktype = 'PUBLIC'
-    AND rm.idManagement = ipm.idManagement
-    AND rm.idVirtualDataCenter = idVirtualDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vlanUsed
-    FROM virtualdatacenter vdc, vlan_network vn
-    WHERE vdc.networktypeID = vn.network_id
-    AND vdc.idVirtualDataCenter = idVirtualDataCenterObj;
-   -- 
-
-
-    -- Inserts stats row
-    INSERT INTO vdc_enterprise_stats (idVirtualDataCenter,idEnterprise,vdcName,vmCreated,vmActive,volCreated,volAssociated,volAttached, vCpuReserved, vCpuUsed, memoryReserved, memoryUsed, localStorageReserved, localStorageUsed, extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed)
-    VALUES (idVirtualDataCenterObj,idEnterprise,vdcName,vmCreated,vmActive,volCreated,volAssociated,volAttached, vCpuReserved, vCpuUsed, memoryReserved, memoryUsed, localStorageReserved, localStorageUsed + extraHDUsed, extStorageReserved, extStorageUsed, publicIPsReserved, publicIPsUsed, vlanReserved, vlanUsed );
-
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-   END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4127-4114', '2.0.3', '3:be509954d54d99afb53946f5dcb9a2a6', 322);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4114-4166::destevez::(Checksum: 3:64ba2418c95dabffd34a95ede7aa3bf8)
-DROP PROCEDURE IF EXISTS CalculateVappEnterpriseStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateVappEnterpriseStats()
-   BEGIN
-  DECLARE idVirtualAppObj INTEGER;
-  DECLARE idEnterprise INTEGER;
-  DECLARE idVirtualDataCenter INTEGER;
-  DECLARE vappName VARCHAR(45);
-  DECLARE vdcName VARCHAR(45);
-  DECLARE vmCreated MEDIUMINT UNSIGNED;
-  DECLARE vmActive MEDIUMINT UNSIGNED;
-  DECLARE volAssociated MEDIUMINT UNSIGNED;
-  DECLARE volAttached MEDIUMINT UNSIGNED;
-
-  DECLARE no_more_vapps INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT vapp.idVirtualApp, vapp.idEnterprise, vapp.idVirtualDataCenter, vapp.name, vdc.name FROM virtualapp vapp, virtualdatacenter vdc WHERE vdc.idVirtualDataCenter = vapp.idVirtualDataCenter;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_vapps = 1;
-
-  SET no_more_vapps = 0;
-  SET idVirtualAppObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE vapp_enterprise_stats;
-
-  dept_loop:WHILE(no_more_vapps = 0) DO
-    FETCH curDC INTO idVirtualAppObj, idEnterprise, idVirtualDataCenter, vappName, vdcName;
-    IF no_more_vapps=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmCreated
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualApp = idVirtualAppObj
-    AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN"
-    and v.idType = 1;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vmActive
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp
-    WHERE nvi.idNode IS NOT NULL
-    AND v.idVM = nvi.idVM
-    AND n.idNode = nvi.idNode
-    AND n.idVirtualApp = vapp.idVirtualApp
-    AND vapp.idVirtualApp = idVirtualAppObj
-    AND v.state = "ON"
-    and v.idType = 1;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAssociated
-    FROM rasd_management rm
-    WHERE rm.idVirtualApp = idVirtualAppObj
-    AND rm.idResource IS NOT NULL
-    AND rm.idResourceType=8;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO volAttached
-    FROM volume_management vm, rasd_management rm
-    WHERE rm.idManagement = vm.idManagement
-    AND rm.idResource IS NOT NULL
-    AND rm.idVirtualApp = idVirtualAppObj
-    AND state = 2;
-
-    -- Inserts stats row
-    INSERT INTO vapp_enterprise_stats (idVirtualApp,idEnterprise,idVirtualDataCenter,vappName,vdcName,vmCreated,vmActive,volAssociated,volAttached)
-    VALUES (idVirtualAppObj, idEnterprise,idVirtualDataCenter,vappName,vdcName,vmCreated,vmActive,volAssociated,volAttached);
-
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-   END;
-|
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS CalculateCloudUsageStats;
-
-DELIMITER |
-CREATE PROCEDURE CalculateCloudUsageStats()
-   BEGIN
-  DECLARE idDataCenterObj INTEGER;
-  DECLARE serversTotal BIGINT UNSIGNED;
-  DECLARE serversRunning BIGINT UNSIGNED;
-  DECLARE storageTotal BIGINT UNSIGNED;
-  DECLARE storageUsed BIGINT UNSIGNED;
-  DECLARE publicIPsTotal BIGINT UNSIGNED;
-  DECLARE publicIPsReserved BIGINT UNSIGNED;
-  DECLARE publicIPsUsed BIGINT UNSIGNED;
-  DECLARE vMachinesTotal BIGINT UNSIGNED;
-  DECLARE vMachinesRunning BIGINT UNSIGNED;
-  DECLARE vCpuTotal BIGINT UNSIGNED;
-  DECLARE vCpuReserved BIGINT UNSIGNED;
-  DECLARE vCpuUsed BIGINT UNSIGNED;
-  DECLARE vMemoryTotal BIGINT UNSIGNED;
-  DECLARE vMemoryReserved BIGINT UNSIGNED;
-  DECLARE vMemoryUsed BIGINT UNSIGNED;
-  DECLARE vStorageReserved BIGINT UNSIGNED;
-  DECLARE vStorageUsed BIGINT UNSIGNED;
-  DECLARE vStorageTotal BIGINT UNSIGNED;
-  DECLARE numUsersCreated BIGINT UNSIGNED;
-  DECLARE numVDCCreated BIGINT UNSIGNED;
-  DECLARE numEnterprisesCreated BIGINT UNSIGNED;
-  DECLARE storageReserved BIGINT UNSIGNED; 
-  DECLARE vlanReserved BIGINT UNSIGNED; 
-  DECLARE vlanUsed BIGINT UNSIGNED; 
-
-  DECLARE no_more_dcs INTEGER;
-
-  DECLARE curDC CURSOR FOR SELECT idDataCenter FROM datacenter;
-  DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_more_dcs=1;
-
-  SET no_more_dcs=0;
-  SET idDataCenterObj = -1;
-
-  OPEN curDC;
-
-  TRUNCATE cloud_usage_stats;
-
-  dept_loop:WHILE(no_more_dcs=0) DO
-    FETCH curDC INTO idDataCenterObj;
-    IF no_more_dcs=1 THEN
-        LEAVE dept_loop;
-    END IF;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO serversTotal
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState!=2;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO serversRunning
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState=3;
-    --
-    SELECT IF (SUM(limitResource) IS NULL, 0, SUM(limitResource))   INTO storageTotal
-    FROM rasd r, rasd_management rm, virtualdatacenter vdc
-    WHERE rm.idResource = r.instanceID
-    AND vdc.idVirtualDataCenter=rm.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (SUM(r.limitResource) IS NULL, 0, SUM(r.limitResource)) INTO storageUsed
-    FROM storage_pool sp, storage_device sd, volume_management vm, rasd_management rm, rasd r
-    WHERE vm.idStorage = sp.idStorage
-    AND sp.idStorageDevice = sd.id
-    AND vm.idManagement = rm.idManagement
-    AND r.instanceID = rm.idResource
-    AND rm.idResourceType = 8
-    AND rm.idResource IS NOT NULL
-    AND (vm.state = 1)
-    AND sd.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsTotal
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsReserved
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND vn.networktype = 'PUBLIC'             
-    AND ipm.mac IS NOT NULL
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO publicIPsUsed
-    FROM ip_pool_management ipm, network_configuration nc, vlan_network vn, datacenter dc, rasd_management rm
-    WHERE ipm.vlan_network_id = vn.vlan_network_id
-    AND vn.network_configuration_id = nc.network_configuration_id
-    AND vn.network_id = dc.network_id
-    AND vn.networktype = 'PUBLIC'             
-    AND rm.idManagement = ipm.idManagement
-    AND ipm.mac IS NOT NULL
-    AND rm.idVM IS NOT NULL
-    AND dc.idDataCenter = idDataCenterObj;
-    --
-    SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vMachinesTotal
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp, virtualdatacenter vdc
-    WHERE v.idVM = nvi.idVM
-    AND n.idNode=nvi.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj
-    AND v.state != "NOT_ALLOCATED" AND v.state != "UNKNOWN" 
-    and v.idType = 1;
-    --
-    SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vMachinesRunning
-    FROM nodevirtualimage nvi, virtualmachine v, node n, virtualapp vapp, virtualdatacenter vdc
-    WHERE v.idVM = nvi.idVM
-    AND n.idNode=nvi.idNode
-    AND vapp.idVirtualApp = n.idVirtualApp
-    AND vdc.idVirtualDataCenter = vapp.idVirtualDataCenter
-    AND vdc.idDataCenter = idDataCenterObj
-    AND v.state = "ON"
-    and v.idType = 1;
-    --
-    SELECT IF (SUM(cpu) IS NULL,0,SUM(cpu)), IF (SUM(ram) IS NULL,0,SUM(ram)), IF (SUM(cpuUsed) IS NULL,0,SUM(cpuUsed)), IF (SUM(ramUsed) IS NULL,0,SUM(ramUsed)) 			INTO vCpuTotal, vMemoryTotal, vCpuUsed, vMemoryUsed
-    FROM physicalmachine
-    WHERE idDataCenter = idDataCenterObj
-    AND idState = 3; 
-    --
-    CALL get_datastore_size_by_dc(idDataCenterObj,vStorageTotal);
-    CALL get_datastore_used_size_by_dc(idDataCenterObj,vStorageUsed);
-    --
-    SELECT IF (SUM(vlanHard) IS NULL, 0, SUM(vlanHard))  INTO vlanReserved
-    FROM enterprise_limits_by_datacenter 
-    WHERE idDataCenter = idDataCenterObj AND idEnterprise IS NOT NULL;
-
-    -- Inserts stats row
-    INSERT INTO cloud_usage_stats
-    (idDataCenter,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,vCpuReserved,vCpuUsed,
-    vMemoryTotal,vMemoryReserved,vMemoryUsed,
-    vStorageReserved,vStorageUsed,vStorageTotal,
-    vlanReserved,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated)
-    VALUES
-    (idDataCenterObj,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,0,vCpuUsed,
-    vMemoryTotal,0,vMemoryUsed,
-    0,vStorageUsed,vStorageTotal,
-    vlanReserved,
-    0,0,0);
-
-  END WHILE dept_loop;
-  CLOSE curDC;
-
-  -- All Cloud Stats (idDataCenter -1): vCpuReserved, VMemoryReserved, VStorageReserved, NumUsersCreated, NumVDCCreated, NumEnterprisesCreated
-  SELECT IF (SUM(cpuHard) IS NULL,0,SUM(cpuHard)), IF (SUM(ramHard) IS NULL,0,SUM(ramHard)), IF (SUM(hdHard) IS NULL,0,SUM(hdHard)), IF (SUM(storageHard) IS NULL,0,SUM(storageHard)) INTO vCpuReserved, vMemoryReserved, vStorageReserved, storageReserved
-  FROM enterprise e;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numUsersCreated
-  FROM user;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numVDCCreated
-  FROM virtualdatacenter vdc;
-  --
-  SELECT IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO numEnterprisesCreated
-  FROM enterprise e;
-  --
-  SELECT  IF (COUNT(*) IS NULL, 0, COUNT(*)) INTO vlanUsed
-  FROM vlan_network;
-
-  -- Inserts stats row
-    INSERT INTO cloud_usage_stats
-    (idDataCenter,
-    serversTotal,serversRunning,
-    storageTotal,storageUsed,
-    publicIPsTotal,publicIPsReserved,publicIPsUsed,
-    vMachinesTotal,vMachinesRunning,
-    vCpuTotal,vCpuReserved,vCpuUsed,
-    vMemoryTotal,vMemoryReserved,vMemoryUsed,
-    vStorageReserved,vStorageUsed,vStorageTotal,
-    vlanUsed,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated)
-    VALUES
-    (-1,
-    0,0,
-    0,0,
-    0,0,0,
-    0,0,
-    0,vCpuReserved,0,
-    0,vMemoryReserved,0,
-    vStorageReserved,0,0,
-    vlanUsed,
-    numUsersCreated,numVDCCreated,numEnterprisesCreated);
-   END;
-|
-DELIMITER ;
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('destevez', '', NOW(), 'Custom SQL, SQL From File, Custom SQL, SQL From File', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4114-4166', '2.0.3', '3:64ba2418c95dabffd34a95ede7aa3bf8', 323);
-
--- Changeset src/2.2/kinton-2.2.xml::ABICLOUDPREMIUM-4217::jdevesa::(Checksum: 3:b388a8f15cdd350e02dc8622a13bfdb9)
-delete from rasd where instanceid not in (select idresource from rasd_management where idresource is not null);
-
-INSERT INTO `kinton`.`DATABASECHANGELOG` (`AUTHOR`, `COMMENTS`, `DATEEXECUTED`, `DESCRIPTION`, `EXECTYPE`, `FILENAME`, `ID`, `LIQUIBASE`, `MD5SUM`, `ORDEREXECUTED`) VALUES ('jdevesa', '', NOW(), 'Custom SQL', 'EXECUTED', 'src/2.2/kinton-2.2.xml', 'ABICLOUDPREMIUM-4217', '2.0.3', '3:b388a8f15cdd350e02dc8622a13bfdb9', 324);
-
-# Introduction of OPTIMIZED ACCOUNTING
-# This script defines all of the DBMS changes to:
-# 1. Create a new separate accounting schema (for new objects only)
-# 2. Create an optimised storage version of the existing accounting_event_detail table 
-# 3. Make accounting queries against the detail table scalable
-# 4. Core functionality to recover 'missed' accounting periods (currently requires manual identification and running)
-#    - Also will skip periods if re-run, when existing data detected
-# 5. Core functionality to change accounting period from 1 hour (i.e. allowing customers to collect detail data 
-#    at a 1 day account period will give further massive DBMS space saving benefits). Note, further work required
-#    to control granularity independently of the account period.
-#
-# Other misc notes:
-# - Cost Codes now only stored against VM-CPU resources, rather than against CPU, Memory and LocalHD
-
-DROP PROCEDURE IF EXISTS kinton.accounting_optimizations;
-
-DELIMITER |
-CREATE PROCEDURE kinton.accounting_optimizations() 
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `UpdateAccounting` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `UpdateAccounting`()
 BEGIN
-	SELECT "Applying accounting Premium optimizations in new schema..." as " ";
+    DECLARE accounting_enabled INT(1);
+    DECLARE maxPeriodsToProcess INT(6);
+    DECLARE maxPeriodsToInit INT(6);
+    DECLARE currentAccountingPeriod TIMESTAMP;
+    DECLARE nextAccountingPeriod TIMESTAMP;
+    DECLARE accountingPeriodSize VARCHAR(10);
+    DECLARE accountingPeriodGranularity VARCHAR(10);
+    DECLARE periodCount INT(6);
+    DECLARE logLevelStr VARCHAR(10);
 
-    # Create new schema to hold the accounting objects...
-    CREATE SCHEMA IF NOT EXISTS kinton_accounting;
+	IF EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='accounting_parameters') THEN
+        SELECT kinton_accounting.LOAD_CURRENT_LOG_LEVEL() INTO logLevelStr;
 
+        
+        SELECT kinton_accounting.ABQ_GET_PARAMETER('AccountingEnabled') INTO accounting_enabled;
+        IF (accounting_enabled IS NULL)  THEN
+            CALL kinton_accounting.Log(logLevelStr, 'WARN', NULL, 'Missing AccountingEnabled parameter, accounting will be disabled.');
+            SET accounting_enabled=0;
+        END IF;
+        
+        SELECT kinton_accounting.ABQ_GET_PARAMETER('MaximumPeriodsToProcess') INTO maxPeriodsToProcess;
+        IF (maxPeriodsToProcess IS NULL) OR (maxPeriodsToProcess < 1) OR (maxPeriodsToProcess > 720) THEN
+            
+            CALL kinton_accounting.Log(logLevelStr, 'WARN', NULL, CONCAT('Bad value ', QUOTE(maxPeriodsToProcess),' detected for MaximumPeriodsToProcess parameter, will use default of 24.'));
+            SET maxPeriodsToProcess=24;
+        END IF;
 
-	SELECT "Creating new name tables..." as " ";
+        SELECT kinton_accounting.ABQ_GET_PARAMETER('MaximumPeriodsToFirstInit') INTO maxPeriodsToInit;
+        IF (maxPeriodsToInit IS NULL) OR (maxPeriodsToInit < 1) OR (maxPeriodsToInit > 720) THEN
+            
+            CALL kinton_accounting.Log(logLevelStr, 'WARN', NULL, CONCAT('Bad value ', QUOTE(maxPeriodsToInit),' detected for MaximumPeriodsToFirstInit parameter, will use default of 1.'));
+            SET maxPeriodsToInit=1;
+        END IF;
 
-	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='object_name') THEN
-        SELECT "Creating table - kinton_accounting.object_name" as " ";
-        CREATE TABLE `kinton_accounting`.`object_name` (
-          idObject          INT(16)         NOT NULL AUTO_INCREMENT,
-          objectName        VARCHAR(511)    NOT NULL,
-          startTime         TIMESTAMP       NOT NULL,
-          endTime           TIMESTAMP       NULL,
-          PRIMARY KEY (idObject)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
-        CREATE INDEX obj_name_idx on kinton_accounting.object_name(objectName);
+        SELECT UPPER(kinton_accounting.ABQ_GET_PARAMETER('AccountPeriodSize')) INTO accountingPeriodSize;
+        IF (accountingPeriodSize IS NULL) OR
+            ((accountingPeriodSize <> 'HOUR') AND (accountingPeriodSize <> 'DAY') AND (accountingPeriodSize <> 'WEEK') AND (accountingPeriodSize <> 'MONTH')) THEN
+            
+            CALL kinton_accounting.Log(logLevelStr, 'WARN', NULL, CONCAT('Bad value ', QUOTE(accountingPeriodSize),' detected for AccountPeriodSize parameter, will use default of HOUR.'));
+            SET accountingPeriodSize='HOUR';
+        END IF;
+
+        SELECT UPPER(kinton_accounting.ABQ_GET_PARAMETER('AccountPeriodGranularity')) INTO accountingPeriodGranularity;
+        IF (accountingPeriodGranularity IS NULL) OR
+            ((accountingPeriodGranularity <> 'HOUR') AND (accountingPeriodGranularity <> 'DAY') AND 
+             (accountingPeriodGranularity <> 'WEEK') AND (accountingPeriodGranularity <> 'MONTH')) THEN
+            
+            CALL kinton_accounting.Log(logLevelStr, 'WARN', NULL, CONCAT('Bad value ', QUOTE(accountingPeriodGranularity),' detected for AccountPeriodGranularity parameter, will use default of HOUR.'));
+            SET accountingPeriodGranularity='HOUR';
+        END IF;
+
+        
+        IF ((accountingPeriodSize='HOUR') AND ((accountingPeriodGranularity='DAY') OR (accountingPeriodGranularity='WEEK') OR (accountingPeriodGranularity='MONTH')) OR
+            (accountingPeriodSize='DAY') AND ((accountingPeriodGranularity='WEEK') OR (accountingPeriodGranularity='MONTH')) OR
+            (accountingPeriodSize='WEEK') AND (accountingPeriodGranularity='MONTH') OR
+            (accountingPeriodSize='MONTH') AND (accountingPeriodGranularity='WEEK'))
+        THEN
+            
+            CALL kinton_accounting.Log(logLevelStr, 'WARN', NULL, CONCAT('Granularity ', QUOTE(accountingPeriodGranularity),' is not compatible with account period ', QUOTE(accountingPeriodSize),', so resetting the Granularity to ', QUOTE(accountingPeriodSize)));
+            SET accountingPeriodGranularity=accountingPeriodSize;
+        END IF;
+
+        
+    ELSE
+        
+        SELECT 0 INTO accounting_enabled;
     END IF;
 
-	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='ent_name') THEN
-        SELECT "Creating table - kinton_accounting.ent_name" as " ";
-        CREATE TABLE `kinton_accounting`.`ent_name` (
-          idEnterprise      INT(10)         NOT NULL,
-          enterpriseName    VARCHAR(40)     NOT NULL,
-          startTime         TIMESTAMP       NOT NULL,
-          endTime           TIMESTAMP       NULL,
-          PRIMARY KEY (idEnterprise)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-    END IF;
+    IF (accounting_enabled <> 0) THEN
+        SET periodCount=0;
 
-	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='vdc_name') THEN
-        SELECT "Creating table - kinton_accounting.vdc_name" as " ";
-        CREATE TABLE `kinton_accounting`.`vdc_name` (
-          idVirtualDataCenter   INT(10)         NOT NULL,
-          vdcName               VARCHAR(40)     NOT NULL,
-          startTime             TIMESTAMP       NOT NULL,
-          endTime               TIMESTAMP       NULL,
-          PRIMARY KEY (idVirtualDataCenter)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-    END IF;
+        
+        SELECT MAX(endTime) INTO nextAccountingPeriod FROM kinton_accounting.accounting_event_detail;
+        IF (nextAccountingPeriod IS NULL) THEN
+            
+            
+            
+            SELECT TIMESTAMP(CURDATE()) INTO currentAccountingPeriod;
+            SELECT  CASE accountingPeriodSize
+                        WHEN 'HOUR' THEN TIMESTAMPADD(HOUR, HOUR(NOW()), currentAccountingPeriod)
+                        WHEN 'DAY' THEN currentAccountingPeriod 
+                        WHEN 'WEEK' THEN TIMESTAMPADD(DAY, -(DAYOFWEEK(NOW())-1), currentAccountingPeriod) 
+                        WHEN 'MONTH' THEN TIMESTAMPADD(DAY, -(DAYOFMONTH(NOW())-1), currentAccountingPeriod) 
+                    END
+                    INTO currentAccountingPeriod;            
 
-	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='vapp_name') THEN
-        SELECT "Creating table - kinton_accounting.vapp_name" as " ";
-        CREATE TABLE `kinton_accounting`.`vapp_name` (
-          idVirtualApp          INT(10)         NOT NULL,
-          vappName              VARCHAR(40)     NOT NULL,
-          startTime             TIMESTAMP       NOT NULL,
-          endTime               TIMESTAMP       NULL,
-          PRIMARY KEY (idVirtualApp)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-    END IF;
+            SELECT  CASE accountingPeriodSize
+                        WHEN 'HOUR' THEN TIMESTAMPADD(HOUR, -maxPeriodsToInit, currentAccountingPeriod)
+                        WHEN 'DAY' THEN TIMESTAMPADD(DAY, -maxPeriodsToInit, currentAccountingPeriod)
+                        WHEN 'WEEK' THEN TIMESTAMPADD(WEEK, -maxPeriodsToInit, currentAccountingPeriod) 
+                        WHEN 'MONTH' THEN TIMESTAMPADD(MONTH, -maxPeriodsToInit, currentAccountingPeriod) 
+                    END
+                    INTO nextAccountingPeriod;
 
-	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='vm_name') THEN
-        SELECT "Creating table - kinton_accounting.vm_name" as " ";
-        CREATE TABLE `kinton_accounting`.`vm_name` (
-          idVM                  BIGINT(20)      NOT NULL,
-          vmName                VARCHAR(255)    NOT NULL,
-          startTime             TIMESTAMP       NOT NULL,
-          endTime               TIMESTAMP       NULL,
-          PRIMARY KEY (idVM)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-    END IF;
+            CALL kinton_accounting.Log( logLevelStr, 'INFO', NULL,
+                                        CONCAT('Accounting table is empty, will start accounting data from ', QUOTE(nextAccountingPeriod)));        
+        END IF;
 
-    # Refined version of the 'old' accounting table, removing duplicated string data and column references...
-	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='accounting_event_detail') THEN
-        SELECT "Creating table - kinton_accounting.accounting_event_detail" as " ";
-        CREATE TABLE kinton_accounting.accounting_event_detail (
-          `idAccountingEvent`           bigint(20)          NOT NULL auto_increment,
-          `startTime`                   timestamp           NOT NULL default '0000-00-00 00:00:00',
-          `endTime`                     timestamp           NOT NULL default '0000-00-00 00:00:00',
-          `idAccountingResourceType`    tinyint(4)          NOT NULL,
-          `resourceType`                int(20)             NOT NULL,
-          `resourceUnits`               bigint(20)          NOT NULL,
-          `resourceName`                int(20)             NOT NULL,
-          `idEnterprise`                int(11) unsigned    NOT NULL,
-          `idVirtualDataCenter`         int(11) unsigned    NOT NULL,
-          `idVirtualApp`                int(11) unsigned    default NULL,
-          `idVirtualMachine`            int(11) unsigned    default NULL,
-          `costCode`                    int(4)              default NULL,
-          `idStorageTier`               int(10)             default NULL,
-          `version_c`                   int(11)             default '0',
-          PRIMARY KEY  (`idAccountingEvent`)
-        ) ENGINE=InnoDB
-        AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
-    END IF;
+        WHILE ((periodCount < maxPeriodsToProcess) AND (nextAccountingPeriod < NOW())) DO 
 
-    # Refined version of the 'old' accounting table, removing duplicated string data and column references...
-	IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='accounting_parameters') THEN
-        SELECT "Creating table - kinton_accounting.accounting_parameters" as " ";
-        CREATE TABLE kinton_accounting.accounting_parameters(
-            idParam     INT(5)          NOT NULL AUTO_INCREMENT,
-            paramName   VARCHAR(64)     NOT NULL,
-            paramValue  VARCHAR(511)    NOT NULL,
-            PRIMARY KEY (idParam),
-            CONSTRAINT UNIQUE unique_param (paramName)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+            
+            CALL kinton_accounting.GenerateAccountingPeriodDataExt(
+                        nextAccountingPeriod,       
+                        accountingPeriodSize,       
+                        accountingPeriodGranularity 
+                        );
+            
 
-        # Populate up the default table param values, too...
-        SELECT "Populating intial kinton_accounting.accounting_parameters" as " ";
-        INSERT INTO kinton_accounting.accounting_parameters(paramName, paramValue) VALUES('AccountingEnabled', 1);
-        INSERT INTO kinton_accounting.accounting_parameters(paramName, paramValue) VALUES('DeleteRegEventsUseSPParam', 0);
-        INSERT INTO kinton_accounting.accounting_parameters(paramName, paramValue) VALUES('DeleteRegEventsDeleteHours', 2160); # 90 days by default...
+            
+            SELECT  CASE accountingPeriodSize
+                        WHEN 'HOUR' THEN TIMESTAMPADD(HOUR, 1, nextAccountingPeriod)
+                        WHEN 'DAY' THEN TIMESTAMPADD(DAY, 1, nextAccountingPeriod) 
+                        WHEN 'WEEK' THEN TIMESTAMPADD(WEEK, 1, nextAccountingPeriod) 
+                        WHEN 'MONTH' THEN TIMESTAMPADD(MONTH, 1, nextAccountingPeriod) 
+                    END
+                    INTO nextAccountingPeriod;
+
+            SET periodCount = periodCount+1;
+        END WHILE;
     END IF;
-END;
-|
+END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
-# Now invoke the SP
-CALL kinton.accounting_optimizations();
+--
+-- Final view structure for view `CLOUD_STAT_DC_LIST`
+--
 
-# And on successful completion, remove the SP, so we are not cluttering the DBMS with upgrade code!
-DROP PROCEDURE IF EXISTS kinton.accounting_optimizations;
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_LIST`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_LIST`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_LIST` AS select `datacenter`.`idDataCenter` AS `idDataCenter`,`datacenter`.`uuid` AS `uuid`,`datacenter`.`name` AS `name`,`datacenter`.`situation` AS `situation`,`datacenter`.`network_id` AS `network_id`,`datacenter`.`version_c` AS `version_c` from `datacenter` union (select 0 AS `0`,NULL AS `NULL`,NULL AS `NULL`,NULL AS `NULL`,NULL AS `NULL`,NULL AS `NULL`) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
+--
+-- Final view structure for view `CLOUD_STAT_DC_PUBLIC_IP_STATS`
+--
 
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_PUBLIC_IP_STATS`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_PUBLIC_IP_STATS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_PUBLIC_IP_STATS` AS select `dc`.`idDataCenter` AS `idDataCenter`,if(isnull(count(0)),0,count(0)) AS `publicIPsTotal`,sum(if((`ipm`.`mac` is not null),1,0)) AS `publicIPsReserved`,sum(if(((`ipm`.`mac` is not null) and (`rm`.`idVM` is not null)),1,0)) AS `publicIPsUsed` from ((((`ip_pool_management` `ipm` join `network_configuration` `nc`) join `vlan_network` `vn`) join `datacenter` `dc`) join `rasd_management` `rm`) where ((`ipm`.`vlan_network_id` = `vn`.`vlan_network_id`) and (`vn`.`network_configuration_id` = `nc`.`network_configuration_id`) and (`vn`.`network_id` = `dc`.`network_id`) and (`vn`.`networktype` = 'PUBLIC') and (`rm`.`idManagement` = `ipm`.`idManagement`)) group by `dc`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
-# Helper stored procedures used to access the name tables...
-SELECT "Creating name table helper FUNCTIONs..." as " ";
+--
+-- Final view structure for view `CLOUD_STAT_DC_SERVER_STATS`
+--
 
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_OBJECT_NAME_TO_ID;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_OBJECT_NAME_TO_ID (objName VARCHAR(511))
-  RETURNS INT
-   DETERMINISTIC
-    BEGIN
-     DECLARE id INT;
-     SELECT idObject INTO id FROM kinton_accounting.object_name obj WHERE obj.objectName=objName;
-     IF id IS NULL THEN
-        INSERT INTO kinton_accounting.object_name (objectName, startTime) VALUES (objName, now());
-        SELECT LAST_INSERT_ID() INTO id;
-     END IF;
-     RETURN id;
-    END|
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_SERVER_STATS`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_SERVER_STATS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_SERVER_STATS` AS select `pm`.`idDataCenter` AS `idDatacenter`,sum(if((`pm`.`idState` <> 2),1,0)) AS `serversTotal`,sum(if((`pm`.`idState` = 3),1,0)) AS `serversRunning`,if((`pm`.`idState` = 3),sum(`pm`.`cpu`),0) AS `vCpuTotal`,if((`pm`.`idState` = 3),sum(`pm`.`ram`),0) AS `vMemoryTotal` from `physicalmachine` `pm` group by `pm`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_DC_STOARGE`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_STOARGE`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STOARGE`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_STOARGE` AS select `uuidgrp`.`idDataCenter` AS `idDataCenter`,if(isnull(sum(`uuidgrp`.`size`)),0,sum(`uuidgrp`.`size`)) AS `vStorageTotal`,if(isnull(sum(`uuidgrp`.`datastoreUsed`)),0,sum(`uuidgrp`.`datastoreUsed`)) AS `vStorageUsed` from `CLOUD_STAT_DC_STOARGE_INNER` `uuidgrp` group by `uuidgrp`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_DC_STOARGE_INNER`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_STOARGE_INNER`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STOARGE_INNER`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_STOARGE_INNER` AS select `pm`.`idDataCenter` AS `idDataCenter`,`d`.`datastoreUuid` AS `datastoreUuid`,`d`.`size` AS `size`,`sr`.`datastoreUsed` AS `datastoreUsed` from ((`datastore` `d` left join `scheduled_resources` `sr` on((`d`.`idDatastore` = `sr`.`idDatastore`))) left join `physicalmachine` `pm` on((`sr`.`idPhysicalMachine` = `pm`.`idPhysicalMachine`))) where (`d`.`enabled` = 1) group by `d`.`datastoreUuid` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_DC_STORAGE_TOTAL`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_STORAGE_TOTAL`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STORAGE_TOTAL`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_STORAGE_TOTAL` AS select `vdc`.`idDataCenter` AS `idDataCenter`,if(isnull(sum(`r`.`limitResource`)),0,sum(`r`.`limitResource`)) AS `storageTotal` from ((`rasd` `r` join `rasd_management` `rm`) join `virtualdatacenter` `vdc`) where ((`rm`.`idResource` = `r`.`instanceID`) and (`vdc`.`idVirtualDataCenter` = `rm`.`idVirtualDataCenter`) and (`rm`.`idResourceType` = 8)) group by `vdc`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_DC_STORAGE_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_STORAGE_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_STORAGE_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_STORAGE_USED` AS select `sd`.`idDataCenter` AS `idDataCenter`,if(isnull(sum(`r`.`limitResource`)),0,sum(`r`.`limitResource`)) AS `storageUsed` from ((((`storage_pool` `sp` join `storage_device` `sd`) join `volume_management` `vm`) join `rasd_management` `rm`) join `rasd` `r`) where ((`vm`.`idStorage` = `sp`.`idStorage`) and (`sp`.`idStorageDevice` = `sd`.`id`) and (`vm`.`idManagement` = `rm`.`idManagement`) and (`r`.`instanceID` = `rm`.`idResource`) and (`rm`.`idResourceType` = 8) and (`vm`.`state` = 1)) group by `sd`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_DC_VLAN_RES`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_VLAN_RES`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_VLAN_RES`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_VLAN_RES` AS select `enterprise_limits_by_datacenter`.`idDataCenter` AS `idDataCenter`,if(isnull(sum(`enterprise_limits_by_datacenter`.`vlanHard`)),0,sum(`enterprise_limits_by_datacenter`.`vlanHard`)) AS `vlanReserved` from `enterprise_limits_by_datacenter` where (`enterprise_limits_by_datacenter`.`idEnterprise` is not null) group by `enterprise_limits_by_datacenter`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_DC_VM_STATS`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_DC_VM_STATS`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_DC_VM_STATS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_DC_VM_STATS` AS select `vdc`.`idDataCenter` AS `idDataCenter`,sum(if((`v`.`state` = 'ON'),1,0)) AS `vMachinesRunning`,sum(if(((`v`.`state` <> 'NOT_ALLOCATED') and (`v`.`state` <> 'UNKNOWN')),1,0)) AS `vMachinesTotal`,sum(if((`v`.`state` in ('ON','OFF','PAUSED')),`v`.`cpu`,0)) AS `vCpuUsed`,sum(if((`v`.`state` in ('ON','OFF','PAUSED')),`v`.`ram`,0)) AS `vMemoryUsed` from ((((`nodevirtualimage` `nvi` join `virtualmachine` `v`) join `node` `n`) join `virtualapp` `vapp`) join `virtualdatacenter` `vdc`) where ((`v`.`idVM` = `nvi`.`idVM`) and (`n`.`idNode` = `nvi`.`idNode`) and (`vapp`.`idVirtualApp` = `n`.`idVirtualApp`) and (`vdc`.`idVirtualDataCenter` = `vapp`.`idVirtualDataCenter`) and (`v`.`idType` = 1)) group by `vdc`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_ENT_COUNT`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_ENT_COUNT`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_ENT_COUNT`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_ENT_COUNT` AS select 0 AS `idDataCenter`,if(isnull(count(0)),0,count(0)) AS `numEnterprisesCreated` from `enterprise` `e` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_EXTRA_HD_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_EXTRA_HD_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_EXTRA_HD_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_EXTRA_HD_USED` AS select `pm`.`idDataCenter` AS `idDatacenter`,(ifnull(sum(`r`.`limitResource`),0) * 1048576) AS `extraHDUsed` from ((((`rasd_management` `rm` join `rasd` `r`) join `virtualmachine` `vm`) join `hypervisor` `h`) join `physicalmachine` `pm`) where ((`rm`.`idResource` = `r`.`instanceID`) and (`rm`.`idVM` = `vm`.`idVM`) and (`rm`.`idResourceType` = 17) and (`vm`.`idHypervisor` = `h`.`id`) and (`h`.`idPhysicalMachine` = `pm`.`idPhysicalMachine`) and (`vm`.`state` = 'ON') and (`vm`.`idType` = 1)) group by `pm`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_RESERVED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_RESERVED`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_RESERVED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_RESERVED` AS select 0 AS `idDataCenter`,if(isnull(sum(`e`.`cpuHard`)),0,sum(`e`.`cpuHard`)) AS `vCpuReserved`,if(isnull(sum(`e`.`ramHard`)),0,sum(`e`.`ramHard`)) AS `vMemoryReserved`,if(isnull(sum(`e`.`hdHard`)),0,sum(`e`.`hdHard`)) AS `vStorageReserved`,if(isnull(sum(`e`.`storageHard`)),0,sum(`e`.`storageHard`)) AS `storageReserved` from `enterprise` `e` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_SERV_WKLOAD_TOTALS`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_SERV_WKLOAD_TOTALS` AS select `mm`.`idDataCenter` AS `idDatacenter`,sum((`mm`.`cpu` * coalesce((`mchRules`.`cpuLoadPercentage` / 100),1))) AS `vCPUTotal`,sum((`mm`.`ram` * coalesce((`mchRules`.`ramLoadPercentage` / 100),1))) AS `vMemoryTotal` from (`physicalmachine` `mm` left join `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER` `mchRules` on((`mm`.`idPhysicalMachine` = `mchRules`.`idPhysicalMachine`))) group by `mm`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_SERV_WKLOAD_TOTALS_INNER` AS select `m`.`idDataCenter` AS `idDatacenter`,`m`.`idPhysicalMachine` AS `idPhysicalMachine`,`l`.`id` AS `load_rule`,`m`.`cpu` AS `cpu`,`m`.`ram` AS `ram`,`l`.`cpuLoadPercentage` AS `cpuLoadPercentage`,`l`.`ramLoadPercentage` AS `ramLoadPercentage` from (`physicalmachine` `m` join `workload_machine_load_rule` `l` on((`m`.`idPhysicalMachine` = `l`.`idMachine`))) union all select `m`.`idDataCenter` AS `idDatacenter`,`m`.`idPhysicalMachine` AS `idPhysicalMachine`,`l`.`id` AS `id`,`m`.`cpu` AS `cpu`,`m`.`ram` AS `ram`,`l`.`cpuLoadPercentage` AS `cpuLoadPercentage`,`l`.`ramLoadPercentage` AS `ramLoadPercentage` from ((`rack` `r` join `workload_machine_load_rule` `l` on(((`r`.`idRack` = `l`.`idRack`) and isnull(`l`.`idMachine`)))) join `physicalmachine` `m` on((`r`.`idRack` = `m`.`idRack`))) where (not(`m`.`idPhysicalMachine` in (select `ll`.`idMachine` from `workload_machine_load_rule` `ll` where (`ll`.`idMachine` is not null)))) union all select `m`.`idDataCenter` AS `idDatacenter`,`m`.`idPhysicalMachine` AS `idPhysicalMachine`,`l`.`id` AS `id`,`m`.`cpu` AS `cpu`,`m`.`ram` AS `ram`,`l`.`cpuLoadPercentage` AS `cpuLoadPercentage`,`l`.`ramLoadPercentage` AS `ramLoadPercentage` from ((`datacenter` `d` join `workload_machine_load_rule` `l` on(((`d`.`idDataCenter` = `l`.`idDatacenter`) and isnull(`l`.`idMachine`) and isnull(`l`.`idRack`)))) join `physicalmachine` `m` on((`d`.`idDataCenter` = `m`.`idDataCenter`))) where ((not(`m`.`idPhysicalMachine` in (select `ll`.`idMachine` from `workload_machine_load_rule` `ll` where (`ll`.`idMachine` is not null)))) and (not(`m`.`idRack` in (select `ll`.`idRack` from `workload_machine_load_rule` `ll` where (`ll`.`idRack` is not null))))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_USER_COUNT`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_USER_COUNT`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_USER_COUNT`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_USER_COUNT` AS select 0 AS `idDataCenter`,if(isnull(count(0)),0,count(0)) AS `numUsersCreated` from `user` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_VDC_COUNT`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_VDC_COUNT`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_VDC_COUNT`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_VDC_COUNT` AS select 0 AS `idDataCenter`,if(isnull(count(0)),0,count(0)) AS `numVDCCreated` from `virtualdatacenter` `vdc` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `CLOUD_STAT_VLAN_USAGE`
+--
+
+/*!50001 DROP TABLE IF EXISTS `CLOUD_STAT_VLAN_USAGE`*/;
+/*!50001 DROP VIEW IF EXISTS `CLOUD_STAT_VLAN_USAGE`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `CLOUD_STAT_VLAN_USAGE` AS select 0 AS `idDataCenter`,if(isnull(count(0)),0,count(0)) AS `vlanUsed` from `vlan_network` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `ENT_STAT_EXTRA_HD_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `ENT_STAT_EXTRA_HD_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_EXTRA_HD_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ENT_STAT_EXTRA_HD_USED` AS select `vm`.`idEnterprise` AS `idEnterprise`,(ifnull(sum(`r`.`limitResource`),0) * 1048576) AS `extraHDUsed` from ((`rasd_management` `rm` join `rasd` `r`) join `virtualmachine` `vm`) where ((`rm`.`idResource` = `r`.`instanceID`) and (`rm`.`idVM` = `vm`.`idVM`) and (`rm`.`idResourceType` = 17) and (`vm`.`state` in ('ON','OFF','PAUSED')) and (`vm`.`idType` = 1)) group by `vm`.`idEnterprise` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `ENT_STAT_PUBLIC_IP_STATS`
+--
+
+/*!50001 DROP TABLE IF EXISTS `ENT_STAT_PUBLIC_IP_STATS`*/;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_PUBLIC_IP_STATS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ENT_STAT_PUBLIC_IP_STATS` AS select `vdc`.`idEnterprise` AS `idEnterprise`,sum(if((`ipm`.`mac` is not null),1,0)) AS `publicIPsReserved`,sum(if(((`ipm`.`mac` is not null) and (`rm`.`idVM` is not null)),1,0)) AS `publicIPsUsed` from (((((`ip_pool_management` `ipm` join `network_configuration` `nc`) join `vlan_network` `vn`) join `datacenter` `dc`) join `rasd_management` `rm`) join `virtualdatacenter` `vdc`) where ((`ipm`.`vlan_network_id` = `vn`.`vlan_network_id`) and (`vn`.`network_configuration_id` = `nc`.`network_configuration_id`) and (`vn`.`network_id` = `dc`.`network_id`) and (`vn`.`networktype` = 'PUBLIC') and (`rm`.`idManagement` = `ipm`.`idManagement`) and (`vdc`.`idVirtualDataCenter` = `rm`.`idVirtualDataCenter`)) group by `vdc`.`idEnterprise` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `ENT_STAT_STORAGE_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `ENT_STAT_STORAGE_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_STORAGE_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ENT_STAT_STORAGE_USED` AS select `vdc`.`idEnterprise` AS `idEnterprise`,if(isnull(sum(`r`.`limitResource`)),0,sum(`r`.`limitResource`)) AS `extStorageUsed` from (((`rasd_management` `rm` join `rasd` `r`) join `volume_management` `vm`) join `virtualdatacenter` `vdc`) where ((`rm`.`idManagement` = `vm`.`idManagement`) and (`vdc`.`idVirtualDataCenter` = `rm`.`idVirtualDataCenter`) and (`r`.`instanceID` = `rm`.`idResource`) and (`rm`.`idResource` is not null)) group by `vdc`.`idEnterprise` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `ENT_STAT_VLANS_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `ENT_STAT_VLANS_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_VLANS_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ENT_STAT_VLANS_USED` AS select `vdc`.`idEnterprise` AS `idEnterprise`,if(isnull(count(0)),0,count(0)) AS `vlanUsed` from (`virtualdatacenter` `vdc` join `vlan_network` `vn`) where (`vdc`.`networktypeID` = `vn`.`network_id`) group by `vdc`.`idEnterprise` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `ENT_STAT_VM_RESOURCES`
+--
+
+/*!50001 DROP TABLE IF EXISTS `ENT_STAT_VM_RESOURCES`*/;
+/*!50001 DROP VIEW IF EXISTS `ENT_STAT_VM_RESOURCES`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ENT_STAT_VM_RESOURCES` AS select `vm`.`idEnterprise` AS `idEnterprise`,if(isnull(sum(`vm`.`cpu`)),0,sum(`vm`.`cpu`)) AS `vCpuUsed`,if(isnull(sum(`vm`.`ram`)),0,sum(`vm`.`ram`)) AS `memoryUsed`,if(isnull(sum(`vm`.`hd`)),0,sum(`vm`.`hd`)) AS `localStorageUsed` from `virtualmachine` `vm` where ((`vm`.`state` in ('ON','OFF','PAUSED')) and (`vm`.`idType` = 1)) group by `vm`.`idEnterprise` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `METERING_ALL_VW`
+--
+
+/*!50001 DROP TABLE IF EXISTS `METERING_ALL_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `METERING_ALL_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `METERING_ALL_VW` AS select `metering_archive`.`idMeter` AS `idMeter`,`metering_archive`.`idDatacenter` AS `idDatacenter`,`metering_archive`.`datacenter` AS `datacenter`,`metering_archive`.`idRack` AS `idRack`,`metering_archive`.`rack` AS `rack`,`metering_archive`.`idPhysicalMachine` AS `idPhysicalMachine`,`metering_archive`.`physicalmachine` AS `physicalmachine`,`metering_archive`.`idStorageSystem` AS `idStorageSystem`,`metering_archive`.`storageSystem` AS `storageSystem`,`metering_archive`.`idStoragePool` AS `idStoragePool`,`metering_archive`.`storagePool` AS `storagePool`,`metering_archive`.`idVolume` AS `idVolume`,`metering_archive`.`volume` AS `volume`,`metering_archive`.`idNetwork` AS `idNetwork`,`metering_archive`.`network` AS `network`,`metering_archive`.`idSubnet` AS `idSubnet`,`metering_archive`.`subnet` AS `subnet`,`metering_archive`.`idEnterprise` AS `idEnterprise`,`metering_archive`.`enterprise` AS `enterprise`,`metering_archive`.`idUser` AS `idUser`,`metering_archive`.`user` AS `user`,`metering_archive`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`metering_archive`.`virtualDataCenter` AS `virtualDataCenter`,`metering_archive`.`idVirtualApp` AS `idVirtualApp`,`metering_archive`.`virtualApp` AS `virtualApp`,`metering_archive`.`idVirtualMachine` AS `idVirtualMachine`,`metering_archive`.`virtualmachine` AS `virtualmachine`,`metering_archive`.`severity` AS `severity`,`metering_archive`.`timestamp` AS `timestamp`,`metering_archive`.`performedby` AS `performedby`,`metering_archive`.`actionperformed` AS `actionperformed`,`metering_archive`.`component` AS `component`,`metering_archive`.`stacktrace` AS `stacktrace`,`metering_archive`.`version_c` AS `version_c` from `metering_archive` union all select `metering`.`idMeter` AS `idMeter`,`metering`.`idDatacenter` AS `idDatacenter`,`metering`.`datacenter` AS `datacenter`,`metering`.`idRack` AS `idRack`,`metering`.`rack` AS `rack`,`metering`.`idPhysicalMachine` AS `idPhysicalMachine`,`metering`.`physicalmachine` AS `physicalmachine`,`metering`.`idStorageSystem` AS `idStorageSystem`,`metering`.`storageSystem` AS `storageSystem`,`metering`.`idStoragePool` AS `idStoragePool`,`metering`.`storagePool` AS `storagePool`,`metering`.`idVolume` AS `idVolume`,`metering`.`volume` AS `volume`,`metering`.`idNetwork` AS `idNetwork`,`metering`.`network` AS `network`,`metering`.`idSubnet` AS `idSubnet`,`metering`.`subnet` AS `subnet`,`metering`.`idEnterprise` AS `idEnterprise`,`metering`.`enterprise` AS `enterprise`,`metering`.`idUser` AS `idUser`,`metering`.`user` AS `user`,`metering`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`metering`.`virtualDataCenter` AS `virtualDataCenter`,`metering`.`idVirtualApp` AS `idVirtualApp`,`metering`.`virtualApp` AS `virtualApp`,`metering`.`idVirtualMachine` AS `idVirtualMachine`,`metering`.`virtualmachine` AS `virtualmachine`,`metering`.`severity` AS `severity`,`metering`.`timestamp` AS `timestamp`,`metering`.`performedby` AS `performedby`,`metering`.`actionperformed` AS `actionperformed`,`metering`.`component` AS `component`,`metering`.`stacktrace` AS `stacktrace`,`metering`.`version_c` AS `version_c` from `metering` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VAPP_STAT_ASSOC_VOLUMES`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VAPP_STAT_ASSOC_VOLUMES`*/;
+/*!50001 DROP VIEW IF EXISTS `VAPP_STAT_ASSOC_VOLUMES`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VAPP_STAT_ASSOC_VOLUMES` AS select `rm`.`idVirtualApp` AS `idVirtualApp`,if(isnull(count(0)),0,count(0)) AS `volAssociated` from `rasd_management` `rm` where ((`rm`.`idResource` is not null) and (`rm`.`idResourceType` = 8)) group by `rm`.`idVirtualApp` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VAPP_STAT_ATTACH_VOLUMES`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VAPP_STAT_ATTACH_VOLUMES`*/;
+/*!50001 DROP VIEW IF EXISTS `VAPP_STAT_ATTACH_VOLUMES`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VAPP_STAT_ATTACH_VOLUMES` AS select `rm`.`idVirtualApp` AS `idVirtualApp`,sum(if((`rm`.`idVM` is not null),1,0)) AS `volAttached` from `rasd_management` `rm` where ((`rm`.`idResource` is not null) and (`rm`.`idResourceType` = 8)) group by `rm`.`idVirtualApp` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VAPP_STAT_VM_COUNTS`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VAPP_STAT_VM_COUNTS`*/;
+/*!50001 DROP VIEW IF EXISTS `VAPP_STAT_VM_COUNTS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VAPP_STAT_VM_COUNTS` AS select `vapp`.`idVirtualApp` AS `idVirtualApp`,sum(if(((`v`.`state` <> 'NOT_ALLOCATED') and (`v`.`state` <> 'UNKNOWN')),1,0)) AS `vmCreated`,sum(if((`v`.`state` = 'ON'),1,0)) AS `vmActive` from (((`nodevirtualimage` `nvi` join `virtualmachine` `v`) join `node` `n`) join `virtualapp` `vapp`) where ((`nvi`.`idNode` is not null) and (`v`.`idVM` = `nvi`.`idVM`) and (`n`.`idNode` = `nvi`.`idNode`) and (`n`.`idVirtualApp` = `vapp`.`idVirtualApp`) and (`v`.`idType` = 1)) group by `vapp`.`idVirtualApp` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_ASSOC_VOLUMES`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_ASSOC_VOLUMES`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_ASSOC_VOLUMES`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_ASSOC_VOLUMES` AS select `rm`.`idVirtualDataCenter` AS `idVirtualDataCenter`,if(isnull(count(0)),0,count(0)) AS `volCreated`,sum(if((`rm`.`idVirtualApp` is not null),1,0)) AS `volAssociated` from `rasd_management` `rm` where ((`rm`.`idResource` is not null) and (`rm`.`idResourceType` = 8)) group by `rm`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_ATTACH_VOLUMES`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_ATTACH_VOLUMES`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_ATTACH_VOLUMES`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_ATTACH_VOLUMES` AS select `rm`.`idVirtualDataCenter` AS `idVirtualDataCenter`,sum(if((`rm`.`idVM` is not null),1,0)) AS `volAttached` from `rasd_management` `rm` where ((`rm`.`idResource` is not null) and (`rm`.`idResourceType` = 8)) group by `rm`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_EXTRA_HD_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_EXTRA_HD_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_EXTRA_HD_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_EXTRA_HD_USED` AS select `rm`.`idVirtualDataCenter` AS `idVirtualDataCenter`,(ifnull(sum(`r`.`limitResource`),0) * 1048576) AS `extraHDUsed` from ((`rasd_management` `rm` join `rasd` `r`) join `virtualmachine` `vm`) where ((`rm`.`idResource` = `r`.`instanceID`) and (`rm`.`idVM` = `vm`.`idVM`) and (`rm`.`idResourceType` = 17) and (`vm`.`state` = 'ON') and (`vm`.`idType` = 1)) group by `rm`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_PUBLIC_IP_STATS`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_PUBLIC_IP_STATS`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_PUBLIC_IP_STATS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_PUBLIC_IP_STATS` AS select `vdc`.`idVirtualDataCenter` AS `idVirtualDataCenter`,sum(if((`ipm`.`mac` is not null),1,0)) AS `publicIPsReserved`,sum(if(((`ipm`.`mac` is not null) and (`rm`.`idVM` is not null)),1,0)) AS `publicIPsUsed` from (((((`ip_pool_management` `ipm` join `network_configuration` `nc`) join `vlan_network` `vn`) join `datacenter` `dc`) join `rasd_management` `rm`) join `virtualdatacenter` `vdc`) where ((`ipm`.`vlan_network_id` = `vn`.`vlan_network_id`) and (`vn`.`network_configuration_id` = `nc`.`network_configuration_id`) and (`vn`.`network_id` = `dc`.`network_id`) and (`vn`.`networktype` = 'PUBLIC') and (`rm`.`idManagement` = `ipm`.`idManagement`) and (`vdc`.`idVirtualDataCenter` = `rm`.`idVirtualDataCenter`)) group by `vdc`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_STORAGE_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_STORAGE_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_STORAGE_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_STORAGE_USED` AS select `rm`.`idVirtualDataCenter` AS `idVirtualDataCenter`,if(isnull(sum(`r`.`limitResource`)),0,sum(`r`.`limitResource`)) AS `extStorageUsed` from ((`rasd_management` `rm` join `rasd` `r`) join `volume_management` `vm`) where ((`rm`.`idManagement` = `vm`.`idManagement`) and (`r`.`instanceID` = `rm`.`idResource`)) group by `rm`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_VLANS_USED`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_VLANS_USED`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_VLANS_USED`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_VLANS_USED` AS select `vdc`.`idVirtualDataCenter` AS `idVirtualDataCenter`,if(isnull(count(0)),0,count(0)) AS `vlanUsed` from (`virtualdatacenter` `vdc` join `vlan_network` `vn`) where (`vdc`.`networktypeID` = `vn`.`network_id`) group by `vdc`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_VM_COUNTS`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_VM_COUNTS`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_VM_COUNTS`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_VM_COUNTS` AS select `vapp`.`idVirtualDataCenter` AS `idVirtualDataCenter`,sum(if(((`v`.`state` <> 'NOT_ALLOCATED') and (`v`.`state` <> 'UNKNOWN')),1,0)) AS `vmCreated`,sum(if((`v`.`state` = 'ON'),1,0)) AS `vmActive` from (((`nodevirtualimage` `nvi` join `virtualmachine` `v`) join `node` `n`) join `virtualapp` `vapp`) where ((`nvi`.`idNode` is not null) and (`v`.`idVM` = `nvi`.`idVM`) and (`n`.`idNode` = `nvi`.`idNode`) and (`n`.`idVirtualApp` = `vapp`.`idVirtualApp`) and (`v`.`idType` = 1)) group by `vapp`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `VDC_STAT_VM_RESOURCES`
+--
+
+/*!50001 DROP TABLE IF EXISTS `VDC_STAT_VM_RESOURCES`*/;
+/*!50001 DROP VIEW IF EXISTS `VDC_STAT_VM_RESOURCES`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `VDC_STAT_VM_RESOURCES` AS select `vapp`.`idVirtualDataCenter` AS `idVirtualDataCenter`,if(isnull(sum(`vm`.`cpu`)),0,sum(`vm`.`cpu`)) AS `vCpuUsed`,if(isnull(sum(`vm`.`ram`)),0,sum(`vm`.`ram`)) AS `memoryUsed`,if(isnull(sum(`vm`.`hd`)),0,sum(`vm`.`hd`)) AS `localStorageUsed` from (((`virtualmachine` `vm` join `nodevirtualimage` `nvi`) join `node` `n`) join `virtualapp` `vapp`) where ((`vm`.`idVM` = `nvi`.`idVM`) and (`nvi`.`idNode` = `n`.`idNode`) and (`vapp`.`idVirtualApp` = `n`.`idVirtualApp`) and (`vm`.`state` in ('ON','OFF','PAUSED')) and (`vm`.`idType` = 1)) group by `vapp`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `cloud_usage_stats_vw`
+--
+
+/*!50001 DROP TABLE IF EXISTS `cloud_usage_stats_vw`*/;
+/*!50001 DROP VIEW IF EXISTS `cloud_usage_stats_vw`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `cloud_usage_stats_vw` AS select cast(if((`dc`.`idDataCenter` = 0),-(1),`dc`.`idDataCenter`) as decimal(20,0)) AS `idDataCenter`,cast(coalesce(`st`.`serversTotal`,0) as unsigned) AS `serversTotal`,cast(coalesce(`st`.`serversRunning`,0) as unsigned) AS `serversRunning`,cast(coalesce(`storT`.`storageTotal`,0) as unsigned) AS `storageTotal`,cast(coalesce(`cloudRes`.`storageReserved`,0) as unsigned) AS `storageReserved`,cast(coalesce(`storU`.`storageUsed`,0) as unsigned) AS `storageUsed`,cast(coalesce(`ipt`.`publicIPsTotal`,0) as unsigned) AS `publicIPsTotal`,cast(coalesce(`ipt`.`publicIPsReserved`,0) as unsigned) AS `publicIPsReserved`,cast(coalesce(`ipt`.`publicIPsUsed`,0) as unsigned) AS `publicIPsUsed`,cast(coalesce(`vlr`.`vlanReserved`,0) as unsigned) AS `vlanReserved`,cast(coalesce(`vlc`.`vlanUsed`,0) as unsigned) AS `vlanUsed`,cast(coalesce(`vmt`.`vMachinesTotal`,0) as unsigned) AS `vMachinesTotal`,cast(coalesce(`vmt`.`vMachinesRunning`,0) as unsigned) AS `vMachinesRunning`,cast(coalesce(`wkload`.`vCPUTotal`,0) as unsigned) AS `vCpuTotal`,cast(coalesce(`cloudRes`.`vCpuReserved`,0) as unsigned) AS `vCpuReserved`,cast(coalesce(`vmt`.`vCpuUsed`,0) as unsigned) AS `vCpuUsed`,cast(coalesce(`wkload`.`vMemoryTotal`,0) as unsigned) AS `vMemoryTotal`,cast(coalesce(`cloudRes`.`vMemoryReserved`,0) as unsigned) AS `vMemoryReserved`,cast(coalesce(`vmt`.`vMemoryUsed`,0) as unsigned) AS `vMemoryUsed`,cast(coalesce(`cloudRes`.`vStorageReserved`,0) as unsigned) AS `vStorageReserved`,cast((coalesce(`vst`.`vStorageUsed`,0) + coalesce(`ehd`.`extraHDUsed`,0)) as unsigned) AS `vStorageUsed`,cast(coalesce(`vst`.`vStorageTotal`,0) as unsigned) AS `vStorageTotal`,cast(coalesce(`uc`.`numUsersCreated`,0) as unsigned) AS `numUsersCreated`,cast(coalesce(`vdcc`.`numVDCCreated`,0) as unsigned) AS `numVDCCreated`,cast(coalesce(`ec`.`numEnterprisesCreated`,0) as unsigned) AS `numEnterprisesCreated`,1 AS `version_c` from ((((((((((((((`CLOUD_STAT_DC_LIST` `dc` left join `CLOUD_STAT_DC_SERVER_STATS` `st` on((`dc`.`idDataCenter` = `st`.`idDatacenter`))) left join `CLOUD_STAT_DC_STORAGE_TOTAL` `storT` on((`dc`.`idDataCenter` = `storT`.`idDataCenter`))) left join `CLOUD_STAT_DC_STORAGE_USED` `storU` on((`dc`.`idDataCenter` = `storU`.`idDataCenter`))) left join `CLOUD_STAT_DC_PUBLIC_IP_STATS` `ipt` on((`dc`.`idDataCenter` = `ipt`.`idDataCenter`))) left join `CLOUD_STAT_DC_VM_STATS` `vmt` on((`dc`.`idDataCenter` = `vmt`.`idDataCenter`))) left join `CLOUD_STAT_DC_VLAN_RES` `vlr` on((`dc`.`idDataCenter` = `vlr`.`idDataCenter`))) left join `CLOUD_STAT_DC_STOARGE` `vst` on((`dc`.`idDataCenter` = `vst`.`idDataCenter`))) left join `CLOUD_STAT_SERV_WKLOAD_TOTALS` `wkload` on((`dc`.`idDataCenter` = `wkload`.`idDatacenter`))) left join `CLOUD_STAT_EXTRA_HD_USED` `ehd` on((`dc`.`idDataCenter` = `ehd`.`idDatacenter`))) left join `CLOUD_STAT_RESERVED` `cloudRes` on((`dc`.`idDataCenter` = `cloudRes`.`idDataCenter`))) left join `CLOUD_STAT_USER_COUNT` `uc` on((`dc`.`idDataCenter` = `uc`.`idDataCenter`))) left join `CLOUD_STAT_VDC_COUNT` `vdcc` on((`dc`.`idDataCenter` = `vdcc`.`idDataCenter`))) left join `CLOUD_STAT_ENT_COUNT` `ec` on((`dc`.`idDataCenter` = `ec`.`idDataCenter`))) left join `CLOUD_STAT_VLAN_USAGE` `vlc` on((`dc`.`idDataCenter` = `vlc`.`idDataCenter`))) order by `dc`.`idDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `enterprise_resources_stats_vw`
+--
+
+/*!50001 DROP TABLE IF EXISTS `enterprise_resources_stats_vw`*/;
+/*!50001 DROP VIEW IF EXISTS `enterprise_resources_stats_vw`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `enterprise_resources_stats_vw` AS select `e`.`idEnterprise` AS `idEnterprise`,cast(`e`.`cpuHard` as unsigned) AS `vCpuReserved`,cast(coalesce(`evm`.`vCpuUsed`,0) as unsigned) AS `vCpuUsed`,cast(`e`.`ramHard` as unsigned) AS `memoryReserved`,cast(coalesce(`evm`.`memoryUsed`,0) as unsigned) AS `memoryUsed`,cast(`e`.`hdHard` as unsigned) AS `localStorageReserved`,cast((coalesce(`evm`.`localStorageUsed`,0) + coalesce(`ehd`.`extraHDUsed`,0)) as unsigned) AS `localStorageUsed`,cast(`e`.`storageHard` as unsigned) AS `extStorageReserved`,cast(coalesce(`su`.`extStorageUsed`,0) as unsigned) AS `extStorageUsed`,cast(`e`.`repositoryHard` as unsigned) AS `repositoryReserved`,cast(`e`.`repositorySoft` as unsigned) AS `repositoryUsed`,cast(coalesce(`ips`.`publicIPsReserved`,0) as unsigned) AS `publicIPsReserved`,cast(coalesce(`ips`.`publicIPsUsed`,0) as unsigned) AS `publicIPsUsed`,cast(`e`.`vlanHard` as unsigned) AS `vlanReserved`,cast(coalesce(`vlu`.`vlanUsed`,0) as unsigned) AS `vlanUsed`,1 AS `version_c` from (((((`enterprise` `e` left join `ENT_STAT_VM_RESOURCES` `evm` on((`e`.`idEnterprise` = `evm`.`idEnterprise`))) left join `ENT_STAT_VLANS_USED` `vlu` on((`e`.`idEnterprise` = `vlu`.`idEnterprise`))) left join `ENT_STAT_STORAGE_USED` `su` on((`e`.`idEnterprise` = `su`.`idEnterprise`))) left join `ENT_STAT_PUBLIC_IP_STATS` `ips` on((`e`.`idEnterprise` = `ips`.`idEnterprise`))) left join `ENT_STAT_EXTRA_HD_USED` `ehd` on((`e`.`idEnterprise` = `ehd`.`idEnterprise`))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vapp_enterprise_stats_vw`
+--
+
+/*!50001 DROP TABLE IF EXISTS `vapp_enterprise_stats_vw`*/;
+/*!50001 DROP VIEW IF EXISTS `vapp_enterprise_stats_vw`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vapp_enterprise_stats_vw` AS select `vapp`.`idVirtualApp` AS `idVirtualApp`,`vapp`.`idEnterprise` AS `idEnterprise`,`vapp`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`vapp`.`name` AS `vappName`,`vdc`.`name` AS `vdcName`,cast(coalesce(`vvm`.`vmCreated`,0) as decimal(12,0)) AS `vmCreated`,cast(coalesce(`vvm`.`vmActive`,0) as decimal(12,0)) AS `vmActive`,cast(coalesce(`vass`.`volAssociated`,0) as decimal(12,0)) AS `volAssociated`,cast(coalesce(`vatt`.`volAttached`,0) as decimal(12,0)) AS `volAttached`,1 AS `version_c` from ((((`virtualapp` `vapp` join `virtualdatacenter` `vdc` on((`vdc`.`idVirtualDataCenter` = `vapp`.`idVirtualDataCenter`))) left join `VAPP_STAT_VM_COUNTS` `vvm` on((`vapp`.`idVirtualApp` = `vvm`.`idVirtualApp`))) left join `VAPP_STAT_ASSOC_VOLUMES` `vass` on((`vapp`.`idVirtualApp` = `vass`.`idVirtualApp`))) left join `VAPP_STAT_ATTACH_VOLUMES` `vatt` on((`vapp`.`idVirtualApp` = `vatt`.`idVirtualApp`))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vdc_enterprise_stats_vw`
+--
+
+/*!50001 DROP TABLE IF EXISTS `vdc_enterprise_stats_vw`*/;
+/*!50001 DROP VIEW IF EXISTS `vdc_enterprise_stats_vw`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vdc_enterprise_stats_vw` AS select `vdc`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`vdc`.`idEnterprise` AS `idEnterprise`,`vdc`.`name` AS `vdcName`,cast(coalesce(`vvm`.`vmCreated`,0) as decimal(12,0)) AS `vmCreated`,cast(coalesce(`vvm`.`vmActive`,0) as decimal(12,0)) AS `vmActive`,cast(coalesce(`vass`.`volCreated`,0) as decimal(12,0)) AS `volCreated`,cast(coalesce(`vass`.`volAssociated`,0) as decimal(12,0)) AS `volAssociated`,cast(coalesce(`vatt`.`volAttached`,0) as decimal(12,0)) AS `volAttached`,cast(`vdc`.`cpuHard` as unsigned) AS `vCpuReserved`,cast(coalesce(`vm`.`vCpuUsed`,0) as unsigned) AS `vCpuUsed`,cast(`vdc`.`ramHard` as unsigned) AS `memoryReserved`,cast(coalesce(`vm`.`memoryUsed`,0) as unsigned) AS `memoryUsed`,cast(`vdc`.`hdHard` as unsigned) AS `localStorageReserved`,cast((coalesce(`vm`.`localStorageUsed`,0) + coalesce(`vehd`.`extraHDUsed`,0)) as unsigned) AS `localStorageUsed`,cast(`vdc`.`storageHard` as unsigned) AS `extStorageReserved`,cast(coalesce(`vs`.`extStorageUsed`,0) as unsigned) AS `extStorageUsed`,cast(coalesce(`vip`.`publicIPsReserved`,0) as decimal(12,0)) AS `publicIPsReserved`,cast(coalesce(`vip`.`publicIPsUsed`,0) as decimal(12,0)) AS `publicIPsUsed`,cast(`vdc`.`vlanHard` as decimal(12,0)) AS `vlanReserved`,cast(coalesce(`vlu`.`vlanUsed`,0) as decimal(12,0)) AS `vlanUsed`,1 AS `version_c` from ((((((((`virtualdatacenter` `vdc` left join `VDC_STAT_VM_COUNTS` `vvm` on((`vdc`.`idVirtualDataCenter` = `vvm`.`idVirtualDataCenter`))) left join `VDC_STAT_ASSOC_VOLUMES` `vass` on((`vdc`.`idVirtualDataCenter` = `vass`.`idVirtualDataCenter`))) left join `VDC_STAT_ATTACH_VOLUMES` `vatt` on((`vdc`.`idVirtualDataCenter` = `vatt`.`idVirtualDataCenter`))) left join `VDC_STAT_VM_RESOURCES` `vm` on((`vdc`.`idVirtualDataCenter` = `vm`.`idVirtualDataCenter`))) left join `VDC_STAT_PUBLIC_IP_STATS` `vip` on((`vdc`.`idVirtualDataCenter` = `vip`.`idVirtualDataCenter`))) left join `VDC_STAT_STORAGE_USED` `vs` on((`vdc`.`idVirtualDataCenter` = `vs`.`idVirtualDataCenter`))) left join `VDC_STAT_EXTRA_HD_USED` `vehd` on((`vdc`.`idVirtualDataCenter` = `vehd`.`idVirtualDataCenter`))) left join `VDC_STAT_VLANS_USED` `vlu` on((`vdc`.`idVirtualDataCenter` = `vlu`.`idVirtualDataCenter`))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2013-04-09 14:52:30
+DROP DATABASE IF EXISTS kinton_accounting;
+CREATE DATABASE IF NOT EXISTS kinton_accounting;
+USE kinton_accounting;-- MySQL dump 10.13  Distrib 5.1.52, for unknown-linux-gnu (x86_64)
+--
+-- Host: 10.60.20.42    Database: kinton_accounting
+-- ------------------------------------------------------
+-- Server version	5.1.52
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Temporary table structure for view `ACCOUNTING_CONFIG_VW`
+--
+
+DROP TABLE IF EXISTS `ACCOUNTING_CONFIG_VW`;
+/*!50001 DROP VIEW IF EXISTS `ACCOUNTING_CONFIG_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `ACCOUNTING_CONFIG_VW` (
+  `ACCOUNTING_ENABLED` decimal(1,0),
+  `PERIOD_SIZE` varchar(511),
+  `PERIOD_GRANULARITY` varchar(511),
+  `DELETE_HOURS` decimal(6,0),
+  `MAX_PERIODS_PER_RUN` decimal(5,0),
+  `MAX_INIT_PERIODS` decimal(5,0),
+  `VM_CPU_ENABLED` decimal(1,0),
+  `VM_RAM_ENABLED` decimal(1,0),
+  `VM_HD_ENABLED` decimal(1,0),
+  `TIER_STORAGE_ENABLED` decimal(1,0),
+  `IP_ENABLED` decimal(1,0),
+  `VLAN_ENABLED` decimal(1,0),
+  `HYP_TYPE_ENABLED` decimal(1,0),
+  `VM_HA_ENABLED` decimal(1,0),
+  `PM_CPU_ENABLED` decimal(1,0),
+  `PM_RAM_ENABLED` decimal(1,0),
+  `REPO_ENABLED` decimal(1,0)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `ACCOUNT_PERIOD_USAGE_VW`
+--
+
+DROP TABLE IF EXISTS `ACCOUNT_PERIOD_USAGE_VW`;
+/*!50001 DROP VIEW IF EXISTS `ACCOUNT_PERIOD_USAGE_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `ACCOUNT_PERIOD_USAGE_VW` (
+  `startTime` timestamp,
+  `endTime` timestamp,
+  `idAccountingResourceType` tinyint(4),
+  `resourceType` varchar(511),
+  `resourceName` varchar(511),
+  `resourceUnits` bigint(20),
+  `idEnterprise` int(11) unsigned,
+  `idVirtualDataCenter` int(11) unsigned,
+  `idVirtualApp` int(11) unsigned,
+  `idVirtualMachine` int(11) unsigned,
+  `enterpriseName` varchar(40),
+  `virtualDataCenter` varchar(40),
+  `virtualApp` varchar(40),
+  `virtualMachine` varchar(255),
+  `costCode` int(4),
+  `idStorageTier` int(10),
+  `costCodeName` varchar(255),
+  `storageTierName` varchar(40),
+  `idDataCenter` int(11),
+  `dataCenterName` varchar(255)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `DAILY_USAGE_SUM_VW`
+--
+
+DROP TABLE IF EXISTS `DAILY_USAGE_SUM_VW`;
+/*!50001 DROP VIEW IF EXISTS `DAILY_USAGE_SUM_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `DAILY_USAGE_SUM_VW` (
+  `startTime` date,
+  `endTime` date,
+  `idAccountingResourceType` tinyint(4),
+  `resourceType` varchar(511),
+  `resourceUnits` decimal(41,0),
+  `idEnterprise` int(11) unsigned,
+  `idVirtualDataCenter` int(11) unsigned,
+  `enterpriseName` varchar(40),
+  `virtualDataCenter` varchar(40)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `HOURLY_USAGE_MAX_2_VW`
+--
+
+DROP TABLE IF EXISTS `HOURLY_USAGE_MAX_2_VW`;
+/*!50001 DROP VIEW IF EXISTS `HOURLY_USAGE_MAX_2_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `HOURLY_USAGE_MAX_2_VW` (
+  `startTime` timestamp,
+  `endTime` timestamp,
+  `idAccountingResourceType` tinyint(4),
+  `resourceType` varchar(511),
+  `resourceName` varchar(511),
+  `resourceUnits` bigint(20),
+  `idEnterprise` int(11) unsigned,
+  `idVirtualDataCenter` int(11) unsigned,
+  `idVirtualApp` int(11) unsigned,
+  `idVirtualMachine` int(11) unsigned,
+  `enterpriseName` varchar(40),
+  `virtualDataCenter` varchar(40),
+  `virtualApp` varchar(40),
+  `virtualMachine` varchar(255),
+  `costCode` int(4),
+  `idStorageTier` int(10),
+  `costCodeName` varchar(255),
+  `storageTierName` varchar(40)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `HOURLY_USAGE_MAX_VW`
+--
+
+DROP TABLE IF EXISTS `HOURLY_USAGE_MAX_VW`;
+/*!50001 DROP VIEW IF EXISTS `HOURLY_USAGE_MAX_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `HOURLY_USAGE_MAX_VW` (
+  `startTime` timestamp,
+  `endTime` timestamp,
+  `idAccountingResourceType` tinyint(4),
+  `resourceType` varchar(511),
+  `resourceName` varchar(511),
+  `resourceUnits` bigint(20),
+  `idEnterprise` int(11) unsigned,
+  `idVirtualDataCenter` int(11) unsigned,
+  `idVirtualApp` int(11) unsigned,
+  `idVirtualMachine` int(11) unsigned,
+  `enterpriseName` varchar(40),
+  `virtualDataCenter` varchar(40),
+  `virtualApp` varchar(40),
+  `virtualMachine` varchar(255),
+  `costCode` int(4),
+  `idStorageTier` int(10)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `HOURLY_USAGE_SUM_VW`
+--
+
+DROP TABLE IF EXISTS `HOURLY_USAGE_SUM_VW`;
+/*!50001 DROP VIEW IF EXISTS `HOURLY_USAGE_SUM_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `HOURLY_USAGE_SUM_VW` (
+  `startTime` timestamp,
+  `endTime` timestamp,
+  `idAccountingResourceType` tinyint(4),
+  `resourceType` varchar(511),
+  `resourceUnits` decimal(41,0),
+  `idEnterprise` int(11) unsigned,
+  `idVirtualDataCenter` int(11) unsigned,
+  `enterpriseName` varchar(40),
+  `virtualDataCenter` varchar(40)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `LOG_ERRORS_VW`
+--
+
+DROP TABLE IF EXISTS `LOG_ERRORS_VW`;
+/*!50001 DROP VIEW IF EXISTS `LOG_ERRORS_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `LOG_ERRORS_VW` (
+  `LOG_TIME` timestamp,
+  `SEVERITY` varchar(10),
+  `MESSAGE` varchar(1024)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `LOG_VW`
+--
+
+DROP TABLE IF EXISTS `LOG_VW`;
+/*!50001 DROP VIEW IF EXISTS `LOG_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `LOG_VW` (
+  `LOG_TIME` timestamp,
+  `SEVERITY` varchar(10),
+  `MESSAGE` varchar(1024)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `LOG_WARNINGS_VW`
+--
+
+DROP TABLE IF EXISTS `LOG_WARNINGS_VW`;
+/*!50001 DROP VIEW IF EXISTS `LOG_WARNINGS_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `LOG_WARNINGS_VW` (
+  `LOG_TIME` timestamp,
+  `SEVERITY` varchar(10),
+  `MESSAGE` varchar(1024)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `MONTHLY_USAGE_SUM_VW`
+--
+
+DROP TABLE IF EXISTS `MONTHLY_USAGE_SUM_VW`;
+/*!50001 DROP VIEW IF EXISTS `MONTHLY_USAGE_SUM_VW`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `MONTHLY_USAGE_SUM_VW` (
+  `startTime` date,
+  `endTime` date,
+  `idAccountingResourceType` tinyint(4),
+  `resourceType` varchar(511),
+  `resourceUnits` decimal(41,0),
+  `idEnterprise` int(11) unsigned,
+  `idVirtualDataCenter` int(11) unsigned,
+  `enterpriseName` varchar(40),
+  `virtualDataCenter` varchar(40)
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `accounting_event_detail`
+--
+
+DROP TABLE IF EXISTS `accounting_event_detail`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_detail` (
+  `idAccountingEvent` bigint(20) NOT NULL AUTO_INCREMENT,
+  `startTime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `endTime` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `idAccountingResourceType` tinyint(4) NOT NULL,
+  `resourceType` int(20) NOT NULL,
+  `resourceUnits` bigint(20) NOT NULL,
+  `resourceName` int(20) NOT NULL,
+  `idEnterprise` int(11) unsigned NOT NULL,
+  `idVirtualDataCenter` int(11) unsigned DEFAULT NULL,
+  `idVirtualApp` int(11) unsigned DEFAULT NULL,
+  `idVirtualMachine` int(11) unsigned DEFAULT NULL,
+  `costCode` int(4) DEFAULT NULL,
+  `idStorageTier` int(10) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  `idDataCenter` int(11) DEFAULT NULL,
+  PRIMARY KEY (`idAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_detail`
+--
+
+LOCK TABLES `accounting_event_detail` WRITE;
+/*!40000 ALTER TABLE `accounting_event_detail` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_detail` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_ips`
+--
+
+DROP TABLE IF EXISTS `accounting_event_ips`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_ips` (
+  `idIPsAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idManagement` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `ip` varchar(20) NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  `idDataCenter` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idIPsAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_ips`
+--
+
+LOCK TABLES `accounting_event_ips` WRITE;
+/*!40000 ALTER TABLE `accounting_event_ips` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_ips` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_pm`
+--
+
+DROP TABLE IF EXISTS `accounting_event_pm`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_pm` (
+  `idPMAccountingEvent` bigint(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idPhysicalMachine` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `cpu` int(10) unsigned NOT NULL,
+  `ram` int(10) unsigned NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `idDataCenter` int(10) unsigned DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idPMAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_pm`
+--
+
+LOCK TABLES `accounting_event_pm` WRITE;
+/*!40000 ALTER TABLE `accounting_event_pm` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_pm` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_repository`
+--
+
+DROP TABLE IF EXISTS `accounting_event_repository`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_repository` (
+  `idRepoAccountingEvent` bigint(10) unsigned NOT NULL AUTO_INCREMENT,
+  `idImage` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idImageTypeName` int(10) unsigned NOT NULL,
+  `idImageFormatName` int(10) unsigned NOT NULL,
+  `imageSize` bigint(20) unsigned NOT NULL,
+  `idRepository` int(10) unsigned NOT NULL,
+  `idRepositoryName` int(10) unsigned NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `idDataCenter` int(10) unsigned DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  PRIMARY KEY (`idRepoAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_repository`
+--
+
+LOCK TABLES `accounting_event_repository` WRITE;
+/*!40000 ALTER TABLE `accounting_event_repository` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_repository` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_storage`
+--
+
+DROP TABLE IF EXISTS `accounting_event_storage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_storage` (
+  `idStorageAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idResource` varchar(50) DEFAULT NULL,
+  `resourceName` varchar(511) DEFAULT NULL,
+  `idVM` int(10) unsigned DEFAULT NULL,
+  `idStorageTier` int(10) unsigned DEFAULT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `idVirtualApp` int(10) unsigned DEFAULT NULL,
+  `sizeReserved` bigint(20) unsigned NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  `idDataCenter` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idStorageAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_storage`
+--
+
+LOCK TABLES `accounting_event_storage` WRITE;
+/*!40000 ALTER TABLE `accounting_event_storage` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_storage` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_vlan`
+--
+
+DROP TABLE IF EXISTS `accounting_event_vlan`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_vlan` (
+  `idVLANAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `vlan_network_id` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `network_name` varchar(40) NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `version_c` int(11) DEFAULT '0',
+  `idDataCenter` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idVLANAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_vlan`
+--
+
+LOCK TABLES `accounting_event_vlan` WRITE;
+/*!40000 ALTER TABLE `accounting_event_vlan` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_vlan` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_event_vm`
+--
+
+DROP TABLE IF EXISTS `accounting_event_vm`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_event_vm` (
+  `idVMAccountingEvent` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `idVM` int(10) unsigned NOT NULL,
+  `idEnterprise` int(10) unsigned NOT NULL,
+  `idVirtualDataCenter` int(10) unsigned NOT NULL,
+  `idVirtualApp` int(10) unsigned NOT NULL,
+  `cpu` int(10) unsigned NOT NULL,
+  `ram` int(10) unsigned NOT NULL,
+  `hd` bigint(20) unsigned NOT NULL,
+  `startTime` timestamp NULL DEFAULT NULL,
+  `stopTime` timestamp NULL DEFAULT NULL,
+  `consolidated` tinyint(1) NOT NULL DEFAULT '0',
+  `costCode` int(11) DEFAULT NULL,
+  `hypervisorType` varchar(255) DEFAULT NULL,
+  `version_c` int(11) DEFAULT '0',
+  `idDataCenter` int(10) unsigned DEFAULT NULL,
+  `haEnabled` tinyint(1) unsigned DEFAULT NULL,
+  `antiAffinity` tinyint(1) unsigned DEFAULT NULL,
+  PRIMARY KEY (`idVMAccountingEvent`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_event_vm`
+--
+
+LOCK TABLES `accounting_event_vm` WRITE;
+/*!40000 ALTER TABLE `accounting_event_vm` DISABLE KEYS */;
+/*!40000 ALTER TABLE `accounting_event_vm` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `accounting_parameters`
+--
+
+DROP TABLE IF EXISTS `accounting_parameters`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `accounting_parameters` (
+  `idParam` int(5) NOT NULL AUTO_INCREMENT,
+  `paramName` varchar(64) NOT NULL,
+  `paramValue` varchar(511) NOT NULL,
+  PRIMARY KEY (`idParam`),
+  UNIQUE KEY `unique_param` (`paramName`)
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `accounting_parameters`
+--
+
+LOCK TABLES `accounting_parameters` WRITE;
+/*!40000 ALTER TABLE `accounting_parameters` DISABLE KEYS */;
+INSERT INTO `accounting_parameters` VALUES (1,'AccountingEnabled','1'),(2,'DeleteRegEventsUseSPParam','0'),(3,'DeleteRegEventsDeleteHours','26280'),(4,'MaximumPeriodsToFirstInit','1'),(5,'MaximumPeriodsToProcess','24'),(6,'AccountPeriodSize','HOUR'),(7,'AccountPeriodGranularity','HOUR'),(8,'LoggingLevel','INFO'),(9,'VirtualMachine-vcpu','1'),(10,'VirtualMachine-vram','1'),(11,'VirtualMachine-vhd','1'),(12,'ExternalStorage','1'),(13,'IPAddress','1'),(14,'VLAN','1'),(15,'VirtualMachine-hypervisorType','1'),(16,'VirtualMachine-haHosted','0'),(17,'ReservedPhysicalMachine-cpu','0'),(18,'ReservedPhysicalMachine-ram','0'),(19,'RepositoryStorage','0'),(20,'VirtualMachine-antiAffinity','0');
+/*!40000 ALTER TABLE `accounting_parameters` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `activity_log`
+--
+
+DROP TABLE IF EXISTS `activity_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `activity_log` (
+  `idLog` int(16) NOT NULL AUTO_INCREMENT,
+  `logTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `logLevel` int(11) NOT NULL,
+  `messageNum` int(11) DEFAULT NULL,
+  `message` varchar(1024) NOT NULL,
+  PRIMARY KEY (`idLog`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `activity_log`
+--
+
+LOCK TABLES `activity_log` WRITE;
+/*!40000 ALTER TABLE `activity_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `activity_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cc_name`
+--
+
+DROP TABLE IF EXISTS `cc_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `cc_name` (
+  `idCostCode` bigint(20) NOT NULL,
+  `ccName` varchar(255) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idCostCode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cc_name`
+--
+
+LOCK TABLES `cc_name` WRITE;
+/*!40000 ALTER TABLE `cc_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cc_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `dc_name`
+--
+
+DROP TABLE IF EXISTS `dc_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dc_name` (
+  `idDataCenter` bigint(20) NOT NULL,
+  `dcName` varchar(255) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idDataCenter`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dc_name`
+--
+
+LOCK TABLES `dc_name` WRITE;
+/*!40000 ALTER TABLE `dc_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dc_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `ent_name`
+--
+
+DROP TABLE IF EXISTS `ent_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `ent_name` (
+  `idEnterprise` int(10) NOT NULL,
+  `enterpriseName` varchar(40) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idEnterprise`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `ent_name`
+--
+
+LOCK TABLES `ent_name` WRITE;
+/*!40000 ALTER TABLE `ent_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `ent_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `img_name`
+--
+
+DROP TABLE IF EXISTS `img_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `img_name` (
+  `idImg` bigint(20) NOT NULL,
+  `imgName` varchar(255) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idImg`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `img_name`
+--
+
+LOCK TABLES `img_name` WRITE;
+/*!40000 ALTER TABLE `img_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `img_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `object_name`
+--
+
+DROP TABLE IF EXISTS `object_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `object_name` (
+  `idObject` int(16) NOT NULL AUTO_INCREMENT,
+  `objectName` varchar(511) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idObject`),
+  KEY `obj_name_idx` (`objectName`(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `object_name`
+--
+
+LOCK TABLES `object_name` WRITE;
+/*!40000 ALTER TABLE `object_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `object_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pm_name`
+--
+
+DROP TABLE IF EXISTS `pm_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pm_name` (
+  `idPM` bigint(20) NOT NULL,
+  `pmName` varchar(255) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idPM`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pm_name`
+--
+
+LOCK TABLES `pm_name` WRITE;
+/*!40000 ALTER TABLE `pm_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pm_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `vapp_name`
+--
+
+DROP TABLE IF EXISTS `vapp_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vapp_name` (
+  `idVirtualApp` int(10) NOT NULL,
+  `vappName` varchar(40) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idVirtualApp`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vapp_name`
+--
+
+LOCK TABLES `vapp_name` WRITE;
+/*!40000 ALTER TABLE `vapp_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vapp_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `vdc_name`
+--
+
+DROP TABLE IF EXISTS `vdc_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vdc_name` (
+  `idVirtualDataCenter` int(10) NOT NULL,
+  `vdcName` varchar(40) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idVirtualDataCenter`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vdc_name`
+--
+
+LOCK TABLES `vdc_name` WRITE;
+/*!40000 ALTER TABLE `vdc_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vdc_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `vm_name`
+--
+
+DROP TABLE IF EXISTS `vm_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `vm_name` (
+  `idVM` bigint(20) NOT NULL,
+  `vmName` varchar(255) NOT NULL,
+  `startTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `endTime` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`idVM`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `vm_name`
+--
+
+LOCK TABLES `vm_name` WRITE;
+/*!40000 ALTER TABLE `vm_name` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vm_name` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Dumping routines for database 'kinton_accounting'
+--
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_COSTCODE_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_COSTCODE_NAME`(id INT(10), iName VARCHAR(255)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
+        DECLARE nameInDB VARCHAR(255);
+        IF id IS NOT NULL THEN
+            SELECT ccName INTO nameInDB FROM kinton_accounting.cc_name WHERE idCostCode=id;
+            IF nameInDB IS NULL THEN
+                INSERT INTO kinton_accounting.cc_name (idCostCode, ccName, startTime) VALUES (id, iName, now());
+            END IF;
+        END IF;
+        IF nameInDB <> iName THEN
+            UPDATE kinton_accounting.cc_name SET ccName=iName WHERE idCostCode=id;
+        END IF;
+        RETURN id;
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_OBJECT_ID_TO_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_OBJECT_ID_TO_NAME (idObj INT)
-  RETURNS VARCHAR(511)
-   DETERMINISTIC
-    BEGIN
-     DECLARE objName VARCHAR(511);
-     SELECT objectName INTO objName FROM kinton_accounting.object_name obj WHERE obj.idObject=idObj;
-     RETURN objName;
-    END|
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_DC_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_DC_NAME`(id INT(10), vName VARCHAR(40)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
+        DECLARE nameInDB VARCHAR(40);
+        IF id IS NOT NULL THEN
+            SELECT dcName INTO nameInDB FROM kinton_accounting.dc_name WHERE idDataCenter=id;
+            IF nameInDB IS NULL THEN
+                INSERT INTO kinton_accounting.dc_name (idDataCenter, dcName, startTime) VALUES (id, vName, now());
+            END IF;
+        END IF;
+        IF nameInDB <> vName THEN
+            UPDATE kinton_accounting.dc_name SET dcName=vName WHERE idDataCenter=id;
+        END IF;
+        RETURN id;
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_ADD_ENT_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_ADD_ENT_NAME(id INT(10), eName VARCHAR(40))
-  RETURNS INT
-   DETERMINISTIC
-    BEGIN
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_ENT_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_ENT_NAME`(id INT(10), eName VARCHAR(40)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
         DECLARE nameInDB VARCHAR(40);
         IF id IS NOT NULL THEN
             SELECT enterpriseName INTO nameInDB FROM kinton_accounting.ent_name WHERE idEnterprise=id;
@@ -6052,59 +6347,85 @@ CREATE FUNCTION kinton_accounting.ABQ_ADD_ENT_NAME(id INT(10), eName VARCHAR(40)
             UPDATE kinton_accounting.ent_name SET enterpriseName=eName WHERE idEnterprise=id;
         END IF;
         RETURN id;
-    END|
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_ENT_ID_TO_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_ENT_ID_TO_NAME (id INT)
-  RETURNS VARCHAR(40)
-   DETERMINISTIC
-    BEGIN
-     DECLARE entName VARCHAR(40);
-     SELECT enterpriseName INTO entName FROM kinton_accounting.ent_name ent WHERE ent.idEnterprise=id;
-     RETURN entName;
-    END|
-DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_ADD_VDC_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_ADD_VDC_NAME(id INT(10), vName VARCHAR(40))
-  RETURNS INT
-   DETERMINISTIC
-    BEGIN
-        DECLARE nameInDB VARCHAR(40);
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_IMG_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_IMG_NAME`(id INT(10), iName VARCHAR(255)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
+        DECLARE nameInDB VARCHAR(255);
         IF id IS NOT NULL THEN
-            SELECT vdcName INTO nameInDB FROM kinton_accounting.vdc_name WHERE idVirtualDataCenter=id;
+            SELECT imgName INTO nameInDB FROM kinton_accounting.img_name WHERE idImg=id;
             IF nameInDB IS NULL THEN
-                INSERT INTO kinton_accounting.vdc_name (idVirtualDataCenter, vdcName, startTime) VALUES (id, vName, now());
+                INSERT INTO kinton_accounting.img_name (idImg, imgName, startTime) VALUES (id, iName, now());
             END IF;
         END IF;
-        IF nameInDB <> vName THEN
-            UPDATE kinton_accounting.vdc_name SET vdcName=vName WHERE idVirtualDataCenter=id;
+        IF nameInDB <> iName THEN
+            UPDATE kinton_accounting.img_name SET imgName=iName WHERE idImg=id;
         END IF;
         RETURN id;
-    END|
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_VDC_ID_TO_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_VDC_ID_TO_NAME (id INT)
-  RETURNS VARCHAR(40)
-   DETERMINISTIC
-    BEGIN
-     DECLARE vName VARCHAR(40);
-     SELECT vdcName INTO vName FROM kinton_accounting.vdc_name vdc WHERE vdc.idVirtualDataCenter=id;
-     RETURN vName;
-    END|
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_PM_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_PM_NAME`(id INT(10), pName VARCHAR(255)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
+        DECLARE nameInDB VARCHAR(255);
+        IF id IS NOT NULL THEN
+            SELECT pmName INTO nameInDB FROM kinton_accounting.pm_name WHERE idPM=id;
+            IF nameInDB IS NULL THEN
+                INSERT INTO kinton_accounting.pm_name (idPM, pmName, startTime) VALUES (id, pName, now());
+            END IF;
+        END IF;
+        IF nameInDB <> pName THEN
+            UPDATE kinton_accounting.pm_name SET pmName=pName WHERE idPM=id;
+        END IF;
+        RETURN id;
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_ADD_VAPP_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_ADD_VAPP_NAME(id INT(10), vName VARCHAR(40))
-  RETURNS INT
-   DETERMINISTIC
-    BEGIN
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_VAPP_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_VAPP_NAME`(id INT(10), vName VARCHAR(40)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
         DECLARE nameInDB VARCHAR(40);
         IF id IS NOT NULL THEN
             SELECT vappName INTO nameInDB FROM kinton_accounting.vapp_name WHERE idVirtualApp=id;
@@ -6116,27 +6437,55 @@ CREATE FUNCTION kinton_accounting.ABQ_ADD_VAPP_NAME(id INT(10), vName VARCHAR(40
             UPDATE kinton_accounting.vapp_name SET vappName=vName WHERE idVirtualApp=id;
         END IF;
         RETURN id;
-    END|
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_VAPP_ID_TO_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_VAPP_ID_TO_NAME (id INT)
-  RETURNS VARCHAR(40)
-   DETERMINISTIC
-    BEGIN
-     DECLARE vName VARCHAR(40);
-     SELECT vappName INTO vName FROM kinton_accounting.vapp_name vapp WHERE vapp.idVirtualApp=id;
-     RETURN vName;
-    END|
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_VDC_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_VDC_NAME`(id INT(10), vName VARCHAR(40)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
+        DECLARE nameInDB VARCHAR(40);
+        IF id IS NOT NULL THEN
+            SELECT vdcName INTO nameInDB FROM kinton_accounting.vdc_name WHERE idVirtualDataCenter=id;
+            IF nameInDB IS NULL THEN
+                INSERT INTO kinton_accounting.vdc_name (idVirtualDataCenter, vdcName, startTime) VALUES (id, vName, now());
+            END IF;
+        END IF;
+        IF nameInDB <> vName THEN
+            UPDATE kinton_accounting.vdc_name SET vdcName=vName WHERE idVirtualDataCenter=id;
+        END IF;
+        RETURN id;
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_ADD_VM_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_ADD_VM_NAME(id INT(10), vName VARCHAR(255))
-  RETURNS INT
-   DETERMINISTIC
-    BEGIN
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ADD_VM_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ADD_VM_NAME`(id INT(10), vName VARCHAR(255)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
         DECLARE nameInDB VARCHAR(255);
         IF id IS NOT NULL THEN
             SELECT vmName INTO nameInDB FROM kinton_accounting.vm_name WHERE idVM=id;
@@ -6148,208 +6497,980 @@ CREATE FUNCTION kinton_accounting.ABQ_ADD_VM_NAME(id INT(10), vName VARCHAR(255)
             UPDATE kinton_accounting.vm_name SET vmName=vName WHERE idVM=id;
         END IF;
         RETURN id;
-    END|
+    END */;;
 DELIMITER ;
-
-DROP FUNCTION IF EXISTS kinton_accounting.ABQ_VM_ID_TO_NAME;
-DELIMITER |
-CREATE FUNCTION kinton_accounting.ABQ_VM_ID_TO_NAME(id INT)
-  RETURNS VARCHAR(255)
-   DETERMINISTIC
-    BEGIN
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_COSTCODE_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_COSTCODE_ID_TO_NAME`(id INT) RETURNS varchar(255) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE iName VARCHAR(255);
+     SELECT ccName INTO iName FROM kinton_accounting.cc_name cc WHERE cc.idCostCode=id;
+     RETURN iName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_DC_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_DC_ID_TO_NAME`(id INT) RETURNS varchar(40) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE vName VARCHAR(40);
+     SELECT dcName INTO vName FROM kinton_accounting.dc_name v WHERE v.idDataCenter=id;
+     RETURN vName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_ENT_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_ENT_ID_TO_NAME`(id INT) RETURNS varchar(40) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE entName VARCHAR(40);
+     SELECT enterpriseName INTO entName FROM kinton_accounting.ent_name ent WHERE ent.idEnterprise=id;
+     RETURN entName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_GET_PARAMETER` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_GET_PARAMETER`(pName VARCHAR(64)) RETURNS varchar(511) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE pValue VARCHAR(511);
+     SELECT paramValue INTO pValue FROM kinton_accounting.accounting_parameters ap WHERE ap.paramName=pName;
+     RETURN pValue;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_IMG_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_IMG_ID_TO_NAME`(id INT) RETURNS varchar(255) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE iName VARCHAR(255);
+     SELECT imgName INTO iName FROM kinton_accounting.img_name im WHERE im.idImg=id;
+     RETURN iName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_OBJECT_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_OBJECT_ID_TO_NAME`(idObj INT) RETURNS varchar(511) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE objName VARCHAR(511);
+     SELECT objectName INTO objName FROM kinton_accounting.object_name obj WHERE obj.idObject=idObj;
+     RETURN objName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_OBJECT_NAME_TO_ID` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_OBJECT_NAME_TO_ID`(objName VARCHAR(511)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
+     DECLARE id INT;
+     SELECT idObject INTO id FROM kinton_accounting.object_name obj WHERE obj.objectName=objName;
+     IF id IS NULL THEN
+        INSERT INTO kinton_accounting.object_name (objectName, startTime) VALUES (objName, now());
+        SELECT LAST_INSERT_ID() INTO id;
+     END IF;
+     RETURN id;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_PM_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_PM_ID_TO_NAME`(id INT) RETURNS varchar(255) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE pName VARCHAR(255);
+     SELECT pmName INTO pName FROM kinton_accounting.pm_name pm WHERE pm.idPM=id;
+     RETURN pName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_VAPP_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_VAPP_ID_TO_NAME`(id INT) RETURNS varchar(40) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE vName VARCHAR(40);
+     SELECT vappName INTO vName FROM kinton_accounting.vapp_name vapp WHERE vapp.idVirtualApp=id;
+     RETURN vName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_VDC_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_VDC_ID_TO_NAME`(id INT) RETURNS varchar(40) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE vName VARCHAR(40);
+     SELECT vdcName INTO vName FROM kinton_accounting.vdc_name vdc WHERE vdc.idVirtualDataCenter=id;
+     RETURN vName;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `ABQ_VM_ID_TO_NAME` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `ABQ_VM_ID_TO_NAME`(id INT) RETURNS varchar(255) CHARSET latin1
+    DETERMINISTIC
+BEGIN
      DECLARE vName VARCHAR(255);
      SELECT vmName INTO vName FROM kinton_accounting.vm_name vm WHERE vm.idVM=id;
      RETURN vName;
-    END|
+    END */;;
 DELIMITER ;
-
-
-
-# Once we have the TABLES and supporting functions in place we insert the 
-# existing accounting data into the new optimized table.   We do this prior
-# to creating the new UpdateAccounting SP, so we are sure that nothing else gets
-# into the new table until this INSERT has completed...
-DROP PROCEDURE IF EXISTS kinton_accounting.migrate_accounting_data;
-DELIMITER |
-CREATE PROCEDURE kinton_accounting.migrate_accounting_data() 
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `LOAD_CURRENT_LOG_LEVEL` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `LOAD_CURRENT_LOG_LEVEL`() RETURNS varchar(10) CHARSET latin1
+    DETERMINISTIC
 BEGIN
-    DECLARE batch_size INT;
-    DECLARE last_batch INT;
-    DECLARE last_batch_size INT;
-    DECLARE processed_startTime TIMESTAMP;
-    DECLARE target_startTime TIMESTAMP;
-    DECLARE migrationStartTime TIMESTAMP;
-
-    DECLARE rowsToProcess BIGINT;
-    DECLARE rowsProcessed BIGINT;
-
-    IF EXISTS(SELECT * FROM information_schema.tables WHERE table_schema= 'kinton' AND table_name='accounting_event_detail' AND table_type='BASE TABLE') THEN
-        SELECT CONCAT("Detected old kinton.accounting_event_detail table, will migrate data from it...") as " ";
-        SELECT NOW() AS 'Migrate START';
-
-        SELECT MAX(startTime) INTO processed_startTime FROM kinton_accounting.accounting_event_detail;
-        IF (processed_startTime IS NULL) THEN
-            SELECT TIMESTAMPADD(HOUR,-1,MIN(startTime)) INTO processed_startTime FROM kinton.accounting_event_detail;
-        END IF;
-        SELECT MAX(startTime), COUNT(*) INTO target_startTime, rowsToProcess FROM kinton.accounting_event_detail WHERE startTime > processed_startTime;
-        SELECT 0 INTO rowsProcessed;
-
-        SELECT CONCAT("Copying existing accounting data into optimized tables, migrating ", rowsToProcess, " accounting data rows from ", QUOTE(processed_startTime), " to ",  QUOTE(target_startTime)) as " ";
-
-        # Create buffer variables and CREATE TMP table to hold intermediate data...
-        SET last_batch=0;
-        SELECT 100000 INTO batch_size;
-
-        IF NOT EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='tmp_accounting_event_detail') THEN
-            CREATE TEMPORARY TABLE kinton_accounting.tmp_accounting_event_detail (
-              `idAccountingEvent` bigint(20) NOT NULL auto_increment,
-              `startTime` timestamp NOT NULL default '0000-00-00 00:00:00',
-              `endTime` timestamp NOT NULL default '0000-00-00 00:00:00',
-              `idAccountingResourceType` tinyint(4) NOT NULL,
-              `resourceType` varchar(255) NOT NULL,
-              `resourceUnits` bigint(20) NOT NULL,
-              `resourceName` varchar(511) NOT NULL,
-              `idEnterprise` int(11) unsigned NOT NULL,
-              `idVirtualDataCenter` int(11) unsigned NOT NULL,
-              `idVirtualApp` int(11) unsigned default NULL,
-              `idVirtualMachine` int(11) unsigned default NULL,
-              `enterpriseName` varchar(255) NOT NULL,
-              `virtualDataCenter` varchar(255) NOT NULL,
-              `virtualApp` varchar(255) DEFAULT NULL,
-              `virtualMachine` varchar(255) DEFAULT NULL,
-              `costCode` int(4) default NULL,
-              `idStorageTier` int(10) default NULL,
-              `version_c` int(11) default '0',
-              PRIMARY KEY  (`idAccountingEvent`)
-            ) ENGINE=InnoDB
-            AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
-        ELSE
-            DELETE FROM kinton_accounting.tmp_accounting_event_detail;
-        END IF;
-
-        SELECT NOW() INTO migrationStartTime;
-        WHILE (last_batch=0) DO
-            SELECT CONCAT("Processing BATCH from ", QUOTE(processed_startTime), " target batch size is ",  QUOTE(batch_size)) as " ";
+     DECLARE currentLogLevelStr VARCHAR(10);
+        SELECT UPPER(paramValue) INTO currentLogLevelStr FROM kinton_accounting.accounting_parameters WHERE paramName='LoggingLevel';
+        IF (currentLogLevelStr IS NULL) OR
+            ((currentLogLevelStr <> 'ERROR') AND (currentLogLevelStr <> 'WARN') AND 
+             (currentLogLevelStr <> 'INFO') AND (currentLogLevelStr <> 'DETAIL') AND (currentLogLevelStr <> 'DEBUG')) THEN
             
-            # Read a small batch of data from the main table into a TMP table where it is easier to process
-            PREPARE STMT FROM
-                        "INSERT INTO kinton_accounting.tmp_accounting_event_detail
-                        (   startTime, endTime,
-                            idAccountingResourceType, resourceType, resourceUnits, resourceName, 
-                            idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
-                            enterpriseName, virtualDataCenter, virtualApp, virtualMachine,
-                            costCode, idStorageTier, version_c
-                        )
-                        SELECT startTime, endTime,
-                            idAccountingResourceType, resourceType, resourceUnits, resourceName, 
-                            idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
-                            enterpriseName, virtualDataCenter, virtualApp, virtualMachine,
-                            costCode, idStorageTier, version_c
-                        FROM kinton.accounting_event_detail
-                        WHERE startTime > ?
-                        ORDER BY startTime ASC LIMIT 0, ?";
-            SET @pst = processed_startTime;
-            set @bs = batch_size;
-            EXECUTE STMT USING @pst, @bs;
-            
-            SELECT COUNT(*) INTO last_batch_size FROM kinton_accounting.tmp_accounting_event_detail;
-            SELECT CONCAT("TMP table populated with a batch of ", QUOTE(last_batch_size), " rows") AS " ";
-
-            IF (last_batch_size < batch_size) THEN
-                SELECT CONCAT("Detected **LAST** BATCH to process!") AS " ";
-                SELECT 1 INTO last_batch;
-            ELSE
-                # Remove any rows from this batch that may be in the next batch...
-                SELECT MAX(startTime) INTO @batch_last_startTime FROM kinton_accounting.tmp_accounting_event_detail;
-                
-                SELECT CONCAT("Pruning entries with the following startTime from the batch - ", QUOTE(@batch_last_startTime)) AS " ";
-                DELETE FROM kinton_accounting.tmp_accounting_event_detail WHERE startTime=@batch_last_startTime;
-            END IF;
-
-            #   Now INSERT the rows from the TMP table INTO kinton_accounting.accounting_event_detail...
-            SELECT CONCAT("Inserting data from TMP table into new kinton_accounting.accounting_event_detail table...") AS " ";
-            INSERT INTO kinton_accounting.accounting_event_detail
-                (   startTime, endTime,
-                    idAccountingResourceType, resourceType, resourceUnits, resourceName, 
-                    idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
-                    costCode, idStorageTier, version_c
-                )
-                SELECT
-                    startTime, endTime,
-                    idAccountingResourceType, kinton_accounting.ABQ_OBJECT_NAME_TO_ID(resourceType),
-                    resourceUnits, kinton_accounting.ABQ_OBJECT_NAME_TO_ID(resourceName), 
-                    kinton_accounting.ABQ_ADD_ENT_NAME(idEnterprise, enterpriseName),
-                    kinton_accounting.ABQ_ADD_VDC_NAME(idVirtualDataCenter, virtualDataCenter),
-                    kinton_accounting.ABQ_ADD_VAPP_NAME(idVirtualApp, virtualApp),
-                    kinton_accounting.ABQ_ADD_VM_NAME(idVirtualMachine, virtualMachine),
-                    IF(idAccountingResourceType=1,costCode,NULL),
-                    idStorageTier, version_c    
-                FROM
-                (
-                    SELECT 
-                        `tmp_accounting_event_detail`.`startTime`  AS `startTime`,
-                        `tmp_accounting_event_detail`.`endTime` AS `endTime`,
-                        `tmp_accounting_event_detail`.`idAccountingResourceType` AS `idAccountingResourceType`,
-                        `tmp_accounting_event_detail`.`resourceType` AS `resourceType`,
-                        `tmp_accounting_event_detail`.`resourceName` AS `resourceName`,
-                        MAX(`tmp_accounting_event_detail`.`resourceUnits`)  AS `resourceUnits`, # Use the max resources reported in the hour, where multiple entries exist!
-                        `tmp_accounting_event_detail`.`idEnterprise` AS `idEnterprise`,
-                        `tmp_accounting_event_detail`.`idVirtualDataCenter` AS `idVirtualDataCenter`,
-                        `tmp_accounting_event_detail`.`idVirtualApp` AS `idVirtualApp`,
-                        `tmp_accounting_event_detail`.`idVirtualMachine` AS `idVirtualMachine`,
-                        `tmp_accounting_event_detail`.`enterpriseName` AS `enterpriseName`,
-                        `tmp_accounting_event_detail`.`virtualDataCenter` AS `virtualDataCenter`,
-                        `tmp_accounting_event_detail`.`virtualApp` AS `virtualApp`,
-                        `tmp_accounting_event_detail`.`virtualMachine` AS `virtualMachine`,
-                        `tmp_accounting_event_detail`.`costCode` AS `costCode`,
-                        `tmp_accounting_event_detail`.`idStorageTier` AS `idStorageTier`,
-                        version_c
-                    FROM kinton_accounting.tmp_accounting_event_detail
-                    GROUP BY 
-                        `tmp_accounting_event_detail`.`startTime`,
-                        `tmp_accounting_event_detail`.`endTime`,
-                        `tmp_accounting_event_detail`.`idAccountingResourceType`,
-                        `tmp_accounting_event_detail`.`resourceName`,
-                        `tmp_accounting_event_detail`.`idEnterprise`,
-                        `tmp_accounting_event_detail`.`idVirtualDataCenter`,
-                        `tmp_accounting_event_detail`.`idVirtualApp`,
-                        `tmp_accounting_event_detail`.`idVirtualMachine`,
-                        `tmp_accounting_event_detail`.`costCode`
-                ) TMP_HOURLY_USAGE_MAX_VW_EXTENDED;
-
-            #SELECT CONCAT("Purging content of the TMP table...") AS " ";
-            # Finally update the next startTime we should use for processing the next batch...
-            SELECT MAX(startTime) INTO processed_startTime FROM kinton_accounting.tmp_accounting_event_detail;
-
-            # And truncate the TMP table ready for the next batch of data...
-            DELETE FROM kinton_accounting.tmp_accounting_event_detail;
-            SELECT rowsProcessed + ROW_COUNT() INTO rowsProcessed;
-            SELECT CONCAT("STATUS - Migration ", (rowsProcessed/rowsToProcess) * 100, "% Complete, estimated Time remaining is ",
-                            ((TIMESTAMPDIFF(SECOND, migrationStartTime, NOW())/rowsProcessed) * (rowsToProcess - rowsProcessed))/60, " minutes.") AS " ";
-        END WHILE;
-
-        SELECT "Copy of existing accounting data complete!" as " ";
-        SELECT NOW() AS 'Migrate STOP';
-    ELSE
-        SELECT "kinton_accounting.accounting_event_detail already migrated, so data migration was skipped!" as " ";
-    END IF;
-END;
-|
+            SET currentLogLevelStr='INFO';
+        END IF;
+     RETURN currentLogLevelStr;
+    END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `LOG_LEVEL_NUM_TO_STR` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `LOG_LEVEL_NUM_TO_STR`(logLevelNum INT) RETURNS varchar(10) CHARSET latin1
+    DETERMINISTIC
+BEGIN
+     DECLARE logLevelStr VARCHAR(10);
+     SELECT CASE logLevelNum
+                        WHEN 1 THEN 'ERROR'
+                        WHEN 2 THEN 'WARN'
+                        WHEN 3 THEN 'INFO' 
+                        WHEN 4 THEN 'DETAIL' 
+                        WHEN 5 THEN 'DEBUG'
+                    END
+        INTO logLevelStr;
+     RETURN logLevelStr;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `LOG_LEVEL_STR_TO_NUM` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `LOG_LEVEL_STR_TO_NUM`(logLevelStr VARCHAR(10)) RETURNS int(11)
+    DETERMINISTIC
+BEGIN
+     DECLARE logLevel INT;
+     SELECT CASE logLevelStr
+                        WHEN 'ERROR' THEN   1
+                        WHEN 'WARN' THEN    2
+                        WHEN 'INFO' THEN    3 
+                        WHEN 'DETAIL' THEN  4 
+                        WHEN 'DEBUG' THEN   5
+                    END
+        INTO logLevel;
+     RETURN logLevel;
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `ABQ_SET_PARAMETER` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `ABQ_SET_PARAMETER`(IN pName VARCHAR(64), IN pValue VARCHAR(511))
+BEGIN
+     IF EXISTS(SELECT 1 FROM kinton_accounting.accounting_parameters ap WHERE ap.paramName=pName) THEN
+        UPDATE kinton_accounting.accounting_parameters SET paramValue=pValue WHERE paramName=pName;
+     ELSE
+        INSERT INTO kinton_accounting.accounting_parameters (paramName,paramValue) VALUES(pName, pValue);
+     END IF;
+     CALL kinton_accounting.Log( LOAD_CURRENT_LOG_LEVEL(), 'INFO', NULL,
+           CONCAT('Accounting parameter ', QUOTE(pName), ' has been assigned the value ', QUOTE(pValue)));      
+    END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `AccountingIPsRegisterEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `AccountingIPsRegisterEvents`(
+    IN action VARCHAR(15),
+    IN idManagement INT(10) UNSIGNED,
+    IN ipAddress VARCHAR(20),
+    IN idThisVirtualDataCenter INT(10) UNSIGNED,
+    IN idThisEnterprise INT(10) UNSIGNED)
+BEGIN   
+    DECLARE v_idDataCenter INT(10) UNSIGNED;
+    DECLARE idDummy BIGINT; 
 
-# Now invoke the SP to migrate the data...
-CALL kinton_accounting.migrate_accounting_data();
+    
+    
+    IF action = "IP_RESERVED" THEN
+        SELECT  dc.idDataCenter, ABQ_ADD_DC_NAME(dc.idDataCenter, dc.name)
+                INTO v_idDataCenter , idDummy
+        FROM    kinton.virtualdatacenter vdc, kinton.datacenter dc
+        WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND
+                vdc.idDataCenter=dc.idDataCenter;
 
-# And on successful completion, remove the SP, so we are not cluttering the DBMS with upgrade code!
-DROP PROCEDURE IF EXISTS kinton_accounting.migrate_accounting_data;
+        SELECT  ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
+                    INTO idDummy, idDummy
+            FROM    kinton.virtualdatacenter vdc, kinton.enterprise e
+            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
 
+        INSERT INTO accounting_event_ips (idManagement,idEnterprise,idVirtualDataCenter,ip,startTime,stopTime,idDataCenter)
+            SELECT idManagement, idThisEnterprise, idThisVirtualDataCenter, ipAddress, now(), null, v_idDataCenter; 
+    END IF;
 
-SELECT "Creating new accouting stored procedures..." as " ";
-DROP PROCEDURE IF EXISTS kinton_accounting.CreateTMPEventTables;
-DELIMITER |
-CREATE PROCEDURE `kinton_accounting`.`CreateTMPEventTables`()
-    NOT DETERMINISTIC
-    SQL SECURITY DEFINER
+    
+    IF action = "IP_FREED" THEN 
+        UPDATE
+          accounting_event_ips
+        SET
+          stopTime=now()
+        WHERE
+          accounting_event_ips.idManagement = idManagement
+          AND
+          accounting_event_ips.stopTime is null;
+    END IF; 
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `AccountingPMRegisterEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `AccountingPMRegisterEvents`(
+    IN p_action VARCHAR(15),
+    IN p_idPhysicalMachine INT(11) UNSIGNED,
+    IN p_idDataCenter INT(10) UNSIGNED,
+    IN p_name VARCHAR(256),
+    IN p_cpu INT(11) UNSIGNED,
+    IN p_ram INT(11) UNSIGNED,
+    IN p_idEnterprise INT(10) UNSIGNED)
+BEGIN   
+    DECLARE idDummy BIGINT; 
+ 
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION CALL kinton_accounting.Log( LOAD_CURRENT_LOG_LEVEL(), 'ERROR', NULL,
+                                    CONCAT('AccountingPMRegisterEvents() EXCEPTION during action ', QUOTE(p_action), ' for IMAGE ',QUOTE(p_name), ' id=', QUOTE(p_idPhysicalMachine)));
+
+    
+    
+    
+    IF p_action = "RESERVE_PM" THEN
+        SELECT  ABQ_ADD_DC_NAME(dc.idDataCenter, dc.name), ABQ_ADD_PM_NAME(p_idPhysicalMachine, p_name)
+                INTO idDummy, idDummy
+            FROM    kinton.datacenter dc
+            WHERE   dc.idDataCenter=p_idDataCenter;
+
+        SELECT  ABQ_ADD_ENT_NAME(e.idEnterprise, e.name) INTO idDummy
+            FROM    kinton.enterprise e
+            WHERE   e.idEnterprise=p_idEnterprise;
+
+        INSERT INTO accounting_event_pm (idPhysicalMachine, idEnterprise, cpu, ram, startTime, stopTime, idDataCenter) 
+            SELECT p_idPhysicalMachine, p_idEnterprise, p_cpu, p_ram, NOW(), NULL, p_idDataCenter; 
+    END IF;
+
+    
+    IF p_action = "UNRESERVE_PM" THEN  
+        UPDATE accounting_event_pm SET stopTime=NOW()
+            WHERE   accounting_event_pm.idPhysicalMachine = p_idPhysicalMachine AND
+                    accounting_event_pm.stopTime IS NULL;
+    END IF; 
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `AccountingRepositoryRegisterEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `AccountingRepositoryRegisterEvents`(
+    IN p_action VARCHAR(15),
+    IN p_idImage INT(11) UNSIGNED,
+    IN p_idRepository INT(11) UNSIGNED,
+    IN p_imageName VARCHAR(255),
+    IN p_imageFormat VARCHAR(50),
+    IN p_imageType VARCHAR(50),
+    IN p_imageSize BIGINT UNSIGNED,
+    IN p_idEnterprise INT(10) UNSIGNED)
+BEGIN   
+    DECLARE idDummy BIGINT; 
+    DECLARE v_idImageFormatName INT; 
+    DECLARE v_idImageTypeName INT; 
+    DECLARE v_idRepoName INT; 
+    DECLARE v_idDataCenter INT; 
+
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION CALL kinton_accounting.Log( LOAD_CURRENT_LOG_LEVEL(), 'ERROR', NULL,
+                                    CONCAT('AccountingRepositoryRegisterEvents() EXCEPTION during action ', QUOTE(p_action), ' for IMAGE ',QUOTE(p_imageName), ' id=', QUOTE(p_idImage)));
+
+    
+    
+    
+    IF p_action = "ADD_IMAGE" THEN
+        
+        SELECT  ABQ_ADD_ENT_NAME(e.idEnterprise, e.name),
+                ABQ_ADD_DC_NAME(dc.idDataCenter, dc.name),
+                ABQ_ADD_IMG_NAME(p_idImage, p_imageName),
+                ABQ_OBJECT_NAME_TO_ID(p_imageFormat),
+                ABQ_OBJECT_NAME_TO_ID(p_imageType),
+                ABQ_OBJECT_NAME_TO_ID(r.name),
+                dc.idDataCenter
+            INTO    idDummy, idDummy, idDummy,
+                    v_idImageFormatName, v_idImageTypeName, v_idRepoName, v_idDataCenter
+            FROM    kinton.datacenter dc,
+                    kinton.repository r,
+                    kinton.virtualimage vi,
+                    kinton.enterprise e
+            WHERE   dc.idDataCenter=r.idDataCenter AND
+                    r.idRepository=vi.idRepository AND
+                    vi.idEnterprise=e.idEnterprise AND
+                    vi.idImage=p_idImage;
+
+        INSERT INTO accounting_event_repository(idImage, idEnterprise, idImageTypeName, idImageFormatName, idRepository, idRepositoryName, imageSize, startTime, stopTime, idDataCenter) 
+            SELECT p_idImage, p_idEnterprise, v_idImageTypeName, v_idImageFormatName, p_idRepository, v_idRepoName, p_imageSize, NOW(), NULL, v_idDataCenter; 
+    END IF;
+
+    
+    IF p_action = "UPDATE_IMAGE" THEN
+        
+        SELECT ABQ_ADD_IMG_NAME(p_idImage, p_imageName) INTO idDummy;
+    END IF; 
+
+    
+    
+    IF p_action = "DELETE_IMAGE" THEN  
+        UPDATE accounting_event_repository SET stopTime=NOW()
+            WHERE   accounting_event_repository.idImage = p_idImage AND
+                    accounting_event_repository.stopTime IS NULL;
+    END IF; 
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `AccountingStorageRegisterEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `AccountingStorageRegisterEvents`(
+    IN action VARCHAR(15),
+    IN idThisResource VARCHAR(50),
+    IN thisResourceName VARCHAR(255),
+    IN idStorageTier INT(10) UNSIGNED,
+    IN idThisVirtualDataCenter INT(10) UNSIGNED,
+    IN idThisEnterprise INT(10) UNSIGNED,  
+    IN sizeReserved BIGINT(20))
+BEGIN   
+    DECLARE v_idDataCenter INT(10) UNSIGNED;
+    DECLARE idDummy BIGINT; 
+
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION CALL kinton_accounting.Log( LOAD_CURRENT_LOG_LEVEL(), 'ERROR', NULL,
+                                    CONCAT('AccountingStorageRegisterEvents() EXCEPTION during action ', QUOTE(action), ' for resource ',QUOTE(thisResourceName), ' id=', QUOTE(idThisResource)));
+
+    
+    IF action = "CREATE_STORAGE" THEN
+        SELECT  dc.idDataCenter, ABQ_ADD_DC_NAME(dc.idDataCenter, dc.name)
+                INTO v_idDataCenter, idDummy
+        FROM    kinton.virtualdatacenter vdc, kinton.datacenter dc
+        WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND
+                vdc.idDataCenter=dc.idDataCenter;
+
+        SELECT  ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
+                    INTO idDummy, idDummy
+            FROM    kinton.virtualdatacenter vdc, kinton.enterprise e
+            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
+
+        INSERT INTO accounting_event_storage (idResource, resourceName, idStorageTier, idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,sizeReserved,startTime, stopTime,idDataCenter)
+            SELECT idThisResource, thisResourceName, idStorageTier, null, idThisEnterprise, idThisVirtualDataCenter, null, sizeReserved * 1048576, now(), null, v_idDataCenter; 
+    END IF;
+
+    
+    IF action = "DELETE_STORAGE" THEN   
+        UPDATE
+          accounting_event_storage
+        SET
+          stopTime=now()
+        WHERE
+          accounting_event_storage.idResource = idThisResource
+          AND
+          accounting_event_storage.stopTime is null;
+    END IF;
+
+    
+    IF action = "UPDATE_STORAGE" THEN   
+        UPDATE
+          accounting_event_storage
+        SET
+          stopTime=now()
+        WHERE
+          accounting_event_storage.idResource = idThisResource
+          AND
+          accounting_event_storage.stopTime is null;
+
+        SELECT  dc.idDataCenter
+                INTO v_idDataCenter
+        FROM    kinton.virtualdatacenter vdc, kinton.datacenter dc
+        WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND
+                vdc.idDataCenter=dc.idDataCenter;
+
+        INSERT INTO accounting_event_storage (idResource, resourceName, idStorageTier, idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,sizeReserved,startTime, stopTime, idDataCenter)
+            SELECT idThisResource,thisResourceName, idStorageTier, null, idThisEnterprise, idThisVirtualDataCenter, null, sizeReserved * 1048576, now(), null, v_idDataCenter; 
+    END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `AccountingUsageLogReport` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `AccountingUsageLogReport`(  IN period_start TIMESTAMP, IN period_end TIMESTAMP,
+                                                                IN idEnterprise INTEGER)
+BEGIN
+        
+        
+        CALL kinton_accounting.CreateTMPEventTables();
+        CALL kinton_accounting.PopulateTMPEventTables(period_start, period_end);
+
+        SELECT * FROM
+
+        (SELECT  VIRTUAL_ENTERPRISE,
+                VIRTUAL_DATACENTER,
+                VIRTUAL_APP,
+                vm.startTime, vm.stopTime,
+                CONCAT( 'VM(CPU=', QUOTE(cpu), 'RAM=',QUOTE(ram), 'MB, STORAGE=',QUOTE(hd/(1048574*1024)), 
+                        'GB, CostCode=', QUOTE(cc.ccName), ', Hypervisor=', QUOTE(hypervisorType),  ', HA=',QUOTE(haEnabled), ')') AS ACCOUNTING_RESOURCE,
+                VIRTUAL_MACHINE AS RESOURCE_NAME
+        FROM tmp_vm_events_period vm
+             LEFT JOIN kinton_accounting.cc_name cc ON (cc.idCostCode=vm.costCode)
+        WHERE vm.idEnterprise=idEnterprise) aa
+        
+        UNION ALL
+        
+        (SELECT VIRTUAL_ENTERPRISE,
+                VIRTUAL_DATACENTER,
+                NULL AS VIRTUAL_APP,
+                startTime, stopTime,
+                CONCAT( 'STORAGE(Tier=', QUOTE(st.name), ', Size=', QUOTE(stor.sizeReserved/(1048576*1024)), 'GB)') AS ACCOUNTING_RESOURCE,
+                stor.resourceName AS RESOURCE_NAME
+        FROM tmp_storage_events_period stor
+             LEFT JOIN kinton.tier st ON (st.id=stor.idStorageTier)
+        WHERE stor.idEnterprise=idEnterprise) 
+        
+        UNION ALL
+
+        (SELECT VIRTUAL_ENTERPRISE,
+                VIRTUAL_DATACENTER,
+                NULL AS VIRTUAL_APP,
+                startTime, stopTime,
+                CONCAT( 'VLAN') AS ACCOUNTING_RESOURCE,
+                vl.networkName AS RESOURCE_NAME
+        FROM tmp_vlan_events_period vl
+        WHERE vl.idEnterprise=idEnterprise)
+
+        UNION ALL
+        
+        (SELECT VIRTUAL_ENTERPRISE,
+                VIRTUAL_DATACENTER,
+                NULL AS VIRTUAL_APP,
+                startTime, stopTime,
+                CONCAT('IP') AS ACCOUNTING_RESOURCE,
+                ip.ip AS RESOURCE_NAME
+        FROM tmp_ips_events_period ip
+        WHERE ip.idEnterprise=idEnterprise)
+
+        UNION ALL 
+
+        (SELECT DISTINCT
+                ABQ_ENT_ID_TO_NAME(acc_pm.idEnterprise) AS VIRTUAL_ENTERPRISE,
+                NULL AS VIRTUAL_APP,
+                NULL AS VIRTUAL_DATACENTER,
+                startTime,
+                stopTime,
+                CONCAT('RESERVED_SRV(CPU=', acc_pm.cpu,', RAM=', acc_pm.ram, 'MB)') AS ACCOUNTING_RESOURCE,
+                ABQ_PM_ID_TO_NAME(acc_pm.idPhysicalMachine) AS RESOURCE_NAME
+            FROM accounting_event_pm acc_pm
+            WHERE
+                acc_pm.idEnterprise=idEnterprise AND
+                
+                ((acc_pm.startTime <= period_end AND 
+                 (acc_pm.stopTime IS NULL OR acc_pm.stopTime >= period_end)) OR
+                
+                ((acc_pm.stopTime >= period_start) AND (acc_pm.stopTime < period_end))))
+        UNION ALL 
+
+        (SELECT DISTINCT
+                ABQ_ENT_ID_TO_NAME(acc_rep.idEnterprise) AS VIRTUAL_ENTERPRISE,
+                NULL AS VIRTUAL_APP,
+                NULL AS VIRTUAL_DATACENTER,
+                startTime,
+                stopTime,
+                CONCAT('REPOSITORY(', ABQ_OBJECT_ID_TO_NAME(acc_rep.idImageTypeName), '-', ABQ_OBJECT_ID_TO_NAME(acc_rep.idImageFormatName), 
+                        ' Size=', QUOTE(acc_rep.imageSize/(1048576*1024)), 'GB)') AS ACCOUNTING_RESOURCE,
+                CONCAT(QUOTE(ABQ_IMG_ID_TO_NAME(acc_rep.idImage)),'(', ABQ_DC_ID_TO_NAME(acc_rep.idDataCenter), ')' ) AS RESOURCE_NAME
+            FROM accounting_event_repository acc_rep
+            WHERE
+                acc_rep.idEnterprise=idEnterprise AND
+                
+                ((acc_rep.startTime <= period_end AND 
+                 (acc_rep.stopTime IS NULL OR acc_rep.stopTime >= period_end)) OR
+                
+                ((acc_rep.stopTime >= period_start) AND (acc_rep.stopTime < period_end))))
+
+        ORDER BY VIRTUAL_ENTERPRISE, VIRTUAL_DATACENTER, VIRTUAL_APP, startTime;
+
+        
+        CALL kinton_accounting.DropTMPEventTables();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `AccountingVLANRegisterEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `AccountingVLANRegisterEvents`(
+    IN action VARCHAR(15),
+    IN vlan_network_id INT(11) UNSIGNED,
+    IN network_name VARCHAR(40),
+    IN idThisVirtualDataCenter INT(10) UNSIGNED,
+    IN idThisEnterprise INT(10) UNSIGNED)
+BEGIN   
+    DECLARE v_idDataCenter INT(10) UNSIGNED;
+    DECLARE idDummy BIGINT; 
+
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION CALL kinton_accounting.Log( LOAD_CURRENT_LOG_LEVEL(), 'ERROR', NULL,
+                                    CONCAT('AccountingVLANRegisterEvents() EXCEPTION during action ', QUOTE(action), ' for vlan_network_id=', QUOTE(vlan_network_id)));
+
+    
+    
+    
+    IF action = "CREATE_VLAN" THEN
+        SELECT  dc.idDataCenter, ABQ_ADD_DC_NAME(dc.idDataCenter, dc.name)
+                INTO v_idDataCenter, idDummy
+        FROM    kinton.virtualdatacenter vdc, kinton.datacenter dc
+        WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND
+                vdc.idDataCenter=dc.idDataCenter;
+
+        SELECT  ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name)
+                    INTO idDummy, idDummy
+            FROM    kinton.virtualdatacenter vdc, kinton.enterprise e
+            WHERE   vdc.idVirtualDataCenter=idThisVirtualDataCenter AND e.idEnterprise=vdc.idEnterprise;
+
+        INSERT INTO accounting_event_vlan (vlan_network_id,idEnterprise,idVirtualDataCenter,network_name,startTime,stopTime,idDataCenter) 
+            SELECT vlan_network_id, idThisEnterprise, idThisVirtualDataCenter, network_name, now(), null, v_idDataCenter; 
+    END IF;
+
+    
+    IF action = "DELETE_VLAN" THEN  
+        UPDATE
+          accounting_event_vlan
+        SET
+          stopTime=now()
+        WHERE
+          accounting_event_vlan.vlan_network_id = vlan_network_id
+          AND
+          accounting_event_vlan.stopTime is null;
+    END IF; 
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `AccountingVMRegisterEvents` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `AccountingVMRegisterEvents`(
+    IN idVirtualMachine INT(10) UNSIGNED, 
+    IN idType INT(1) UNSIGNED, 
+    IN oldState VARCHAR(50), 
+    IN newState VARCHAR(50), 
+    IN previousState VARCHAR(50), 
+    IN ramValue INT(7) unsigned,  
+    IN cpuValue INT(10) unsigned,
+    IN hdValue BIGINT(20) unsigned,
+    IN costCode int(4))
+BEGIN
+    DECLARE v_idDataCenter INT(10) UNSIGNED;
+    DECLARE v_haEnabled TINYINT(1);
+    DECLARE v_antiAffinity TINYINT(1);
+    DECLARE checkIfUpdated TINYINT(1);
+    DECLARE idDummy BIGINT; 
+
+    
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION CALL kinton_accounting.Log( LOAD_CURRENT_LOG_LEVEL(), 'ERROR', NULL,
+                                    CONCAT('AccountingVMRegisterEvents() EXCEPTION during state ', QUOTE(newState), ' for idVM=', QUOTE(idVirtualMachine)));
+
+    SELECT 1 INTO checkIfUpdated; 
+
+	
+    IF idType = 1 AND (oldState != newState) THEN
+    	
+		IF (previousState = "NOT_ALLOCATED" AND newState IN ("ON","OFF","PAUSED")) OR
+            (previousState = "UNKNOWN" AND newState IN ("ON","OFF","PAUSED")) THEN
+
+            
+            SELECT  pm.idDataCenter, r.haEnabled, ABQ_ADD_DC_NAME(d.idDataCenter, d.name), IF(vm.layer IS NULL, 0, 1)
+                    INTO v_idDataCenter, v_haEnabled, idDummy, v_antiAffinity
+            FROM    kinton.virtualmachine vm, kinton.hypervisor h, kinton.physicalmachine pm, kinton.rack r, kinton.datacenter d
+            WHERE   vm.idVM=idVirtualMachine AND
+                    vm.idHypervisor=h.id AND
+                    h.idPhysicalMachine=pm.idPhysicalmachine AND
+                    pm.idRack=r.idRack AND
+                    pm.idDataCenter=d.idDataCenter;
+            
+            
+            SELECT  ABQ_ADD_ENT_NAME(e.idEnterprise, e.name), ABQ_ADD_VDC_NAME(vdc.idVirtualDataCenter, vdc.name),
+                    ABQ_ADD_VAPP_NAME(vapp.idVirtualApp, vapp.name),
+                    ABQ_ADD_VM_NAME(vm.idVM, CONCAT(IF(ISNULL(vm.description),_utf8'',substr(vm.description,1,120)), _utf8' - ', vm.name))
+                    INTO idDummy, idDummy, idDummy, idDummy
+            FROM    kinton.nodevirtualimage nvi, kinton.node n, kinton.virtualapp vapp, kinton.virtualmachine vm, kinton.virtualdatacenter vdc, kinton.enterprise e
+            WHERE   vm.idVM = nvi.idVM
+                    AND nvi.idNode = n.idNode
+                    AND vapp.idVirtualApp = n.idVirtualApp
+                    AND vm.idVM = idVirtualMachine
+                    AND vdc.idVirtualDataCenter=vapp.idVirtualDataCenter
+                    AND e.idEnterprise=vdc.idEnterprise;
+
+            SELECT  ABQ_ADD_COSTCODE_NAME(cc.idCostCode, cc.name) INTO idDummy FROM kinton.costCode cc WHERE cc.idCostCode=costCode;
+            
+            
+            UPDATE accounting_event_vm SET stopTime=NOW()
+                WHERE accounting_event_vm.idVM = idVirtualMachine AND accounting_event_vm.stopTime IS NULL;
+
+		
+		    
+		    INSERT INTO accounting_event_vm (idVM,idEnterprise,idVirtualDataCenter,idVirtualApp,cpu,ram,hd,startTime,stopTime,costCode,hypervisorType,idDataCenter,haEnabled,antiAffinity) 
+		    SELECT
+		        vm.idVM, vapp.idEnterprise, vapp.idVirtualDataCenter, n.idVirtualApp,
+		        cpuValue,
+		        ramValue,           
+		        hdValue,
+		        now(),
+		        null,
+		        costCode,
+		        vdc.hypervisorType,
+                v_idDataCenter,
+                v_haEnabled,
+                v_antiAffinity
+		      FROM kinton.nodevirtualimage nvi, kinton.node n, kinton.virtualapp vapp, kinton.virtualmachine vm, kinton.virtualdatacenter vdc
+		    WHERE vm.idVM = nvi.idVM
+		    AND nvi.idNode = n.idNode
+		    AND vapp.idVirtualApp = n.idVirtualApp
+		    AND vm.idVM = idVirtualMachine
+		    AND vdc.idVirtualDataCenter=vapp.idVirtualDataCenter;
+            
+            SELECT 0 INTO checkIfUpdated; 
+		END IF;
+
+		IF previousState IN ("ON","OFF","PAUSED") AND newState IN ("NOT_ALLOCATED","UNKNOWN") THEN          
+			
+			
+		    UPDATE accounting_event_vm SET stopTime=NOW()
+                WHERE accounting_event_vm.idVM = idVirtualMachine AND accounting_event_vm.stopTime IS NULL;
+            
+            SELECT 0 INTO checkIfUpdated; 
+	    END IF;
+    END IF;    
+    
+
+    
+    IF (checkIfUpdated > 0) THEN
+    BEGIN
+        DECLARE cur_cpu INTEGER UNSIGNED;
+        DECLARE cur_ram INTEGER UNSIGNED;
+        DECLARE cur_hd BIGINT UNSIGNED;
+        DECLARE cur_cc INTEGER;
+        DECLARE cur_aa TINYINT;
+        DECLARE cur_ha TINYINT;
+
+        
+        SELECT cpu, ram, hd, accounting_event_vm.costCode, antiAffinity, haEnabled INTO 
+               cur_cpu, cur_ram, cur_hd, cur_cc, cur_aa, cur_ha
+            FROM accounting_event_vm WHERE idVM = idVirtualMachine AND stopTime IS NULL;
+
+        SELECT  pm.idDataCenter, r.haEnabled, IF(vm.layer IS NULL, 0, 1)
+                INTO v_idDataCenter, v_haEnabled, v_antiAffinity
+        FROM    kinton.virtualmachine vm, kinton.hypervisor h, kinton.physicalmachine pm, kinton.rack r
+        WHERE   vm.idVM=idVirtualMachine AND
+                vm.idHypervisor=h.id AND
+                h.idPhysicalMachine=pm.idPhysicalmachine AND
+                pm.idRack=r.idRack;
+
+        
+        SELECT ABQ_ADD_COSTCODE_NAME(cc.idCostCode, cc.name) INTO idDummy FROM kinton.costCode cc WHERE cc.idCostCode=costCode;
+        
+        
+        IF  (cur_cpu != cpuValue) OR (cur_ram != ramValue) OR (cur_hd != hdValue) OR 
+            (cur_cc != costCode) OR (cur_aa != v_antiAffinity) OR (cur_ha != v_haEnabled) THEN
+
+            
+		    UPDATE accounting_event_vm SET stopTime=NOW()
+                WHERE accounting_event_vm.idVM = idVirtualMachine AND accounting_event_vm.stopTime IS NULL;
+
+            
+		    INSERT INTO accounting_event_vm (idVM, idEnterprise, idVirtualDataCenter, idVirtualApp,
+                                             cpu, ram, hd, startTime, stopTime, costCode,
+                                             hypervisorType, idDataCenter, haEnabled, antiAffinity) 
+		    (SELECT
+		        vm.idVM, vapp.idEnterprise, vapp.idVirtualDataCenter, n.idVirtualApp,
+		        cpuValue, ramValue, hdValue, NOW(), NULL, costCode,
+		        vdc.hypervisorType, v_idDataCenter, v_haEnabled, v_antiAffinity
+		     FROM kinton.nodevirtualimage nvi, kinton.node n, kinton.virtualapp vapp, kinton.virtualmachine vm, kinton.virtualdatacenter vdc
+		     WHERE vm.idVM = nvi.idVM
+                AND nvi.idNode = n.idNode
+                AND vapp.idVirtualApp = n.idVirtualApp
+                AND vm.idVM = idVirtualMachine
+                AND vdc.idVirtualDataCenter=vapp.idVirtualDataCenter);
+        END IF;
+    END;
+    END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `CreateTMPEventTables` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `CreateTMPEventTables`()
 BEGIN
     CREATE TEMPORARY TABLE kinton_accounting.tmp_vm_events_period (
         `idVMAccountingEvent`   BIGINT(20)  UNSIGNED    NOT NULL AUTO_INCREMENT,
@@ -6364,6 +7485,8 @@ BEGIN
         `stopTime`              TIMESTAMP               NULL,
         `costCode`              INT(10)                 DEFAULT NULL,
         `hypervisorType`        VARCHAR(255)            DEFAULT NULL,
+        `haEnabled`             TINYINT                 DEFAULT NULL,
+        `idDataCenter`          INTEGER(11)             DEFAULT NULL,
         `DELTA_TIME`            INTEGER(10)             NULL,
         `PERIOD_START`          TIMESTAMP               NOT NULL,
         `PERIOD_END`            TIMESTAMP               NOT NULL,
@@ -6383,7 +7506,8 @@ BEGIN
         `idEnterprise`              INTEGER(10) UNSIGNED    NOT NULL,
         `idVirtualDataCenter`       INTEGER(10) UNSIGNED    NOT NULL,
         `idVirtualApp`              INTEGER(10) UNSIGNED    NULL,
-        `sizeReserved`              BIGINT UNSIGNED         NOT NULL, -- SELECT limitResource INTO limitResourceObj FROM rasd r
+        `sizeReserved`              BIGINT UNSIGNED         NOT NULL, 
+        `idDataCenter`              INTEGER(11)             DEFAULT NULL,
         `startTime`                 TIMESTAMP               NULL,
         `stopTime`                  TIMESTAMP               NULL,
         `DELTA_TIME`                INTEGER(10)             NULL,
@@ -6399,6 +7523,7 @@ BEGIN
         `idEnterprise`              INTEGER(10) UNSIGNED    NOT NULL,
         `idVirtualDataCenter`       INTEGER(10) UNSIGNED    NOT NULL,
         `ip`                        VARCHAR(20)             NOT NULL,
+        `idDataCenter`              INTEGER(11)             DEFAULT NULL,
         `startTime`                 TIMESTAMP               NULL,
         `stopTime`                  TIMESTAMP               NULL,
         `DELTA_TIME`                INTEGER(10)             NULL,
@@ -6414,6 +7539,7 @@ BEGIN
         `idEnterprise`              INTEGER(10) UNSIGNED    NOT NULL,
         `idVirtualDataCenter`       INTEGER(10) UNSIGNED    NOT NULL,
         `networkName`               VARCHAR(40)             NOT NULL,
+        `idDataCenter`              INTEGER(11)             DEFAULT NULL,
         `startTime`                 TIMESTAMP               NULL,
         `stopTime`                  TIMESTAMP               NULL,
         `DELTA_TIME`                INTEGER(10)             NULL,
@@ -6424,37 +7550,776 @@ BEGIN
         PRIMARY KEY (`idVLANAccountingEvent`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-END|
+END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `CUSTOM_GENERATE_ACCOUNTING_DATA_TEMPLATE_V1` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `CUSTOM_GENERATE_ACCOUNTING_DATA_TEMPLATE_V1`(IN period_start TIMESTAMP, IN period_end TIMESTAMP, IN period_hours INTEGER, IN granularity_hours INTEGER)
+BEGIN
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-
-DROP PROCEDURE IF EXISTS kinton_accounting.DropTMPEventTables;
-DELIMITER |
-CREATE PROCEDURE `kinton_accounting`.`DropTMPEventTables`()
-    NOT DETERMINISTIC
-    SQL SECURITY DEFINER
+    
+    
+    CALL FLUSH_TMP_ACCOUNTING_EVENT_DETAIL();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `DropTMPEventTables` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `DropTMPEventTables`()
 BEGIN
     DROP TEMPORARY TABLE kinton_accounting.tmp_vm_events_period;
     DROP TEMPORARY TABLE kinton_accounting.tmp_storage_events_period;
     DROP TEMPORARY TABLE kinton_accounting.tmp_ips_events_period;
     DROP TEMPORARY TABLE kinton_accounting.tmp_vlan_events_period;
-END|
+END */;;
 DELIMITER ;
-
-
-DROP PROCEDURE IF EXISTS kinton_accounting.PopulateTMPEventTables;
-DELIMITER |
-CREATE PROCEDURE `kinton_accounting`.`PopulateTMPEventTables`(IN period_start TIMESTAMP, IN period_secs INT(8) UNSIGNED)
-    NOT DETERMINISTIC
-    SQL SECURITY DEFINER
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `FLUSH_TMP_ACCOUNTING_EVENT_DETAIL` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `FLUSH_TMP_ACCOUNTING_EVENT_DETAIL`()
 BEGIN
+    INSERT INTO `kinton_accounting`.`accounting_event_detail` 
+        (startTime, endTime, idAccountingResourceType, resourceType, resourceUnits, resourceName,
+         idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
+         costCode, idStorageTier, idDataCenter)
+    SELECT
+        startTime, endTime, idAccountingResourceType, resourceType, resourceUnits, resourceName,
+        idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
+        costCode, idStorageTier, idDataCenter
+    FROM 
+    (SELECT 
+        acc.startTime  AS `startTime`,
+        acc.endTime AS `endTime`,
+        acc.idAccountingResourceType AS `idAccountingResourceType`,
+        acc.resourceType AS `resourceType`,
+        acc.resourceName AS `resourceName`,
+        MAX(acc.resourceUnits)  AS `resourceUnits`,
+        acc.idEnterprise AS `idEnterprise`,
+        acc.idVirtualDataCenter AS `idVirtualDataCenter`,
+        acc.idVirtualApp AS `idVirtualApp`,
+        acc.idVirtualMachine AS `idVirtualMachine`,
+        acc.costCode AS `costCode`,
+        acc.idStorageTier AS `idStorageTier`,
+        acc.idDataCenter AS `idDataCenter`
+        FROM kinton_accounting.tmp_accounting_event_detail acc
+        GROUP BY 
+            acc.startTime,
+            acc.idAccountingResourceType,
+            acc.resourceName,
+            acc.idEnterprise,
+            acc.idVirtualDataCenter,
+            acc.idVirtualApp,
+            acc.idVirtualMachine,
+            acc.costCode
+    ) tmp_data;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GenerateAccountingPeriodData` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `GenerateAccountingPeriodData`(IN period_start TIMESTAMP, IN period_secs INT(8) UNSIGNED)
+BEGIN
+    CALL GenerateAccountingPeriodDataExt(period_start,'HOUR','HOUR');
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `GenerateAccountingPeriodDataExt` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `GenerateAccountingPeriodDataExt`(IN period_start TIMESTAMP, IN period_size VARCHAR(10), IN granularity VARCHAR(10))
+BEGIN
+    
+    
     DECLARE period_end TIMESTAMP;
+    DECLARE period_hours INTEGER;
+    DECLARE granularity_hours INTEGER;
+    DECLARE logLevelStr VARCHAR(10);
+    DECLARE resourceEnabled TINYINT;
 
-    SELECT TIMESTAMPADD(SECOND,period_secs,period_start) INTO period_end;
+    SELECT kinton_accounting.LOAD_CURRENT_LOG_LEVEL() INTO logLevelStr;
 
-    # LAST_HOUR_USAGE_VM_VW
+    SELECT  CASE period_size
+            WHEN 'HOUR' THEN TIMESTAMPADD(HOUR, 1, period_start)
+            WHEN 'DAY' THEN TIMESTAMPADD(DAY, 1, period_start) 
+            WHEN 'WEEK' THEN TIMESTAMPADD(WEEK, 1, period_start) 
+            WHEN 'MONTH' THEN TIMESTAMPADD(MONTH, 1, period_start)
+            ELSE  TIMESTAMPADD(HOUR, 1, period_start)
+        END
+        INTO period_end;
+
+    SELECT  CASE period_size
+            WHEN 'HOUR' THEN 1
+            WHEN 'DAY' THEN 24 
+            WHEN 'WEEK' THEN 168 
+            WHEN 'MONTH' THEN (DAYOFMONTH(LAST_DAY(period_start)) * 24)
+            ELSE  1
+        END
+        INTO period_hours;
+    
+    SELECT  CASE granularity
+            WHEN 'HOUR' THEN 1
+            WHEN 'DAY' THEN 24 
+            WHEN 'WEEK' THEN 168 
+            WHEN 'MONTH' THEN (DAYOFMONTH(LAST_DAY(period_start)) * 24)
+            ELSE  1
+        END
+        INTO granularity_hours;
+
+    SELECT COUNT(*) INTO @periodDataCount
+        FROM `kinton_accounting`.`accounting_event_detail` 
+        WHERE startTime=period_start AND endTime=period_end;
+
+    IF ((@periodDataCount = 0) AND (NOW() > period_end)) THEN
+        CALL kinton_accounting.Log( logLevelStr, 'INFO', NULL,
+                CONCAT('Accounting about to start for period ', QUOTE(period_start), ', AccountPeriodSize=', QUOTE(period_size), ', AccountPeriodGranularity=', QUOTE(granularity)));      
+
+        
+        
+        CREATE TEMPORARY TABLE kinton_accounting.tmp_accounting_event_detail (
+          `idAccountingEvent` bigint(20) NOT NULL auto_increment,
+          `startTime` timestamp NOT NULL default '0000-00-00 00:00:00',
+          `endTime` timestamp NOT NULL default '0000-00-00 00:00:00',
+          `idAccountingResourceType` tinyint(4) NOT NULL,
+          `resourceType` int(20) NOT NULL,
+          `resourceUnits` bigint(20) NOT NULL,
+          `resourceName` int(20) NOT NULL,
+          `idEnterprise` int(11) unsigned NOT NULL,
+          `idVirtualDataCenter` int(11) unsigned NULL,
+          `idVirtualApp` int(11) unsigned default NULL,
+          `idVirtualMachine` int(11) unsigned default NULL,
+          `costCode` int(4) default NULL,
+          `idStorageTier` int(10) default NULL,
+          `version_c` int(11) default '0',
+          `idDataCenter` int(11) default NULL,
+          PRIMARY KEY  (`idAccountingEvent`)
+        ) ENGINE=InnoDB
+        AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+
+        
+        
+        CALL kinton_accounting.CreateTMPEventTables();
+        CALL kinton_accounting.PopulateTMPEventTables(period_start, period_end);
+
+        SELECT ABQ_GET_PARAMETER('VirtualMachine-vcpu') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            
+            
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+              `startTime`,
+              `endTime`, 
+              `idAccountingResourceType`,
+              `resourceType`,
+              `resourceUnits`,
+              `resourceName`, 
+              `idEnterprise`, 
+              `idVirtualDataCenter`, 
+              `idVirtualApp`, 
+              `idVirtualMachine`, 
+              `costCode`,
+              `idStorageTier`,
+              `idDataCenter`)
+            SELECT DISTINCT
+                  T.`PERIOD_START`,
+                  T.`PERIOD_END`,
+                  1,
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-vcpu'),
+                  T.cpu * (period_hours/granularity_hours),
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`VIRTUAL_MACHINE`),
+                  kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
+                  kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
+                  kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
+                  kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
+                  T.`costCode`,
+                  NULL,
+                  T.`idDataCenter`
+            FROM kinton_accounting.tmp_vm_events_period T;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''VirtualMachine-vcpu'' resources is disabled');
+        END IF;
+
+        SELECT ABQ_GET_PARAMETER('VirtualMachine-vram') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+              `startTime`,
+              `endTime`, 
+              `idAccountingResourceType`,
+              `resourceType`,
+              `resourceUnits`,
+              `resourceName`, 
+              `idEnterprise`, 
+              `idVirtualDataCenter`, 
+              `idVirtualApp`, 
+              `idVirtualMachine`, 
+              `costCode`,
+              `idStorageTier`,
+              `idDataCenter`)
+            SELECT DISTINCT
+                  T.`PERIOD_START`,
+                  T.`PERIOD_END`,
+                  2,
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-vram'),
+                  T.`ram` * (period_hours/granularity_hours),
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`VIRTUAL_MACHINE`),
+                  kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
+                  kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
+                  kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
+                  kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
+                  NULL,
+                  NULL,
+                  T.`idDataCenter`
+            FROM kinton_accounting.tmp_vm_events_period T;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''VirtualMachine-vram'' resources is disabled');
+        END IF;
+
+        SELECT ABQ_GET_PARAMETER('VirtualMachine-vhd') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+              `startTime`,
+              `endTime`, 
+              `idAccountingResourceType`,
+              `resourceType`,
+              `resourceUnits`,
+              `resourceName`, 
+              `idEnterprise`, 
+              `idVirtualDataCenter`, 
+              `idVirtualApp`, 
+              `idVirtualMachine`, 
+              `costCode`,
+              `idStorageTier`,
+              `idDataCenter`)
+            SELECT DISTINCT
+                  T.`PERIOD_START`,
+                  T.`PERIOD_END`,
+                  3,
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-vhd'),
+                  T.`hd` * (period_hours/granularity_hours),
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`VIRTUAL_MACHINE`),
+                  kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
+                  kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
+                  kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
+                  kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
+                  NULL,
+                  NULL,
+                  T.`idDataCenter`
+            FROM kinton_accounting.tmp_vm_events_period T;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''VirtualMachine-vhd'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('ExternalStorage') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+              `startTime`,
+              `endTime`, 
+              `idAccountingResourceType`,
+              `resourceType`,
+              `resourceUnits`,
+              `resourceName`, 
+              `idEnterprise`, 
+              `idVirtualDataCenter`, 
+              `idVirtualApp`, 
+              `idVirtualMachine`, 
+              `costCode`,
+              `idStorageTier`,
+              `idDataCenter`)
+            SELECT DISTINCT
+                  T.`PERIOD_START`,
+                  T.`PERIOD_END`,
+                  4,
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID('ExternalStorage'),
+                  T.`sizeReserved` * (period_hours/granularity_hours),
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID(CONCAT(IF (T.`resourceName` IS NULL, '', T.`resourceName`), ' - ', T.`idResource`)),
+                  kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
+                  kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
+                  NULL,
+                  NULL, 
+                  NULL,
+                  T.`idStorageTier`,
+                  T.`idDataCenter`
+            FROM kinton_accounting.tmp_storage_events_period T;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''ExternalStorage'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('IPAddress') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+              `startTime`,
+              `endTime`, 
+              `idAccountingResourceType`,
+              `resourceType`,
+              `resourceUnits`,
+              `resourceName`, 
+              `idEnterprise`, 
+              `idVirtualDataCenter`, 
+              `idVirtualApp`, 
+              `idVirtualMachine`, 
+              `costCode`,
+              `idStorageTier`,
+              `idDataCenter`)
+            SELECT DISTINCT
+                  T.`PERIOD_START`,
+                  T.`PERIOD_END`,
+                  5,
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID('IPAddress'),
+                  1 * (period_hours/granularity_hours),
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`ip`),
+                  kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
+                  kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
+                  NULL,
+                  NULL, 
+                  NULL,
+                  NULL,
+                  T.`idDataCenter`
+            FROM kinton_accounting.tmp_ips_events_period T;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''IPAddress'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('VLAN') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+              `startTime`,
+              `endTime`, 
+              `idAccountingResourceType`,
+              `resourceType`,
+              `resourceUnits`,
+              `resourceName`, 
+              `idEnterprise`, 
+              `idVirtualDataCenter`, 
+              `idVirtualApp`, 
+              `idVirtualMachine`, 
+              `costCode`,
+              `idStorageTier`,
+              `idDataCenter`)
+            SELECT DISTINCT
+                  T.`PERIOD_START`,
+                  T.`PERIOD_END`,
+                  6,
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VLAN'),
+                  1 * (period_hours/granularity_hours),
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`networkName`),
+                  kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
+                  kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
+                  NULL,
+                  NULL, 
+                  NULL,
+                  NULL,
+                  T.`idDataCenter`
+            FROM kinton_accounting.tmp_vlan_events_period T;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''VLAN'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('VirtualMachine-hypervisorType') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+              `startTime`,
+              `endTime`, 
+              `idAccountingResourceType`,
+              `resourceType`,
+              `resourceUnits`,
+              `resourceName`, 
+              `idEnterprise`, 
+              `idVirtualDataCenter`, 
+              `idVirtualApp`, 
+              `idVirtualMachine`, 
+              `costCode`,
+              `idStorageTier`,
+              `idDataCenter`)
+            SELECT DISTINCT
+                  T.`PERIOD_START`,
+                  T.`PERIOD_END`,
+                  7,
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-hypervisorType'),
+                  1 * (period_hours/granularity_hours),
+                  kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.hypervisorType),
+                  kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
+                  kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
+                  kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
+                  kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
+                  NULL,
+                  NULL,
+                  T.`idDataCenter`
+            FROM kinton_accounting.tmp_vm_events_period T;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''VirtualMachine-hypervisorType'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('VirtualMachine-haHosted') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+            startTime,
+            endTime, 
+            idAccountingResourceType,
+            resourceType,
+            resourceUnits,
+            resourceName, 
+            idEnterprise, 
+            idVirtualDataCenter, 
+            idVirtualApp, 
+            idVirtualMachine, 
+            costCode,
+            idStorageTier,
+            idDataCenter)
+            SELECT DISTINCT
+                period_start,
+                period_end,
+                8,
+                ABQ_OBJECT_NAME_TO_ID('VirtualMachine-haHosted'),
+                1 * (period_hours/granularity_hours),
+                ABQ_OBJECT_NAME_TO_ID(ABQ_VM_ID_TO_NAME(acc_vm.idVM)),
+                acc_vm.idEnterprise,
+                acc_vm.idVirtualDataCenter, 
+                acc_vm.idVirtualApp, 
+                acc_vm.idVM,
+                NULL,
+                NULL,
+                acc_vm.idDataCenter
+            FROM accounting_event_vm acc_vm
+            WHERE
+                
+                ((acc_vm.startTime <= period_end AND 
+                 (acc_vm.stopTime IS NULL OR acc_vm.stopTime >= period_end)) OR
+                
+                ((acc_vm.stopTime >= period_start) AND (acc_vm.stopTime < period_end))) AND
+                acc_vm.haEnabled=1;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''VirtualMachine-haHosted'' resources is disabled');
+        END IF;
+
+        SELECT ABQ_GET_PARAMETER('ReservedPhysicalMachine-cpu') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+            startTime,
+            endTime, 
+            idAccountingResourceType,
+            resourceType,
+            resourceUnits,
+            resourceName, 
+            idEnterprise, 
+            idVirtualDataCenter, 
+            idVirtualApp, 
+            idVirtualMachine, 
+            costCode,
+            idStorageTier,
+            idDataCenter)
+            SELECT DISTINCT
+                period_start,
+                period_end,
+                9,
+                ABQ_OBJECT_NAME_TO_ID('ReservedPhysicalMachine-cpu'),
+                acc_pm.cpu * (period_hours/granularity_hours),
+                ABQ_OBJECT_NAME_TO_ID(ABQ_PM_ID_TO_NAME(acc_pm.idPhysicalMachine)),
+                acc_pm.idEnterprise,
+                NULL, 
+                NULL, 
+                NULL,
+                NULL,
+                NULL,
+                acc_pm.idDataCenter
+            FROM accounting_event_pm acc_pm
+            WHERE
+                
+                ((acc_pm.startTime <= period_end AND 
+                 (acc_pm.stopTime IS NULL OR acc_pm.stopTime >= period_end)) OR
+                
+                ((acc_pm.stopTime >= period_start) AND (acc_pm.stopTime < period_end)));
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''ReservedPhysicalMachine-cpu'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('ReservedPhysicalMachine-ram') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+            startTime,
+            endTime, 
+            idAccountingResourceType,
+            resourceType,
+            resourceUnits,
+            resourceName, 
+            idEnterprise, 
+            idVirtualDataCenter, 
+            idVirtualApp, 
+            idVirtualMachine, 
+            costCode,
+            idStorageTier,
+            idDataCenter)
+            SELECT DISTINCT
+                period_start,
+                period_end,
+                10,
+                ABQ_OBJECT_NAME_TO_ID('ReservedPhysicalMachine-ram'),
+                acc_pm.ram * (period_hours/granularity_hours),
+                ABQ_OBJECT_NAME_TO_ID(ABQ_PM_ID_TO_NAME(acc_pm.idPhysicalMachine)),
+                acc_pm.idEnterprise,
+                NULL, 
+                NULL, 
+                NULL,
+                NULL,
+                NULL,
+                acc_pm.idDataCenter
+            FROM accounting_event_pm acc_pm
+            WHERE
+                
+                ((acc_pm.startTime <= period_end AND 
+                 (acc_pm.stopTime IS NULL OR acc_pm.stopTime >= period_end)) OR
+                
+                ((acc_pm.stopTime >= period_start) AND (acc_pm.stopTime < period_end)));
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''ReservedPhysicalMachine-ram'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('RepositoryStorage') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+            startTime,
+            endTime, 
+            idAccountingResourceType,
+            resourceType,
+            resourceUnits,
+            resourceName, 
+            idEnterprise, 
+            idVirtualDataCenter, 
+            idVirtualApp, 
+            idVirtualMachine, 
+            costCode,
+            idStorageTier,
+            idDataCenter)
+            SELECT DISTINCT
+                period_start,
+                period_end,
+                11,
+                ABQ_OBJECT_NAME_TO_ID('RepositoryStorage'),
+                acc_rep.imageSize * (period_hours/granularity_hours),
+                ABQ_OBJECT_NAME_TO_ID(CONCAT(ABQ_IMG_ID_TO_NAME(acc_rep.idImage),'-', acc_rep.idImage, '-', ABQ_OBJECT_ID_TO_NAME(acc_rep.idImageTypeName),
+                                                '(', ABQ_OBJECT_ID_TO_NAME(acc_rep.idImageFormatName), ')')),
+                acc_rep.idEnterprise,
+                NULL, 
+                NULL, 
+                NULL,
+                NULL,
+                NULL,
+                acc_rep.idDataCenter
+            FROM accounting_event_repository acc_rep
+            WHERE
+                
+                ((acc_rep.startTime <= period_end AND 
+                 (acc_rep.stopTime IS NULL OR acc_rep.stopTime >= period_end)) OR
+                
+                ((acc_rep.stopTime >= period_start) AND (acc_rep.stopTime < period_end)))
+                AND idImageTypeName IN (ABQ_OBJECT_NAME_TO_ID('TEMPLATE'),
+                                        ABQ_OBJECT_NAME_TO_ID('INSTANCE')
+                                        
+                                        
+                                        
+                                        );
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''RepositoryStorage'' resources is disabled');
+        END IF;
+
+        
+        SELECT ABQ_GET_PARAMETER('VirtualMachine-antiAffinity') INTO resourceEnabled;
+        IF (resourceEnabled IS NOT NULL) AND (resourceEnabled <> 0) THEN 
+            INSERT INTO kinton_accounting.tmp_accounting_event_detail(
+            startTime,
+            endTime, 
+            idAccountingResourceType,
+            resourceType,
+            resourceUnits,
+            resourceName, 
+            idEnterprise, 
+            idVirtualDataCenter, 
+            idVirtualApp, 
+            idVirtualMachine, 
+            costCode,
+            idStorageTier,
+            idDataCenter)
+            SELECT DISTINCT
+                period_start,
+                period_end,
+                12,
+                ABQ_OBJECT_NAME_TO_ID('VirtualMachine-antiAffinity'),
+                1 * (period_hours/granularity_hours),
+                ABQ_OBJECT_NAME_TO_ID(ABQ_VM_ID_TO_NAME(acc_vm.idVM)),
+                acc_vm.idEnterprise,
+                acc_vm.idVirtualDataCenter, 
+                acc_vm.idVirtualApp, 
+                acc_vm.idVM,
+                NULL,
+                NULL,
+                acc_vm.idDataCenter
+            FROM accounting_event_vm acc_vm
+            WHERE
+                
+                ((acc_vm.startTime <= period_end AND 
+                 (acc_vm.stopTime IS NULL OR acc_vm.stopTime >= period_end)) OR
+                
+                ((acc_vm.stopTime >= period_start) AND (acc_vm.stopTime < period_end))) AND
+                acc_vm.antiAffinity=1;
+        ELSE
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'Accounting of ''VirtualMachine-antiAffinity'' resources is disabled');
+        END IF;
+
+        
+        
+        CALL FLUSH_TMP_ACCOUNTING_EVENT_DETAIL();
+
+        CALL kinton_accounting.Log( logLevelStr, 'INFO', NULL,
+                CONCAT('Completed core processing accounting period ', QUOTE(period_start), ', rows added: ', ROW_COUNT()));      
+
+        
+        IF EXISTS(SELECT * FROM `information_schema`.ROUTINES WHERE ROUTINE_SCHEMA='kinton_accounting' AND ROUTINE_TYPE='PROCEDURE' AND ROUTINE_NAME='CUSTOM_GENERATE_ACCOUNTING_DATA_V1') THEN
+        BEGIN
+            DECLARE CONTINUE HANDLER FOR SQLEXCEPTION CALL kinton_accounting.Log( logLevelStr, 'ERROR', NULL, CONCAT('Exception detected generating CUSTOM accounting data'));
+
+            CALL kinton_accounting.Log( logLevelStr, 'DETAIL', NULL, 'About to call the configured CUSTOM account data procedure'); 
+            
+            DELETE FROM kinton_accounting.tmp_accounting_event_detail;
+
+            CALL CUSTOM_GENERATE_ACCOUNTING_DATA_V1(period_start, period_end, period_hours, granularity_hours);
+            CALL kinton_accounting.Log( logLevelStr, 'INFO', NULL, CONCAT('CUSTOM accounting processing completed for period ', QUOTE(period_start), ', rows added: ', ROW_COUNT()));
+        END;
+        END IF;
+
+        
+        CALL kinton_accounting.DropTMPEventTables();
+        DROP TEMPORARY TABLE kinton_accounting.`tmp_accounting_event_detail`;
+    END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `Log` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `Log`(IN currentLogLevelStr VARCHAR(10), IN logMsgLevelStr VARCHAR(10), IN msgNum INT, IN msg VARCHAR(1024))
+BEGIN
+    DECLARE currentLogLevel INTEGER;
+    DECLARE logMsgLevel INTEGER;
+
+    IF (currentLogLevelStr IS NULL) THEN
+        
+        SELECT LOAD_CURRENT_LOG_LEVEL() INTO currentLogLevelStr;
+    END IF;
+
+    
+    SELECT LOG_LEVEL_STR_TO_NUM(currentLogLevelSTR) INTO currentLogLevel;
+    SELECT LOG_LEVEL_STR_TO_NUM(logMsgLevelStr) INTO logMsgLevel;
+
+    
+    IF (logMsgLevel <= currentLogLevel) THEN
+        
+        INSERT IGNORE INTO kinton_accounting.activity_log (logLevel, messageNum, message) VALUES(logMsgLevel, msgNum, msg);
+    END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `PopulateTMPEventTables` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = '' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 PROCEDURE `PopulateTMPEventTables`(IN period_start TIMESTAMP, IN period_end TIMESTAMP)
+BEGIN
+    
     INSERT INTO tmp_vm_events_period (  idVMAccountingEvent, idVM, idEnterprise, idVirtualDataCenter, idVirtualApp,
-                                        cpu, ram, hd, startTime, stopTime, costCode, hypervisorType,
+                                        cpu, ram, hd, startTime, stopTime, costCode, hypervisorType, haEnabled, idDataCenter,
                                         DELTA_TIME, PERIOD_START, PERIOD_END, VIRTUAL_MACHINE, VIRTUAL_APP, VIRTUAL_DATACENTER, VIRTUAL_ENTERPRISE)
     SELECT
         `accounting_event_vm`.`idVMAccountingEvent` AS `idVMAccountingEvent`,
@@ -6469,29 +8334,31 @@ BEGIN
         `accounting_event_vm`.`stopTime` AS `stopTime`,
         `accounting_event_vm`.`costCode` AS `costCode`,
         `accounting_event_vm`.`hypervisorType` AS `hypervisorType`,
+        `accounting_event_vm`.`haEnabled` AS `haEnabled`,
+        `accounting_event_vm`.`idDataCenter` AS `idDataCenter`,
         (UNIX_TIMESTAMP(`accounting_event_vm`.`stopTime`) - UNIX_TIMESTAMP(`accounting_event_vm`.`startTime`)) AS `DELTA_TIME`,
-        period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`
+        period_start AS `PERIOD_START`, 
         period_end AS `PERIOD_END`,
         `vm_name`.`vmName` AS `VIRTUAL_MACHINE`,
         `vapp_name`.`vappName` AS `VIRTUAL_APP`,
         `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
         `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE`
     FROM
-        kinton.`accounting_event_vm`
-        JOIN kinton_accounting.`vm_name` on(`accounting_event_vm`.`idVM` = kinton_accounting.`vm_name`.`idVM`)
-        JOIN kinton_accounting.`vapp_name` on(`accounting_event_vm`.`idVirtualApp` = kinton_accounting.`vapp_name`.`idVirtualApp`)
-        JOIN kinton_accounting.`vdc_name` on(`accounting_event_vm`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
-        JOIN kinton_accounting.`ent_name` on(`accounting_event_vm`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
+        `accounting_event_vm`
+        JOIN `vm_name` on(`accounting_event_vm`.`idVM` = `vm_name`.`idVM`)
+        JOIN `vapp_name` on(`accounting_event_vm`.`idVirtualApp` = `vapp_name`.`idVirtualApp`)
+        JOIN `vdc_name` on(`accounting_event_vm`.`idVirtualDataCenter` = `vdc_name`.`idVirtualDataCenter`)
+        JOIN `ent_name` on(`accounting_event_vm`.`idEnterprise` = `ent_name`.`idEnterprise`)
     WHERE
-        # Is currently active, and was active prior to the end of the account period
+        
         (`accounting_event_vm`.`startTime` < period_end AND 
          (`accounting_event_vm`.stopTime IS NULL OR `accounting_event_vm`.stopTime >= period_end)) OR
-        # OR stopped running during the account period
+        
         ((`accounting_event_vm`.stopTime >= period_start) AND (`accounting_event_vm`.stopTime < period_end));
 
-    # LAST_HOUR_USAGE_STORAGE_VW
+    
     INSERT INTO tmp_storage_events_period ( idStorageAccountingEvent, idResource, resourceName, idVM, idStorageTier,
-                                            idEnterprise, idVirtualDataCenter, idVirtualApp, sizeReserved,
+                                            idEnterprise, idVirtualDataCenter, idVirtualApp, sizeReserved, idDataCenter,
                                             startTime, stopTime, 
                                             DELTA_TIME, PERIOD_START, PERIOD_END, VIRTUAL_DATACENTER, VIRTUAL_ENTERPRISE)
     SELECT 
@@ -6503,649 +8370,287 @@ BEGIN
         `accounting_event_storage`.idEnterprise AS idEnterprise,
         `accounting_event_storage`.idVirtualDataCenter AS idVirtualDataCenter,
         `accounting_event_storage`.idVirtualApp AS idVirtualApp,
-        `accounting_event_storage`.sizeReserved AS sizeReserved,    
+        `accounting_event_storage`.sizeReserved AS sizeReserved,
+        `accounting_event_storage`.idDataCenter AS idDataCenter,
         `accounting_event_storage`.startTime AS startTime,
         `accounting_event_storage`.stopTime AS stopTime,
         (UNIX_TIMESTAMP(`accounting_event_storage`.stopTime) - UNIX_TIMESTAMP(`accounting_event_storage`.startTime)) AS `DELTA_TIME`,
-        period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`,
+        period_start AS `PERIOD_START`, 
         period_end AS `PERIOD_END`,
         `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
         `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE` 
      FROM 
-        kinton.`accounting_event_storage`
-        JOIN kinton_accounting.`vdc_name` on(`accounting_event_storage`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
-        JOIN kinton_accounting.`ent_name` on(`accounting_event_storage`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
+        `accounting_event_storage`
+        JOIN `vdc_name` on(`accounting_event_storage`.`idVirtualDataCenter` = `vdc_name`.`idVirtualDataCenter`)
+        JOIN `ent_name` on(`accounting_event_storage`.`idEnterprise` = `ent_name`.`idEnterprise`)
      WHERE 
-        # Is currently active, and was active prior to the end of the account period
+        
         (`accounting_event_storage`.`startTime` < period_end AND 
          (`accounting_event_storage`.stopTime IS NULL OR `accounting_event_storage`.stopTime >= period_end)) OR
-        # OR stopped running during the account period
+        
         ((`accounting_event_storage`.stopTime >= period_start) AND (`accounting_event_storage`.stopTime < period_end));
 
 
-    # LAST_HOUR_USAGE_IPS_VW
+    
     INSERT INTO tmp_ips_events_period ( idIPsAccountingEvent, idEnterprise, idVirtualDataCenter,
-                                        ip, startTime, stopTime, 
+                                        ip, idDataCenter, startTime, stopTime, 
                                         DELTA_TIME, PERIOD_START, PERIOD_END, VIRTUAL_DATACENTER, VIRTUAL_ENTERPRISE)
     SELECT 
         `accounting_event_ips`.idIPsAccountingEvent AS idIPsAccountingEvent,
         `accounting_event_ips`.idEnterprise AS idEnterprise,
         `accounting_event_ips`.idVirtualDataCenter AS idVirtualDataCenter,
-        `accounting_event_ips`.ip AS ip,    
+        `accounting_event_ips`.ip AS ip,
+        `accounting_event_ips`.idDataCenter AS idDataCenter,
         `accounting_event_ips`.startTime AS startTime,
         `accounting_event_ips`.stopTime AS stopTime,
         (unix_timestamp(`accounting_event_ips`.stopTime) - unix_timestamp(`accounting_event_ips`.startTime)) AS `DELTA_TIME`,
-        period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`,
+        period_start AS `PERIOD_START`, 
         period_end AS `PERIOD_END`,
         `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
         `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE` 
     FROM 
-        kinton.`accounting_event_ips`
-        JOIN kinton_accounting.`vdc_name` on(`accounting_event_ips`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
-        JOIN kinton_accounting.`ent_name` on(`accounting_event_ips`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
+        `accounting_event_ips`
+        JOIN `vdc_name` on(`accounting_event_ips`.`idVirtualDataCenter` = `vdc_name`.`idVirtualDataCenter`)
+        JOIN `ent_name` on(`accounting_event_ips`.`idEnterprise` = `ent_name`.`idEnterprise`)
     WHERE
-        # IP Is currently RESERVED, and was reserved prior to the end of the account period
+        
         (`accounting_event_ips`.`startTime` < period_end AND 
          (`accounting_event_ips`.stopTime IS NULL OR `accounting_event_ips`.stopTime >= period_end)) OR
-        # IP stopped being reserved during the account period
+        
         ((`accounting_event_ips`.stopTime >= period_start) AND (`accounting_event_ips`.stopTime < period_end));
 
 
-    # LAST_HOUR_USAGE_VLAN_VW
+    
     INSERT INTO tmp_vlan_events_period ( idVLANAccountingEvent, idEnterprise, idVirtualDataCenter,
-                                        networkName, startTime, stopTime, 
+                                        networkName, idDataCenter, startTime, stopTime, 
                                         DELTA_TIME, PERIOD_START, PERIOD_END, VIRTUAL_DATACENTER, VIRTUAL_ENTERPRISE)
     SELECT 
         `accounting_event_vlan`.idVLANAccountingEvent AS idVLANAccountingEvent,
         `accounting_event_vlan`.idEnterprise AS idEnterprise,
         `accounting_event_vlan`.idVirtualDataCenter AS idVirtualDataCenter,
         `accounting_event_vlan`.network_name AS networkName,    
+        `accounting_event_vlan`.idDataCenter AS idDataCenter,
         `accounting_event_vlan`.startTime AS startTime,
         `accounting_event_vlan`.stopTime AS stopTime,
         (unix_timestamp(`accounting_event_vlan`.stopTime) - unix_timestamp(`accounting_event_vlan`.startTime)) AS `DELTA_TIME`,
-        period_start AS `PERIOD_START`, # was: `ROUNDED_HOUR`,
+        period_start AS `PERIOD_START`, 
         period_end AS `PERIOD_END`,
         `vdc_name`.`vdcName` AS `VIRTUAL_DATACENTER`,
         `ent_name`.`enterpriseName` AS `VIRTUAL_ENTERPRISE` 
     FROM 
-        kinton.`accounting_event_vlan`
-        JOIN kinton_accounting.`vdc_name` on(`accounting_event_vlan`.`idVirtualDataCenter` = kinton_accounting.`vdc_name`.`idVirtualDataCenter`)
-        JOIN kinton_accounting.`ent_name` on(`accounting_event_vlan`.`idEnterprise` = kinton_accounting.`ent_name`.`idEnterprise`)
+        `accounting_event_vlan`
+        JOIN `vdc_name` on(`accounting_event_vlan`.`idVirtualDataCenter` = `vdc_name`.`idVirtualDataCenter`)
+        JOIN `ent_name` on(`accounting_event_vlan`.`idEnterprise` = `ent_name`.`idEnterprise`)
     WHERE 
-        # VLAN is still Reserved
+        
         (`accounting_event_vlan`.`startTime` < period_end AND 
          (`accounting_event_vlan`.stopTime IS NULL OR `accounting_event_vlan`.stopTime >= period_end)) OR
-        # VLAN stopped being reserved during the account period
+        
         ((`accounting_event_vlan`.stopTime >= period_start) AND (`accounting_event_vlan`.stopTime < period_end));
-END|
+END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
-
-# This is the main SP called from the 'old' UpdateAccounting SP
-DROP PROCEDURE IF EXISTS kinton_accounting.GenerateAccountingPeriodData;
-DELIMITER |
-CREATE PROCEDURE `kinton_accounting`.`GenerateAccountingPeriodData`(IN period_start TIMESTAMP, IN period_secs INT(8) UNSIGNED)
-    NOT DETERMINISTIC
-    SQL SECURITY DEFINER
-BEGIN
-    # First, check if we already have any data for this period, and do nothing if we already have data
-    # Also - Verify the the accounting period is in the past and not current/future
-    DECLARE period_end TIMESTAMP;
-    SELECT TIMESTAMPADD(SECOND,period_secs,period_start) INTO period_end;
-
-    SELECT COUNT(*) INTO @periodDataCount
-        FROM `kinton_accounting`.`accounting_event_detail` 
-        WHERE startTime=period_start AND endTime=period_end;
-
-    IF ((@periodDataCount = 0) AND (NOW() > period_end)) THEN
-        # Create a TMP table, which will store intermediate data, so we can write
-        # the old style MAX_HOURLY data straight into the detail table
-        CREATE TEMPORARY TABLE kinton_accounting.tmp_accounting_event_detail (
-          `idAccountingEvent` bigint(20) NOT NULL auto_increment,
-          `startTime` timestamp NOT NULL default '0000-00-00 00:00:00',
-          `endTime` timestamp NOT NULL default '0000-00-00 00:00:00',
-          `idAccountingResourceType` tinyint(4) NOT NULL,
-          `resourceType` int(20) NOT NULL,
-          `resourceUnits` bigint(20) NOT NULL,
-          `resourceName` int(20) NOT NULL,
-          `idEnterprise` int(11) unsigned NOT NULL,
-          `idVirtualDataCenter` int(11) unsigned NOT NULL,
-          `idVirtualApp` int(11) unsigned default NULL,
-          `idVirtualMachine` int(11) unsigned default NULL,
-          `costCode` int(4) default NULL,
-          `idStorageTier` int(10) default NULL,
-          `version_c` int(11) default '0',
-          PRIMARY KEY  (`idAccountingEvent`)
-        ) ENGINE=InnoDB
-        AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
-
-        # Create & populate TMP copies of the event tables which contain only data
-        # pertaining to the account period we are processing
-        CALL kinton_accounting.CreateTMPEventTables();
-        CALL kinton_accounting.PopulateTMPEventTables(period_start, period_secs);
-
-        # Now INSERT the raw period event data into the TMP detail table
-        -- For VM Resources Accounting
-        INSERT INTO kinton_accounting.tmp_accounting_event_detail(
-          `startTime`,
-          `endTime`, 
-          `idAccountingResourceType`,
-          `resourceType`,
-          `resourceUnits`,
-          `resourceName`, 
-          `idEnterprise`, 
-          `idVirtualDataCenter`, 
-          `idVirtualApp`, 
-          `idVirtualMachine`, 
-          `costCode`,
-          `idStorageTier`)
-        SELECT DISTINCT
-              T.`PERIOD_START`,
-              T.`PERIOD_END`,
-              1,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-vcpu'),
-              T.cpu,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`VIRTUAL_MACHINE`),
-              kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
-              kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
-              kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
-              kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
-              T.`costCode`,
-              NULL
-        FROM kinton_accounting.tmp_vm_events_period T;
-
-        INSERT INTO kinton_accounting.tmp_accounting_event_detail(
-          `startTime`,
-          `endTime`, 
-          `idAccountingResourceType`,
-          `resourceType`,
-          `resourceUnits`,
-          `resourceName`, 
-          `idEnterprise`, 
-          `idVirtualDataCenter`, 
-          `idVirtualApp`, 
-          `idVirtualMachine`, 
-          `costCode`,
-          `idStorageTier`)
-        SELECT DISTINCT
-              T.`PERIOD_START`,
-              T.`PERIOD_END`,
-              2,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-vram'),
-              T.`ram`,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`VIRTUAL_MACHINE`),
-              kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
-              kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
-              kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
-              kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
-              NULL,
-              NULL
-        FROM kinton_accounting.tmp_vm_events_period T;
-
-        INSERT INTO kinton_accounting.tmp_accounting_event_detail(
-          `startTime`,
-          `endTime`, 
-          `idAccountingResourceType`,
-          `resourceType`,
-          `resourceUnits`,
-          `resourceName`, 
-          `idEnterprise`, 
-          `idVirtualDataCenter`, 
-          `idVirtualApp`, 
-          `idVirtualMachine`, 
-          `costCode`,
-          `idStorageTier`)
-        SELECT DISTINCT
-              T.`PERIOD_START`,
-              T.`PERIOD_END`,
-              3,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-vhd'),
-              T.`hd`,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`VIRTUAL_MACHINE`),
-              kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
-              kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
-              kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
-              kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
-              NULL,
-              NULL
-        FROM kinton_accounting.tmp_vm_events_period T;
-
-        -- Storage
-        INSERT INTO kinton_accounting.tmp_accounting_event_detail(
-          `startTime`,
-          `endTime`, 
-          `idAccountingResourceType`,
-          `resourceType`,
-          `resourceUnits`,
-          `resourceName`, 
-          `idEnterprise`, 
-          `idVirtualDataCenter`, 
-          `idVirtualApp`, 
-          `idVirtualMachine`, 
-          `costCode`,
-          `idStorageTier`)
-        SELECT DISTINCT
-              T.`PERIOD_START`,
-              T.`PERIOD_END`,
-              4,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID('ExternalStorage'),
-              T.`sizeReserved`,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID(CONCAT(IF (T.`resourceName` IS NULL, '', T.`resourceName`), ' - ', T.`idResource`)),
-              kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
-              kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
-              NULL,
-              NULL, 
-              NULL,
-              T.`idStorageTier`
-        FROM kinton_accounting.tmp_storage_events_period T;
-
-        -- IP
-        INSERT INTO kinton_accounting.tmp_accounting_event_detail(
-          `startTime`,
-          `endTime`, 
-          `idAccountingResourceType`,
-          `resourceType`,
-          `resourceUnits`,
-          `resourceName`, 
-          `idEnterprise`, 
-          `idVirtualDataCenter`, 
-          `idVirtualApp`, 
-          `idVirtualMachine`, 
-          `costCode`,
-          `idStorageTier`)
-        SELECT DISTINCT
-              T.`PERIOD_START`,
-              T.`PERIOD_END`,
-              5,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID('IPAddress'),
-              1,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`ip`),
-              kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
-              kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
-              NULL,
-              NULL, 
-              NULL,
-              NULL
-        FROM kinton_accounting.tmp_ips_events_period T;
-
-        -- VLAN
-        INSERT INTO kinton_accounting.tmp_accounting_event_detail(
-          `startTime`,
-          `endTime`, 
-          `idAccountingResourceType`,
-          `resourceType`,
-          `resourceUnits`,
-          `resourceName`, 
-          `idEnterprise`, 
-          `idVirtualDataCenter`, 
-          `idVirtualApp`, 
-          `idVirtualMachine`, 
-          `costCode`,
-          `idStorageTier`)
-        SELECT DISTINCT
-              T.`PERIOD_START`,
-              T.`PERIOD_END`,
-              6,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VLAN'),
-              1,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.`networkName`),
-              kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
-              kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
-              NULL,
-              NULL, 
-              NULL,
-              NULL
-        FROM kinton_accounting.tmp_vlan_events_period T;
-
-        -- Hypervisor Type
-        INSERT INTO kinton_accounting.tmp_accounting_event_detail(
-          `startTime`,
-          `endTime`, 
-          `idAccountingResourceType`,
-          `resourceType`,
-          `resourceUnits`,
-          `resourceName`, 
-          `idEnterprise`, 
-          `idVirtualDataCenter`, 
-          `idVirtualApp`, 
-          `idVirtualMachine`, 
-          `costCode`,
-          `idStorageTier`)
-        SELECT DISTINCT
-              T.`PERIOD_START`,
-              T.`PERIOD_END`,
-              7,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID('VirtualMachine-hypervisorType'),
-              1,
-              kinton_accounting.ABQ_OBJECT_NAME_TO_ID(T.hypervisorType),
-              kinton_accounting.ABQ_ADD_ENT_NAME(T.`idEnterprise`, T.`VIRTUAL_ENTERPRISE`),
-              kinton_accounting.ABQ_ADD_VDC_NAME(T.`idVirtualDataCenter`, T.`VIRTUAL_DATACENTER`),
-              kinton_accounting.ABQ_ADD_VAPP_NAME(T.`idVirtualApp`, T.`VIRTUAL_APP`),
-              kinton_accounting.ABQ_ADD_VM_NAME(T.`idVM`, T.`VIRTUAL_MACHINE`),
-              NULL,
-              NULL
-        FROM kinton_accounting.tmp_vm_events_period T;
-
-        # And INSERT the MAX_HOURLY data into the new detail table, using the TMP table data
-        # as the source...
-        INSERT INTO `kinton_accounting`.`accounting_event_detail` 
-            (startTime, endTime, idAccountingResourceType, resourceType, resourceUnits, resourceName,
-             idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
-             costCode, idStorageTier)
-        SELECT
-            startTime, endTime, idAccountingResourceType, resourceType, resourceUnits, resourceName,
-            idEnterprise, idVirtualDataCenter, idVirtualApp, idVirtualMachine,
-            costCode, idStorageTier
-        FROM 
-        (SELECT 
-            acc.`startTime`  AS `startTime`,
-            acc.`endTime` AS `endTime`,
-            acc.`idAccountingResourceType` AS `idAccountingResourceType`,
-            acc.`resourceType` AS `resourceType`,
-            acc.`resourceName` AS `resourceName`,
-            MAX(acc.`resourceUnits`)  AS `resourceUnits`,
-            acc.`idEnterprise` AS `idEnterprise`,
-            acc.`idVirtualDataCenter` AS `idVirtualDataCenter`,
-            acc.`idVirtualApp` AS `idVirtualApp`,
-            acc.`idVirtualMachine` AS `idVirtualMachine`,
-            acc.`costCode` AS `costCode`,
-            acc.`idStorageTier` AS `idStorageTier`
-            FROM kinton_accounting.`tmp_accounting_event_detail` acc
-            GROUP BY 
-                acc.`startTime`,
-                acc.`idAccountingResourceType`,
-                acc.`resourceName`,
-                acc.`idEnterprise`,
-                acc.`idVirtualDataCenter`,
-                acc.`idVirtualApp`,
-                acc.`idVirtualMachine`,
-                acc.`costCode`
-        ) tmp_data;
-
-        # Finally, clean up the TMP tables...
-        CALL kinton_accounting.DropTMPEventTables();
-        DROP TEMPORARY TABLE kinton_accounting.`tmp_accounting_event_detail`;
-    END IF;
-END|
-DELIMITER ;
-
-
-
-
-SELECT "Creating new optimised accounting VIEWs..." as " ";
-# This is now the main view that should be be used to access accounting data...
-DROP VIEW IF EXISTS kinton_accounting.HOURLY_USAGE_MAX_2_VW;
-CREATE VIEW kinton_accounting.HOURLY_USAGE_MAX_2_VW
-AS
-SELECT
-        a.startTime, a.endTime,
-        idAccountingResourceType,
-        kinton_accounting.ABQ_OBJECT_ID_TO_NAME(resourceType) AS resourceType,
-        kinton_accounting.ABQ_OBJECT_ID_TO_NAME(resourceName) AS resourceName, 
-        resourceUnits,
-        a.idEnterprise, a.idVirtualDataCenter, a.idVirtualApp, a.idVirtualMachine,
-        en.enterpriseName AS enterpriseName,
-        vdcn.vdcName AS virtualDataCenter,
-        vappn.vappName AS virtualApp,
-        vmn.vmName AS virtualMachine,
-        costCode, idStorageTier,
-        cc.name AS costCodeName,
-        t.name AS storageTierName
-FROM kinton_accounting.accounting_event_detail a
-LEFT JOIN kinton_accounting.ent_name en ON (a.idEnterprise=en.idEnterprise)
-LEFT JOIN kinton_accounting.vdc_name vdcn ON (a.idVirtualDataCenter=vdcn.idVirtualDataCenter)
-LEFT JOIN kinton_accounting.vapp_name vappn ON (a.idVirtualApp=vappn.idVirtualApp)
-LEFT JOIN kinton_accounting.vm_name vmn ON (a.idVirtualMachine=vmn.idVM)
-LEFT JOIN kinton.costCode cc ON (a.costCode=cc.idCostCode)
-LEFT JOIN kinton.tier t ON (a.idStorageTier=t.id);
-
-# This is now the main view that should be be used to access accounting data...
-DROP VIEW IF EXISTS kinton_accounting.HOURLY_USAGE_MAX_VW;
-CREATE VIEW kinton_accounting.HOURLY_USAGE_MAX_VW
-AS
-SELECT
-        a.startTime, a.endTime,
-        idAccountingResourceType,
-        kinton_accounting.ABQ_OBJECT_ID_TO_NAME(resourceType) AS resourceType,
-        kinton_accounting.ABQ_OBJECT_ID_TO_NAME(resourceName) AS resourceName, 
-        resourceUnits,
-        a.idEnterprise, a.idVirtualDataCenter, a.idVirtualApp, a.idVirtualMachine,
-        en.enterpriseName AS enterpriseName,
-        vdcn.vdcName AS virtualDataCenter,
-        vappn.vappName AS virtualApp,
-        vmn.vmName AS virtualMachine,
-        costCode, idStorageTier
-FROM kinton_accounting.accounting_event_detail a
-LEFT JOIN kinton_accounting.ent_name en ON (a.idEnterprise=en.idEnterprise)
-LEFT JOIN kinton_accounting.vdc_name vdcn ON (a.idVirtualDataCenter=vdcn.idVirtualDataCenter)
-LEFT JOIN kinton_accounting.vapp_name vappn ON (a.idVirtualApp=vappn.idVirtualApp)
-LEFT JOIN kinton_accounting.vm_name vmn ON (a.idVirtualMachine=vmn.idVM);
-
-
-#
-# Definition for the HOURLY_USAGE_SUM_VW view : 
-#
-DROP VIEW IF EXISTS kinton_accounting.HOURLY_USAGE_SUM_VW;
-CREATE SQL SECURITY DEFINER VIEW kinton_accounting.HOURLY_USAGE_SUM_VW AS 
-  SELECT 
-    v.startTime AS startTime,
-    v.endTime AS endTime,
-    v.idAccountingResourceType AS idAccountingResourceType,
-    v.resourceType AS resourceType,
-    SUM(v.resourceUnits) AS resourceUnits,
-    v.idEnterprise AS idEnterprise,
-    v.idVirtualDataCenter AS idVirtualDataCenter,
-    v.enterpriseName AS enterpriseName,
-    v.virtualDataCenter AS virtualDataCenter 
-  FROM
-    kinton_accounting.HOURLY_USAGE_MAX_VW v 
-  GROUP BY 
-    v.startTime,
-    v.idAccountingResourceType,
-    v.idEnterprise, v.idVirtualDataCenter;
-
-
-#
-# Definition for the DAILY_USAGE_SUM_VW view : 
-#
-DROP VIEW IF EXISTS kinton_accounting.DAILY_USAGE_SUM_VW;
-CREATE SQL SECURITY DEFINER VIEW kinton_accounting.DAILY_USAGE_SUM_VW AS 
-	SELECT 
-		CAST(a.startTime AS DATE) AS startTime,
-		CAST(a.startTime AS DATE) AS endTime,
-		a.idAccountingResourceType AS idAccountingResourceType,
-		kinton_accounting.ABQ_OBJECT_ID_TO_NAME(a.resourceType) AS resourceType,
-		SUM(a.resourceUnits) AS resourceUnits,
-		a.idEnterprise AS idEnterprise,
-		a.idVirtualDataCenter AS idVirtualDataCenter,
-        en.enterpriseName AS enterpriseName,
-        vdcn.vdcName AS virtualDataCenter
-	FROM 
-		kinton_accounting.accounting_event_detail a 
-        LEFT JOIN kinton_accounting.ent_name en ON (a.idEnterprise=en.idEnterprise)
-        LEFT JOIN kinton_accounting.vdc_name vdcn ON (a.idVirtualDataCenter=vdcn.idVirtualDataCenter)
-	GROUP BY
-        CAST(a.startTime AS DATE),
-        a.idAccountingResourceType,
-        a.idEnterprise, a.idVirtualDataCenter;
-
-#
-# Definition for the MONTHLY_USAGE_SUM_VW view : 
-#
-DROP VIEW IF EXISTS kinton_accounting.MONTHLY_USAGE_SUM_VW;
-CREATE SQL SECURITY DEFINER VIEW kinton_accounting.MONTHLY_USAGE_SUM_VW AS 
-	SELECT 
-        CAST((a.startTime - INTERVAL (DAYOFMONTH(a.startTime) - 1) day) AS DATE) AS startTime,
-        LAST_DAY(a.startTime) AS endTime,
-        a.idAccountingResourceType AS idAccountingResourceType,
-        kinton_accounting.ABQ_OBJECT_ID_TO_NAME(a.resourceType) AS resourceType,
-        SUM(a.resourceUnits) AS resourceUnits,
-        a.idEnterprise AS idEnterprise,
-        a.idVirtualDataCenter AS idVirtualDataCenter,
-        en.enterpriseName AS enterpriseName,
-        vdcn.vdcName AS virtualDataCenter
-    FROM 
-        kinton_accounting.accounting_event_detail a 
-        LEFT JOIN kinton_accounting.ent_name en ON (a.idEnterprise=en.idEnterprise)
-        LEFT JOIN kinton_accounting.vdc_name vdcn ON (a.idVirtualDataCenter=vdcn.idVirtualDataCenter)
-    GROUP BY
-        CAST((a.startTime - INTERVAL (dayofmonth(a.startTime) - 1) day) AS DATE), 
-        a.idAccountingResourceType,
-        a.idEnterprise, a.idVirtualDataCenter;
-
-
-
-
-#
-#
-# Finally, changes to the existing 'kinton' schema accounting objects.   We will use the existing 'UpdateAccounting' SP to launch the new
-# accounting behaviour, and update the old objects to point to the new tables.
-# We will also rename the old kinton accounting_event_detail table and create a new view with the same name, which points to the 'new'
-# table
-#
-#
-SELECT "Updating the old UpdateAccounting and DeleteOldRegisteredEvents stored procedures..." as " ";
--- 
--- UpdateAccounting
 --
--- Inserts rows at accounting_event_detail based on Views defined for VMs, Storage and IPs events
--- 
-DROP PROCEDURE IF EXISTS kinton.UpdateAccounting;
-DELIMITER |
-CREATE PROCEDURE `kinton`.`UpdateAccounting`()
-    NOT DETERMINISTIC
-    SQL SECURITY DEFINER
-    COMMENT ''
-BEGIN
-    DECLARE accounting_enabled INT(1);
-
-	IF EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='accounting_parameters') THEN
-        # Get the parameters to determine which flavours of accounting are enabled...
-        SELECT paramValue INTO accounting_enabled FROM kinton_accounting.accounting_parameters WHERE paramName='AccountingEnabled';
-    ELSE
-        # If no accounting parameter table exists, then we will not run any accounting...
-        SELECT 0 INTO accounting_enabled;
-    END IF;
-
-    IF (accounting_enabled <> 0) THEN
-        # The underlying SP now handles differing account period sizes, although other areas of prod only support 1 hour,
-        # so we hard code that support for now...
-        CALL kinton_accounting.GenerateAccountingPeriodData(
-                    from_unixtime((-(3600) + (truncate((unix_timestamp(now()) / 3600),0) * 3600))), # Period StartTime
-                    3600                                                                            # Period Length (in seconds)
-        );
-    END IF;
-END|
-DELIMITER ;
-
--- 
--- DeleteOldRegisteredEvents
+-- Final view structure for view `ACCOUNTING_CONFIG_VW`
 --
--- Auxiliar procedure to delete old rows from event registering tables
--- All events registered older than 'hours' parameter from now will be deleted
--- 
-DROP PROCEDURE IF EXISTS `kinton`.DeleteOldRegisteredEvents;
-DELIMITER |
-CREATE PROCEDURE `kinton`.DeleteOldRegisteredEvents(    
-IN hours INT(2) UNSIGNED)
-BEGIN   
-    DECLARE sp_param_enabled INT(1);
-    DECLARE param_hours INT(8);
 
-	IF EXISTS (SELECT * FROM information_schema.columns WHERE table_schema= 'kinton_accounting' AND table_name='accounting_parameters') THEN
-        # Get the parameters to determine which flavours of accounting are enabled...
-        SELECT paramValue INTO sp_param_enabled FROM kinton_accounting.accounting_parameters WHERE paramName='DeleteRegEventsUseSPParam';
-        SELECT paramValue INTO param_hours FROM kinton_accounting.accounting_parameters WHERE paramName='DeleteRegEventsDeleteHours';
-    ELSE
-        # If no accounting parameter table exists, then we default to legacy support...
-        SELECT 1 INTO sp_param_enabled;
-    END IF;
+/*!50001 DROP TABLE IF EXISTS `ACCOUNTING_CONFIG_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `ACCOUNTING_CONFIG_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ACCOUNTING_CONFIG_VW` AS select cast(max(if((`accounting_parameters`.`paramName` = 'AccountingEnabled'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `ACCOUNTING_ENABLED`,max(if((`accounting_parameters`.`paramName` = 'AccountPeriodSize'),`accounting_parameters`.`paramValue`,NULL)) AS `PERIOD_SIZE`,max(if((`accounting_parameters`.`paramName` = 'AccountPeriodGranularity'),`accounting_parameters`.`paramValue`,NULL)) AS `PERIOD_GRANULARITY`,cast(max(if((`accounting_parameters`.`paramName` = 'DeleteRegEventsDeleteHours'),`accounting_parameters`.`paramValue`,NULL)) as decimal(6,0)) AS `DELETE_HOURS`,cast(max(if((`accounting_parameters`.`paramName` = 'MaximumPeriodsToProcess'),`accounting_parameters`.`paramValue`,NULL)) as decimal(5,0)) AS `MAX_PERIODS_PER_RUN`,cast(max(if((`accounting_parameters`.`paramName` = 'MaximumPeriodsToFirstInit'),`accounting_parameters`.`paramValue`,NULL)) as decimal(5,0)) AS `MAX_INIT_PERIODS`,cast(max(if((`accounting_parameters`.`paramName` = 'VirtualMachine-vcpu'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `VM_CPU_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'VirtualMachine-vram'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `VM_RAM_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'VirtualMachine-vhd'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `VM_HD_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'ExternalStorage'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `TIER_STORAGE_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'IPAddress'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `IP_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'VLAN'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `VLAN_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'VirtualMachine-hypervisorType'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `HYP_TYPE_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'VirtualMachine-haHosted'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `VM_HA_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'ReservedPhysicalMachine-cpu'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `PM_CPU_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'ReservedPhysicalMachine-ram'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `PM_RAM_ENABLED`,cast(max(if((`accounting_parameters`.`paramName` = 'RepositoryStorage'),`accounting_parameters`.`paramValue`,NULL)) as decimal(1,0)) AS `REPO_ENABLED` from `accounting_parameters` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
-    IF (sp_param_enabled = 0) THEN
-        # We should be using the DBMS stored value, not the one supplied to the SP
-        SELECT param_hours INTO hours;
-    END IF;
+--
+-- Final view structure for view `ACCOUNT_PERIOD_USAGE_VW`
+--
 
-    DELETE FROM accounting_event_vm  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-    DELETE FROM accounting_event_storage  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-    DELETE FROM accounting_event_ips  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-    DELETE FROM accounting_event_vlan  WHERE stopTime < date_sub(NOW(), INTERVAL hours HOUR);
-END|
-DELIMITER ;
+/*!50001 DROP TABLE IF EXISTS `ACCOUNT_PERIOD_USAGE_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `ACCOUNT_PERIOD_USAGE_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `ACCOUNT_PERIOD_USAGE_VW` AS select `a`.`startTime` AS `startTime`,`a`.`endTime` AS `endTime`,`a`.`idAccountingResourceType` AS `idAccountingResourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceType`) AS `resourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceName`) AS `resourceName`,`a`.`resourceUnits` AS `resourceUnits`,`a`.`idEnterprise` AS `idEnterprise`,`a`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`a`.`idVirtualApp` AS `idVirtualApp`,`a`.`idVirtualMachine` AS `idVirtualMachine`,`en`.`enterpriseName` AS `enterpriseName`,`vdcn`.`vdcName` AS `virtualDataCenter`,`vappn`.`vappName` AS `virtualApp`,`vmn`.`vmName` AS `virtualMachine`,`a`.`costCode` AS `costCode`,`a`.`idStorageTier` AS `idStorageTier`,`cc`.`ccName` AS `costCodeName`,`t`.`name` AS `storageTierName`,`a`.`idDataCenter` AS `idDataCenter`,`dcn`.`dcName` AS `dataCenterName` from (((((((`kinton_accounting`.`accounting_event_detail` `a` left join `kinton_accounting`.`ent_name` `en` on((`a`.`idEnterprise` = `en`.`idEnterprise`))) left join `kinton_accounting`.`vdc_name` `vdcn` on((`a`.`idVirtualDataCenter` = `vdcn`.`idVirtualDataCenter`))) left join `kinton_accounting`.`vapp_name` `vappn` on((`a`.`idVirtualApp` = `vappn`.`idVirtualApp`))) left join `kinton_accounting`.`vm_name` `vmn` on((`a`.`idVirtualMachine` = `vmn`.`idVM`))) left join `kinton_accounting`.`cc_name` `cc` on((`a`.`costCode` = `cc`.`idCostCode`))) left join `kinton`.`tier` `t` on((`a`.`idStorageTier` = `t`.`id`))) left join `kinton_accounting`.`dc_name` `dcn` on((`a`.`idDataCenter` = `dcn`.`idDataCenter`))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
+--
+-- Final view structure for view `DAILY_USAGE_SUM_VW`
+--
 
-#
-# The views below are only suitable for existing customers, and ideally should not exist
-# on a fresh install.   However, we will leave them in place, in case existing customers
-# are performing a fresh install...
-#
+/*!50001 DROP TABLE IF EXISTS `DAILY_USAGE_SUM_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `DAILY_USAGE_SUM_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `DAILY_USAGE_SUM_VW` AS select cast(`a`.`startTime` as date) AS `startTime`,cast(`a`.`startTime` as date) AS `endTime`,`a`.`idAccountingResourceType` AS `idAccountingResourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceType`) AS `resourceType`,sum(`a`.`resourceUnits`) AS `resourceUnits`,`a`.`idEnterprise` AS `idEnterprise`,`a`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`en`.`enterpriseName` AS `enterpriseName`,`vdcn`.`vdcName` AS `virtualDataCenter` from (((`accounting_event_detail` `a` left join `ent_name` `en` on((`a`.`idEnterprise` = `en`.`idEnterprise`))) left join `vdc_name` `vdcn` on((`a`.`idVirtualDataCenter` = `vdcn`.`idVirtualDataCenter`))) join `accounting_parameters` `param`) where ((`param`.`paramName` = 'AccountPeriodSize') and ((ucase(`param`.`paramValue`) = 'HOUR') or (ucase(`param`.`paramValue`) = 'DAY'))) group by cast(`a`.`startTime` as date),`a`.`idAccountingResourceType`,`a`.`idEnterprise`,`a`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
-SELECT "Updating the old _VW views to point to the new schema views..." as " ";
-#
-# Definition for the HOURLY_USAGE_MAX_VW view: 
-#
-DROP VIEW IF EXISTS kinton.HOURLY_USAGE_MAX_VW;
-CREATE SQL SECURITY DEFINER VIEW kinton.HOURLY_USAGE_MAX_VW AS 
-	SELECT * FROM kinton_accounting.HOURLY_USAGE_MAX_VW;
+--
+-- Final view structure for view `HOURLY_USAGE_MAX_2_VW`
+--
 
-#
-# Definition for the HOURLY_USAGE_SUM_VW view : 
-#
-DROP VIEW IF EXISTS kinton.HOURLY_USAGE_SUM_VW;
-CREATE SQL SECURITY DEFINER VIEW kinton.HOURLY_USAGE_SUM_VW AS 
-	SELECT * FROM kinton_accounting.HOURLY_USAGE_SUM_VW;
+/*!50001 DROP TABLE IF EXISTS `HOURLY_USAGE_MAX_2_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `HOURLY_USAGE_MAX_2_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `HOURLY_USAGE_MAX_2_VW` AS select `a`.`startTime` AS `startTime`,`a`.`endTime` AS `endTime`,`a`.`idAccountingResourceType` AS `idAccountingResourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceType`) AS `resourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceName`) AS `resourceName`,`a`.`resourceUnits` AS `resourceUnits`,`a`.`idEnterprise` AS `idEnterprise`,`a`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`a`.`idVirtualApp` AS `idVirtualApp`,`a`.`idVirtualMachine` AS `idVirtualMachine`,`en`.`enterpriseName` AS `enterpriseName`,`vdcn`.`vdcName` AS `virtualDataCenter`,`vappn`.`vappName` AS `virtualApp`,`vmn`.`vmName` AS `virtualMachine`,`a`.`costCode` AS `costCode`,`a`.`idStorageTier` AS `idStorageTier`,`cc`.`ccName` AS `costCodeName`,`t`.`name` AS `storageTierName` from (((((((`kinton_accounting`.`accounting_event_detail` `a` left join `kinton_accounting`.`ent_name` `en` on((`a`.`idEnterprise` = `en`.`idEnterprise`))) left join `kinton_accounting`.`vdc_name` `vdcn` on((`a`.`idVirtualDataCenter` = `vdcn`.`idVirtualDataCenter`))) left join `kinton_accounting`.`vapp_name` `vappn` on((`a`.`idVirtualApp` = `vappn`.`idVirtualApp`))) left join `kinton_accounting`.`vm_name` `vmn` on((`a`.`idVirtualMachine` = `vmn`.`idVM`))) left join `kinton_accounting`.`cc_name` `cc` on((`a`.`costCode` = `cc`.`idCostCode`))) left join `kinton`.`tier` `t` on((`a`.`idStorageTier` = `t`.`id`))) join `kinton_accounting`.`accounting_parameters` `param`) where ((`param`.`paramName` = 'AccountPeriodSize') and (ucase(`param`.`paramValue`) = 'HOUR')) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
+--
+-- Final view structure for view `HOURLY_USAGE_MAX_VW`
+--
 
-#
-# Definition for the DAILY_USAGE_SUM_VW view : 
-#
-DROP VIEW IF EXISTS kinton.DAILY_USAGE_SUM_VW;
-CREATE SQL SECURITY DEFINER VIEW kinton.DAILY_USAGE_SUM_VW AS 
-	SELECT * FROM kinton_accounting.DAILY_USAGE_SUM_VW;
+/*!50001 DROP TABLE IF EXISTS `HOURLY_USAGE_MAX_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `HOURLY_USAGE_MAX_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `HOURLY_USAGE_MAX_VW` AS select `a`.`startTime` AS `startTime`,`a`.`endTime` AS `endTime`,`a`.`idAccountingResourceType` AS `idAccountingResourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceType`) AS `resourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceName`) AS `resourceName`,`a`.`resourceUnits` AS `resourceUnits`,`a`.`idEnterprise` AS `idEnterprise`,`a`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`a`.`idVirtualApp` AS `idVirtualApp`,`a`.`idVirtualMachine` AS `idVirtualMachine`,`en`.`enterpriseName` AS `enterpriseName`,`vdcn`.`vdcName` AS `virtualDataCenter`,`vappn`.`vappName` AS `virtualApp`,`vmn`.`vmName` AS `virtualMachine`,`a`.`costCode` AS `costCode`,`a`.`idStorageTier` AS `idStorageTier` from (((((`accounting_event_detail` `a` left join `ent_name` `en` on((`a`.`idEnterprise` = `en`.`idEnterprise`))) left join `vdc_name` `vdcn` on((`a`.`idVirtualDataCenter` = `vdcn`.`idVirtualDataCenter`))) left join `vapp_name` `vappn` on((`a`.`idVirtualApp` = `vappn`.`idVirtualApp`))) left join `vm_name` `vmn` on((`a`.`idVirtualMachine` = `vmn`.`idVM`))) join `accounting_parameters` `param`) where ((`param`.`paramName` = 'AccountPeriodSize') and (ucase(`param`.`paramValue`) = 'HOUR')) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
-#
-# Definition for the MONTHLY_USAGE_SUM_VW view : 
-#
-DROP VIEW IF EXISTS kinton.MONTHLY_USAGE_SUM_VW;
-CREATE SQL SECURITY DEFINER VIEW kinton.MONTHLY_USAGE_SUM_VW AS 
-	SELECT * FROM kinton_accounting.MONTHLY_USAGE_SUM_VW;
+--
+-- Final view structure for view `HOURLY_USAGE_SUM_VW`
+--
 
+/*!50001 DROP TABLE IF EXISTS `HOURLY_USAGE_SUM_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `HOURLY_USAGE_SUM_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `HOURLY_USAGE_SUM_VW` AS select `a`.`startTime` AS `startTime`,`a`.`endTime` AS `endTime`,`a`.`idAccountingResourceType` AS `idAccountingResourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceType`) AS `resourceType`,sum(`a`.`resourceUnits`) AS `resourceUnits`,`a`.`idEnterprise` AS `idEnterprise`,`a`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`en`.`enterpriseName` AS `enterpriseName`,`vdcn`.`vdcName` AS `virtualDataCenter` from (((`accounting_event_detail` `a` left join `ent_name` `en` on((`a`.`idEnterprise` = `en`.`idEnterprise`))) left join `vdc_name` `vdcn` on((`a`.`idVirtualDataCenter` = `vdcn`.`idVirtualDataCenter`))) join `accounting_parameters` `param`) where ((`param`.`paramName` = 'AccountPeriodSize') and (ucase(`param`.`paramValue`) = 'HOUR')) group by `a`.`startTime`,`a`.`idAccountingResourceType`,`a`.`idEnterprise`,`a`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
-#
-# Now we will rename the existing accounting_event_detail table and replace it with a VIEW pointing to the
-# new table...
-#
-DROP PROCEDURE IF EXISTS kinton_accounting.rename_detail_table;
-DELIMITER |
-CREATE PROCEDURE kinton_accounting.rename_detail_table() 
-BEGIN
-	IF EXISTS (SELECT * FROM information_schema.tables WHERE table_schema= 'kinton' AND table_name='accounting_event_detail' AND table_type <> 'VIEW') THEN
-        SELECT "Renaming table - kinton.accounting_event_detail" as " ";
-        ALTER TABLE kinton.accounting_event_detail RENAME TO kinton.accounting_event_detail_deprecated;
-    END IF;
-END;
-|
-DELIMITER ;
+--
+-- Final view structure for view `LOG_ERRORS_VW`
+--
 
-# Now invoke the SP...
-CALL kinton_accounting.rename_detail_table();
-# And on successful completion, remove the SP, so we are not cluttering the DBMS with upgrade code!
-DROP PROCEDURE IF EXISTS kinton_accounting.rename_detail_table;
+/*!50001 DROP TABLE IF EXISTS `LOG_ERRORS_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `LOG_ERRORS_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `LOG_ERRORS_VW` AS select `activity_log`.`logTime` AS `LOG_TIME`,`kinton_accounting`.`LOG_LEVEL_NUM_TO_STR`(`activity_log`.`logLevel`) AS `SEVERITY`,`activity_log`.`message` AS `MESSAGE` from `activity_log` where (`activity_log`.`logLevel` < 2) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 
-SELECT "Create a new view to replace the 'old' accounting_event_detail table..." as " ";
-#
-# Definition for the accounting_event_detail view (for compatibility purposes):
-# Note : This is missing the 'unreferenced' version_c column at the end,
-# as the view does not include it. 
-#
-DROP VIEW IF EXISTS kinton.accounting_event_detail;
-CREATE SQL SECURITY DEFINER VIEW kinton.accounting_event_detail AS 
-	SELECT * FROM kinton_accounting.HOURLY_USAGE_MAX_VW;
+--
+-- Final view structure for view `LOG_VW`
+--
 
-# Drop the old LAST_HOUR views...
-SELECT "Removing the deprecated LAST_HOUR_ views..." as " ";
-DROP VIEW IF EXISTS kinton.LAST_HOUR_USAGE_IPS_VW;
-DROP VIEW IF EXISTS kinton.LAST_HOUR_USAGE_STORAGE_VW;
-DROP VIEW IF EXISTS kinton.LAST_HOUR_USAGE_VLAN_VW;
-DROP VIEW IF EXISTS kinton.LAST_HOUR_USAGE_VM_VW;
-SELECT "Accounting upgrade complete!" as " ";
+/*!50001 DROP TABLE IF EXISTS `LOG_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `LOG_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `LOG_VW` AS select `activity_log`.`logTime` AS `LOG_TIME`,`kinton_accounting`.`LOG_LEVEL_NUM_TO_STR`(`activity_log`.`logLevel`) AS `SEVERITY`,`activity_log`.`message` AS `MESSAGE` from `activity_log` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `LOG_WARNINGS_VW`
+--
+
+/*!50001 DROP TABLE IF EXISTS `LOG_WARNINGS_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `LOG_WARNINGS_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `LOG_WARNINGS_VW` AS select `activity_log`.`logTime` AS `LOG_TIME`,`kinton_accounting`.`LOG_LEVEL_NUM_TO_STR`(`activity_log`.`logLevel`) AS `SEVERITY`,`activity_log`.`message` AS `MESSAGE` from `activity_log` where (`activity_log`.`logLevel` < 3) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `MONTHLY_USAGE_SUM_VW`
+--
+
+/*!50001 DROP TABLE IF EXISTS `MONTHLY_USAGE_SUM_VW`*/;
+/*!50001 DROP VIEW IF EXISTS `MONTHLY_USAGE_SUM_VW`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `MONTHLY_USAGE_SUM_VW` AS select cast((`a`.`startTime` - interval (dayofmonth(`a`.`startTime`) - 1) day) as date) AS `startTime`,last_day(`a`.`startTime`) AS `endTime`,`a`.`idAccountingResourceType` AS `idAccountingResourceType`,`kinton_accounting`.`ABQ_OBJECT_ID_TO_NAME`(`a`.`resourceType`) AS `resourceType`,sum(`a`.`resourceUnits`) AS `resourceUnits`,`a`.`idEnterprise` AS `idEnterprise`,`a`.`idVirtualDataCenter` AS `idVirtualDataCenter`,`en`.`enterpriseName` AS `enterpriseName`,`vdcn`.`vdcName` AS `virtualDataCenter` from ((`accounting_event_detail` `a` left join `ent_name` `en` on((`a`.`idEnterprise` = `en`.`idEnterprise`))) left join `vdc_name` `vdcn` on((`a`.`idVirtualDataCenter` = `vdcn`.`idVirtualDataCenter`))) group by cast((`a`.`startTime` - interval (dayofmonth(`a`.`startTime`) - 1) day) as date),`a`.`idAccountingResourceType`,`a`.`idEnterprise`,`a`.`idVirtualDataCenter` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2013-04-09 14:52:30

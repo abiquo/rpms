@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-server
-Version:        2.2.0
-Release:        2%{?dist}%{?buildstamp}
+Version:        2.4.0
+Release:        1%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -10,10 +10,10 @@ Summary:        Abiquo Server Enterprise Edition
 Source0:        abiquo.properties.server
 Source1:        abiquo-accounting.cron
 Source2:	%{?abiquo_binaries_url}database/kinton-schema.sql
-Source3:	%{?abiquo_binaries_url}database/kinton-latest-delta.sql
-Source4:	accounting-refactor-sql-script.sql
+Source3:	%{?abiquo_binaries_url}database/kinton-%{version}-delta.sql
+Source4:        kinton-delta-disable-wizard
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires:       abiquo-core abiquo-client-premium mysql-server nfs-utils sos wget ruby ntp libvirt-client rabbitmq-server redis 
+Requires:       abiquo-core abiquo-client-premium nfs-utils sos wget ruby ntp libvirt-client redis 
 Requires:       /usr/sbin/sendmail /usr/bin/which
 BuildRequires:  /usr/bin/unzip
 BuildArch: 	noarch
@@ -26,6 +26,10 @@ This package contains the server enterprise component.
 This package includes software developed by third-party.
 Make sure that you read the license agrements in /usr/share/doc/abiquo-core licenses before using this software.
 
+%prep
+# Abiquo wizard fix
+cat %{SOURCE4} >> %{SOURCE3}
+
 %install
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}/database
@@ -33,11 +37,12 @@ mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}/examples
 mkdir -p $RPM_BUILD_ROOT%{abiquo_basedir}
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 mkdir -p %{buildroot}/%{_sysconfdir}/cron.d/
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/profile.d/
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 cp -r %{SOURCE0} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
 cp %{SOURCE3} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-cp %{SOURCE4} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -48,6 +53,12 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/config/examples/abiquo.properties.server
 
 %changelog
+* Wed Dec 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
+- Bumped version to 2.4.0
+
+* Tue Oct 23 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.3.0-1
+- bumped version to 2.3.0
+
 * Fri Oct 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-2
 - Accounting refactor added
 

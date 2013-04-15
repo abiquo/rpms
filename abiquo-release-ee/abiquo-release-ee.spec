@@ -1,7 +1,7 @@
 %define builtin_release_name GA
-%define base_release_version 2.2.0
+%define base_release_version 2.4.0
 %define builtin_release_variant Enterprise Edition
-%define builtin_release_version 2.2
+%define builtin_release_version 2.4
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
 %define real_release_name %{?release_name}%{!?release_name:%{builtin_release_name}}
 %define product_family Abiquo Linux
@@ -11,11 +11,11 @@
 Summary: %{product_family} release file
 Name: abiquo-release-ee
 Epoch: 11
-Version: 2.2.0
+Version: 2.4.0
 Release: 2%{?dist}
 License: GPL
 Group: System Environment/Base
-Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
+Source: http://mirror.abiquo.com/sources/%{name}-%{base_release_version}.tar.gz
 Source1: abiquo-release
 #Source2: hotfix.repo
 Source3: motd
@@ -42,7 +42,7 @@ python -c "import py_compile; py_compile.compile('eula.py')"
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc
-echo "%{product_family} %{builtin_release_variant} release %{base_release_version} (%{real_release_name})" > $RPM_BUILD_ROOT/etc/redhat-release
+echo "%{product_family} %{builtin_release_variant} release %{builtin_release_version} (%{real_release_name})" > $RPM_BUILD_ROOT/etc/redhat-release
 cp $RPM_BUILD_ROOT/etc/redhat-release $RPM_BUILD_ROOT/etc/issue
 echo "Kernel \r on an \m" >> $RPM_BUILD_ROOT/etc/issue
 cp $RPM_BUILD_ROOT/etc/issue $RPM_BUILD_ROOT/etc/issue.net
@@ -82,7 +82,8 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %attr(0644,root,root) /etc/redhat-release
 %dir /etc/yum.repos.d
-%config(noreplace) /etc/yum.repos.d/*
+#%config(noreplace) /etc/yum.repos.d/*
+%config /etc/yum.repos.d/*
 %doc EULA GPL autorun-template
 %config(noreplace) %attr(0644,root,root) /etc/issue
 %config(noreplace) %attr(0644,root,root) /etc/issue.net
@@ -95,6 +96,15 @@ rm -rf $RPM_BUILD_ROOT
 #/var/lib/supportinfo
 
 %changelog
+* Mon Mar 04 2013 Abel Boldú <abel.boldu@abiquo.com> - 11:2.4.0-2
+- Fixed release in repos
+
+* Wed Dec 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 11:2.4.0-1
+- Bumped version to 2.4
+
+* Tue Oct 16 2012 Abel Boldú <abel.boldu@abiquo.com> - 11:2.3.0-1
+- bumped version to 2.3
+
 * Tue Oct 02 2012 Abel Boldú <abel.boldu@abiquo.com> - 11:2.2.0-2
 - keeping major version updates
 

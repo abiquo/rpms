@@ -6,8 +6,8 @@
 
 Summary: Abiquo SOSReport plugins
 Name: abiquo-sosreport-plugins
-Version: 2.2.0
-Release: 1%{?dist}
+Version: 2.4.0
+Release: 2%{?dist}
 License: BSD 
 Group: System Environment/Base
 URL: http://www.abiquo.com/
@@ -15,11 +15,13 @@ Vendor: Abiquo Repository, http://www.abiquo.com
 Requires: sos 
 BuildArch: noarch
 
-Source0: abiquo_node.py
-Source1: abiquo_xen_node.py
-Source2: abiquo_server.py
-Source3: abiquo_dhcp.py
-Source4: abiquo_rs.py
+Source0: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_node.py
+Source1: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_xen_node.py
+Source2: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_server.py
+Source3: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_dhcp.py
+Source4: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_rs.py
+Source5: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_v2v.py
+Source6: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_lvm.py
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 %description
@@ -33,6 +35,8 @@ mkdir -p %{buildroot}%{python_sitelib}/sos/plugins
 %{__cp} %{_sourcedir}/abiquo_server.py %{buildroot}/%{python_sitelib}/sos/plugins/
 %{__cp} %{_sourcedir}/abiquo_dhcp.py %{buildroot}/%{python_sitelib}/sos/plugins/
 %{__cp} %{_sourcedir}/abiquo_rs.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__cp} %{_sourcedir}/abiquo_v2v.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__cp} %{_sourcedir}/abiquo_lvm.py %{buildroot}/%{python_sitelib}/sos/plugins/
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -42,6 +46,15 @@ mkdir -p %{buildroot}%{python_sitelib}/sos/plugins
 %{python_sitelib}/sos/plugins/*
 
 %changelog
+* Tue Feb 19 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-2
+- Added V2V and LVM profiles.
+
+* Wed Dec 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
+- Bumped version to 2.4.0
+
+* Tue Oct 23 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.3.0-1
+- bumped version to 2.3.0
+
 * Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
 - new versioning
 

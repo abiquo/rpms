@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-core
-Version: 	2.2.0
+Version: 	2.4.0
 Release: 	2%{?dist}
 Url:            http://www.abiquo.com/
 License:        Multiple
@@ -9,6 +9,9 @@ Group:          Development/Tools
 Summary:        Abiquo Server core package 
 Source0:        http://mirror.abiquo.com/sources/%{name}-%{version}.tar.gz
 Source1:        abiquo-tomcat.logrotate
+Source2:        %{?abiquo_binaries_url}legal.tar.gz
+Source3:        %{?abiquo_binaries_url}tomcat/abiquo-tomcat.jar
+# Source4:	abiquo_alias.sh
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:	noarch
 
@@ -23,6 +26,7 @@ Make sure that you read the license agrements in /usr/share/doc/abiquo-core lice
 %prep
 rm -rf $RPM_BUILD_ROOT
 %setup -q
+%setup -a 2
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -37,6 +41,8 @@ mkdir -p $RPM_BUILD_ROOT/opt/vm_repository
 cp -r tomcat $RPM_BUILD_ROOT/%{abiquo_basedir}
 install -m 755 scripts/abiquo-tomcat.init $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/init.d/abiquo-tomcat
 cp %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/abiquo-tomcat
+cp -r legal $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/
+cp -r %{SOURCE3} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/lib
 
 %post
 /sbin/chkconfig --add abiquo-tomcat
@@ -65,8 +71,17 @@ fi
 %config %{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %changelog
+* Mon Mar 25 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-2
+- New properties in abiquo-tomcat.jar
+
+* Wed Nov 21 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
+- Bumped version to 2.4
+
+* Fri Oct 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.3.0-1
+- Bumped version to 2.3.0. Added legal source
+
 * Wed Oct 03 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-2
-- bumped release
+- added legal and abiquo-tomcat.jar
 
 * Fri Aug 31 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.2.0-1
 - new versioning
