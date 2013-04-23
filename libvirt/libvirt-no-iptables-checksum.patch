@@ -1,0 +1,13 @@
+diff -ru libvirt-0.8.4.orig/src/util/iptables.c libvirt-0.8.4/src/util/iptables.c
+--- libvirt-0.8.4.orig/src/util/iptables.c	2010-08-02 15:16:42.000000000 -0400
++++ libvirt-0.8.4/src/util/iptables.c	2013-04-02 13:23:09.931950922 -0400
+@@ -805,7 +805,8 @@
+                                  "--out-interface", iface,
+                                  "--protocol", "udp",
+                                  "--destination-port", portstr,
+-                                 "--jump", "CHECKSUM", "--checksum-fill",
++                                 // "--jump", "CHECKSUM", "--checksum-fill",
++                                 "--jump", "ACCEPT", 
+                                  NULL);
+ }
+ 
