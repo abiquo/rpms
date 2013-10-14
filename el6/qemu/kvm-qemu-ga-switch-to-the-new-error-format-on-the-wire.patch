@@ -1,0 +1,132 @@
+From 8e9785a0934dcbf9c2bd6969a348d3986481f113 Mon Sep 17 00:00:00 2001
+Message-Id: <8e9785a0934dcbf9c2bd6969a348d3986481f113.1350312451.git.minovotn@redhat.com>
+In-Reply-To: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+References: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Thu, 11 Oct 2012 16:03:07 +0200
+Subject: [PATCH 24/27] qemu-ga: switch to the new error format on the wire
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <1349971387-7693-1-git-send-email-jcody@redhat.com>
+Patchwork-id: 42977
+O-Subject: [RHEL6.4 qemu-kvm PATCH v2] qemu-ga: switch to the new error format on the wire
+Bugzilla: 797227
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+IMPORTANT: this BREAKS qemu-ga compatibility for the error response.
+
+Instead of returning something like:
+
+{ "error": { "class": "InvalidParameterValue",
+             "data": {"name": "mode", "expected": "halt|powerdown|reboot" } } }
+
+qemu-ga now returns:
+
+ { "error": { "class": "GenericError",
+              "desc": "Parameter 'mode' expects halt|powerdown|reboot" } }
+
+Notice that this is also a bug fix, as qemu-ga wasn't returning the
+human message.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
+(cherry picked from commit 93b91c59dbccde6e4d25661150c1529bd5ee4a06)
+
+Conflicts:
+	Makefile.objs
+
+RHEL6 Note: Contents of qmp_build_error_object() are different, and the
+            above warning in the upstream commit does not apply to RHEL.
+
+            Error returns from qemu-ga are now of the form:
+
+{ "error": { "class": "CommandNotFound",
+             "desc": "The command invalid-cmd has not been found",
+             "data": {"name": "gueast-fsfreeze-status" } } }
+
+BZ 797227
+Brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4963953
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ qapi/qmp-core.h     |  1 +
+ qapi/qmp-dispatch.c | 10 +++++++++-
+ qemu-ga.c           |  4 ++--
+ 3 files changed, 12 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi/qmp-core.h     |  1 +
+ qapi/qmp-dispatch.c | 10 +++++++++-
+ qemu-ga.c           |  4 ++--
+ 3 files changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/qapi/qmp-core.h b/qapi/qmp-core.h
+index b0f64ba..00446cf 100644
+--- a/qapi/qmp-core.h
++++ b/qapi/qmp-core.h
+@@ -49,6 +49,7 @@ void qmp_disable_command(const char *name);
+ void qmp_enable_command(const char *name);
+ bool qmp_command_is_enabled(const char *name);
+ char **qmp_get_command_list(void);
++QObject *qmp_build_error_object(Error *errp);
+ 
+ #endif
+ 
+diff --git a/qapi/qmp-dispatch.c b/qapi/qmp-dispatch.c
+index 122c1a2..47bff03 100644
+--- a/qapi/qmp-dispatch.c
++++ b/qapi/qmp-dispatch.c
+@@ -109,6 +109,14 @@ static QObject *do_qmp_dispatch(QObject *request, Error **errp)
+     return ret;
+ }
+ 
++QObject *qmp_build_error_object(Error *errp)
++{
++    return qobject_from_jsonf("{ 'class': %s, 'desc': %s, 'data': %p }",
++                              error_get_field(errp, "class"),
++                              error_get_pretty(errp),
++                              error_get_data(errp));
++}
++
+ QObject *qmp_dispatch(QObject *request)
+ {
+     Error *err = NULL;
+@@ -119,7 +127,7 @@ QObject *qmp_dispatch(QObject *request)
+ 
+     rsp = qdict_new();
+     if (err) {
+-        qdict_put_obj(rsp, "error", error_get_qobject(err));
++        qdict_put_obj(rsp, "error", qmp_build_error_object(err));
+         error_free(err);
+     } else if (ret) {
+         qdict_put_obj(rsp, "return", ret);
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 22a656f..2f7f598 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -515,7 +515,7 @@ static void process_event(JSONMessageParser *parser, QList *tokens)
+         } else {
+             g_warning("failed to parse event: %s", error_get_pretty(err));
+         }
+-        qdict_put_obj(qdict, "error", error_get_qobject(err));
++        qdict_put_obj(qdict, "error", qmp_build_error_object(err));
+         error_free(err);
+     } else {
+         qdict = qobject_to_qdict(obj);
+@@ -532,7 +532,7 @@ static void process_event(JSONMessageParser *parser, QList *tokens)
+             qdict = qdict_new();
+             g_warning("unrecognized payload format");
+             error_set(&err, QERR_UNSUPPORTED);
+-            qdict_put_obj(qdict, "error", error_get_qobject(err));
++            qdict_put_obj(qdict, "error", qmp_build_error_object(err));
+             error_free(err);
+         }
+         ret = send_response(s, QOBJECT(qdict));
+-- 
+1.7.11.7
+

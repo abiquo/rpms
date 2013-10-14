@@ -1,0 +1,4 @@
+#Disable wizard on upgrades
+UPDATE kinton.system_properties SET value="0" WHERE name='client.dashboard.showStartUpAlert' 
+
+

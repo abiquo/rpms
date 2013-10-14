@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-am
-Version:  2.4.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  2.6.0
+Release:  2%{?dist}%{?buildstamp}
 Summary:  Abiquo Appliance Manager
 Group:    Development/System 
 License:  Multiple 
@@ -33,13 +33,17 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-#%doc %{_docdir}/%{name}/README
 %{abiquo_basedir}/tomcat/webapps/am
-#%config(noreplace) %{abiquo_basedir}/config/*
 
 
 
 %changelog
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
+- Bumped version to 2.6.0
+
+* Thu Apr 18 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-1
+- Bumped version to 2.6
+
 * Mon Nov 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
 - Bumped version to 2.4
 

@@ -1,0 +1,96 @@
+From 00a415b3bda4938dc1c855ed9df1fa7ebb21e1d2 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:43:31 -0500
+Subject: [PATCH 04/98] QDict: Introduce new iteration API
+
+It's composed of functions qdict_first() and qdict_next(), plus
+functions to access QDictEntry values.
+
+This API was suggested by Markus Armbruster <armbru@redhat.com> and
+it offers full control over the iteration process.
+
+The usage is simple, the following example prints all keys in 'qdict'
+(it's hopefully better than any English description):
+
+   QDict *qdict;
+   const QDictEntry *ent;
+
+   [...]
+
+   for (ent = qdict_first(qdict); ent; ent = qdict_next(qdict, ent)) {
+        printf("%s ", qdict_entry_key(ent));
+    }
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit f2b07f35d2ee1c6a501d1e3c68c0db42c70751fd)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qdict.c |   37 +++++++++++++++++++++++++++++++++++++
+ qdict.h |    2 ++
+ 2 files changed, 39 insertions(+), 0 deletions(-)
+
+diff --git a/qdict.c b/qdict.c
+index 6fbc4c1..59e3c39 100644
+--- a/qdict.c
++++ b/qdict.c
+@@ -345,6 +345,43 @@ void qdict_iter(const QDict *qdict,
+     }
+ }
+ 
++static QDictEntry *qdict_next_entry(const QDict *qdict, int first_bucket)
++{
++    int i;
++
++    for (i = first_bucket; i < QDICT_BUCKET_MAX; i++) {
++        if (!QLIST_EMPTY(&qdict->table[i])) {
++            return QLIST_FIRST(&qdict->table[i]);
++        }
++    }
++
++    return NULL;
++}
++
++/**
++ * qdict_first(): Return first qdict entry for iteration.
++ */
++const QDictEntry *qdict_first(const QDict *qdict)
++{
++    return qdict_next_entry(qdict, 0);
++}
++
++/**
++ * qdict_next(): Return next qdict entry in an iteration.
++ */
++const QDictEntry *qdict_next(const QDict *qdict, const QDictEntry *entry)
++{
++    QDictEntry *ret;
++
++    ret = QLIST_NEXT(entry, next);
++    if (!ret) {
++        unsigned int bucket = tdb_hash(entry->key) % QDICT_BUCKET_MAX;
++        ret = qdict_next_entry(qdict, bucket + 1);
++    }
++
++    return ret;
++}
++
+ /**
+  * qentry_destroy(): Free all the memory allocated by a QDictEntry
+  */
+diff --git a/qdict.h b/qdict.h
+index b5d68c7..9804782 100644
+--- a/qdict.h
++++ b/qdict.h
+@@ -33,6 +33,8 @@ QDict *qobject_to_qdict(const QObject *obj);
+ void qdict_iter(const QDict *qdict,
+                 void (*iter)(const char *key, QObject *obj, void *opaque),
+                 void *opaque);
++const QDictEntry *qdict_first(const QDict *qdict);
++const QDictEntry *qdict_next(const QDict *qdict, const QDictEntry *entry);
+ 
+ /* Helper to qdict_put_obj(), accepts any object */
+ #define qdict_put(qdict, key, obj) \
+-- 
+1.7.7.6
+

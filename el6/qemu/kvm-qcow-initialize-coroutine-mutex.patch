@@ -1,0 +1,50 @@
+From 233c519fc9d981bd021d71d1164883b16d6bcc3f Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:15 +0100
+Subject: [PATCH 50/99] qcow: initialize coroutine mutex
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-51-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37237
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 50/96] qcow: initialize coroutine mutex
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Scott Wood <scottwood@freescale.com>
+
+Bugzilla: 783950
+
+commit 52b8eb60132b27ad53476490e9d7579003390cfa added a mutex,
+but never initialized it.  This caused a segfault.
+
+Reported-by: Alexander Graf <agraf@suse.de>
+Signed-off-by: Scott Wood <scottwood@freescale.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit de33b1f3ddef8d6b4d53dbd4ae049262de2d3f02)
+---
+ block/qcow.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/block/qcow.c b/block/qcow.c
+index 1ec5241..b4c4d38 100644
+--- a/block/qcow.c
++++ b/block/qcow.c
+@@ -159,6 +159,8 @@ static int qcow_open(BlockDriverState *bs, int flags)
+             goto fail;
+         bs->backing_file[len] = '\0';
+     }
++
++    qemu_co_mutex_init(&s->lock);
+     return 0;
+ 
+  fail:
+-- 
+1.7.7.5
+

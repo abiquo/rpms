@@ -1,0 +1,78 @@
+From 1e1b0696f214d6c0296ad870a500d8b3080b056e Mon Sep 17 00:00:00 2001
+Message-Id: <1e1b0696f214d6c0296ad870a500d8b3080b056e.1350567686.git.minovotn@redhat.com>
+In-Reply-To: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+References: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+From: Jason Baron <jbaron@redhat.com>
+Date: Fri, 12 Oct 2012 19:44:31 +0200
+Subject: [PATCH 5/7] qemu-option: Add support for merged QemuOptsLists
+
+RH-Author: Jason Baron <jbaron@redhat.com>
+Message-id: <d33e9550e4d14aa6ed1899d62cdc15fb77d6fd98.1350069767.git.jbaron@redhat.com>
+Patchwork-id: 43073
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v4 5/7] qemu-option: Add support for merged QemuOptsLists
+Bugzilla: 859447
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Peter Maydell <peter.maydell@linaro.org>
+
+Add support for option lists which are merged together, so that
+"-listname foo=bar -listname bar=baz" is equivalent to "-listname
+foo=bar,bar=baz" rather than generating two separate lists of options.
+
+Signed-off-by: Peter Maydell <peter.maydell@linaro.org>
+Signed-off-by: Andrzej Zaborowski <andrew.zaborowski@intel.com>
+(cherry picked from commit da93318a9f0ff83e4a93e8755fa92291f9b8cc1b)
+
+Signed-off-by: Jason Baron <jbaron@redhat.com>
+---
+ qemu-option.c |    7 ++++++-
+ qemu-option.h |    1 +
+ 2 files changed, 7 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-option.c | 7 ++++++-
+ qemu-option.h | 1 +
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/qemu-option.c b/qemu-option.c
+index b37815f..4b0511c 100644
+--- a/qemu-option.c
++++ b/qemu-option.c
+@@ -693,13 +693,18 @@ QemuOpts *qemu_opts_create(QemuOptsList *list, const char *id, int fail_if_exist
+     if (id) {
+         opts = qemu_opts_find(list, id);
+         if (opts != NULL) {
+-            if (fail_if_exists) {
++            if (fail_if_exists && !list->merge_lists) {
+                 qerror_report(QERR_DUPLICATE_ID, id, list->name);
+                 return NULL;
+             } else {
+                 return opts;
+             }
+         }
++    } else if (list->merge_lists) {
++        opts = qemu_opts_find(list, NULL);
++        if (opts) {
++            return opts;
++        }
+     }
+     opts = qemu_mallocz(sizeof(*opts));
+     if (id) {
+diff --git a/qemu-option.h b/qemu-option.h
+index a3fe5d5..5f300df 100644
+--- a/qemu-option.h
++++ b/qemu-option.h
+@@ -100,6 +100,7 @@ typedef struct QemuOptDesc {
+ struct QemuOptsList {
+     const char *name;
+     const char *implied_opt_name;
++    bool merge_lists;  /* Merge multiple uses of option into a single list? */
+     QTAILQ_HEAD(, QemuOpts) head;
+     QemuOptDesc desc[];
+ };
+-- 
+1.7.11.7
+

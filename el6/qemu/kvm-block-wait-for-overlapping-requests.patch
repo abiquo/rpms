@@ -1,0 +1,117 @@
+From 06305383357f2f9161d73bbd3c4e3f284c65ee32 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:54 +0100
+Subject: [PATCH 27/55] block: wait for overlapping requests
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <152a0253f6f1aef05a04e2f57116b55162201c92.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38877
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 27/54] block: wait for overlapping requests
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+When copy-on-read is enabled it is necessary to wait for overlapping
+requests before issuing new requests.  This prevents races between the
+copy-on-read and a write request.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit f4658285f99473367dbbc34ce6970ec4637c2388)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c |   35 +++++++++++++++++++++++++++++++++++
+ 1 files changed, 35 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   35 +++++++++++++++++++++++++++++++++++
+ 1 files changed, 35 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index c2a2493..14d9201 100644
+--- a/block.c
++++ b/block.c
+@@ -1104,6 +1104,7 @@ struct BdrvTrackedRequest {
+     int nb_sectors;
+     bool is_write;
+     QLIST_ENTRY(BdrvTrackedRequest) list;
++    CoQueue wait_queue; /* coroutines blocked on this request */
+ };
+ 
+ /**
+@@ -1114,6 +1115,7 @@ struct BdrvTrackedRequest {
+ static void tracked_request_end(BdrvTrackedRequest *req)
+ {
+     QLIST_REMOVE(req, list);
++    qemu_co_queue_restart_all(&req->wait_queue);
+ }
+ 
+ /**
+@@ -1131,9 +1133,34 @@ static void tracked_request_begin(BdrvTrackedRequest *req,
+         .is_write = is_write,
+     };
+ 
++    qemu_co_queue_init(&req->wait_queue);
++
+     QLIST_INSERT_HEAD(&bs->tracked_requests, req, list);
+ }
+ 
++static bool tracked_request_overlaps(BdrvTrackedRequest *req,
++                                     int64_t sector_num, int nb_sectors) {
++    return false; /* not yet implemented */
++}
++
++static void coroutine_fn wait_for_overlapping_requests(BlockDriverState *bs,
++        int64_t sector_num, int nb_sectors)
++{
++    BdrvTrackedRequest *req;
++    bool retry;
++
++    do {
++        retry = false;
++        QLIST_FOREACH(req, &bs->tracked_requests, list) {
++            if (tracked_request_overlaps(req, sector_num, nb_sectors)) {
++                qemu_co_queue_wait(&req->wait_queue);
++                retry = true;
++                break;
++            }
++        }
++    } while (retry);
++}
++
+ /*
+  * Return values:
+  * 0        - success
+@@ -1417,6 +1444,10 @@ static int coroutine_fn bdrv_co_do_readv(BlockDriverState *bs,
+         return -EIO;
+     }
+ 
++    if (bs->copy_on_read) {
++        wait_for_overlapping_requests(bs, sector_num, nb_sectors);
++    }
++
+     tracked_request_begin(&req, bs, sector_num, nb_sectors, false);
+     ret = drv->bdrv_co_readv(bs, sector_num, nb_sectors, qiov);
+     tracked_request_end(&req);
+@@ -1451,6 +1482,10 @@ static int coroutine_fn bdrv_co_do_writev(BlockDriverState *bs,
+         return -EIO;
+     }
+ 
++    if (bs->copy_on_read) {
++        wait_for_overlapping_requests(bs, sector_num, nb_sectors);
++    }
++
+     tracked_request_begin(&req, bs, sector_num, nb_sectors, true);
+ 
+     ret = drv->bdrv_co_writev(bs, sector_num, nb_sectors, qiov);
+-- 
+1.7.7.6
+

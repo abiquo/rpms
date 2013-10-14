@@ -1,0 +1,79 @@
+From 9e21bf086698953382c5e27b9088c27a63c0b320 Mon Sep 17 00:00:00 2001
+From: Alon Levy <alevy@redhat.com>
+Date: Tue, 22 Jan 2013 17:33:23 +0100
+Subject: [PATCH 5/5] qxl: change rom size to 8192
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1358876003-30877-3-git-send-email-alevy@redhat.com>
+Patchwork-id: 47626
+O-Subject: [PATCHv2 RHEL-6.4 qemu-kvm 2/2] qxl: change rom size to 8192
+Bugzilla: 869981
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+This is a simpler solution to RHBZ#869981, where migration breaks since
+qxl's rom bar size has changed. Instead of ignoring fields in QXLRom,
+which is what has actually changed, we remove some of the modes, a
+mechanism already accounted for by the guest. The modes left allow for
+portrait and landscape only modes, corresponding to orientations 0 and
+1.  Orientations 2 and 3 are dropped.
+
+Added assert so that rom size will fit the future QXLRom increases via
+spice-protocol changes.
+
+This patch has been tested with 6.1.0.10015. With the newer 6.1.0.10016
+there are problems with both "(flipped)" modes prior to the patch, and
+the patch loses the ability to set "Portrait" modes. But this is a
+separate bug to be fixed in the driver, and besides the patch doesn't
+affect the new arbitrary mode setting functionality.
+
+Signed-off-by: Alon Levy <alevy@redhat.com>
+
+upstream: acked but not committed.
+
+RHBZ: 869981
+---
+ hw/qxl.c | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+Signed-off-by: Miroslav Rezanina <mrezanin@redhat.com>
+---
+ hw/qxl.c |   14 ++++++++------
+ 1 files changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/hw/qxl.c b/hw/qxl.c
+index a68dac9..a121d42 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -93,9 +93,7 @@
+ 
+ #define QXL_MODE_EX(x_res, y_res)                 \
+     QXL_MODE_16_32(x_res, y_res, 0),              \
+-    QXL_MODE_16_32(y_res, x_res, 1),              \
+-    QXL_MODE_16_32(x_res, y_res, 2),              \
+-    QXL_MODE_16_32(y_res, x_res, 3)
++    QXL_MODE_16_32(x_res, y_res, 1)
+ 
+ static QXLMode qxl_modes[] = {
+     QXL_MODE_EX(640, 480),
+@@ -325,9 +323,13 @@ static inline uint32_t msb_mask(uint32_t val)
+ 
+ static ram_addr_t qxl_rom_size(void)
+ {
+-    uint32_t rom_size = sizeof(QXLRom) + sizeof(QXLModes) + sizeof(qxl_modes);
+-    rom_size = MAX(rom_size, TARGET_PAGE_SIZE);
+-    rom_size = msb_mask(rom_size * 2 - 1);
++    uint32_t required_rom_size = sizeof(QXLRom) + sizeof(QXLModes) +
++                                 sizeof(qxl_modes);
++    uint32_t rom_size = 8192; /* two pages */
++
++    required_rom_size = MAX(required_rom_size, TARGET_PAGE_SIZE);
++    required_rom_size = msb_mask(required_rom_size * 2 - 1);
++    assert(required_rom_size <= rom_size);
+     return rom_size;
+ }
+ 
+-- 
+1.7.1
+

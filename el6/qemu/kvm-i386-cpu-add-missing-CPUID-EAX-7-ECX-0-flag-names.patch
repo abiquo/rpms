@@ -1,0 +1,59 @@
+From ed98ba7520c96bdba6ddd34427d775ed6417c50a Mon Sep 17 00:00:00 2001
+Message-Id: <ed98ba7520c96bdba6ddd34427d775ed6417c50a.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Tue, 9 Oct 2012 17:27:30 +0200
+Subject: [PATCH 03/17] i386: cpu: add missing CPUID[EAX=7, ECX=0] flag names
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1349803650-17308-4-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 42870
+O-Subject: [RHEL6.4 qemu-kvm PATCH 3/3] i386: cpu: add missing CPUID[EAX=7, ECX=0] flag names
+Bugzilla: 843084
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+
+Bugzilla: 843084
+Upstream status: submitted
+  Message-Id: <1349791439-15369-1-git-send-email-ehabkost@redhat.com>
+
+This makes QEMU recognize the following CPU flag names:
+
+ Flags            | Corresponding KVM kernel commit
+ -----------------+----------------------------------------
+ FSGSBASE         | 176f61da82435eae09cc96f70b530d1ba0746b8b
+ AVX2, BMI1, BMI2 | fb215366b3c7320ac25dca766a0152df16534932
+ HLE, RTM         | 83c529151ab0d4a813e3f6a3e293fff75d468519
+ INVPCID          | ad756a1603c5fac207758faaac7f01c34c9d0b7b
+ ERMS             | a01c8f9b4e266df1d7166d23216f2060648f862d
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index d21769c..8dcab93 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -74,8 +74,8 @@ static const char *ext3_feature_name[] = {
+ };
+ 
+ static const char *cpuid_7_0_ebx_feature_name[] = {
+-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, "smep",
+-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
++    "fsgsbase", NULL, NULL, "bmi1", "hle", "avx2", NULL, "smep",
++    "bmi2", "erms", "invpcid", "rtm", NULL, NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL, "smap", NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+ };
+-- 
+1.7.11.7
+

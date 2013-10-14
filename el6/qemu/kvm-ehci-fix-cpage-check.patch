@@ -1,0 +1,60 @@
+From 432f6ccb823ce1ce52e2e9aabdbaf18cda9c2f93 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Fri, 28 Oct 2011 10:33:00 +0200
+Subject: [PATCH 2/2] ehci: fix cpage check
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1319797980-29296-1-git-send-email-kraxel@redhat.com>
+Patchwork-id: 34725
+O-Subject: [RHEL-6.3 qemu-kvm PATCH] ehci: fix cpage check
+Bugzilla: 728843
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+spotted by coverity: cpage is incremented within the loop, so we better
+move the range check into the loop to make sure cpage stays within the
+permitted range.
+
+bguzilla: 728843 - qemu-kvm: Some suspicious code (found by Coverity)
+upstream: 0ce668bc5284ffebd2d0b269ae141f9a696dbd01 -- this one switches
+          ehci to scatter gather lists and largely rewites the code in
+          question.  It also moves the cpage sanity check into the loop.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ hw/usb-ehci.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-ehci.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index 5ff9396..468ec0f 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -1178,14 +1178,14 @@ static int ehci_buffer_rw(EHCIQueue *q, int bytes, int rw)
+     }
+ 
+     cpage = get_field(q->qh.token, QTD_TOKEN_CPAGE);
+-    if (cpage > 4) {
+-        fprintf(stderr, "cpage out of range (%d)\n", cpage);
+-        return USB_RET_PROCERR;
+-    }
+-
+     offset = q->qh.bufptr[0] & ~QTD_BUFPTR_MASK;
+ 
+     do {
++        if (cpage > 4) {
++            fprintf(stderr, "cpage out of range (%d)\n", cpage);
++            return USB_RET_PROCERR;
++        }
++
+         /* start and end of this page */
+         head = q->qh.bufptr[cpage] & QTD_BUFPTR_MASK;
+         tail = head + ~QTD_BUFPTR_MASK + 1;
+-- 
+1.7.7.3
+

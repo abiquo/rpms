@@ -1,0 +1,51 @@
+From b4b0da87d98b6bd25f03dd54bfd6b8a856f7f7b4 Mon Sep 17 00:00:00 2001
+Message-Id: <b4b0da87d98b6bd25f03dd54bfd6b8a856f7f7b4.1334231944.git.minovotn@redhat.com>
+In-Reply-To: <50c33b164bbd7fa0d613bd09b072ef7deb09168c.1334231944.git.minovotn@redhat.com>
+References: <50c33b164bbd7fa0d613bd09b072ef7deb09168c.1334231944.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 30 Mar 2012 18:32:03 +0200
+Subject: [PATCH 3/4] block: cancel jobs when a device is ready to go away
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1333132324-20958-4-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39050
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 3/4] block: cancel jobs when a device is ready to go away
+Bugzilla: 807898
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Upstream ref: http://permalink.gmane.org/gmane.comp.emulators.qemu/144351
+
+We do not want jobs to keep a device busy for a possibly very long
+time, and management could become confused because they thought a
+device was not even there anymore.  So, cancel long-running jobs
+as soon as their device is going to disappear.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ blockdev.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ blockdev.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 488b30f..0d6476e 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -64,6 +64,9 @@ void blockdev_mark_auto_del(BlockDriverState *bs)
+ {
+     DriveInfo *dinfo = drive_get_by_blockdev(bs);
+ 
++    if (bs->job) {
++        block_job_cancel(bs->job);
++    }
+     if (dinfo) {
+         dinfo->auto_del = 1;
+     }
+-- 
+1.7.7.6
+

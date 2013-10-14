@@ -1,0 +1,70 @@
+From 6c8785ec072059e461c2106913aa8081c6dc1334 Mon Sep 17 00:00:00 2001
+From: Amit Shah <amit.shah@redhat.com>
+Date: Tue, 24 Jan 2012 07:40:53 +0100
+Subject: [PATCH 2/3] qdev: Add a 'free' method to disassociate chardev from
+ qdev device
+
+RH-Author: Amit Shah <amit.shah@redhat.com>
+Message-id: <3db856ca87083406378337bdc4befd0cbd227e18.1327390706.git.amit.shah@redhat.com>
+Patchwork-id: 36773
+O-Subject: [RHEL6.3 qemu-kvm PATCH 1/2] qdev: Add a 'free' method to disassociate chardev from qdev device
+Bugzilla: 770512
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+When a device is removed, remove the association with a chardev, if any,
+so that the chardev can be re-used later for other devices.
+
+Reported-by: Qunfang Zhang <qzhang@redhat.com>
+Fix-suggested-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit a87f3e8b080205879232f34ff6977cb225b70e05)
+
+Conflicts:
+
+	hw/qdev-properties.c
+
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+---
+ hw/qdev-properties.c |   11 +++++++++++
+ 1 files changed, 11 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qdev-properties.c |   11 +++++++++++
+ 1 files changed, 11 insertions(+), 0 deletions(-)
+
+diff --git a/hw/qdev-properties.c b/hw/qdev-properties.c
+index 0851d31..925a5f2 100644
+--- a/hw/qdev-properties.c
++++ b/hw/qdev-properties.c
+@@ -361,6 +361,16 @@ static int parse_chr(DeviceState *dev, Property *prop, const char *str)
+     return 0;
+ }
+ 
++static void free_chr(DeviceState *dev, Property *prop)
++{
++    CharDriverState **ptr = qdev_get_prop_ptr(dev, prop);
++
++    if (*ptr) {
++        qemu_chr_add_handlers(*ptr, NULL, NULL);
++    }
++}
++
++
+ static int print_chr(DeviceState *dev, Property *prop, char *dest, size_t len)
+ {
+     CharDriverState **ptr = qdev_get_prop_ptr(dev, prop);
+@@ -378,6 +388,7 @@ PropertyInfo qdev_prop_chr = {
+     .size  = sizeof(CharDriverState*),
+     .parse = parse_chr,
+     .print = print_chr,
++    .free  = free_chr,
+ };
+ 
+ /* --- netdev device --- */
+-- 
+1.7.7.5
+

@@ -1,0 +1,89 @@
+From c2472c92512ea656d2525321cd89338d8c6e92d8 Mon Sep 17 00:00:00 2001
+Message-Id: <c2472c92512ea656d2525321cd89338d8c6e92d8.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Pavel Hrdina <phrdina@redhat.com>
+Date: Wed, 30 May 2012 19:35:21 +0200
+Subject: [PATCH 03/41] move atexit(term_exit) and O_NONBLOCK to
+ qemu_chr_open_stdio
+
+RH-Author: Pavel Hrdina <phrdina@redhat.com>
+Message-id: <63e05587f23fdc1c83d0c442a620589462064a59.1338401409.git.phrdina@redhat.com>
+Patchwork-id: 39860
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 3/4] move atexit(term_exit) and O_NONBLOCK to qemu_chr_open_stdio
+Bugzilla: 806768
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+In the next patch, term_init will be changed to enable or disable
+echo at will.  Move extraneous stuff out of it.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 0369364be871f9c4b4429a69ddcd2ba21be34ea3)
+Signed-off-by: Pavel Hrdina <phrdina@redhat.com>
+---
+ qemu-char.c |   18 ++++++++----------
+ 1 files changed, 8 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-char.c |   18 ++++++++----------
+ 1 file changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/qemu-char.c b/qemu-char.c
+index ac29e6c..8a5c103 100644
+--- a/qemu-char.c
++++ b/qemu-char.c
+@@ -825,7 +825,6 @@ static void stdio_read(void *opaque)
+ /* init terminal so that we can grab keys */
+ static struct termios oldtty;
+ static int old_fd0_flags;
+-static int term_atexit_done;
+ 
+ static void term_exit(void)
+ {
+@@ -837,10 +836,7 @@ static void term_init(QemuOpts *opts)
+ {
+     struct termios tty;
+ 
+-    tcgetattr (0, &tty);
+-    oldtty = tty;
+-    old_fd0_flags = fcntl(0, F_GETFL);
+-
++    tty = oldtty;
+     tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP
+                           |INLCR|IGNCR|ICRNL|IXON);
+     tty.c_oflag |= OPOST;
+@@ -854,11 +850,6 @@ static void term_init(QemuOpts *opts)
+     tty.c_cc[VTIME] = 0;
+ 
+     tcsetattr (0, TCSANOW, &tty);
+-
+-    if (!term_atexit_done++)
+-        atexit(term_exit);
+-
+-    fcntl(0, F_SETFL, O_NONBLOCK);
+ }
+ 
+ static void qemu_chr_close_stdio(struct CharDriverState *chr)
+@@ -875,6 +866,13 @@ static CharDriverState *qemu_chr_open_stdio(QemuOpts *opts)
+ 
+     if (stdio_nb_clients >= STDIO_MAX_CLIENTS)
+         return NULL;
++    if (stdio_nb_clients == 0) {
++        old_fd0_flags = fcntl(0, F_GETFL);
++        tcgetattr (0, &oldtty);
++        fcntl(0, F_SETFL, O_NONBLOCK);
++        atexit(term_exit);
++    }
++
+     chr = qemu_chr_open_fd(0, 1);
+     chr->chr_close = qemu_chr_close_stdio;
+     qemu_set_fd_handler2(0, stdio_read_poll, stdio_read, NULL, chr);
+-- 
+1.7.10.4
+

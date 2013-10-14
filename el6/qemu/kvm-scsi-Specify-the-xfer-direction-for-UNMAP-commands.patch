@@ -1,0 +1,60 @@
+From a4bb8299aa87675904a16540aa92ee4aaeb3bddc Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 27 Aug 2012 13:42:38 -0300
+Subject: [RHEL6 qemu-kvm PATCH 2/5] scsi: Specify the xfer direction for
+ UNMAP commands
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1346074958-12169-3-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 41334
+O-Subject: [RHEL 6.4 qemu-kvm PATCH 2/2] scsi: Specify the xfer direction for UNMAP commands
+Bugzilla: 841171
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+From: Ronnie Sahlberg <ronniesahlberg@gmail.com>
+
+Bugzilla: 841171
+
+scsi_cmd_xfer_mode() is used to specify the xfer direction for SCSI
+commands that come in from the guest.  If the direction is set incorrectly
+this will eventually cause QEMU to kernel-panic the guest.
+
+Add UNMAP as commands that send data to the device.  The upstream commit
+also did the same for ATA PASSTHROUGH, but this command may also receive
+data so I am removing that part of the patch.  Upstream later learnt to
+parse the ATA PASSTHROUGH CDB and get the correct direction from it.
+
+Recent kernels may send both UNMAP as well as ATA PASSTHROUGH commands.
+With the LSI adapter, not supported in RHEL6, the incorrect xfer direction
+very quickly causes the guest kernel to crash.  virtio-scsi cares much
+less, the driver just reports an error and the guest goes on happily.
+
+Signed-off-by: Ronnie Sahlberg <ronniesahlberg@gmail.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit 381b634c275ca1a2806e97392527bbfc01bcb333)
+---
+ hw/scsi-bus.c | 1 +
+ 1 file modificato, 1 inserzioni(+)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/scsi-bus.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 932c5dc..f60db4b 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -906,6 +906,7 @@ static void scsi_cmd_xfer_mode(SCSICommand *cmd)
+     case WRITE_LONG_10:
+     case WRITE_SAME_10:
+     case WRITE_SAME_16:
++    case UNMAP:
+     case SEARCH_HIGH_12:
+     case SEARCH_EQUAL_12:
+     case SEARCH_LOW_12:
+-- 
+1.7.11.4
+

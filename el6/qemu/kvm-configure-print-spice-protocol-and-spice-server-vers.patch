@@ -1,0 +1,61 @@
+From a9c55ce42ddde5559f75af12c1a43b05d5687509 Mon Sep 17 00:00:00 2001
+Message-Id: <a9c55ce42ddde5559f75af12c1a43b05d5687509.1350312451.git.minovotn@redhat.com>
+In-Reply-To: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+References: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+From: Alon Levy <alevy@redhat.com>
+Date: Sun, 7 Oct 2012 15:32:00 +0200
+Subject: [PATCH 23/27] configure: print spice-protocol and spice-server
+ versions
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1349623920-19894-17-git-send-email-alevy@redhat.com>
+Patchwork-id: 42791
+O-Subject: [PATCH RHEL-6.4 v2 16/16] configure: print spice-protocol and spice-server versions
+Bugzilla: 770842
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Arnon Gilboa <agilboa@redhat.com>
+
+Signed-off-by: Alon Levy <alevy@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Upstream: 2e0e3c399aa8067148055b9ea0edb822c5b584d2
+
+Conflicts:
+	configure
+
+Changes from upstream: only context.
+---
+ configure | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ configure | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/configure b/configure
+index 7e9fd5d..2584264 100755
+--- a/configure
++++ b/configure
+@@ -2042,6 +2042,8 @@ EOF
+     spice="yes"
+     libs_softmmu="$libs_softmmu $spice_libs"
+     QEMU_CFLAGS="$QEMU_CFLAGS $spice_cflags"
++    spice_protocol_version=$($pkg_config --modversion spice-protocol)
++    spice_server_version=$($pkg_config --modversion spice-server)
+     if $pkg_config --atleast-version=0.12.0 spice-protocol >/dev/null 2>&1; then
+         spice_qxl_io_monitors_config_async="yes"
+     fi
+@@ -2306,7 +2308,7 @@ echo "uuid support      $uuid"
+ echo "vhost-net support $vhost_net"
+ echo "-fake-machine     $fake_machine"
+ echo "Trace backend     $trace_backend"
+-echo "spice support     $spice"
++echo "spice support     $spice ($spice_protocol_version/$spice_server_version)"
+ echo "nss used          $smartcard_nss"
+ echo "Live snapshots    $live_snapshots"
+ echo "Block streaming   $block_stream"
+-- 
+1.7.11.7
+

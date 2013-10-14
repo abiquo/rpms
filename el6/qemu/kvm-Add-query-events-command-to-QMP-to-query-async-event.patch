@@ -1,0 +1,315 @@
+From caa17055f3f1b12be5b2d1baa48c1764e89a3b70 Mon Sep 17 00:00:00 2001
+Message-Id: <caa17055f3f1b12be5b2d1baa48c1764e89a3b70.1355253494.git.minovotn@redhat.com>
+In-Reply-To: <e1113518ec4b649620a785870b1e37dd352f8b90.1355253494.git.minovotn@redhat.com>
+References: <e1113518ec4b649620a785870b1e37dd352f8b90.1355253494.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 11 Dec 2012 15:26:25 +0100
+Subject: [PATCH 3/5] Add 'query-events' command to QMP to query async events
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1355239587-12473-3-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 44910
+O-Subject: [RHEL6.4 qemu-kvm PATCH 2/4] Add 'query-events' command to QMP to query async events
+Bugzilla: 881732
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: "Daniel P. Berrange" <berrange@redhat.com>
+
+Sometimes it is neccessary for an application to determine
+whether a particular QMP event is available, so they can
+decide whether to use compatibility code instead. This
+introduces a new 'query-events' command to QMP to do just
+that
+
+ { "execute": "query-events" }
+ {"return": [{"name": "WAKEUP"},
+             {"name": "SUSPEND"},
+             {"name": "DEVICE_TRAY_MOVED"},
+             {"name": "BLOCK_JOB_CANCELLED"},
+             {"name": "BLOCK_JOB_COMPLETED"},
+             ...snip...
+             {"name": "SHUTDOWN"}]}
+
+* monitor.c: Turn MonitorEvent -> string conversion
+  into a lookup from a static table of constant strings.
+  Add impl of qmp_query_events monitor command handler
+* qapi-schema.json, qmp-commands.hx: Define contract of
+  query-events command
+
+Signed-off-by: Daniel P. Berrange <berrange@redhat.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 4860853d60ecea44b65e9cdefce980de3a641dce)
+
+Conflicts:
+	monitor.c
+	monitor.h
+	qapi-schema.json
+	qmp-commands.hx
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ monitor.c        | 123 ++++++++++++++++++++++---------------------------------
+ monitor.h        |   4 ++
+ qapi-schema.json |  22 ++++++++++
+ qemu-monitor.hx  |  39 ++++++++++++++++++
+ 4 files changed, 114 insertions(+), 74 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ monitor.c        | 123 ++++++++++++++++++++++---------------------------------
+ monitor.h        |   4 ++
+ qapi-schema.json |  22 ++++++++++
+ qemu-monitor.hx  |  39 ++++++++++++++++++
+ 4 files changed, 114 insertions(+), 74 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index a2836bc..1c903b8 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -428,6 +428,34 @@ static void timestamp_put(QDict *qdict)
+     qdict_put_obj(qdict, "timestamp", obj);
+ }
+ 
++
++static const char *monitor_event_names[] = {
++    [QEVENT_SHUTDOWN] = "SHUTDOWN",
++    [QEVENT_RESET] = "RESET",
++    [QEVENT_POWERDOWN] = "POWERDOWN",
++    [QEVENT_STOP] = "STOP",
++    [QEVENT_RESUME] = "RESUME",
++    [QEVENT_VNC_CONNECTED] = "VNC_CONNECTED",
++    [QEVENT_VNC_INITIALIZED] = "VNC_INITIALIZED",
++    [QEVENT_VNC_DISCONNECTED] = "VNC_DISCONNECTED",
++    [QEVENT_BLOCK_IO_ERROR] = "BLOCK_IO_ERROR",
++    [QEVENT_RTC_CHANGE] = "RTC_CHANGE",
++    [QEVENT_WATCHDOG] = "WATCHDOG",
++    [QEVENT_SPICE_CONNECTED] = "SPICE_CONNECTED",
++    [QEVENT_SPICE_INITIALIZED] = "SPICE_INITIALIZED",
++    [QEVENT_SPICE_DISCONNECTED] = "SPICE_DISCONNECTED",
++    [QEVENT_RH_SPICE_INITIALIZED] = RFQDN_REDHAT "SPICE_INITIALIZED",
++    [QEVENT_RH_SPICE_DISCONNECTED] = RFQDN_REDHAT "SPICE_DISCONNECTED",
++    [QEVENT_BLOCK_JOB_COMPLETED] = "BLOCK_JOB_COMPLETED",
++    [QEVENT_BLOCK_JOB_CANCELLED] = "BLOCK_JOB_CANCELLED",
++    [QEVENT_DEVICE_TRAY_MOVED] = "DEVICE_TRAY_MOVED",
++    [QEVENT_SUSPEND] = "SUSPEND",
++    [QEVENT_SUSPEND_DISK] = "SUSPEND_DISK",
++    [QEVENT_WAKEUP] = "WAKEUP",
++    [QEVENT_SPICE_MIGRATE_COMPLETED] = "SPICE_MIGRATE_COMPLETED",
++};
++QEMU_BUILD_BUG_ON(ARRAY_SIZE(monitor_event_names) != QEVENT_MAX)
++
+ /**
+  * monitor_protocol_event(): Generate a Monitor event
+  *
+@@ -441,80 +469,8 @@ void monitor_protocol_event(MonitorEvent event, QObject *data)
+ 
+     assert(event < QEVENT_MAX);
+ 
+-    switch (event) {
+-        case QEVENT_SHUTDOWN:
+-            event_name = "SHUTDOWN";
+-            break;
+-        case QEVENT_RESET:
+-            event_name = "RESET";
+-            break;
+-        case QEVENT_POWERDOWN:
+-            event_name = "POWERDOWN";
+-            break;
+-        case QEVENT_STOP:
+-            event_name = "STOP";
+-            break;
+-        case QEVENT_RESUME:
+-            event_name = "RESUME";
+-            break;
+-        case QEVENT_VNC_CONNECTED:
+-            event_name = "VNC_CONNECTED";
+-            break;
+-        case QEVENT_VNC_INITIALIZED:
+-            event_name = "VNC_INITIALIZED";
+-            break;
+-        case QEVENT_VNC_DISCONNECTED:
+-            event_name = "VNC_DISCONNECTED";
+-            break;
+-        case QEVENT_BLOCK_IO_ERROR:
+-            event_name = "BLOCK_IO_ERROR";
+-            break;
+-        case QEVENT_RTC_CHANGE:
+-            event_name = "RTC_CHANGE";
+-            break;
+-        case QEVENT_WATCHDOG:
+-            event_name = "WATCHDOG";
+-            break;
+-        case QEVENT_SPICE_CONNECTED:
+-            event_name = "SPICE_CONNECTED";
+-            break;
+-        case QEVENT_SPICE_INITIALIZED:
+-            event_name = "SPICE_INITIALIZED";
+-            break;
+-        case QEVENT_SPICE_DISCONNECTED:
+-            event_name = "SPICE_DISCONNECTED";
+-            break;
+-        case QEVENT_SPICE_MIGRATE_COMPLETED:
+-            event_name = "SPICE_MIGRATE_COMPLETED";
+-            break;
+-        case QEVENT_DEVICE_TRAY_MOVED:
+-             event_name = "DEVICE_TRAY_MOVED";
+-            break;
+-        case QEVENT_BLOCK_JOB_COMPLETED:
+-            event_name = "BLOCK_JOB_COMPLETED";
+-            break;
+-        case QEVENT_BLOCK_JOB_CANCELLED:
+-            event_name = "BLOCK_JOB_CANCELLED";
+-            break;
+-        case QEVENT_RH_SPICE_INITIALIZED:
+-            event_name = RFQDN_REDHAT "SPICE_INITIALIZED";
+-            break;
+-        case QEVENT_RH_SPICE_DISCONNECTED:
+-            event_name = RFQDN_REDHAT "SPICE_DISCONNECTED";
+-            break;
+-        case QEVENT_SUSPEND:
+-            event_name = "SUSPEND";
+-            break;
+-        case QEVENT_SUSPEND_DISK:
+-            event_name = "SUSPEND_DISK";
+-            break;
+-        case QEVENT_WAKEUP:
+-            event_name = "WAKEUP";
+-            break;
+-        default:
+-            abort();
+-            break;
+-    }
++    event_name = monitor_event_names[event];
++    assert(event_name != NULL);
+ 
+     qmp = qdict_new();
+     timestamp_put(qmp);
+@@ -868,6 +824,25 @@ static void do_info_uuid_print(Monitor *mon, const QObject *data)
+     monitor_printf(mon, "%s\n", qdict_get_str(qobject_to_qdict(data), "UUID"));
+ }
+ 
++EventInfoList *qmp_query_events(Error **errp)
++{
++    EventInfoList *info, *ev_list = NULL;
++    MonitorEvent e;
++
++    for (e = 0 ; e < QEVENT_MAX ; e++) {
++        const char *event_name = monitor_event_names[e];
++        assert(event_name != NULL);
++        info = g_malloc0(sizeof(*info));
++        info->value = g_malloc0(sizeof(*info->value));
++        info->value->name = g_strdup(event_name);
++
++        info->next = ev_list;
++        ev_list = info;
++    }
++
++    return ev_list;
++}
++
+ static void do_info_uuid(Monitor *mon, QObject **ret_data)
+ {
+     char uuid[64];
+diff --git a/monitor.h b/monitor.h
+index 60c7a90..ff3ff3e 100644
+--- a/monitor.h
++++ b/monitor.h
+@@ -48,6 +48,10 @@ typedef enum MonitorEvent {
+     QEVENT_SUSPEND_DISK,
+     QEVENT_WAKEUP,
+     QEVENT_SPICE_MIGRATE_COMPLETED,
++
++    /* Add to 'monitor_event_names' array in monitor.c when
++     * defining new events here */
++
+     QEVENT_MAX,
+ } MonitorEvent;
+ 
+diff --git a/qapi-schema.json b/qapi-schema.json
+index 07b84df..d6cbf05 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -224,6 +224,28 @@
+ #endif
+ 
+ ##
++# @EventInfo:
++#
++# Information about a QMP event
++#
++# @name: The event name
++#
++# Since: 1.2.0
++##
++{ 'type': 'EventInfo', 'data': {'name': 'str'} }
++
++##
++# @query-events:
++#
++# Return a list of supported QMP events by this server
++#
++# Returns: A list of @EventInfo for all supported events
++#
++# Since: 1.2.0
++##
++{ 'command': 'query-events', 'returns': ['EventInfo'] }
++
++##
+ # @dump-guest-memory
+ #
+ # Dump guest's memory to vmcore. It is a synchronous operation that can take
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 9689d4b..ea163bb 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -2452,6 +2452,45 @@ Note: This example has been shortened as the real response is too long.
+ 
+ EQMP
+ 
++SQMP
++query-events
++--------------
++
++List QMP available events.
++
++Each event is represented by a json-object, the returned value is a json-array
++of all events.
++
++Each json-object contains:
++
++- "name": event's name (json-string)
++
++Example:
++
++-> { "execute": "query-events" }
++<- {
++      "return":[
++         {
++            "name":"SHUTDOWN"
++         },
++         {
++            "name":"RESET"
++         }
++      ]
++   }
++
++Note: This example has been shortened as the real response is too long.
++
++EQMP
++
++    {
++        .name       = "query-events",
++        .args_type  = "",
++        .user_print = monitor_user_noop,
++        .mhandler.cmd_new = qmp_marshal_input_query_events,
++        .flags = MONITOR_CMD_QMP_ONLY
++    },
++
+ STEXI
+ @item info network
+ show the various VLANs and the associated devices
+-- 
+1.7.11.7
+

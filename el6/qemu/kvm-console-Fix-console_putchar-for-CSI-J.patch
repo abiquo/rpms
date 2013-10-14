@@ -1,0 +1,46 @@
+From fa3e32a56283843ddbdc86e8203b762a49e795ef Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:46 +0100
+Subject: [PATCH 52/52] console: Fix console_putchar() for CSI J
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-53-git-send-email-armbru@redhat.com>
+Patchwork-id: 36618
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 52/52] console: Fix console_putchar() for CSI J
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+It falls through to the code for CSI K.  "Erase Down" also does "Erase
+End of Line", "Erase Up" also does "Erase Start of Line", and "Erase
+Screen" also does "Erase Line".  Happens not to be visible.  Fix it
+anyway.  Spotted by Coverity.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 95d8f9f41c313c458dd34e0a54162c414a352111)
+---
+ console.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ console.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/console.c b/console.c
+index 50820e8..d4c9eb2 100644
+--- a/console.c
++++ b/console.c
+@@ -1004,6 +1004,7 @@ static void console_putchar(TextConsole *s, int ch)
+                     }
+                     break;
+                 }
++                break;
+             case 'K':
+                 switch (s->esc_params[0]) {
+                 case 0:
+-- 
+1.7.7.5
+

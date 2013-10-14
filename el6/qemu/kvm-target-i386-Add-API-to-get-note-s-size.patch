@@ -1,0 +1,105 @@
+From a2303ec7b735346a8c42c2aea7fa02d6503e641e Mon Sep 17 00:00:00 2001
+Message-Id: <a2303ec7b735346a8c42c2aea7fa02d6503e641e.1349774431.git.minovotn@redhat.com>
+In-Reply-To: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+References: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Fri, 5 Oct 2012 17:46:25 +0200
+Subject: [PATCH 13/21] target-i386: Add API to get note's size
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349459193-18226-12-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42759
+O-Subject: [RHEL6.4 qemu-kvm PATCH 11/19] target-i386: Add API to get note's size
+Bugzilla: 832458
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Wen Congyang <wency@cn.fujitsu.com>
+
+We should know where the note and memory is stored before writing
+them to vmcore. If we know this, we can avoid using lseek() when
+creating vmcore.
+
+Signed-off-by: Wen Congyang <wency@cn.fujitsu.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 0038ffb09692955b8f8f363958cbf58c205ae772)
+---
+ cpu-all.h               |  6 ++++++
+ target-i386/arch_dump.c | 33 +++++++++++++++++++++++++++++++++
+ 2 files changed, 39 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ cpu-all.h               |  6 ++++++
+ target-i386/arch_dump.c | 33 +++++++++++++++++++++++++++++++++
+ 2 files changed, 39 insertions(+)
+
+diff --git a/cpu-all.h b/cpu-all.h
+index c1f3748..10d427c 100644
+--- a/cpu-all.h
++++ b/cpu-all.h
+@@ -1133,6 +1133,7 @@ int cpu_write_elf64_qemunote(write_core_dump_function f, CPUArchState *env,
+ int cpu_write_elf32_qemunote(write_core_dump_function f, CPUArchState *env,
+                              void *opaque);
+ int cpu_get_dump_info(ArchDumpInfo *info);
++size_t cpu_get_note_size(int class, int machine, int nr_cpus);
+ #else
+ static inline int cpu_write_elf64_note(write_core_dump_function f,
+                                        CPUArchState *env, int cpuid,
+@@ -1166,6 +1167,11 @@ static inline int cpu_get_dump_info(ArchDumpInfo *info)
+ {
+     return -1;
+ }
++
++static inline int cpu_get_note_size(int class, int machine, int nr_cpus)
++{
++    return -1;
++}
+ #endif
+ 
+ #endif /* CPU_ALL_H */
+diff --git a/target-i386/arch_dump.c b/target-i386/arch_dump.c
+index e378579..135d855 100644
+--- a/target-i386/arch_dump.c
++++ b/target-i386/arch_dump.c
+@@ -414,3 +414,36 @@ int cpu_get_dump_info(ArchDumpInfo *info)
+ 
+     return 0;
+ }
++
++size_t cpu_get_note_size(int class, int machine, int nr_cpus)
++{
++    int name_size = 5; /* "CORE" or "QEMU" */
++    size_t elf_note_size = 0;
++    size_t qemu_note_size = 0;
++    int elf_desc_size = 0;
++    int qemu_desc_size = 0;
++    int note_head_size;
++
++    if (class == ELFCLASS32) {
++        note_head_size = sizeof(Elf32_Nhdr);
++    } else {
++        note_head_size = sizeof(Elf64_Nhdr);
++    }
++
++    if (machine == EM_386) {
++        elf_desc_size = sizeof(x86_elf_prstatus);
++    }
++#ifdef TARGET_X86_64
++    else {
++        elf_desc_size = sizeof(x86_64_elf_prstatus);
++    }
++#endif
++    qemu_desc_size = sizeof(QEMUCPUState);
++
++    elf_note_size = ((note_head_size + 3) / 4 + (name_size + 3) / 4 +
++                     (elf_desc_size + 3) / 4) * 4;
++    qemu_note_size = ((note_head_size + 3) / 4 + (name_size + 3) / 4 +
++                      (qemu_desc_size + 3) / 4) * 4;
++
++    return (elf_note_size + qemu_note_size) * nr_cpus;
++}
+-- 
+1.7.11.4
+

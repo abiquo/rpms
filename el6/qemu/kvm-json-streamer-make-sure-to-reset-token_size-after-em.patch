@@ -1,0 +1,51 @@
+From 345e15b4fd029576df67976daf76787c3d2531f5 Mon Sep 17 00:00:00 2001
+From: Anthony Liguori <aliguori@us.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:34 -0500
+Subject: [PATCH 67/98] json-streamer: make sure to reset token_size after
+ emitting a token list
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit eca7db46ff8f24a70f4040af3e941dc19fd33ebe)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ json-streamer.c |    2 ++
+ json-streamer.h |    1 +
+ 2 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/json-streamer.c b/json-streamer.c
+index 6b9af63..a6cb28f 100644
+--- a/json-streamer.c
++++ b/json-streamer.c
+@@ -65,6 +65,7 @@ static void json_message_process_token(JSONLexer *lexer, QString *token, JSONTok
+         parser->emit(parser, parser->tokens);
+         QDECREF(parser->tokens);
+         parser->tokens = qlist_new();
++        parser->token_size = 0;
+     } else if (parser->token_size > MAX_TOKEN_SIZE ||
+                parser->bracket_count > MAX_NESTING ||
+                parser->brace_count > MAX_NESTING) {
+@@ -76,6 +77,7 @@ static void json_message_process_token(JSONLexer *lexer, QString *token, JSONTok
+         parser->emit(parser, parser->tokens);
+         QDECREF(parser->tokens);
+         parser->tokens = qlist_new();
++        parser->token_size = 0;
+     }
+ }
+ 
+diff --git a/json-streamer.h b/json-streamer.h
+index 09f3bd7..f09bc4d 100644
+--- a/json-streamer.h
++++ b/json-streamer.h
+@@ -24,6 +24,7 @@ typedef struct JSONMessageParser
+     int brace_count;
+     int bracket_count;
+     QList *tokens;
++    uint64_t token_size;
+ } JSONMessageParser;
+ 
+ void json_message_parser_init(JSONMessageParser *parser,
+-- 
+1.7.7.6
+

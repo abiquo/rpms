@@ -1,0 +1,121 @@
+From 03a91fa937f71a00fd4808f6f47b662068f5ace1 Mon Sep 17 00:00:00 2001
+Message-Id: <03a91fa937f71a00fd4808f6f47b662068f5ace1.1346843178.git.minovotn@redhat.com>
+In-Reply-To: <23a13cde0d81a8776ab4defcd30f9edef53b045f.1346843178.git.minovotn@redhat.com>
+References: <23a13cde0d81a8776ab4defcd30f9edef53b045f.1346843178.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Wed, 22 Aug 2012 19:05:42 +0200
+Subject: [PATCH 3/5] qmp: don't emit the RESET event on wakeup from S3
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1345662343-11200-3-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 41144
+O-Subject: [RHEL6.4 qemu-kvm PATCH 2/3] qmp: don't emit the RESET event on wakeup from S3
+Bugzilla: 850927
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@gmail.com>
+
+NOTE: This is a manual backport of upstream commit
+      1405819637f53ed8021067eb3ea52e32bef2870b. Manually backporting this
+      was easier than resolving conflicts, besides this requires RHEL6-only
+      changes.
+
+QEMU is basically using reset logic when waking up from S3. This
+causes the QMP RESET event to be emitted, which is wrong. Also,
+the runstate checks done in reset are not necessary for S3 wakeup.
+
+Fix this by untangling wakeup from reset logic and passing
+VMRESET_SILENT to qemu_system_reset() to avoid emitting the RESET
+event.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@gmail.com>
+---
+ qemu-kvm.c |  2 ++
+ sysemu.h   |  1 +
+ vl.c       | 15 ++++++++++++++-
+ 3 files changed, 17 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-kvm.c |  2 ++
+ sysemu.h   |  1 +
+ vl.c       | 15 ++++++++++++++-
+ 3 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/qemu-kvm.c b/qemu-kvm.c
+index 3aef23a..876d06a 100644
+--- a/qemu-kvm.c
++++ b/qemu-kvm.c
+@@ -2260,6 +2260,8 @@ int kvm_main_loop(void)
+                 runstate_check(RUN_STATE_SHUTDOWN)) {
+                 runstate_set(RUN_STATE_PAUSED);
+             }
++        } else if (qemu_wakeup_requested()) {
++            qemu_kvm_system_reset(VMRESET_SILENT);
+         } else if (kvm_debug_cpu_requested) {
+             gdb_set_stop_cpu(kvm_debug_cpu_requested);
+             vm_stop(RUN_STATE_DEBUG);
+diff --git a/sysemu.h b/sysemu.h
+index adc3184..411a82a 100644
+--- a/sysemu.h
++++ b/sysemu.h
+@@ -95,6 +95,7 @@ int qemu_shutdown_requested(void);
+ int qemu_reset_requested(void);
+ int qemu_suspend_requested(void);
+ int qemu_powerdown_requested(void);
++int qemu_wakeup_requested(void);
+ void qemu_system_killed(int signal, pid_t pid);
+ void qemu_kill_report(void);
+ extern qemu_irq qemu_system_powerdown;
+diff --git a/vl.c b/vl.c
+index 6a9c534..9fbed43 100644
+--- a/vl.c
++++ b/vl.c
+@@ -3229,6 +3229,7 @@ static pid_t shutdown_pid;
+ static int powerdown_requested;
+ static int debug_requested;
+ static int suspend_requested;
++static int wakeup_requested;
+ static bool is_suspended;
+ static NotifierList suspend_notifiers =
+     NOTIFIER_LIST_INITIALIZER(suspend_notifiers);
+@@ -3280,6 +3281,13 @@ int qemu_suspend_requested(void)
+     return r;
+ }
+ 
++int qemu_wakeup_requested(void)
++{
++    int r = wakeup_requested;
++    wakeup_requested = 0;
++    return r;
++}
++
+ int qemu_powerdown_requested(void)
+ {
+     int r = powerdown_requested;
+@@ -3402,7 +3410,7 @@ void qemu_system_wakeup_request(WakeupReason reason)
+     }
+     monitor_protocol_event(QEVENT_WAKEUP, NULL);
+     notifier_list_notify(&wakeup_notifiers, &reason);
+-    reset_requested = 1;
++    wakeup_requested = 1;
+     qemu_notify_event();
+     is_suspended = false;
+ }
+@@ -4250,6 +4258,11 @@ static void main_loop(void)
+                 runstate_set(RUN_STATE_PAUSED);
+             }
+         }
++        if (qemu_wakeup_requested()) {
++            pause_all_vcpus();
++            qemu_system_reset(VMRESET_SILENT);
++            resume_all_vcpus();
++        }
+         if (qemu_powerdown_requested()) {
+             monitor_protocol_event(QEVENT_POWERDOWN, NULL);
+             qemu_irq_raise(qemu_system_powerdown);
+-- 
+1.7.11.4
+

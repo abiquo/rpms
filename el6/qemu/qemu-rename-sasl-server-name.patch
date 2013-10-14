@@ -1,0 +1,24 @@
+From 87c7c86404b0b78a78262baa6af144580299aafc Mon Sep 17 00:00:00 2001
+From: Mark McLoughlin <markmc@redhat.com>
+Date: Thu, 15 Oct 2009 08:41:15 +0100
+Subject: [PATCH] Rename SASL server name
+
+Signed-off-by: Mark McLoughlin <markmc@redhat.com>
+Fedora-patch: qemu-rename-sasl-server-name.patch
+---
+ vnc.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Index: qemu-kvm-0.12.1.2/vnc.c
+===================================================================
+--- qemu-kvm-0.12.1.2.orig/vnc.c	2009-12-29 18:46:34.000000000 -0200
++++ qemu-kvm-0.12.1.2/vnc.c	2010-01-07 11:27:47.000000000 -0200
+@@ -2641,7 +2641,7 @@
+     }
+ 
+ #ifdef CONFIG_VNC_SASL
+-    if ((saslErr = sasl_server_init(NULL, "qemu")) != SASL_OK) {
++    if ((saslErr = sasl_server_init(NULL, "qemu-kvm")) != SASL_OK) {
+         fprintf(stderr, "Failed to initialize SASL auth %s",
+                 sasl_errstring(saslErr, NULL, NULL));
+         free(vs->display);

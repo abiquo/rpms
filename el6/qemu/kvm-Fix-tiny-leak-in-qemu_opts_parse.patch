@@ -1,0 +1,53 @@
+From d5cad522fc8b2be85aeadbe5bc0f0e2efb62bdd9 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:37:59 +0100
+Subject: [PATCH 05/52] Fix tiny leak in qemu_opts_parse
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-6-git-send-email-armbru@redhat.com>
+Patchwork-id: 36579
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 05/52] Fix tiny leak in qemu_opts_parse
+Bugzilla: 758194
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Jan Kiszka <jan.kiszka@siemens.com>
+
+qemu_opts_create duplicates the id we pass in case it shall be stored in
+the opts. So we do not need to dup it in qemu_opts_parse, leaking a few
+bytes this way.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit d510c5cf343eabd4d3a301f5730af724747b7055)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ qemu-option.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-option.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/qemu-option.c b/qemu-option.c
+index afd5efe..89c57e2 100644
+--- a/qemu-option.c
++++ b/qemu-option.c
+@@ -817,10 +817,10 @@ QemuOpts *qemu_opts_parse(QemuOptsList *list, const char *params,
+ 
+     if (strncmp(params, "id=", 3) == 0) {
+         get_opt_value(value, sizeof(value), params+3);
+-        id = qemu_strdup(value);
++        id = value;
+     } else if ((p = strstr(params, ",id=")) != NULL) {
+         get_opt_value(value, sizeof(value), p+4);
+-        id = qemu_strdup(value);
++        id = value;
+     }
+     opts = qemu_opts_create(list, id, 1);
+     if (opts == NULL)
+-- 
+1.7.7.5
+

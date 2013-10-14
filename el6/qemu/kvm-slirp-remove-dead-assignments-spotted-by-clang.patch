@@ -1,0 +1,119 @@
+From 9337c459eaa3afd92ea46f7162790d87faf1b0c6 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:37:56 +0100
+Subject: [PATCH 02/52] slirp: remove dead assignments, spotted by clang
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-3-git-send-email-armbru@redhat.com>
+Patchwork-id: 36585
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 02/52] slirp: remove dead assignments, spotted by clang
+Bugzilla: 758194
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Blue Swirl <blauwirbel@gmail.com>
+
+Value stored is never read.
+
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit aca9fcd28e8a40f2555f8d6d113e4988335aa629)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ slirp/tcp_input.c |   19 +++++++------------
+ slirp/tftp.c      |    3 ---
+ 2 files changed, 7 insertions(+), 15 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ slirp/tcp_input.c |   19 +++++++------------
+ slirp/tftp.c      |    3 ---
+ 2 files changed, 7 insertions(+), 15 deletions(-)
+
+diff --git a/slirp/tcp_input.c b/slirp/tcp_input.c
+index 47cf0ad..2808e3e 100644
+--- a/slirp/tcp_input.c
++++ b/slirp/tcp_input.c
+@@ -597,7 +597,7 @@ findso:
+ 	      *ip=save_ip;
+ 	      icmp_error(m, ICMP_UNREACH,code, 0,strerror(errno));
+ 	    }
+-	    tp = tcp_close(tp);
++            tcp_close(tp);
+ 	    m_free(m);
+ 	  } else {
+ 	    /*
+@@ -660,8 +660,9 @@ findso:
+ 			goto dropwithreset;
+ 
+ 		if (tiflags & TH_RST) {
+-			if (tiflags & TH_ACK)
+-				tp = tcp_drop(tp,0); /* XXX Check t_softerror! */
++                        if (tiflags & TH_ACK) {
++                                tcp_drop(tp, 0); /* XXX Check t_softerror! */
++                        }
+ 			goto drop;
+ 		}
+ 
+@@ -821,13 +822,13 @@ trimthenstep6:
+ 	case TCPS_FIN_WAIT_2:
+ 	case TCPS_CLOSE_WAIT:
+ 		tp->t_state = TCPS_CLOSED;
+-		tp = tcp_close(tp);
++                tcp_close(tp);
+ 		goto drop;
+ 
+ 	case TCPS_CLOSING:
+ 	case TCPS_LAST_ACK:
+ 	case TCPS_TIME_WAIT:
+-		tp = tcp_close(tp);
++                tcp_close(tp);
+ 		goto drop;
+ 	}
+ 
+@@ -1074,7 +1075,7 @@ trimthenstep6:
+ 		 */
+ 		case TCPS_LAST_ACK:
+ 			if (ourfinisacked) {
+-				tp = tcp_close(tp);
++                                tcp_close(tp);
+ 				goto drop;
+ 			}
+ 			break;
+@@ -1165,12 +1166,6 @@ dodata:
+ 	if ((ti->ti_len || (tiflags&TH_FIN)) &&
+ 	    TCPS_HAVERCVDFIN(tp->t_state) == 0) {
+ 		TCP_REASS(tp, ti, m, so, tiflags);
+-		/*
+-		 * Note the amount of data that peer has sent into
+-		 * our window, in order to estimate the sender's
+-		 * buffer size.
+-		 */
+-		len = so->so_rcv.sb_datalen - (tp->rcv_adv - tp->rcv_nxt);
+ 	} else {
+ 		m_free(m);
+ 		tiflags &= ~TH_FIN;
+diff --git a/slirp/tftp.c b/slirp/tftp.c
+index 082f5d0..0323b1a 100644
+--- a/slirp/tftp.c
++++ b/slirp/tftp.c
+@@ -161,7 +161,6 @@ static void tftp_send_error(struct tftp_session *spt,
+   struct sockaddr_in saddr, daddr;
+   struct mbuf *m;
+   struct tftp_t *tp;
+-  int nobytes;
+ 
+   m = m_get(spt->slirp);
+ 
+@@ -185,8 +184,6 @@ static void tftp_send_error(struct tftp_session *spt,
+   daddr.sin_addr = spt->client_ip;
+   daddr.sin_port = spt->client_port;
+ 
+-  nobytes = 2;
+-
+   m->m_len = sizeof(struct tftp_t) - 514 + 3 + strlen(msg) -
+         sizeof(struct ip) - sizeof(struct udphdr);
+ 
+-- 
+1.7.7.5
+

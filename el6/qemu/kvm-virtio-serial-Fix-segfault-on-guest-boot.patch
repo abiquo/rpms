@@ -1,0 +1,101 @@
+From 1e6e865b0dfe07472d8ec56dbf1b7fac9facf4b3 Mon Sep 17 00:00:00 2001
+From: Amit Shah <amit.shah@redhat.com>
+Date: Tue, 6 Mar 2012 11:25:07 +0100
+Subject: [PATCH 10/11] virtio-serial: Fix segfault on guest boot
+
+RH-Author: Amit Shah <amit.shah@redhat.com>
+Message-id: <5ba7e3dbc61fd885a199c6605c48450ee95296f8.1331032960.git.amit.shah@redhat.com>
+Patchwork-id: 38248
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 1/1] virtio-serial: Fix segfault on guest boot
+Bugzilla: 769528
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+If I start qemu with:
+
+  # qemu -hda disks/test.img -enable-kvm -m 1G -snapshot \
+         -device virtio-serial \
+         -chardev socket,host=localhost,port=1234,server,nowait,id=foo \
+         -device virtserialport,chardev=foo,name=org.qemu.guest_agent
+
+I get a segfault when booting a Fedora 14 guest. The backtrace says:
+
+  Program terminated with signal 11, Segmentation fault.
+    #0  0x0000000000420850 in handle_control_message (vser=0x3732bd0, buf=0x2c173e0, len=8) at /home/lcapitulino/src/qmp-unstable/hw/virtio-serial-bus.c:335
+    335     info = DO_UPCAST(VirtIOSerialPortInfo, qdev, port->dev.info);
+
+What's happening is VIRTIO_CONSOLE_DEVICE_READY is a message for the
+whole device, not for an individual port. So port is NULL. This bug was
+introduced by commit a15bb0d6a981de749452a5180fc8084d625671da.
+
+This commit fixes that by making the port returned by find_port_by_id()
+be used only by the VIRTIO_CONSOLE_PORT_READY and
+VIRTIO_CONSOLE_PORT_OPEN messages.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+(cherry picked from commit d2e4d08b3e02deb2d5824b17283c63c1354b7696)
+
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+---
+ hw/virtio-serial-bus.c |   24 ++++++++++++++----------
+ 1 files changed, 14 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-serial-bus.c |   24 ++++++++++++++----------
+ 1 files changed, 14 insertions(+), 10 deletions(-)
+
+diff --git a/hw/virtio-serial-bus.c b/hw/virtio-serial-bus.c
+index 814ddb6..e31d654 100644
+--- a/hw/virtio-serial-bus.c
++++ b/hw/virtio-serial-bus.c
+@@ -374,18 +374,11 @@ static void handle_control_message(VirtIOSerial *vser, void *buf, size_t len)
+     cpkt.event = lduw_p(&gcpkt->event);
+     cpkt.value = lduw_p(&gcpkt->value);
+ 
+-    port = find_port_by_id(vser, ldl_p(&gcpkt->id));
+-    if (!port && cpkt.event != VIRTIO_CONSOLE_DEVICE_READY)
+-        return;
+-
+-    info = DO_UPCAST(VirtIOSerialPortInfo, qdev, port->dev.info);
+-
+-    switch(cpkt.event) {
+-    case VIRTIO_CONSOLE_DEVICE_READY:
++    if (cpkt.event == VIRTIO_CONSOLE_DEVICE_READY) {
+         if (!cpkt.value) {
+             error_report("virtio-serial-bus: Guest failure in adding device %s",
+                          vser->bus.qbus.name);
+-            break;
++            return;
+         }
+         /*
+          * The device is up, we can now tell the device about all the
+@@ -394,8 +387,19 @@ static void handle_control_message(VirtIOSerial *vser, void *buf, size_t len)
+         QTAILQ_FOREACH(port, &vser->ports, next) {
+             send_control_event(port, VIRTIO_CONSOLE_PORT_ADD, 1);
+         }
+-        break;
++        return;
++    }
+ 
++    port = find_port_by_id(vser, ldl_p(&gcpkt->id));
++    if (!port) {
++        error_report("virtio-serial-bus: Unexpected port id %u for device %s\n",
++                     ldl_p(&gcpkt->id), vser->bus.qbus.name);
++        return;
++    }
++
++    info = DO_UPCAST(VirtIOSerialPortInfo, qdev, port->dev.info);
++
++    switch(cpkt.event) {
+     case VIRTIO_CONSOLE_PORT_READY:
+         if (!cpkt.value) {
+             error_report("virtio-serial-bus: Guest failure in adding port %u for device %s",
+-- 
+1.7.7.6
+

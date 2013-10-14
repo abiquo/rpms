@@ -1,0 +1,51 @@
+From 52d014d62b1f97a896f130cbc2ddc1d07c85b035 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Fri, 28 Oct 2011 10:56:19 +0200
+Subject: [PATCH 02/11] Fix segfault on screendump with -nographic
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1319799379-12075-1-git-send-email-kraxel@redhat.com>
+Patchwork-id: 34726
+O-Subject: [RHEL-6.3 qemu-kvm PATCH] Fix segfault on screendump with -nographic
+Bugzilla: 728385
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+
+From: Alexander Graf <agraf@suse.de>
+
+When running -nographic and calling "screendump" on the monitor, qemu
+segfaults. Fix the invalid pointer dereference by checking for NULL.
+
+Signed-off-by: Alexander Graf <agraf@suse.de>
+(cherry picked from commit e34b12ae98b6851da8acc791d6df05f4482ae416)
+
+bugzilla: 728385 - attempting to take a screenshot of a VM with no
+          graphics crashes qemu
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ console.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ console.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/console.c b/console.c
+index 358d748..eec4a47 100644
+--- a/console.c
++++ b/console.c
+@@ -178,7 +178,7 @@ void vga_hw_screen_dump(const char *filename)
+     active_console = consoles[0];
+     /* There is currently no way of specifying which screen we want to dump,
+        so always dump the first one.  */
+-    if (consoles[0]->hw_screen_dump)
++    if (consoles[0] && consoles[0]->hw_screen_dump)
+         consoles[0]->hw_screen_dump(consoles[0]->hw, filename);
+     active_console = previous_active_console;
+ }
+-- 
+1.7.7.3
+

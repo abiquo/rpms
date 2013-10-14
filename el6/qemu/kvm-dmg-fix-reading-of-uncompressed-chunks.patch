@@ -1,0 +1,54 @@
+From d647745a25fdd39411af4d5052daca2c8729df58 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:36 +0100
+Subject: [PATCH 11/99] dmg: fix reading of uncompressed chunks
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-12-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37206
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 11/96] dmg: fix reading of uncompressed chunks
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Christoph Hellwig <hch@lst.de>
+
+Bugzilla: 783950
+
+When dmg_read_chunk encounters an uncompressed chunk it currently
+calls read without any previous adjustment of the file postion.
+
+This seems very wrong, and the "reference" implementation in
+dmg2img does a search to the same offset as done in the various
+compression cases, so do the same here.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit cd02a24b6112da50816a8021d97a2b26038f7190)
+---
+ block/dmg.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/dmg.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/block/dmg.c b/block/dmg.c
+index d5c1a68..02a3d67 100644
+--- a/block/dmg.c
++++ b/block/dmg.c
+@@ -239,7 +239,8 @@ static inline int dmg_read_chunk(BDRVDMGState *s,int sector_num)
+ 		return -1;
+ 	    break; }
+ 	case 1: /* copy */
+-	    ret = read(s->fd, s->uncompressed_chunk, s->lengths[chunk]);
++	    ret = pread(s->fd, s->uncompressed_chunk, s->lengths[chunk],
++                        s->offsets[chunk]);
+ 	    if (ret != s->lengths[chunk])
+ 		return -1;
+ 	    break;
+-- 
+1.7.7.5
+

@@ -1,0 +1,91 @@
+From d22f7cd8cf397cae91dbd59d60c76c628365a6b3 Mon Sep 17 00:00:00 2001
+Message-Id: <d22f7cd8cf397cae91dbd59d60c76c628365a6b3.1351776104.git.minovotn@redhat.com>
+In-Reply-To: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+References: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Mon, 29 Oct 2012 18:52:28 +0100
+Subject: [PATCH 02/11] kvm: create kvm_arch_vcpu_id() function
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351536756-16475-3-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43753
+O-Subject: [RHEL6.4 qemu-kvm PATCH 02/10] kvm: create kvm_arch_vcpu_id() function
+Bugzilla: 733720
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Bugzilla: 733720
+Related TestOnly BZs: 816804, 815958, 782648
+Upstream status: submitted
+ Message-Id: <1351101001-14589-6-git-send-email-ehabkost@redhat.com>
+ http://article.gmane.org/gmane.comp.emulators.qemu/177654
+
+This will allow each architecture to define how the VCPU ID is set on
+the KVM_CREATE_VCPU ioctl call.
+
+[RHEL note: this backport ignores the ppc and s390x code, and
+ has to touch different files from the upstream version, as the KVM
+ initialization code is very different upstream]
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ kvm.h          | 4 ++++
+ qemu-kvm-x86.c | 5 +++++
+ qemu-kvm.c     | 2 +-
+ 3 files changed, 10 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ kvm.h          | 4 ++++
+ qemu-kvm-x86.c | 5 +++++
+ qemu-kvm.c     | 2 +-
+ 3 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/kvm.h b/kvm.h
+index 6c22f98..c3affa3 100644
+--- a/kvm.h
++++ b/kvm.h
+@@ -27,6 +27,10 @@ void kvm_flush_coalesced_mmio_buffer(void);
+ 
+ void kvm_arch_reset_vcpu(CPUState *env);
+ 
++/* Returns VCPU ID to be used on KVM_CREATE_VCPU ioctl() */
++unsigned long kvm_arch_vcpu_id(CPUArchState *env);
++
++
+ int kvm_has_many_ioeventfds(void);
+ 
+ #if defined(KVM_IOEVENTFD) && defined(CONFIG_KVM)
+diff --git a/qemu-kvm-x86.c b/qemu-kvm-x86.c
+index f6634a6..3fdd6fe 100644
+--- a/qemu-kvm-x86.c
++++ b/qemu-kvm-x86.c
+@@ -1385,6 +1385,11 @@ static void cpu_update_state(void *opaque, int running, RunState state)
+     }
+ }
+ 
++unsigned long kvm_arch_vcpu_id(CPUArchState *env)
++{
++    return env->cpu_index;
++}
++
+ int kvm_arch_init_vcpu(CPUState *cenv)
+ {
+     struct kvm_cpuid_entry2 cpuid_ent[100];
+diff --git a/qemu-kvm.c b/qemu-kvm.c
+index 3a84b10..1cc462b 100644
+--- a/qemu-kvm.c
++++ b/qemu-kvm.c
+@@ -2023,7 +2023,7 @@ static void *ap_main_loop(void *_env)
+     env->thread_id = kvm_get_thread_id();
+     sigfillset(&signals);
+     sigprocmask(SIG_BLOCK, &signals, NULL);
+-    kvm_create_vcpu(env, env->cpu_index);
++    kvm_create_vcpu(env, kvm_arch_vcpu_id(env));
+ 
+ #ifdef CONFIG_KVM_DEVICE_ASSIGNMENT
+     /* do ioperm for io ports of assigned devices */
+-- 
+1.7.11.7
+

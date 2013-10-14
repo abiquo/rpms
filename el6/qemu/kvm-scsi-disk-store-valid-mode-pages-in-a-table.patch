@@ -1,0 +1,92 @@
+From 1939bc886d455a34a49b4c94484594fc2af43f67 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:03 +0100
+Subject: [PATCH 047/109] scsi-disk: store valid mode pages in a table
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-47-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37527
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 046/102] scsi-disk: store valid mode pages in a table
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+A small refactoring of the MODE SENSE implementation in scsi-disk.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from a8f4bbe2900f0ebdead032fb8da137777bddd925)
+---
+ hw/scsi-disk.c |   25 +++++++++++++------------
+ 1 files changed, 13 insertions(+), 12 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c |   25 +++++++++++++------------
+ 1 files changed, 13 insertions(+), 12 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 8052d43..a500380 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -641,10 +641,23 @@ static int scsi_emulate_mechanism_status(SCSIDiskState *s, uint8_t *outbuf)
+ static int mode_sense_page(SCSIDiskState *s, int page, uint8_t **p_outbuf,
+                            int page_control)
+ {
++    static const int mode_sense_valid[0x3f] = {
++        [MODE_PAGE_HD_GEOMETRY]            = (1 << TYPE_DISK),
++        [MODE_PAGE_FLEXIBLE_DISK_GEOMETRY] = (1 << TYPE_DISK),
++        [MODE_PAGE_CACHING]                = (1 << TYPE_DISK) | (1 << TYPE_ROM),
++        [MODE_PAGE_CAPABILITIES]           = (1 << TYPE_ROM),
++    };
++
+     BlockDriverState *bdrv = s->bs;
+     int cylinders, heads, secs;
+     uint8_t *p = *p_outbuf;
+ 
++    if ((mode_sense_valid[page] & (1 << s->qdev.type)) == 0) {
++        return -1;
++    }
++
++    p[0] = page;
++
+     /*
+      * If Changeable Values are requested, a mask denoting those mode parameters
+      * that are changeable shall be returned. As we currently don't support
+@@ -653,10 +666,6 @@ static int mode_sense_page(SCSIDiskState *s, int page, uint8_t **p_outbuf,
+      */
+     switch (page) {
+     case MODE_PAGE_HD_GEOMETRY:
+-        if (s->qdev.type == TYPE_ROM) {
+-            return -1;
+-        }
+-        p[0] = 4;
+         p[1] = 0x16;
+         if (page_control == 1) { /* Changeable Values */
+             break;
+@@ -688,10 +697,6 @@ static int mode_sense_page(SCSIDiskState *s, int page, uint8_t **p_outbuf,
+         break;
+ 
+     case MODE_PAGE_FLEXIBLE_DISK_GEOMETRY:
+-        if (s->qdev.type == TYPE_ROM) {
+-            return -1;
+-        }
+-        p[0] = 5;
+         p[1] = 0x1e;
+         if (page_control == 1) { /* Changeable Values */
+             break;
+@@ -741,10 +746,6 @@ static int mode_sense_page(SCSIDiskState *s, int page, uint8_t **p_outbuf,
+         break;
+ 
+     case MODE_PAGE_CAPABILITIES:
+-        if (s->qdev.type != TYPE_ROM) {
+-            return -1;
+-        }
+-        p[0] = 0x2a;
+         p[1] = 0x14;
+         if (page_control == 1) { /* Changeable Values */
+             break;
+-- 
+1.7.7.6
+

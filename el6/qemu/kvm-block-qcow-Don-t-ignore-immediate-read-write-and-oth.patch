@@ -1,0 +1,95 @@
+From c7071bb912ff64ccbcff66f503e0e43f8107b870 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:12 +0100
+Subject: [PATCH 47/99] block/qcow: Don't ignore immediate read/write and
+ other failures
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-48-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37242
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 47/96] block/qcow: Don't ignore immediate read/write and other failures
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Weil <weil@mail.berlios.de>
+
+Bugzilla: 783950
+
+This patch is similar to 171e3d6b9997c98a97d0c525867f7cd9b640cadd
+which fixed qcow2:
+
+Returning -EIO is far from optimal, but at least it's an error code.
+
+In addition to read/write failures, -EIO is also returned when
+decompress_cluster failed.
+
+Cc: Kevin Wolf <kwolf@redhat.com>
+Signed-off-by: Stefan Weil <weil@mail.berlios.de>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 5614c188c65a8194ae499cb16400cab690a45299)
+---
+ block/qcow.c |   16 ++++++++++++----
+ 1 files changed, 12 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow.c |   16 ++++++++++++----
+ 1 files changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/block/qcow.c b/block/qcow.c
+index 0d69794..c3a3519 100644
+--- a/block/qcow.c
++++ b/block/qcow.c
+@@ -588,8 +588,10 @@ static void qcow_aio_read_cb(void *opaque, int ret)
+             qemu_iovec_init_external(&acb->hd_qiov, &acb->hd_iov, 1);
+             acb->hd_aiocb = bdrv_aio_readv(bs->backing_hd, acb->sector_num,
+                 &acb->hd_qiov, acb->n, qcow_aio_read_cb, acb);
+-            if (acb->hd_aiocb == NULL)
++            if (acb->hd_aiocb == NULL) {
++                ret = -EIO;
+                 goto done;
++            }
+         } else {
+             /* Note: in this case, no need to wait */
+             memset(acb->buf, 0, 512 * acb->n);
+@@ -597,8 +599,10 @@ static void qcow_aio_read_cb(void *opaque, int ret)
+         }
+     } else if (acb->cluster_offset & QCOW_OFLAG_COMPRESSED) {
+         /* add AIO support for compressed blocks ? */
+-        if (decompress_cluster(bs, acb->cluster_offset) < 0)
++        if (decompress_cluster(bs, acb->cluster_offset) < 0) {
++            ret = -EIO;
+             goto done;
++        }
+         memcpy(acb->buf,
+                s->cluster_cache + index_in_cluster * 512, 512 * acb->n);
+         goto redo;
+@@ -613,8 +617,10 @@ static void qcow_aio_read_cb(void *opaque, int ret)
+         acb->hd_aiocb = bdrv_aio_readv(bs->file,
+                             (acb->cluster_offset >> 9) + index_in_cluster,
+                             &acb->hd_qiov, acb->n, qcow_aio_read_cb, acb);
+-        if (acb->hd_aiocb == NULL)
++        if (acb->hd_aiocb == NULL) {
++            ret = -EIO;
+             goto done;
++        }
+     }
+ 
+     return;
+@@ -699,8 +705,10 @@ static void qcow_aio_write_cb(void *opaque, int ret)
+                                     (cluster_offset >> 9) + index_in_cluster,
+                                     &acb->hd_qiov, acb->n,
+                                     qcow_aio_write_cb, acb);
+-    if (acb->hd_aiocb == NULL)
++    if (acb->hd_aiocb == NULL) {
++        ret = -EIO;
+         goto done;
++    }
+     return;
+ 
+ done:
+-- 
+1.7.7.5
+

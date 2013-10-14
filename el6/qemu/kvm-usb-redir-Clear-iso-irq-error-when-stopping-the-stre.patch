@@ -1,0 +1,74 @@
+From 8135cf93467489e8529b693f05d1226d5b9353d8 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 29 Feb 2012 12:39:20 +0100
+Subject: [PATCH 05/35] usb-redir: Clear iso / irq error when stopping the
+ stream
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1330519171-24231-6-git-send-email-kraxel@redhat.com>
+Patchwork-id: 37770
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 05/16] usb-redir: Clear iso / irq error when stopping the stream
+Bugzilla: 758104
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+From: Hans de Goede <hdegoede@redhat.com>
+
+And ignore status messages from the client which arrive after stream
+stop (the stream stop send to the client and an error status reported by
+the client my cross each other due to network latency).
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 2bd836e5a6b38e0e03d7f7c90c7284fb610c46eb)
+---
+ usb-redir.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ usb-redir.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index a9d048c..3d955bf 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -408,6 +408,7 @@ static void usbredir_stop_iso_stream(USBRedirDevice *dev, uint8_t ep)
+         DPRINTF("iso stream stopped ep %02X\n", ep);
+         dev->endpoint[EP2I(ep)].iso_started = 0;
+     }
++    dev->endpoint[EP2I(ep)].iso_error = 0;
+     usbredir_free_bufpq(dev, ep);
+ }
+ 
+@@ -515,6 +516,7 @@ static void usbredir_stop_interrupt_receiving(USBRedirDevice *dev,
+         DPRINTF("interrupt recv stopped ep %02X\n", ep);
+         dev->endpoint[EP2I(ep)].interrupt_started = 0;
+     }
++    dev->endpoint[EP2I(ep)].interrupt_error = 0;
+     usbredir_free_bufpq(dev, ep);
+ }
+ 
+@@ -1028,7 +1030,7 @@ static void usbredir_iso_stream_status(void *priv, uint32_t id,
+     DPRINTF("iso status %d ep %02X id %u\n", iso_stream_status->status,
+             ep, id);
+ 
+-    if (!dev->dev.attached) {
++    if (!dev->dev.attached || !dev->endpoint[EP2I(ep)].iso_started) {
+         return;
+     }
+ 
+@@ -1049,7 +1051,7 @@ static void usbredir_interrupt_receiving_status(void *priv, uint32_t id,
+     DPRINTF("interrupt recv status %d ep %02X id %u\n",
+             interrupt_receiving_status->status, ep, id);
+ 
+-    if (!dev->dev.attached) {
++    if (!dev->dev.attached || !dev->endpoint[EP2I(ep)].interrupt_started) {
+         return;
+     }
+ 
+-- 
+1.7.7.6
+

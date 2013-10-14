@@ -1,7 +1,7 @@
 %define builtin_release_name GA
-%define base_release_version 2.4.0
+%define base_release_version 2.6.0
 %define builtin_release_variant Enterprise Edition
-%define builtin_release_version 2.4
+%define builtin_release_version 2.6
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
 %define real_release_name %{?release_name}%{!?release_name:%{builtin_release_name}}
 %define product_family Abiquo Linux
@@ -11,8 +11,8 @@
 Summary: %{product_family} release file
 Name: abiquo-release-ee
 Epoch: 11
-Version: 2.4.0
-Release: 2%{?dist}
+Version: 2.6.0
+Release: 4%{?dist}
 License: GPL
 Group: System Environment/Base
 Source: http://mirror.abiquo.com/sources/%{name}-%{base_release_version}.tar.gz
@@ -22,9 +22,9 @@ Source3: motd
 Patch: centos-release-skip-eula.patch
 
 Obsoletes: rawhide-release redhat-release-as redhat-release-es redhat-release-ws redhat-release-de comps abiquo-release
-Obsoletes: rpmdb-redhat redhat-release whitebox-release fedora-release sl-release enterprise-release
+Obsoletes: rpmdb-redhat redhat-release whitebox-release fedora-release sl-release enterprise-release centos-release
 Provides: abiquo-release centos-release redhat-release yumconf
-Requires: abiquo-release-notes
+# Requires: abiquo-release-notes
 
 BuildRoot: %{_tmppath}/abiquo-release-root
 BuildArch: noarch
@@ -96,6 +96,12 @@ rm -rf $RPM_BUILD_ROOT
 #/var/lib/supportinfo
 
 %changelog
+* Mon Oct 07 2013 Abel Boldú <abel.boldu@abiquo.com> - 11:2.6.0-4
+- Obsoleting centos-release.
+
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 11:2.4.0-3
+- Bumped version to 2.6.0
+
 * Mon Mar 04 2013 Abel Boldú <abel.boldu@abiquo.com> - 11:2.4.0-2
 - Fixed release in repos
 

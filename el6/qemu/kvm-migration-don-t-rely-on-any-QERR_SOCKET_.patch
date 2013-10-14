@@ -1,0 +1,123 @@
+From 7265b36c08625acfe80a1502cf42f80b09a41089 Mon Sep 17 00:00:00 2001
+Message-Id: <7265b36c08625acfe80a1502cf42f80b09a41089.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Mon, 1 Oct 2012 14:12:42 +0200
+Subject: [PATCH 29/34] migration: don't rely on any QERR_SOCKET_*
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1349100767-9066-10-git-send-email-akong@redhat.com>
+Patchwork-id: 42568
+O-Subject: [RHEL-6.4 qemu-kvm PATCH v7 09/14] migration: don't rely on any QERR_SOCKET_*
+Bugzilla: 680356
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+Use the in_progress argument for QERR_SOCKET_CONNECT_IN_PROGRESS. The
+other errors are handled the same by checking if the error is set and
+then calling migrate_fd_error() if it's.
+
+It's also necessary to change inet_connect_opts() not to set
+QERR_SOCKET_CONNECT_IN_PROGRESS. This error is only used by
+tcp_start_outgoing_migration() and not changing it along with the
+usage of in_progress would break migration.
+
+Furthermore this commit fixes a bug. Today, there's a spurious error
+report when migration succeeds:
+
+(qemu) migrate tcp:0:4444
+migrate: Connection can not be completed immediately
+(qemu)
+
+After this commit no spurious error is reported anymore.
+
+(Cherry-picked from commit 540c79fec9e8b6a6582ec4c65aa2c4c5366e4b89)
+
+Conflicts:
+    migration-tcp.c
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Amos Kong <akong@redhat.com>
+---
+ migration-tcp.c |   26 +++++++++-----------------
+ qemu-sockets.c  |    2 --
+ 2 files changed, 9 insertions(+), 19 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ migration-tcp.c | 26 +++++++++-----------------
+ qemu-sockets.c  |  2 --
+ 2 files changed, 9 insertions(+), 19 deletions(-)
+
+diff --git a/migration-tcp.c b/migration-tcp.c
+index b327223..cf00ec7 100644
+--- a/migration-tcp.c
++++ b/migration-tcp.c
+@@ -85,6 +85,7 @@ MigrationState *tcp_start_outgoing_migration(Monitor *mon,
+                                              Error **errp)
+ {
+     FdMigrationState *s;
++    bool in_progress;
+ 
+     s = qemu_mallocz(sizeof(*s));
+ 
+@@ -106,30 +107,21 @@ MigrationState *tcp_start_outgoing_migration(Monitor *mon,
+         migrate_fd_monitor_suspend(s, mon);
+     }
+ 
+-    s->fd = inet_connect(host_port, false, NULL, errp);
++    s->fd = inet_connect(host_port, false, &in_progress, errp);
++    if (error_is_set(errp)) {
++        migrate_fd_error(s);
++        qemu_free(s);
++        return NULL;
++    }
+ 
+-    if (!error_is_set(errp)) {
+-        migrate_fd_connect(s);
+-    } else if (error_is_type(*errp, QERR_SOCKET_CONNECT_IN_PROGRESS)) {
++    if (in_progress) {
+         DPRINTF("connect in progress\n");
+         qemu_set_fd_handler2(s->fd, NULL, NULL, tcp_wait_for_connect, s);
+-    } else if (error_is_type(*errp, QERR_SOCKET_CREATE_FAILED)) {
+-        DPRINTF("connect failed\n");
+-        goto err;
+-    } else if (error_is_type(*errp, QERR_SOCKET_CONNECT_FAILED)) {
+-        DPRINTF("connect failed\n");
+-        migrate_fd_error(s);
+-        goto err;
+     } else {
+-        DPRINTF("unknown error\n");
+-        goto err;
++        migrate_fd_connect(s);
+     }
+ 
+     return &s->mig_state;
+-
+-err:
+-    qemu_free(s);
+-    return NULL;
+ }
+ 
+ static void tcp_accept_incoming_migration(void *opaque)
+diff --git a/qemu-sockets.c b/qemu-sockets.c
+index 9693be2..378b951 100644
+--- a/qemu-sockets.c
++++ b/qemu-sockets.c
+@@ -281,8 +281,6 @@ int inet_connect_opts(QemuOpts *opts, bool *in_progress, Error **errp)
+             if (in_progress) {
+                 *in_progress = true;
+             }
+-
+-            error_set(errp, QERR_SOCKET_CONNECT_IN_PROGRESS);
+         } else if (rc < 0) {
+             if (NULL == e->ai_next)
+                 fprintf(stderr, "%s: connect(%s,%s,%s,%s): %s\n", __FUNCTION__,
+-- 
+1.7.11.4
+

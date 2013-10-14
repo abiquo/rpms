@@ -1,0 +1,123 @@
+From fee9bb6978f014ad5e202d1d6a2fb4432b765c04 Mon Sep 17 00:00:00 2001
+Message-Id: <fee9bb6978f014ad5e202d1d6a2fb4432b765c04.1346940159.git.minovotn@redhat.com>
+In-Reply-To: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+References: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Thu, 16 Aug 2012 11:39:11 +0200
+Subject: [PATCH 09/18] scsi: prepare migration code for usb-storage support
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1345117160-21046-10-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40919
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 09/18] scsi: prepare migration code for usb-storage support
+Bugzilla: 805172
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+usb-storage can't handle requests in one go as the data transfer can be
+splitted into lots of usb packets.  Because of that there can be
+normal in-flight requests at savevm time and we need to handle that.
+With other scsi hba's this happens only in case i/o is stopped due to
+errors and there are pending requests which need to be restarted
+(req->retry = true).
+
+So, first we need to save req->retry and then handle the req->retry =
+false case.  Write requests are handled fine already.  For read requests
+we have to save the buffer as we will not restart the request (and thus
+not refill the buffer) on the target host.
+
+Cc: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 18eef3bc4eb80fee2cf4a9f18cb87784854d30c1)
+---
+ hw/scsi-bus.c  |    8 ++++----
+ hw/scsi-disk.c |   16 ++++++++++++++--
+ 2 files changed, 18 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c  |  8 ++++----
+ hw/scsi-disk.c | 16 ++++++++++++++--
+ 2 files changed, 18 insertions(+), 6 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 15039b4..495805b 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -1477,10 +1477,9 @@ static void put_scsi_requests(QEMUFile *f, void *pv, size_t size)
+     QTAILQ_FOREACH(req, &s->requests, next) {
+         assert(!req->io_canceled);
+         assert(req->status == -1);
+-        assert(req->retry);
+         assert(req->enqueued);
+ 
+-        qemu_put_sbyte(f, 1);
++        qemu_put_sbyte(f, req->retry ? 1 : 2);
+         qemu_put_buffer(f, req->cmd.buf, sizeof(req->cmd.buf));
+         qemu_put_be32s(f, &req->tag);
+         qemu_put_be32s(f, &req->lun);
+@@ -1498,8 +1497,9 @@ static int get_scsi_requests(QEMUFile *f, void *pv, size_t size)
+ {
+     SCSIDevice *s = pv;
+     SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, s->qdev.parent_bus);
++    int8_t sbyte;
+ 
+-    while (qemu_get_sbyte(f)) {
++    while ((sbyte = qemu_get_sbyte(f)) > 0) {
+         uint8_t buf[SCSI_CMD_BUF_SIZE];
+         uint32_t tag;
+         uint32_t lun;
+@@ -1509,6 +1509,7 @@ static int get_scsi_requests(QEMUFile *f, void *pv, size_t size)
+         qemu_get_be32s(f, &tag);
+         qemu_get_be32s(f, &lun);
+         req = scsi_req_new(s, tag, lun, buf, NULL);
++        req->retry = (sbyte == 1);
+         if (bus->info->load_request) {
+             req->hba_private = bus->info->load_request(f, req);
+         }
+@@ -1517,7 +1518,6 @@ static int get_scsi_requests(QEMUFile *f, void *pv, size_t size)
+         }
+ 
+         /* Just restart it later.  */
+-        req->retry = true;
+         scsi_req_enqueue_internal(req);
+ 
+         /* At this point, the request will be kept alive by the reference
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index f0c13b8..138b642 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -128,8 +128,14 @@ static void scsi_disk_save_request(QEMUFile *f, SCSIRequest *req)
+     qemu_put_be64s(f, &r->sector);
+     qemu_put_be32s(f, &r->sector_count);
+     qemu_put_be32s(f, &r->buflen);
+-    if (r->buflen && r->req.cmd.mode == SCSI_XFER_TO_DEV) {
+-        qemu_put_buffer(f, r->iov.iov_base, r->iov.iov_len);
++    if (r->buflen) {
++        if (r->req.cmd.mode == SCSI_XFER_TO_DEV) {
++            qemu_put_buffer(f, r->iov.iov_base, r->iov.iov_len);
++        } else if (!req->retry) {
++            uint32_t len = r->iov.iov_len;
++            qemu_put_be32s(f, &len);
++            qemu_put_buffer(f, r->iov.iov_base, r->iov.iov_len);
++        }
+     }
+ }
+ 
+@@ -144,6 +150,12 @@ static void scsi_disk_load_request(QEMUFile *f, SCSIRequest *req)
+         scsi_init_iovec(r, r->buflen);
+         if (r->req.cmd.mode == SCSI_XFER_TO_DEV) {
+             qemu_get_buffer(f, r->iov.iov_base, r->iov.iov_len);
++        } else if (!r->req.retry) {
++            uint32_t len;
++            qemu_get_be32s(f, &len);
++            r->iov.iov_len = len;
++            assert(r->iov.iov_len <= r->buflen);
++            qemu_get_buffer(f, r->iov.iov_base, r->iov.iov_len);
+         }
+     }
+ 
+-- 
+1.7.11.4
+

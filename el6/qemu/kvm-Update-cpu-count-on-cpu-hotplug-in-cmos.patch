@@ -1,0 +1,101 @@
+From b4031db8f6e0cac2c182986e293c21ff186dd7c6 Mon Sep 17 00:00:00 2001
+From: Igor Mammedov <imammedo@redhat.com>
+Date: Tue, 20 Mar 2012 16:38:02 +0100
+Subject: [PATCH 2/2] Update cpu count on cpu hotplug in cmos
+
+RH-Author: Igor Mammedov <imammedo@redhat.com>
+Message-id: <1332261482-27534-1-git-send-email-imammedo@redhat.com>
+Patchwork-id: 38760
+O-Subject: [RHEL6.3 qemu-kvm PATCH] Update cpu count on cpu hotplug in cmos
+Bugzilla: 802033
+RH-Acked-by: Andrew Jones <drjones@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Bugzilla: 802033
+Brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4168523
+
+No upstream version yet
+
+CPU count in cmos (0x5f) should be updated in case a CPU was
+hot-(un)plugged to avoid hanging in seabios on reboot.
+
+Tested with RHEL6x64 guest.
+
+Signed-off-by: Igor Mammedov <imammedo@redhat.com>
+---
+ hw/acpi.c |   17 +++++++++++++++++
+ hw/pc.c   |    2 +-
+ hw/pc.h   |    1 +
+ 3 files changed, 19 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/acpi.c |   17 +++++++++++++++++
+ hw/pc.c   |    2 +-
+ hw/pc.h   |    1 +
+ 3 files changed, 19 insertions(+), 1 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index 447f111..a994a86 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -904,6 +904,20 @@ void piix4_acpi_system_hot_add_init(PCIBus *bus, const char *cpu_model)
+     pci_bus_hotplug(bus, piix4_device_hotplug);
+ }
+ 
++static int acpi_online_cpu_count(void)
++{
++    int i, j, online_cpu_count = 0;
++    struct gpe_regs *gpe = &pm_state->gpe;
++
++    /* count plugged in cpus in cpus_sts bitmap */
++    for (i = 0; i < sizeof(gpe->cpus_sts); ++i) {
++        for (j = 0; j < 8; ++j)
++            if ((gpe->cpus_sts[i] >> j) & 1)
++                ++online_cpu_count;
++    }
++    return online_cpu_count;
++}
++
+ #if defined(TARGET_I386)
+ static void enable_processor(struct gpe_regs *g, int cpu)
+ {
+@@ -935,6 +949,9 @@ void qemu_system_cpu_hot_add(int cpu, int state)
+     else
+         disable_processor(&pm_state->gpe, cpu);
+ 
++    /* update number of cpus in cmos, to allow BIOS see it on reboot */
++    rtc_set_memory(rtc_state, 0x5f, acpi_online_cpu_count() - 1);
++
+     pm_update_sci(pm_state);
+ }
+ #endif
+diff --git a/hw/pc.c b/hw/pc.c
+index 683c10d..d17acc5 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -71,7 +71,7 @@
+ #define MAX_IDE_BUS 2
+ 
+ static fdctrl_t *floppy_controller;
+-static RTCState *rtc_state;
++RTCState *rtc_state;
+ static PITState *pit;
+ static PCII440FXState *i440fx_state;
+ 
+diff --git a/hw/pc.h b/hw/pc.h
+index 2c08bd3..e49f853 100644
+--- a/hw/pc.h
++++ b/hw/pc.h
+@@ -97,6 +97,7 @@ void i8042_mm_init(qemu_irq kbd_irq, qemu_irq mouse_irq,
+ /* mc146818rtc.c */
+ 
+ typedef struct RTCState RTCState;
++extern RTCState *rtc_state;
+ 
+ RTCState *rtc_init(int base_year);
+ void rtc_set_memory(RTCState *s, int addr, int val);
+-- 
+1.7.7.6
+

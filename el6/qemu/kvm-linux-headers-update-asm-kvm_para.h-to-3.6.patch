@@ -1,0 +1,48 @@
+From ff1a410dc3c0ebaffcd433a4affa5952eaf679da Mon Sep 17 00:00:00 2001
+From: "Michael S. Tsirkin" <mst@redhat.com>
+Date: Sun, 23 Sep 2012 14:31:51 -0300
+Subject: [RHEL6 qemu-kvm PATCH 3/5] linux-headers: update asm/kvm_para.h to
+ 3.6
+
+RH-Author: Michael S. Tsirkin <mst@redhat.com>
+Message-id: <5480124e5d882d0f559e7eec3e0304b4f0ae3191.1348408802.git.mst@redhat.com>
+Patchwork-id: 42289
+O-Subject: [PATCHv2 RHEL6.4 1/3] linux-headers: update asm/kvm_para.h to 3.6
+Bugzilla: 835101
+RH-Acked-by: Xiao Wang <jasowang@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+
+Update asm-x96/kvm_para.h to version present in Linux 3.6.
+This is needed for the new PV EOI feature.
+
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+(cherry picked from commit 6dcaad57552e08e4ec799d814cdcbd1c38c7f37b)
+
+Note: only the define necessary for PV EOI migration was added.
+---
+ kvm/include/x86/asm/kvm_para.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ kvm/include/x86/asm/kvm_para.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/kvm/include/x86/asm/kvm_para.h b/kvm/include/x86/asm/kvm_para.h
+index 8f30857..f712bce 100644
+--- a/kvm/include/x86/asm/kvm_para.h
++++ b/kvm/include/x86/asm/kvm_para.h
+@@ -20,6 +20,9 @@
+ #define MSR_KVM_WALL_CLOCK  0x11
+ #define MSR_KVM_SYSTEM_TIME 0x12
+ 
++/* Custom MSRs falls in the range 0x4b564d00-0x4b564dff */
++#define MSR_KVM_PV_EOI_EN      0x4b564d04
++
+ #define KVM_MAX_MMU_OP_BATCH           32
+ 
+ /* Operations for KVM_HC_MMU_OP */
+-- 
+1.7.11.4
+

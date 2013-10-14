@@ -1,0 +1,61 @@
+From b9d6c40774b71423c8fab57c5cf2eccdbd3adf43 Mon Sep 17 00:00:00 2001
+Message-Id: <b9d6c40774b71423c8fab57c5cf2eccdbd3adf43.1353330552.git.minovotn@redhat.com>
+From: Markus Armbruster <armbru@redhat.com>
+Date: Tue, 23 Oct 2012 14:34:33 +0200
+Subject: [PATCH] vl: Fix cross-version migration for odd RAM sizes
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1351002873-32737-2-git-send-email-armbru@redhat.com>
+Patchwork-id: 43558
+O-Subject: [RHEL-6.4 PATCH qemu-kvm 1/1] vl: Fix cross-version migration for odd RAM sizes
+Bugzilla: 860573
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+
+We recently fixed bug 755594 "-m 1 crashes".  The bug has two root
+causes:
+
+1. Memory sizes that aren't a multiple of the page size make no sense
+and don't work.  Upstream chose to round up to a multiple of 8KiB, the
+largest page size of any target.  Commit 59799a69 "vl: Round argument
+of -m up to multiple of 8KiB" is the backport of the upstream fix.
+
+2. Memory sizes up to 1MiB trigger bugs in CMOS setup (fixed upstream)
+and RAM setup (upstream code is different).  SeaBIOS requires at least
+1MiB anyway.  Commit b7497a17 "vl: Round argument of -m up to multiple
+of 2MiB instead of 8KiB" (RHEL-6 only) is the obvious work-around.
+
+Unfortunately, rounding up RAM size breaks cross-version migration.
+To unbreak it, we need to fix bug 755594 differently: round up to
+multiple to page size 4KiB (regression-proof, because partial pages
+never worked), and enforce minimum 2MiB (okay, because no supported
+guest will boot with less than that).
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ vl.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vl.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/vl.c b/vl.c
+index 73fe5da..efe90fc 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5522,7 +5522,8 @@ int main(int argc, char **argv, char **envp)
+                     fprintf(stderr, "qemu: at most 2047 MB RAM can be simulated\n");
+                     exit(1);
+                 }
+-                sz = QEMU_ALIGN_UP((uint64_t)value, 2 * 1024 * 1024);
++                sz = QEMU_ALIGN_UP((uint64_t)value, 4096);
++                sz = MAX(sz, 2 * 1024 * 1024);
+                 ram_size = sz;
+                 if (ram_size != sz) {
+                     fprintf(stderr, "qemu: ram size too large\n");
+-- 
+1.7.11.7
+

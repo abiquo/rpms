@@ -1,0 +1,70 @@
+From 74d95008399198df5422323ec610aee975fe6847 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:21 +0100
+Subject: [PATCH 56/99] posix-aio-compat: Allow read after EOF
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-57-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37248
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 56/96] posix-aio-compat: Allow read after EOF
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+In order to be able to transparently replace bdrv_read calls by bdrv_co_read,
+reading beyond EOF must produce zeros instead of short reads for AIO, too.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit ba1d1afdfeeb5ec6cbfd0052ab298d9b7cb7e5ba)
+---
+ posix-aio-compat.c |   19 +++++++++++++++++++
+ 1 files changed, 19 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ posix-aio-compat.c |   19 +++++++++++++++++++
+ 1 files changed, 19 insertions(+), 0 deletions(-)
+
+diff --git a/posix-aio-compat.c b/posix-aio-compat.c
+index 4b6d3ac..bdecf5f 100644
+--- a/posix-aio-compat.c
++++ b/posix-aio-compat.c
+@@ -199,6 +199,12 @@ static ssize_t handle_aiocb_rw_vector(struct qemu_paiocb *aiocb)
+     return len;
+ }
+ 
++/*
++ * Read/writes the data to/from a given linear buffer.
++ *
++ * Returns the number of bytes handles or -errno in case of an error. Short
++ * reads are only returned if the end of the file is reached.
++ */
+ static ssize_t handle_aiocb_rw_linear(struct qemu_paiocb *aiocb, char *buf)
+ {
+     ssize_t offset = 0;
+@@ -334,6 +340,19 @@ static void *aio_thread(void *unused)
+ 
+         switch (aiocb->aio_type & QEMU_AIO_TYPE_MASK) {
+         case QEMU_AIO_READ:
++            ret = handle_aiocb_rw(aiocb);
++            if (ret >= 0 && ret < aiocb->aio_nbytes && aiocb->common.bs->growable) {
++                /* A short read means that we have reached EOF. Pad the buffer
++                 * with zeros for bytes after EOF. */
++                QEMUIOVector qiov;
++
++                qemu_iovec_init_external(&qiov, aiocb->aio_iov,
++                                         aiocb->aio_niov);
++                qemu_iovec_memset_skip(&qiov, 0, aiocb->aio_nbytes - ret, ret);
++
++                ret = aiocb->aio_nbytes;
++            }
++            break;
+         case QEMU_AIO_WRITE:
+ 		ret = handle_aiocb_rw(aiocb);
+ 		break;
+-- 
+1.7.7.5
+

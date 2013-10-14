@@ -1,0 +1,259 @@
+From 0288369bab30f37f8215a24314e3f5d693915fae Mon Sep 17 00:00:00 2001
+Message-Id: <0288369bab30f37f8215a24314e3f5d693915fae.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:24 +0200
+Subject: [PATCH 15/41] qemu-ga: add guest-sync-delimited
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-10-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39906
+O-Subject: [PATCH RHEL6.4 qemu-kvm 09/36] qemu-ga: add guest-sync-delimited
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+
+guest-sync leaves it as an exercise to the user as to how to reliably
+obtain the response to guest-sync if the client had previously read in a
+partial response (due qemu-ga previously being restarted mid-"sentence"
+due to reboot, forced restart, etc).
+
+qemu-ga handles this situation on its end by having a client precede
+their guest-sync request with a 0xFF byte (invalid UTF-8), which
+qemu-ga/QEMU JSON parsers will treat as a flush event. Thus we can
+reliably flush the qemu-ga parser state in preparation for receiving
+the guest-sync request.
+
+guest-sync-delimited provides the same functionality for a client: when
+a guest-sync-delimited is issued, qemu-ga will precede it's response
+with a 0xFF byte that the client can use as an indicator to flush its
+buffer/parser state in preparation for reliably receiving the
+guest-sync-delimited response.
+
+It is also useful as an optimization for clients, since, after issuing a
+guest-sync-delimited, clients can safely discard all stale data read
+from the channel until the 0xFF is found.
+
+More information available on the wiki:
+
+http://wiki.qemu.org/Features/QAPI/GuestAgent#QEMU_Guest_Agent_Protocol
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+(cherry picked from commit 3cf0bed8369267184e5dc5b58882811519d67437)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qapi-schema-guest.json | 48 +++++++++++++++++++++++++++++++++++++++++++++++-
+ qemu-ga.c              | 27 ++++++++++++++++++++++-----
+ qga/commands-posix.c   |  3 ---
+ qga/commands.c         |  6 ++++++
+ qga/guest-agent-core.h |  2 ++
+ 5 files changed, 77 insertions(+), 9 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |   48 +++++++++++++++++++++++++++++++++++++++++++++++-
+ qemu-ga.c              |   27 ++++++++++++++++++++++-----
+ qga/commands-posix.c   |    3 ---
+ qga/commands.c         |    6 ++++++
+ qga/guest-agent-core.h |    2 ++
+ 5 files changed, 77 insertions(+), 9 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 12b5d4f..cf18876 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -1,6 +1,41 @@
+ # *-*- Mode: Python -*-*
+ 
+ ##
++#
++# Echo back a unique integer value, and prepend to response a
++# leading sentinel byte (0xFF) the client can check scan for.
++#
++# This is used by clients talking to the guest agent over the
++# wire to ensure the stream is in sync and doesn't contain stale
++# data from previous client. It must be issued upon initial
++# connection, and after any client-side timeouts (including
++# timeouts on receiving a response to this command).
++#
++# After issuing this request, all guest agent responses should be
++# ignored until the response containing the unique integer value
++# the client passed in is returned. Receival of the 0xFF sentinel
++# byte must be handled as an indication that the client's
++# lexer/tokenizer/parser state should be flushed/reset in
++# preparation for reliably receiving the subsequent response. As
++# an optimization, clients may opt to ignore all data until a
++# sentinel value is receiving to avoid unecessary processing of
++# stale data.
++#
++# Similarly, clients should also precede this *request*
++# with a 0xFF byte to make sure the guest agent flushes any
++# partially read JSON data from a previous client connection.
++#
++# @id: randomly generated 64-bit integer
++#
++# Returns: The unique integer id passed in by the client
++#
++# Since: 1.1
++# ##
++{ 'command': 'guest-sync-delimited'
++  'data':    { 'id': 'int' },
++  'returns': 'int' }
++
++##
+ # @guest-sync:
+ #
+ # Echo back a unique integer value
+@@ -13,8 +48,19 @@
+ # partially-delivered JSON text in such a way that this response
+ # can be obtained.
+ #
++# In cases where a partial stale response was previously
++# received by the client, this cannot always be done reliably.
++# One particular scenario being if qemu-ga responses are fed
++# character-by-character into a JSON parser. In these situations,
++# using guest-sync-delimited may be optimal.
++#
++# For clients that fetch responses line by line and convert them
++# to JSON objects, guest-sync should be sufficient, but note that
++# in cases where the channel is dirty some attempts at parsing the
++# response may result in a parser error.
++#
+ # Such clients should also precede this command
+-# with a 0xFF byte to make such the guest agent flushes any
++# with a 0xFF byte to make sure the guest agent flushes any
+ # partially read JSON data from a previous session.
+ #
+ # @id: randomly generated 64-bit integer
+diff --git a/qemu-ga.c b/qemu-ga.c
+index b083cc6..3a522e0 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -41,6 +41,7 @@
+ #define QGA_VIRTIO_PATH_DEFAULT "\\\\.\\Global\\org.qemu.guest_agent.0"
+ #endif
+ #define QGA_PIDFILE_DEFAULT "/var/run/qemu-ga.pid"
++#define QGA_SENTINEL_BYTE 0xFF
+ 
+ struct GAState {
+     JSONMessageParser parser;
+@@ -54,9 +55,10 @@ struct GAState {
+ #ifdef _WIN32
+     GAService service;
+ #endif
++    bool delimit_response;
+ };
+ 
+-static struct GAState *ga_state;
++struct GAState *ga_state;
+ 
+ #ifdef _WIN32
+ DWORD WINAPI service_ctrl_handler(DWORD ctrl, DWORD type, LPVOID data,
+@@ -198,6 +200,11 @@ static void ga_log(const gchar *domain, GLogLevelFlags level,
+     }
+ }
+ 
++void ga_set_response_delimited(GAState *s)
++{
++    s->delimit_response = true;
++}
++
+ #ifndef _WIN32
+ static void become_daemon(const char *pidfile)
+ {
+@@ -254,7 +261,7 @@ fail:
+ static int send_response(GAState *s, QObject *payload)
+ {
+     const char *buf;
+-    QString *payload_qstr;
++    QString *payload_qstr, *response_qstr;
+     GIOStatus status;
+ 
+     g_assert(payload && s->channel);
+@@ -264,10 +271,20 @@ static int send_response(GAState *s, QObject *payload)
+         return -EINVAL;
+     }
+ 
+-    qstring_append_chr(payload_qstr, '\n');
+-    buf = qstring_get_str(payload_qstr);
++    if (s->delimit_response) {
++        s->delimit_response = false;
++        response_qstr = qstring_new();
++        qstring_append_chr(response_qstr, QGA_SENTINEL_BYTE);
++        qstring_append(response_qstr, qstring_get_str(payload_qstr));
++        QDECREF(payload_qstr);
++    } else {
++        response_qstr = payload_qstr;
++    }
++
++    qstring_append_chr(response_qstr, '\n');
++    buf = qstring_get_str(response_qstr);
+     status = ga_channel_write_all(s->channel, buf, strlen(buf));
+-    QDECREF(payload_qstr);
++    QDECREF(response_qstr);
+     if (status != G_IO_STATUS_NORMAL) {
+         return -EIO;
+     }
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index 01b7faf..d7092bd 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -39,8 +39,6 @@
+  * To enable, set to '1' */
+ #define QGA_FILE_OPS 0
+ 
+-static GAState *ga_state;
+-
+ static void reopen_fd_to_null(int fd)
+ {
+     int nullfd;
+@@ -943,7 +941,6 @@ error:
+ /* register init/cleanup routines for stateful command groups */
+ void ga_command_state_init(GAState *s, GACommandState *cs)
+ {
+-    ga_state = s;
+ #if defined(CONFIG_FSFREEZE)
+     ga_command_state_add(cs, guest_fsfreeze_init, guest_fsfreeze_cleanup);
+ #endif
+diff --git a/qga/commands.c b/qga/commands.c
+index ba0a2dc..23d188f 100644
+--- a/qga/commands.c
++++ b/qga/commands.c
+@@ -29,6 +29,12 @@ void slog(const gchar *fmt, ...)
+     va_end(ap);
+ }
+ 
++int64_t qmp_guest_sync_delimited(int64_t id, Error **errp)
++{
++    ga_set_response_delimited(ga_state);
++    return id;
++}
++
+ int64_t qmp_guest_sync(int64_t id, Error **errp)
+ {
+     return id;
+diff --git a/qga/guest-agent-core.h b/qga/guest-agent-core.h
+index b5dfa5b..304525d 100644
+--- a/qga/guest-agent-core.h
++++ b/qga/guest-agent-core.h
+@@ -18,6 +18,7 @@
+ 
+ typedef struct GAState GAState;
+ typedef struct GACommandState GACommandState;
++extern GAState *ga_state;
+ 
+ void ga_command_state_init(GAState *s, GACommandState *cs);
+ void ga_command_state_add(GACommandState *cs,
+@@ -30,3 +31,4 @@ bool ga_logging_enabled(GAState *s);
+ void ga_disable_logging(GAState *s);
+ void ga_enable_logging(GAState *s);
+ void slog(const gchar *fmt, ...);
++void ga_set_response_delimited(GAState *s);
+-- 
+1.7.10.4
+

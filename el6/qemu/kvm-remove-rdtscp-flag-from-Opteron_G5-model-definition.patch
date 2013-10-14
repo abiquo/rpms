@@ -1,0 +1,59 @@
+From 8d77905c18814ff2e0c9d4336f80d2d8a8fd7250 Mon Sep 17 00:00:00 2001
+Message-Id: <8d77905c18814ff2e0c9d4336f80d2d8a8fd7250.1354535052.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Tue, 13 Nov 2012 19:29:05 +0100
+Subject: [PATCH 1/4] remove rdtscp flag from Opteron_G5 model definition
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1352834945-5527-1-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 44171
+O-Subject: [RHEL6.4 qemu-kvm PATCH] remove rdtscp flag from Opteron_G5 model definition
+Bugzilla: 874400
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+
+Bugzilla: 874400
+Upstream status: not applicable
+ (upstream kernel has rdtscp support, so the CPU models upstream can include it)
+
+The RHEL-6 kernel does not support exposing the rdtscp feature to
+guests, so we should not include RDTSCP in the Opteron_G5 CPU model
+definition.
+
+This change doesn't have any visible effect to the user (as qemu-kvm
+removes the CPUID bits that are not supported by the host), but keeping
+the flag in the Opteron_G5 definition may cause problems if one day we
+add rdtscp support to the RHEL-6 kernel.
+
+See also:
+ https://bugzilla.redhat.com/show_bug.cgi?id=814426
+ Bug 814426 - "rdtscp" flag defined on SandyBridge and Opteron models, but not supported by the kernel
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index bcc7452..3de8d50 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -746,7 +746,7 @@ static x86_def_t builtin_x86_defs[] = {
+              CPUID_EXT_AES | CPUID_EXT_POPCNT | CPUID_EXT_SSE42 |
+              CPUID_EXT_SSE41 | CPUID_EXT_CX16 | CPUID_EXT_FMA |
+              CPUID_EXT_SSSE3 | CPUID_EXT_PCLMULQDQ | CPUID_EXT_SSE3,
+-        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_RDTSCP |
++        .ext2_features = CPUID_EXT2_LM |
+              CPUID_EXT2_PDPE1GB | CPUID_EXT2_FXSR | CPUID_EXT2_MMX |
+              CPUID_EXT2_NX | CPUID_EXT2_PSE36 | CPUID_EXT2_PAT |
+              CPUID_EXT2_CMOV | CPUID_EXT2_MCA | CPUID_EXT2_PGE |
+-- 
+1.7.11.7
+

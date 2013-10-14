@@ -1,0 +1,61 @@
+From 6f5e5fa066bf763b7d730b6745f5d0171ad56635 Mon Sep 17 00:00:00 2001
+From: Igor Mammedov <imammedo@redhat.com>
+Date: Tue, 27 Mar 2012 16:35:40 +0200
+Subject: [PATCH 1/2] Use defines instead of numbers for pci hotplug sts bit
+
+RH-Author: Igor Mammedov <imammedo@redhat.com>
+Message-id: <1332866141-17049-2-git-send-email-imammedo@redhat.com>
+Patchwork-id: 39006
+O-Subject: [RHEL-6.3 qemu-kvm PATCH 1/2] Use defines instead of numbers for pci hotplug sts bit
+Bugzilla: 805362
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+BZ#805362
+Upstream qemu-kvm commit: 4441a2870a669b
+Brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4198808
+
+Signed-off-by: Gleb Natapov <gleb@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Igor Mammedov <imammedo@redhat.com>
+---
+ hw/acpi.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <mignov@gmail.com>
+---
+ hw/acpi.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index a994a86..4788526 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -40,6 +40,7 @@
+ #define PCI_EJ_BASE 0xae08
+ #define PCI_RMV_BASE 0xae0c
+ 
++#define PIIX4_PCI_HOTPLUG_STATUS 2
+ #define PIIX4_CPU_HOTPLUG_STATUS 4
+ 
+ struct gpe_regs {
+@@ -958,13 +959,13 @@ void qemu_system_cpu_hot_add(int cpu, int state)
+ 
+ static void enable_device(struct pci_status *p, struct gpe_regs *g, int slot)
+ {
+-    g->sts |= 2;
++    g->sts |= PIIX4_PCI_HOTPLUG_STATUS;
+     p->up |= (1 << slot);
+ }
+ 
+ static void disable_device(struct pci_status *p, struct gpe_regs *g, int slot)
+ {
+-    g->sts |= 2;
++    g->sts |= PIIX4_PCI_HOTPLUG_STATUS;
+     p->down |= (1 << slot);
+ }
+ 
+-- 
+1.7.7.6
+

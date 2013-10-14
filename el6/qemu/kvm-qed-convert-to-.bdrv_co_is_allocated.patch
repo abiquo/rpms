@@ -1,0 +1,92 @@
+From eab65e7882293eeb8aa37702379308cd3e46c24f Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:42 +0100
+Subject: [PATCH 15/55] qed: convert to .bdrv_co_is_allocated()
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <665595f364da6efbc210c832ee60bc1ec8a98d97.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38865
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 15/54] qed: convert to .bdrv_co_is_allocated()
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+The bdrv_qed_is_allocated() function is a synchronous wrapper around
+qed_find_cluster(), which performs the cluster lookup.  In order to
+convert the synchronous function to a coroutine function we yield
+instead of using qemu_aio_wait().  Note that QED's cache is already safe
+for parallel requests so no locking is needed.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit b7d5a5b8ae5425a4dee69b043b1f334237b3b06a)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/qed.c |   15 +++++++++++----
+ 1 files changed, 11 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qed.c |   15 +++++++++++----
+ 1 files changed, 11 insertions(+), 4 deletions(-)
+
+diff --git a/block/qed.c b/block/qed.c
+index a8eda12..76d674d 100644
+--- a/block/qed.c
++++ b/block/qed.c
+@@ -645,6 +645,7 @@ static int bdrv_qed_create(const char *filename, QEMUOptionParameter *options)
+ }
+ 
+ typedef struct {
++    Coroutine *co;
+     int is_allocated;
+     int *pnum;
+ } QEDIsAllocatedCB;
+@@ -654,10 +655,14 @@ static void qed_is_allocated_cb(void *opaque, int ret, uint64_t offset, size_t l
+     QEDIsAllocatedCB *cb = opaque;
+     *cb->pnum = len / BDRV_SECTOR_SIZE;
+     cb->is_allocated = (ret == QED_CLUSTER_FOUND || ret == QED_CLUSTER_ZERO);
++    if (cb->co) {
++        qemu_coroutine_enter(cb->co, NULL);
++    }
+ }
+ 
+-static int bdrv_qed_is_allocated(BlockDriverState *bs, int64_t sector_num,
+-                                  int nb_sectors, int *pnum)
++static int coroutine_fn bdrv_qed_co_is_allocated(BlockDriverState *bs,
++                                                 int64_t sector_num,
++                                                 int nb_sectors, int *pnum)
+ {
+     BDRVQEDState *s = bs->opaque;
+     uint64_t pos = (uint64_t)sector_num * BDRV_SECTOR_SIZE;
+@@ -670,8 +675,10 @@ static int bdrv_qed_is_allocated(BlockDriverState *bs, int64_t sector_num,
+ 
+     qed_find_cluster(s, &request, pos, len, qed_is_allocated_cb, &cb);
+ 
++    /* Now sleep if the callback wasn't invoked immediately */
+     while (cb.is_allocated == -1) {
+-        qemu_aio_wait();
++        cb.co = qemu_coroutine_self();
++        qemu_coroutine_yield();
+     }
+ 
+     qed_unref_l2_cache_entry(request.l2_table);
+@@ -1465,7 +1472,7 @@ static BlockDriver bdrv_qed = {
+     .bdrv_open                = bdrv_qed_open,
+     .bdrv_close               = bdrv_qed_close,
+     .bdrv_create              = bdrv_qed_create,
+-    .bdrv_is_allocated        = bdrv_qed_is_allocated,
++    .bdrv_co_is_allocated     = bdrv_qed_co_is_allocated,
+     .bdrv_make_empty          = bdrv_qed_make_empty,
+     .bdrv_aio_readv           = bdrv_qed_aio_readv,
+     .bdrv_aio_writev          = bdrv_qed_aio_writev,
+-- 
+1.7.7.6
+

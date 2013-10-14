@@ -1,0 +1,302 @@
+From 73335156122849e4c4c47e3111af27f11d629ebe Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:53 +0100
+Subject: [PATCH 88/99] block: unify flush implementations
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-89-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37274
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 88/96] block: unify flush implementations
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Bugzilla: 783950
+
+Add coroutine support for flush and apply the same emulation that
+we already do for read/write.  bdrv_aio_flush is simplified to always
+go through a coroutine.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 07f076157475e1a8ea454e304e0ea5496d05b539)
+---
+ block.c     |  164 ++++++++++++++++++++++++++--------------------------------
+ block.h     |    1 +
+ block_int.h |    1 +
+ 3 files changed, 76 insertions(+), 90 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c     |  164 ++++++++++++++++++++++++++--------------------------------
+ block.h     |    1 +
+ block_int.h |    1 +
+ 3 files changed, 76 insertions(+), 90 deletions(-)
+
+diff --git a/block.c b/block.c
+index 4ff595e..9b1451e 100644
+--- a/block.c
++++ b/block.c
+@@ -53,17 +53,12 @@ static BlockDriverAIOCB *bdrv_aio_readv_em(BlockDriverState *bs,
+ static BlockDriverAIOCB *bdrv_aio_writev_em(BlockDriverState *bs,
+         int64_t sector_num, QEMUIOVector *qiov, int nb_sectors,
+         BlockDriverCompletionFunc *cb, void *opaque);
+-static BlockDriverAIOCB *bdrv_aio_flush_em(BlockDriverState *bs,
+-        BlockDriverCompletionFunc *cb, void *opaque);
+-static BlockDriverAIOCB *bdrv_aio_noop_em(BlockDriverState *bs,
+-        BlockDriverCompletionFunc *cb, void *opaque);
+ static int coroutine_fn bdrv_co_readv_em(BlockDriverState *bs,
+                                          int64_t sector_num, int nb_sectors,
+                                          QEMUIOVector *iov);
+ static int coroutine_fn bdrv_co_writev_em(BlockDriverState *bs,
+                                          int64_t sector_num, int nb_sectors,
+                                          QEMUIOVector *iov);
+-static int coroutine_fn bdrv_co_flush_em(BlockDriverState *bs);
+ static int coroutine_fn bdrv_co_do_readv(BlockDriverState *bs,
+     int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
+ static int coroutine_fn bdrv_co_do_writev(BlockDriverState *bs,
+@@ -170,9 +165,6 @@ void bdrv_register(BlockDriver *bdrv)
+         }
+     }
+ 
+-    if (!bdrv->bdrv_aio_flush)
+-        bdrv->bdrv_aio_flush = bdrv_aio_flush_em;
+-
+     QLIST_INSERT_HEAD(&bdrv_drivers, bdrv, list);
+ }
+ 
+@@ -982,11 +974,6 @@ static int bdrv_check_request(BlockDriverState *bs, int64_t sector_num,
+                                    nb_sectors * BDRV_SECTOR_SIZE);
+ }
+ 
+-static inline bool bdrv_has_async_flush(BlockDriver *drv)
+-{
+-    return drv->bdrv_aio_flush != bdrv_aio_flush_em;
+-}
+-
+ typedef struct RwCo {
+     BlockDriverState *bs;
+     int64_t sector_num;
+@@ -1596,33 +1583,6 @@ const char *bdrv_get_device_name(BlockDriverState *bs)
+     return bs->device_name;
+ }
+ 
+-int bdrv_flush(BlockDriverState *bs)
+-{
+-    if (bs->open_flags & BDRV_O_NO_FLUSH) {
+-        return 0;
+-    }
+-
+-    if (bs->drv && bdrv_has_async_flush(bs->drv) && qemu_in_coroutine()) {
+-        return bdrv_co_flush_em(bs);
+-    }
+-
+-    if (bs->drv && bs->drv->bdrv_flush) {
+-        return bs->drv->bdrv_flush(bs);
+-    }
+-
+-    /*
+-     * Some block drivers always operate in either writethrough or unsafe mode
+-     * and don't support bdrv_flush therefore. Usually qemu doesn't know how
+-     * the server works (because the behaviour is hardcoded or depends on
+-     * server-side configuration), so we can't ensure that everything is safe
+-     * on disk. Returning an error doesn't work because that would break guests
+-     * even if the server operates in writethrough mode.
+-     *
+-     * Let's hope the user knows what he's doing.
+-     */
+-    return 0;
+-}
+-
+ void bdrv_flush_all(void)
+ {
+     BlockDriverState *bs;
+@@ -2464,22 +2424,6 @@ fail:
+     return -1;
+ }
+ 
+-BlockDriverAIOCB *bdrv_aio_flush(BlockDriverState *bs,
+-        BlockDriverCompletionFunc *cb, void *opaque)
+-{
+-    BlockDriver *drv = bs->drv;
+-
+-    trace_bdrv_aio_flush(bs, opaque);
+-
+-    if (bs->open_flags & BDRV_O_NO_FLUSH) {
+-        return bdrv_aio_noop_em(bs, cb, opaque);
+-    }
+-
+-    if (!drv)
+-        return NULL;
+-    return drv->bdrv_aio_flush(bs, cb, opaque);
+-}
+-
+ void bdrv_aio_cancel(BlockDriverAIOCB *acb)
+ {
+     acb->pool->cancel(acb);
+@@ -2639,41 +2583,28 @@ static BlockDriverAIOCB *bdrv_co_aio_rw_vector(BlockDriverState *bs,
+     return &acb->common;
+ }
+ 
+-static BlockDriverAIOCB *bdrv_aio_flush_em(BlockDriverState *bs,
+-        BlockDriverCompletionFunc *cb, void *opaque)
++static void coroutine_fn bdrv_aio_flush_co_entry(void *opaque)
+ {
+-    BlockDriverAIOCBSync *acb;
+-
+-    acb = qemu_aio_get(&bdrv_em_aio_pool, bs, cb, opaque);
+-    acb->is_write = 1; /* don't bounce in the completion hadler */
+-    acb->qiov = NULL;
+-    acb->bounce = NULL;
+-    acb->ret = 0;
+-
+-    if (!acb->bh)
+-        acb->bh = qemu_bh_new(bdrv_aio_bh_cb, acb);
++    BlockDriverAIOCBCoroutine *acb = opaque;
++    BlockDriverState *bs = acb->common.bs;
+ 
+-    bdrv_flush(bs);
++    acb->req.error = bdrv_co_flush(bs);
++    acb->bh = qemu_bh_new(bdrv_co_em_bh, acb);
+     qemu_bh_schedule(acb->bh);
+-    return &acb->common;
+ }
+ 
+-static BlockDriverAIOCB *bdrv_aio_noop_em(BlockDriverState *bs,
++BlockDriverAIOCB *bdrv_aio_flush(BlockDriverState *bs,
+         BlockDriverCompletionFunc *cb, void *opaque)
+ {
+-    BlockDriverAIOCBSync *acb;
++    trace_bdrv_aio_flush(bs, opaque);
+ 
+-    acb = qemu_aio_get(&bdrv_em_aio_pool, bs, cb, opaque);
+-    acb->is_write = 1; /* don't bounce in the completion handler */
+-    acb->qiov = NULL;
+-    acb->bounce = NULL;
+-    acb->ret = 0;
++    Coroutine *co;
++    BlockDriverAIOCBCoroutine *acb;
+ 
+-    if (!acb->bh) {
+-        acb->bh = qemu_bh_new(bdrv_aio_bh_cb, acb);
+-    }
++    acb = qemu_aio_get(&bdrv_em_co_aio_pool, bs, cb, opaque);
++    co = qemu_coroutine_create(bdrv_aio_flush_co_entry);
++    qemu_coroutine_enter(co, acb);
+ 
+-    qemu_bh_schedule(acb->bh);
+     return &acb->common;
+ }
+ 
+@@ -2770,19 +2701,72 @@ static int coroutine_fn bdrv_co_writev_em(BlockDriverState *bs,
+     return bdrv_co_io_em(bs, sector_num, nb_sectors, iov, true);
+ }
+ 
+-static int coroutine_fn bdrv_co_flush_em(BlockDriverState *bs)
++static void coroutine_fn bdrv_flush_co_entry(void *opaque)
+ {
+-    CoroutineIOCompletion co = {
+-        .coroutine = qemu_coroutine_self(),
++    RwCo *rwco = opaque;
++
++    rwco->ret = bdrv_co_flush(rwco->bs);
++}
++
++int coroutine_fn bdrv_co_flush(BlockDriverState *bs)
++{
++    if (bs->open_flags & BDRV_O_NO_FLUSH) {
++        return 0;
++    } else if (!bs->drv) {
++        return 0;
++    } else if (bs->drv->bdrv_co_flush) {
++        return bs->drv->bdrv_co_flush(bs);
++    } else if (bs->drv->bdrv_aio_flush) {
++        BlockDriverAIOCB *acb;
++        CoroutineIOCompletion co = {
++            .coroutine = qemu_coroutine_self(),
++        };
++
++        acb = bs->drv->bdrv_aio_flush(bs, bdrv_co_io_em_complete, &co);
++        if (acb == NULL) {
++            return -EIO;
++        } else {
++            qemu_coroutine_yield();
++            return co.ret;
++        }
++    } else if (bs->drv->bdrv_flush) {
++        return bs->drv->bdrv_flush(bs);
++    } else {
++        /*
++         * Some block drivers always operate in either writethrough or unsafe
++         * mode and don't support bdrv_flush therefore. Usually qemu doesn't
++         * know how the server works (because the behaviour is hardcoded or
++         * depends on server-side configuration), so we can't ensure that
++         * everything is safe on disk. Returning an error doesn't work because
++         * that would break guests even if the server operates in writethrough
++         * mode.
++         *
++         * Let's hope the user knows what he's doing.
++         */
++        return 0;
++    }
++}
++
++int bdrv_flush(BlockDriverState *bs)
++{
++    Coroutine *co;
++    RwCo rwco = {
++        .bs = bs,
++        .ret = NOT_DONE,
+     };
+-    BlockDriverAIOCB *acb;
+ 
+-    acb = bdrv_aio_flush(bs, bdrv_co_io_em_complete, &co);
+-    if (!acb) {
+-        return -EIO;
++    if (qemu_in_coroutine()) {
++        /* Fast-path if already in coroutine context */
++        bdrv_flush_co_entry(&rwco);
++    } else {
++        co = qemu_coroutine_create(bdrv_flush_co_entry);
++        qemu_coroutine_enter(co, &rwco);
++        while (rwco.ret == NOT_DONE) {
++            qemu_aio_wait();
++        }
+     }
+-    qemu_coroutine_yield();
+-    return co.ret;
++
++    return rwco.ret;
+ }
+ 
+ /**************************************************************/
+diff --git a/block.h b/block.h
+index 183aef6..7603330 100644
+--- a/block.h
++++ b/block.h
+@@ -198,6 +198,7 @@ BlockDriverAIOCB *bdrv_aio_ioctl(BlockDriverState *bs,
+ 
+ /* Ensure contents are flushed to disk.  */
+ int bdrv_flush(BlockDriverState *bs);
++int coroutine_fn bdrv_co_flush(BlockDriverState *bs);
+ void bdrv_flush_all(void);
+ void bdrv_close_all(void);
+ 
+diff --git a/block_int.h b/block_int.h
+index fa2875c..25c1f9f 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -84,6 +84,7 @@ struct BlockDriver {
+         int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
+     int coroutine_fn (*bdrv_co_writev)(BlockDriverState *bs,
+         int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
++    int coroutine_fn (*bdrv_co_flush)(BlockDriverState *bs);
+ 
+     int (*bdrv_aio_multiwrite)(BlockDriverState *bs, BlockRequest *reqs,
+         int num_reqs);
+-- 
+1.7.7.5
+

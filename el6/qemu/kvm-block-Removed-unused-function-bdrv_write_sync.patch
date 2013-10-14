@@ -1,0 +1,72 @@
+From f443e0ec24a89f820cef377a29d3bf5cad1c4e30 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:48 +0100
+Subject: [PATCH 23/99] block: Removed unused function bdrv_write_sync
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-24-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37212
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 23/96] block: Removed unused function bdrv_write_sync
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Frediano Ziglio <freddy77@gmail.com>
+
+Bugzilla: 783950
+
+Signed-off-by: Frediano Ziglio <freddy77@gmail.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 5bf3f8e4f71e46f80b76dc8a03cc0c37cad5cde0)
+---
+ block.c |   13 -------------
+ block.h |    2 --
+ 2 files changed, 0 insertions(+), 15 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   13 -------------
+ block.h |    2 --
+ 2 files changed, 0 insertions(+), 15 deletions(-)
+
+diff --git a/block.c b/block.c
+index 52aacee..92d3ce3 100644
+--- a/block.c
++++ b/block.c
+@@ -1140,19 +1140,6 @@ int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
+     return 0;
+ }
+ 
+-/*
+- * Writes to the file and ensures that no writes are reordered across this
+- * request (acts as a barrier)
+- *
+- * Returns 0 on success, -errno in error cases.
+- */
+-int bdrv_write_sync(BlockDriverState *bs, int64_t sector_num,
+-    const uint8_t *buf, int nb_sectors)
+-{
+-    return bdrv_pwrite_sync(bs, BDRV_SECTOR_SIZE * sector_num,
+-        buf, BDRV_SECTOR_SIZE * nb_sectors);
+-}
+-
+ /**
+  * Truncate file to 'offset' bytes (needed only for file protocols)
+  */
+diff --git a/block.h b/block.h
+index 0883580..921436c 100644
+--- a/block.h
++++ b/block.h
+@@ -132,8 +132,6 @@ int bdrv_pwrite(BlockDriverState *bs, int64_t offset,
+                 const void *buf, int count);
+ int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
+     const void *buf, int count);
+-int bdrv_write_sync(BlockDriverState *bs, int64_t sector_num,
+-    const uint8_t *buf, int nb_sectors);
+ int bdrv_truncate(BlockDriverState *bs, int64_t offset);
+ int64_t bdrv_getlength(BlockDriverState *bs);
+ void bdrv_get_geometry(BlockDriverState *bs, uint64_t *nb_sectors_ptr);
+-- 
+1.7.7.5
+

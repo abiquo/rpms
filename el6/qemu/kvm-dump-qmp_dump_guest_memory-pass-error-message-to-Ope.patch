@@ -1,0 +1,44 @@
+From 2229ff59d8f7fa75d9fd6780af24a8786e88c1ce Mon Sep 17 00:00:00 2001
+Message-Id: <2229ff59d8f7fa75d9fd6780af24a8786e88c1ce.1350045285.git.minovotn@redhat.com>
+In-Reply-To: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+References: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Thu, 11 Oct 2012 18:24:21 +0200
+Subject: [PATCH 09/12] dump: qmp_dump_guest_memory(): pass error message to
+ OpenFileFailed error
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349979864-509-4-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42994
+O-Subject: [RHEL6.4 qemu-kvm PATCH 3/6] dump: qmp_dump_guest_memory(): pass error message to OpenFileFailed error
+Bugzilla: 806775
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ dump.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ dump.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dump.c b/dump.c
+index 3dc5311..7362221 100644
+--- a/dump.c
++++ b/dump.c
+@@ -840,7 +840,7 @@ void qmp_dump_guest_memory(bool paging, const char *file, bool has_begin,
+     if  (strstart(file, "file:", &p)) {
+         fd = qemu_open(p, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, S_IRUSR);
+         if (fd < 0) {
+-            error_set(errp, QERR_OPEN_FILE_FAILED, p, "");
++            error_set(errp, QERR_OPEN_FILE_FAILED, p, strerror(errno));
+             return;
+         }
+     }
+-- 
+1.7.11.7
+

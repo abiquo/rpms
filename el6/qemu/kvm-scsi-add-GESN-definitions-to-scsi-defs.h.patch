@@ -1,0 +1,72 @@
+From 9fbf4af00b10bd29e63e5d5686ca0ab447b3edaf Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:58 +0100
+Subject: [PATCH 042/109] scsi: add GESN definitions to scsi-defs.h
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-42-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37522
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 041/102] scsi: add GESN definitions to scsi-defs.h
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+As a complement to the previous patch, add definitions for GET EVENT
+STATUS NOTIFICATION to scsi-defs.h.
+
+The NCR_* constants are just bit values corresponding to the ENC_*
+values, with no offsets even, so keep just one copy.
+
+Unlike upstream, do not touch ATAPI code though.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from f0f992e6509354e0e9d3bd46681bacb1ff53f62b)
+
+Conflicts:
+	hw/ide/atapi.c (but that part wasn't merged anyway)
+---
+ hw/scsi-defs.h |   21 +++++++++++++++++++++
+ 1 files changed, 21 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-defs.h |   21 +++++++++++++++++++++
+ 1 files changed, 21 insertions(+), 0 deletions(-)
+
+diff --git a/hw/scsi-defs.h b/hw/scsi-defs.h
+index 6bb4df7..5e6c9b7 100644
+--- a/hw/scsi-defs.h
++++ b/hw/scsi-defs.h
+@@ -203,6 +203,27 @@
+  * of MODE_PAGE_SENSE_POWER */
+ #define MODE_PAGE_CDROM                       0x0d
+ 
++/* Event notification classes for GET EVENT STATUS NOTIFICATION */
++#define GESN_NO_EVENTS                0
++#define GESN_OPERATIONAL_CHANGE       1
++#define GESN_POWER_MANAGEMENT         2
++#define GESN_EXTERNAL_REQUEST         3
++#define GESN_MEDIA                    4
++#define GESN_MULTIPLE_HOSTS           5
++#define GESN_DEVICE_BUSY              6
++
++/* Event codes for MEDIA event status notification */
++#define MEC_NO_CHANGE                 0
++#define MEC_EJECT_REQUESTED           1
++#define MEC_NEW_MEDIA                 2
++#define MEC_MEDIA_REMOVAL             3 /* only for media changers */
++#define MEC_MEDIA_CHANGED             4 /* only for media changers */
++#define MEC_BG_FORMAT_COMPLETED       5 /* MRW or DVD+RW b/g format completed */
++#define MEC_BG_FORMAT_RESTARTED       6 /* MRW or DVD+RW b/g format restarted */
++
++#define MS_TRAY_OPEN                  1
++#define MS_MEDIA_PRESENT              2
++
+ /*
+  * Based on values from <linux/cdrom.h> but extending CD_MINS
+  * to the maximum common size allowed by the Orange's Book ATIP
+-- 
+1.7.7.6
+

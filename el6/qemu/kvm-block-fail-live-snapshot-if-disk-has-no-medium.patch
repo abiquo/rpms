@@ -1,0 +1,59 @@
+From 8afbd6f7b565a5e82bae75ea70f2f3036af4711f Mon Sep 17 00:00:00 2001
+Message-Id: <8afbd6f7b565a5e82bae75ea70f2f3036af4711f.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:13 +0200
+Subject: [PATCH 05/18] block: fail live snapshot if disk has no medium
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-4-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39215
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 03/16] block: fail live snapshot if disk has no medium
+Bugzilla: 806432
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 806432
+
+Upstream status: submitted for inclusion in 1.1, reviewed by Kevin
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ blockdev.c |    9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ blockdev.c |    9 ++++++---
+ 1 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 0d6476e..56acb63 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -882,14 +882,17 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+             goto delete_and_fail;
+         }
+ 
++        if (!bdrv_is_inserted(states->old_bs)) {
++            error_set(errp, QERR_DEVICE_HAS_NO_MEDIUM, device);
++            goto delete_and_fail;
++        }
++
+         if (bdrv_in_use(states->old_bs)) {
+             error_set(errp, QERR_DEVICE_IN_USE, device);
+             goto delete_and_fail;
+         }
+ 
+-        if (!bdrv_is_read_only(states->old_bs) &&
+-             bdrv_is_inserted(states->old_bs)) {
+-
++        if (!bdrv_is_read_only(states->old_bs)) {
+             if (bdrv_flush(states->old_bs)) {
+                 error_set(errp, QERR_IO_ERROR);
+                 goto delete_and_fail;
+-- 
+1.7.7.6
+

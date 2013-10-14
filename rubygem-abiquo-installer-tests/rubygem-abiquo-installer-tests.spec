@@ -1,5 +1,5 @@
 %define rbname abiquo-installer-tests
-%define version 20121211.4
+%define version 20130523.4
 %define release 1
 
 Summary: Abiquo Installer Unit Tests
@@ -55,6 +55,9 @@ rm %{buildroot}/%{gemdir}/cache/%{rbname}-%{version}.gem
 %{gemdir}/specifications/abiquo-installer-tests-%{version}.gemspec
 
 %changelog
+* Thu May 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 20130523.4-1
+- Upstream bump (2.6)
+
 * Tue Dec 11 2012 Abel Boldú <abel.boldu@abiquo.com> - 20121211.4-1
 - upstream bump
 

@@ -1,0 +1,45 @@
+From d4b1cde3c37d5c7c7c9aab1f96c0e734c77b79ad Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:22 +0100
+Subject: [PATCH 28/52] ide: Fix off-by-one error in array index check
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-29-git-send-email-armbru@redhat.com>
+Patchwork-id: 36606
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 28/52] ide: Fix off-by-one error in array index check
+Bugzilla: 758194
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Kevin Wolf <kwolf@redhat.com>
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+Reviewed-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit fb60105d4942a26f571b1be92a8b9e7528d0c4d8)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ hw/ide/core.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/ide/core.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/hw/ide/core.c b/hw/ide/core.c
+index 6989828..e6bbdf8 100644
+--- a/hw/ide/core.c
++++ b/hw/ide/core.c
+@@ -2006,7 +2006,7 @@ static int ide_drive_pio_post_load(void *opaque, int version_id)
+ {
+     IDEState *s = opaque;
+ 
+-    if (s->end_transfer_fn_idx > ARRAY_SIZE(transfer_end_table)) {
++    if (s->end_transfer_fn_idx >= ARRAY_SIZE(transfer_end_table)) {
+         return -EINVAL;
+     }
+     s->end_transfer_func = transfer_end_table[s->end_transfer_fn_idx];
+-- 
+1.7.7.5
+

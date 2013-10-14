@@ -1,0 +1,53 @@
+From 4574a87d473ec910d9d2659fd21bcc1b2a5e1196 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:35 +0100
+Subject: [PATCH 70/99] qcow2: remove memory leak
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-71-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37283
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 70/96] qcow2: remove memory leak
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Frediano Ziglio <freddy77@gmail.com>
+
+Bugzilla: 783950
+
+Signed-off-by: Frediano Ziglio <freddy77@gmail.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit ab0997e0afdcb272fd04784a280b2df46b0c759f)
+---
+ block/qcow2.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/block/qcow2.c b/block/qcow2.c
+index 527c482..97fed99 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -494,6 +494,7 @@ fail:
+     qemu_co_mutex_unlock(&s->lock);
+ 
+     qemu_iovec_destroy(&hd_qiov);
++    g_free(cluster_data);
+ 
+     return ret;
+ }
+@@ -606,6 +607,7 @@ fail:
+     qemu_co_mutex_unlock(&s->lock);
+ 
+     qemu_iovec_destroy(&hd_qiov);
++    g_free(cluster_data);
+ 
+     return ret;
+ }
+-- 
+1.7.7.5
+

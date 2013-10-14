@@ -1,0 +1,73 @@
+From bab30f2b5abe4c6794f4a451681099685e8ff6b0 Mon Sep 17 00:00:00 2001
+Message-Id: <bab30f2b5abe4c6794f4a451681099685e8ff6b0.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:18 +0200
+Subject: [PATCH 05/35] block: push bdrv_change_backing_file error checking up
+ from drivers
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <10b858c06748631ac3656a73d91f90d99bc7ea84.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43264
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 05/35] block: push bdrv_change_backing_file error checking up from drivers
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+This check applies to all drivers, but QED lacks it.
+
+Reviewed-by: Kevin Wolf <kwolf@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 5f3777945d22248d805fb7c134e206c2d943b77b)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c       | 5 +++++
+ block/qcow2.c | 5 -----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c       | 5 +++++
+ block/qcow2.c | 5 -----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/block.c b/block.c
+index 866109d..b3fc068 100644
+--- a/block.c
++++ b/block.c
+@@ -1310,6 +1310,11 @@ int bdrv_change_backing_file(BlockDriverState *bs,
+ {
+     BlockDriver *drv = bs->drv;
+ 
++    /* Backing file format doesn't make sense without a backing file */
++    if (backing_fmt && !backing_file) {
++        return -EINVAL;
++    }
++
+     if (drv->bdrv_change_backing_file != NULL) {
+         return drv->bdrv_change_backing_file(bs, backing_file, backing_fmt);
+     } else {
+diff --git a/block/qcow2.c b/block/qcow2.c
+index 30c4966..4a16f7e 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -795,11 +795,6 @@ fail:
+ static int qcow2_change_backing_file(BlockDriverState *bs,
+     const char *backing_file, const char *backing_fmt)
+ {
+-    /* Backing file format doesn't make sense without a backing file */
+-    if (backing_fmt && !backing_file) {
+-        return -EINVAL;
+-    }
+-
+     pstrcpy(bs->backing_file, sizeof(bs->backing_file), backing_file ?: "");
+     pstrcpy(bs->backing_format, sizeof(bs->backing_format), backing_fmt ?: "");
+ 
+-- 
+1.7.11.7
+

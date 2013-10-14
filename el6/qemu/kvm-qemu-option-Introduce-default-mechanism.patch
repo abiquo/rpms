@@ -1,0 +1,188 @@
+From 9f0a8b3b12fef19ef6df5126c79db64a3f78102c Mon Sep 17 00:00:00 2001
+Message-Id: <9f0a8b3b12fef19ef6df5126c79db64a3f78102c.1350567686.git.minovotn@redhat.com>
+In-Reply-To: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+References: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+From: Jason Baron <jbaron@redhat.com>
+Date: Fri, 12 Oct 2012 19:44:31 +0200
+Subject: [PATCH 4/7] qemu-option: Introduce default mechanism
+
+RH-Author: Jason Baron <jbaron@redhat.com>
+Message-id: <ee66279e03abd2f8d64c8b0328ec8582a954be79.1350069767.git.jbaron@redhat.com>
+Patchwork-id: 43071
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v4 4/7] qemu-option: Introduce default mechanism
+Bugzilla: 859447
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Jan Kiszka <jan.kiszka@siemens.com>
+
+This adds qemu_opts_set_defaults, an interface provide default values
+for a QemuOpts set. Default options are parsed from a string and then
+prepended to the list of existing options, or they serve as the sole
+QemuOpts set.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 4f6dd9af9cf0a0138ff7733f45568c4e20b3bad1)
+
+Conflicts:
+    qemu-option.c
+
+Signed-off-by: Jason Baron <jbaron@redhat.com>
+---
+ qemu-option.c |   58 +++++++++++++++++++++++++++++++++++++++++++++++++-------
+ qemu-option.h |    2 +
+ 2 files changed, 52 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-option.c | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++--------
+ qemu-option.h |  2 ++
+ 2 files changed, 52 insertions(+), 8 deletions(-)
+
+diff --git a/qemu-option.c b/qemu-option.c
+index 89c57e2..b37815f 100644
+--- a/qemu-option.c
++++ b/qemu-option.c
+@@ -606,7 +606,8 @@ static void qemu_opt_del(QemuOpt *opt)
+     qemu_free(opt);
+ }
+ 
+-int qemu_opt_set(QemuOpts *opts, const char *name, const char *value)
++static int opt_set(QemuOpts *opts, const char *name, const char *value,
++                   bool prepend)
+ {
+     QemuOpt *opt;
+     QemuOptDesc *desc = opts->list->desc;
+@@ -629,7 +630,11 @@ int qemu_opt_set(QemuOpts *opts, const char *name, const char *value)
+     opt = qemu_mallocz(sizeof(*opt));
+     opt->name = qemu_strdup(name);
+     opt->opts = opts;
+-    QTAILQ_INSERT_TAIL(&opts->head, opt, next);
++    if (prepend) {
++        QTAILQ_INSERT_HEAD(&opts->head, opt, next);
++    } else {
++        QTAILQ_INSERT_TAIL(&opts->head, opt, next);
++    }
+     if (desc[i].name != NULL) {
+         opt->desc = desc+i;
+     }
+@@ -643,6 +648,11 @@ int qemu_opt_set(QemuOpts *opts, const char *name, const char *value)
+     return 0;
+ }
+ 
++int qemu_opt_set(QemuOpts *opts, const char *name, const char *value)
++{
++    return opt_set(opts, name, value, false);
++}
++
+ int qemu_opt_foreach(QemuOpts *opts, qemu_opt_loopfunc func, void *opaque,
+                      int abort_on_failure)
+ {
+@@ -663,6 +673,9 @@ QemuOpts *qemu_opts_find(QemuOptsList *list, const char *id)
+ 
+     QTAILQ_FOREACH(opts, &list->head, next) {
+         if (!opts->id) {
++            if (!id) {
++                return opts;
++            }
+             continue;
+         }
+         if (strcmp(opts->id, id) != 0) {
+@@ -758,7 +771,8 @@ int qemu_opts_print(QemuOpts *opts, void *dummy)
+     return 0;
+ }
+ 
+-int qemu_opts_do_parse(QemuOpts *opts, const char *params, const char *firstname)
++static int opts_do_parse(QemuOpts *opts, const char *params,
++                         const char *firstname, bool prepend)
+ {
+     char option[128], value[1024];
+     const char *p,*pe,*pc;
+@@ -793,7 +807,7 @@ int qemu_opts_do_parse(QemuOpts *opts, const char *params, const char *firstname
+         }
+         if (strcmp(option, "id") != 0) {
+             /* store and parse */
+-            if (qemu_opt_set(opts, option, value) == -1) {
++            if (opt_set(opts, option, value, prepend) == -1) {
+                 return -1;
+             }
+         }
+@@ -804,8 +818,13 @@ int qemu_opts_do_parse(QemuOpts *opts, const char *params, const char *firstname
+     return 0;
+ }
+ 
+-QemuOpts *qemu_opts_parse(QemuOptsList *list, const char *params,
+-                          int permit_abbrev)
++int qemu_opts_do_parse(QemuOpts *opts, const char *params, const char *firstname)
++{
++    return opts_do_parse(opts, params, firstname, false);
++}
++
++static QemuOpts *opts_parse(QemuOptsList *list, const char *params,
++                            int permit_abbrev, bool defaults)
+ {
+     const char *firstname;
+     char value[1024], *id = NULL;
+@@ -822,11 +841,19 @@ QemuOpts *qemu_opts_parse(QemuOptsList *list, const char *params,
+         get_opt_value(value, sizeof(value), p+4);
+         id = value;
+     }
+-    opts = qemu_opts_create(list, id, 1);
++    if (defaults) {
++        if (!id && !QTAILQ_EMPTY(&list->head)) {
++            opts = qemu_opts_find(list, NULL);
++        } else {
++            opts = qemu_opts_create(list, id, 0);
++        }
++    } else {
++        opts = qemu_opts_create(list, id, 1);
++    }
+     if (opts == NULL)
+         return NULL;
+ 
+-    if (qemu_opts_do_parse(opts, params, firstname) != 0) {
++    if (opts_do_parse(opts, params, firstname, defaults) != 0) {
+         qemu_opts_del(opts);
+         return NULL;
+     }
+@@ -834,6 +861,21 @@ QemuOpts *qemu_opts_parse(QemuOptsList *list, const char *params,
+     return opts;
+ }
+ 
++QemuOpts *qemu_opts_parse(QemuOptsList *list, const char *params,
++                          int permit_abbrev)
++{
++    return opts_parse(list, params, permit_abbrev, false);
++}
++
++void qemu_opts_set_defaults(QemuOptsList *list, const char *params,
++                            int permit_abbrev)
++{
++    QemuOpts *opts;
++
++    opts = opts_parse(list, params, permit_abbrev, true);
++    assert(opts);
++}
++
+ static void qemu_opts_from_qdict_1(const char *key, QObject *obj, void *opaque)
+ {
+     char buf[32];
+diff --git a/qemu-option.h b/qemu-option.h
+index e98144e..a3fe5d5 100644
+--- a/qemu-option.h
++++ b/qemu-option.h
+@@ -124,6 +124,8 @@ void qemu_opts_del(QemuOpts *opts);
+ int qemu_opts_validate(QemuOpts *opts, QemuOptDesc *desc);
+ int qemu_opts_do_parse(QemuOpts *opts, const char *params, const char *firstname);
+ QemuOpts *qemu_opts_parse(QemuOptsList *list, const char *params, int permit_abbrev);
++void qemu_opts_set_defaults(QemuOptsList *list, const char *params,
++                            int permit_abbrev);
+ QemuOpts *qemu_opts_from_qdict(QemuOptsList *list, const QDict *qdict);
+ QDict *qemu_opts_to_qdict(QemuOpts *opts, QDict *qdict);
+ 
+-- 
+1.7.11.7
+

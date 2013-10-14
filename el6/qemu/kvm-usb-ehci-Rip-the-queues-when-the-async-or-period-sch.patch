@@ -1,0 +1,63 @@
+From 669a56369497c3da27ecf53a1e1c5081e9e1e0c8 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Sun, 4 Mar 2012 11:57:49 +0100
+Subject: [PATCH 27/35] usb-ehci: Rip the queues when the async or period
+ schedule is halted
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1330862278-22314-13-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 37925
+O-Subject: [PATCH 12/21] usb-ehci: Rip the queues when the async or period schedule is halted
+Bugzilla: 758104
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+
+Upstream commit: e850c2b45306b59d179c4df93d91edc1c3c45106
+Upstream: http://patchwork.ozlabs.org/patch/144334/
+(waiting for next usb pull request)
+---
+ hw/usb-ehci.c |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-ehci.c |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index 02b134a..11e9131 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -1044,7 +1044,8 @@ static void ehci_mem_writel(void *ptr, target_phys_addr_t addr, uint32_t val)
+ 
+         if (!(val & USBCMD_RUNSTOP) && (s->usbcmd & USBCMD_RUNSTOP)) {
+             qemu_del_timer(s->frame_timer);
+-            // TODO - should finish out some stuff before setting halt
++            ehci_queues_rip_all(s, 0);
++            ehci_queues_rip_all(s, 1);
+             ehci_set_usbsts(s, USBSTS_HALT);
+         }
+ 
+@@ -2071,6 +2072,7 @@ static void ehci_advance_async_state(EHCIState *ehci)
+ 
+     case EST_ACTIVE:
+         if ( !(ehci->usbcmd & USBCMD_ASE)) {
++            ehci_queues_rip_all(ehci, async);
+             ehci_clear_usbsts(ehci, USBSTS_ASS);
+             ehci_set_state(ehci, async, EST_INACTIVE);
+             break;
+@@ -2131,6 +2133,7 @@ static void ehci_advance_periodic_state(EHCIState *ehci)
+ 
+     case EST_ACTIVE:
+         if ( !(ehci->frindex & 7) && !(ehci->usbcmd & USBCMD_PSE)) {
++            ehci_queues_rip_all(ehci, async);
+             ehci_clear_usbsts(ehci, USBSTS_PSS);
+             ehci_set_state(ehci, async, EST_INACTIVE);
+             break;
+-- 
+1.7.7.6
+

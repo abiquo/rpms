@@ -1,0 +1,96 @@
+From af3834711bf1ca03a9e9259feb4688a38528416a Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Sun, 4 Mar 2012 11:57:54 +0100
+Subject: [PATCH 32/35] usb-ehci: Cleanup itd error handling
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1330862278-22314-18-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 37931
+O-Subject: [PATCH 17/21] usb-ehci: Cleanup itd error handling
+Bugzilla: 758104
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+All error statuses except for NAK are handled in a switch case, move the
+handling of NAK into the same switch case.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+
+Upstream commit: 5eafd438c9e3b7b698c4a4ec755f52d8dfb870ae
+Upstream: http://patchwork.ozlabs.org/patch/144351/
+(waiting for next usb pull request)
+---
+ hw/usb-ehci.c |   42 +++++++++++++++++++++---------------------
+ 1 files changed, 21 insertions(+), 21 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-ehci.c |   42 +++++++++++++++++++++---------------------
+ 1 files changed, 21 insertions(+), 21 deletions(-)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index 05e76d0..fa552c7 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -1471,11 +1471,28 @@ static int ehci_process_itd(EHCIState *ehci,
+                 }
+             }
+ 
+-            if (ret == USB_RET_NAK) {
+-                /* no data for us, so do a zero-length transfer */
+-                ret = 0;
++            if (ret < 0) {
++                switch (ret) {
++                default: 
++                    fprintf(stderr, "Unexpected iso usb result: %d\n", ret);
++                    /* Fall through */
++                case USB_RET_NODEV:
++                    /* 3.3.2: XACTERR is only allowed on IN transactions */
++                    if (dir) {
++                        itd->transact[i] |= ITD_XACT_XACTERR;
++                        ehci_record_interrupt(ehci, USBSTS_ERRINT);
++                    }
++                    break;
++                case USB_RET_BABBLE:
++                    itd->transact[i] |= ITD_XACT_BABBLE;
++                    ehci_record_interrupt(ehci, USBSTS_ERRINT);
++                    break;
++                case USB_RET_NAK:
++                    /* no data for us, so do a zero-length transfer */
++                    ret = 0;
++                    break;
++                }
+             }
+-
+             if (ret >= 0) {
+                 if (!dir) {
+                     /* OUT */
+@@ -1498,23 +1515,6 @@ static int ehci_process_itd(EHCIState *ehci,
+                     }
+                     set_field(&itd->transact[i], ret, ITD_XACT_LENGTH);
+                 }
+-            } else {
+-                switch (ret) {
+-                default:
+-                    fprintf(stderr, "Unexpected iso usb result: %d\n", ret);
+-                    /* Fall through */
+-                case USB_RET_NODEV:
+-                    /* 3.3.2: XACTERR is only allowed on IN transactions */
+-                    if (dir) {
+-                        itd->transact[i] |= ITD_XACT_XACTERR;
+-                        ehci_record_interrupt(ehci, USBSTS_ERRINT);
+-                    }
+-                    break;
+-                case USB_RET_BABBLE:
+-                    itd->transact[i] |= ITD_XACT_BABBLE;
+-                    ehci_record_interrupt(ehci, USBSTS_ERRINT);
+-                    break;
+-                }
+             }
+             if (itd->transact[i] & ITD_XACT_IOC) {
+                 ehci_record_interrupt(ehci, USBSTS_INT);
+-- 
+1.7.7.6
+

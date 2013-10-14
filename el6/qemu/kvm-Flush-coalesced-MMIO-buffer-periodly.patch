@@ -1,0 +1,275 @@
+From a7e23878812385f1addafc6fde233a0ad05f0d69 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 28 Feb 2012 12:53:14 +0100
+Subject: [PATCH 1/7] kvm: Flush coalesced MMIO buffer periodly
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1330433598-21534-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37668
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 1/5] kvm: Flush coalesced MMIO buffer periodly
+Bugzilla: 796575
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Sheng Yang <sheng@linux.intel.com>
+
+The default action of coalesced MMIO is, cache the writing in buffer, until:
+1. The buffer is full.
+2. Or the exit to QEmu due to other reasons.
+
+But this would result in a very late writing in some condition.
+1. The each time write to MMIO content is small.
+2. The writing interval is big.
+3. No need for input or accessing other devices frequently.
+
+This issue was observed in a experimental embbed system. The test image
+simply print "test" every 1 seconds. The output in QEmu meets expectation,
+but the output in KVM is delayed for seconds.
+
+Per Avi's suggestion, I hooked flushing coalesced MMIO buffer in VGA update
+handler. By this way, We don't need vcpu explicit exit to QEmu to
+handle this issue.
+
+Signed-off-by: Sheng Yang <sheng@linux.intel.com>
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+(cherry picked from commit 62a2744ca09a0b44b8406ea0c430c4c67a2c3231)
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ cpu-all.h  |    2 ++
+ exec.c     |    6 ++++++
+ kvm-all.c  |   23 +++++++++++++++--------
+ kvm.h      |    2 ++
+ qemu-kvm.c |   37 ++++++++++++++++++++++++-------------
+ qemu-kvm.h |    3 +++
+ vl.c       |    2 ++
+ 7 files changed, 54 insertions(+), 21 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ cpu-all.h  |    2 ++
+ exec.c     |    6 ++++++
+ kvm-all.c  |   23 +++++++++++++++--------
+ kvm.h      |    2 ++
+ qemu-kvm.c |   37 ++++++++++++++++++++++++-------------
+ qemu-kvm.h |    3 +++
+ vl.c       |    2 ++
+ 7 files changed, 54 insertions(+), 21 deletions(-)
+
+diff --git a/cpu-all.h b/cpu-all.h
+index 334de68..9c63a4a 100644
+--- a/cpu-all.h
++++ b/cpu-all.h
+@@ -941,6 +941,8 @@ void qemu_register_coalesced_mmio(target_phys_addr_t addr, ram_addr_t size);
+ 
+ void qemu_unregister_coalesced_mmio(target_phys_addr_t addr, ram_addr_t size);
+ 
++void qemu_flush_coalesced_mmio_buffer(void);
++
+ /*******************************************/
+ /* host CPU ticks (if available) */
+ 
+diff --git a/exec.c b/exec.c
+index a16f8ca..b401cdd 100644
+--- a/exec.c
++++ b/exec.c
+@@ -2837,6 +2837,12 @@ void qemu_ram_free(ram_addr_t addr)
+ 
+ }
+ 
++void qemu_flush_coalesced_mmio_buffer(void)
++{
++    if (kvm_enabled())
++        kvm_flush_coalesced_mmio_buffer();
++}
++
+ #ifndef _WIN32
+ void qemu_ram_remap(ram_addr_t addr, ram_addr_t length)
+ {
+diff --git a/kvm-all.c b/kvm-all.c
+index edcf921..e36c15f 100644
+--- a/kvm-all.c
++++ b/kvm-all.c
+@@ -62,6 +62,9 @@ struct KVMState
+     int fd;
+     int vmfd;
+     int coalesced_mmio;
++#ifdef KVM_CAP_COALESCED_MMIO
++    struct kvm_coalesced_mmio_ring *coalesced_mmio_ring;
++#endif
+     int broken_set_mem_region;
+     int migration_log;
+     int vcpu_events;
+@@ -206,6 +209,12 @@ int kvm_init_vcpu(CPUState *env)
+         goto err;
+     }
+ 
++#ifdef KVM_CAP_COALESCED_MMIO
++    if (s->coalesced_mmio && !s->coalesced_mmio_ring)
++        s->coalesced_mmio_ring = (void *) env->kvm_run +
++		s->coalesced_mmio * PAGE_SIZE;
++#endif
++
+     ret = kvm_arch_init_vcpu(env);
+     if (ret == 0) {
+         qemu_register_reset(kvm_reset_vcpu, env);
+@@ -507,10 +516,10 @@ int kvm_init(int smp_cpus)
+         goto err;
+     }
+ 
++    s->coalesced_mmio = 0;
+ #ifdef KVM_CAP_COALESCED_MMIO
+     s->coalesced_mmio = kvm_check_extension(s, KVM_CAP_COALESCED_MMIO);
+-#else
+-    s->coalesced_mmio = 0;
++    s->coalesced_mmio_ring = NULL;
+ #endif
+ 
+     s->broken_set_mem_region = 1;
+@@ -589,14 +598,12 @@ static int kvm_handle_io(uint16_t port, void *data, int direction, int size,
+ }
+ 
+ #ifdef KVM_UPSTREAM
+-static void kvm_run_coalesced_mmio(CPUState *env, struct kvm_run *run)
++void kvm_flush_coalesced_mmio_buffer(void)
+ {
+ #ifdef KVM_CAP_COALESCED_MMIO
+     KVMState *s = kvm_state;
+-    if (s->coalesced_mmio) {
+-        struct kvm_coalesced_mmio_ring *ring;
+-
+-        ring = (void *)run + (s->coalesced_mmio * TARGET_PAGE_SIZE);
++    if (s->coalesced_mmio_ring) {
++        struct kvm_coalesced_mmio_ring *ring = s->coalesced_mmio_ring;
+         while (ring->first != ring->last) {
+             struct kvm_coalesced_mmio *ent;
+ 
+@@ -654,7 +661,7 @@ int kvm_cpu_exec(CPUState *env)
+             abort();
+         }
+ 
+-        kvm_run_coalesced_mmio(env, run);
++        kvm_flush_coalesced_mmio_buffer();
+ 
+         ret = 0; /* exit loop */
+         switch (run->exit_reason) {
+diff --git a/kvm.h b/kvm.h
+index 78d6595..884d55a 100644
+--- a/kvm.h
++++ b/kvm.h
+@@ -60,6 +60,8 @@ int kvm_has_vcpu_events(void);
+ int kvm_put_vcpu_events(CPUState *env);
+ int kvm_get_vcpu_events(CPUState *env);
+ 
++void kvm_flush_coalesced_mmio_buffer(void);
++
+ #ifdef KVM_UPSTREAM
+ 
+ void kvm_setup_guest_memory(void *start, size_t size);
+diff --git a/qemu-kvm.c b/qemu-kvm.c
+index a7ab2c0..8d0105d 100644
+--- a/qemu-kvm.c
++++ b/qemu-kvm.c
+@@ -965,6 +965,22 @@ static int kvm_handle_internal_error(kvm_context_t kvm,
+     return 1;
+ }
+ 
++void kvm_flush_coalesced_mmio_buffer(void)
++{
++#if defined(KVM_CAP_COALESCED_MMIO)
++    if (kvm_state->coalesced_mmio) {
++        struct kvm_coalesced_mmio_ring *ring = kvm_state->coalesced_mmio_ring;
++        while (ring->first != ring->last) {
++            cpu_physical_memory_rw(ring->coalesced_mmio[ring->first].phys_addr,
++                           &ring->coalesced_mmio[ring->first].data[0],
++                           ring->coalesced_mmio[ring->first].len, 1);
++            smp_wmb();
++            ring->first = (ring->first + 1) % KVM_COALESCED_MMIO_MAX;
++        }
++    }
++#endif
++}
++
+ int kvm_run(CPUState *env)
+ {
+     int r;
+@@ -997,19 +1013,7 @@ int kvm_run(CPUState *env)
+ 
+     post_kvm_run(kvm, env);
+ 
+-#if defined(KVM_CAP_COALESCED_MMIO)
+-    if (kvm_state->coalesced_mmio) {
+-        struct kvm_coalesced_mmio_ring *ring =
+-            (void *) run + kvm_state->coalesced_mmio * PAGE_SIZE;
+-        while (ring->first != ring->last) {
+-            cpu_physical_memory_rw(ring->coalesced_mmio[ring->first].phys_addr,
+-                           &ring->coalesced_mmio[ring->first].data[0],
+-                           ring->coalesced_mmio[ring->first].len, 1);
+-            smp_wmb();
+-            ring->first = (ring->first + 1) % KVM_COALESCED_MMIO_MAX;
+-        }
+-    }
+-#endif
++    kvm_flush_coalesced_mmio_buffer();
+ 
+ #if !defined(__s390__)
+     if (r == -1) {
+@@ -1137,6 +1141,7 @@ int kvm_init_coalesced_mmio(kvm_context_t kvm)
+         return 0;
+     }
+ #endif
++    kvm_state->coalesced_mmio_ring = NULL;
+     return r;
+ }
+ 
+@@ -2023,6 +2028,12 @@ static void *ap_main_loop(void *_env)
+     pthread_mutex_lock(&qemu_mutex);
+     cpu_single_env = env;
+ 
++#ifdef KVM_CAP_COALESCED_MMIO
++    if (kvm_state->coalesced_mmio && !kvm_state->coalesced_mmio_ring)
++        kvm_state->coalesced_mmio_ring = (void *) env->kvm_run +
++           kvm_state->coalesced_mmio * PAGE_SIZE;
++#endif
++
+     kvm_arch_init_vcpu(env);
+ 
+     kvm_arch_load_regs(env);
+diff --git a/qemu-kvm.h b/qemu-kvm.h
+index 1717e4a..3be5fd0 100644
+--- a/qemu-kvm.h
++++ b/qemu-kvm.h
+@@ -1173,6 +1173,9 @@ typedef struct KVMState {
+     int fd;
+     int vmfd;
+     int coalesced_mmio;
++#ifdef KVM_CAP_COALESCED_MMIO
++    struct kvm_coalesced_mmio_ring *coalesced_mmio_ring;
++#endif
+     int broken_set_mem_region;
+     int migration_log;
+     int vcpu_events;
+diff --git a/vl.c b/vl.c
+index 9ff9910..9fc8912 100644
+--- a/vl.c
++++ b/vl.c
+@@ -3205,6 +3205,7 @@ static void gui_update(void *opaque)
+     DisplayState *ds = opaque;
+     DisplayChangeListener *dcl = ds->listeners;
+ 
++    qemu_flush_coalesced_mmio_buffer();
+     dpy_refresh(ds);
+ 
+     while (dcl != NULL) {
+@@ -3220,6 +3221,7 @@ static void nographic_update(void *opaque)
+ {
+     uint64_t interval = GUI_REFRESH_INTERVAL;
+ 
++    qemu_flush_coalesced_mmio_buffer();
+     qemu_mod_timer(nographic_timer, interval + qemu_get_clock(rt_clock));
+ }
+ 
+-- 
+1.7.7.6
+

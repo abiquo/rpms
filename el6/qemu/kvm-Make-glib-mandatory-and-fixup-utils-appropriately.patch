@@ -1,0 +1,131 @@
+From acb56dd794e3186ec8630fcb85a935bc5d2504b8 Mon Sep 17 00:00:00 2001
+From: Anthony Liguori <aliguori@us.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:03 -0500
+Subject: [PATCH 36/98] Make glib mandatory and fixup utils appropriately
+
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 14015304b662e8f8ccce46c5a6927af6a14c510b)
+
+Conflicts:
+
+	Makefile.objs
+	configure
+	libcacard/Makefile
+	qemu-common.h
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.objs      |    2 +-
+ configure          |    4 ++--
+ hw/cirrus_vga.c    |    2 --
+ libcacard/Makefile |    4 +++-
+ qemu-common.h      |   32 +-------------------------------
+ 5 files changed, 7 insertions(+), 37 deletions(-)
+
+diff --git a/Makefile.objs b/Makefile.objs
+index 0dff0c9..c9f4026 100644
+--- a/Makefile.objs
++++ b/Makefile.objs
+@@ -193,4 +193,4 @@ qapi-nested-y += qmp-registry.o qmp-dispatch.o
+ qapi-obj-y = $(addprefix qapi/, $(qapi-nested-y))
+ 
+ all: $(HWLIB)
+-vl.o: QEMU_CFLAGS+=$(GLIB_CFLAGS)
++QEMU_CFLAGS+=$(GLIB_CFLAGS)
+diff --git a/configure b/configure
+index fd5ff61..ff8ff97 100755
+--- a/configure
++++ b/configure
+@@ -1489,8 +1489,8 @@ fi
+ if $pkg_config --modversion gthread-2.0 gio-2.0 > /dev/null 2>&1 ; then
+     glib_cflags=`$pkg_config --cflags gthread-2.0 gio-2.0 2>/dev/null`
+     glib_libs=`$pkg_config --libs gthread-2.0 gio-2.0 2>/dev/null`
+-    libs_softmmu="$glib_libs $libs_softmmu"
+-    libs_tools="$glib_libs $libs_tools"
++    LIBS="$glib_libs $LIBS"
++    LIBS="$glib_libs $LIBS"
+ else
+     echo "glib-2.0 required to compile QEMU"
+     exit 1
+diff --git a/hw/cirrus_vga.c b/hw/cirrus_vga.c
+index 8846087..7b24472 100644
+--- a/hw/cirrus_vga.c
++++ b/hw/cirrus_vga.c
+@@ -175,8 +175,6 @@
+ 
+ #define CIRRUS_PNPMMIO_SIZE         0x1000
+ 
+-#define ABS(a) ((signed)(a) > 0 ? a : -a)
+-
+ #define BLTUNSAFE(s) \
+     ( \
+         ( /* check dst is within bounds */ \
+diff --git a/libcacard/Makefile b/libcacard/Makefile
+index 4292bd3..b26dac7 100644
+--- a/libcacard/Makefile
++++ b/libcacard/Makefile
+@@ -12,8 +12,10 @@ QEMU_OBJS=$(addprefix ../, $(oslib-obj-y) $(trace-obj-y) qemu-malloc.o qemu-thre
+ 
+ QEMU_CFLAGS+=-I../
+ 
++QEMU_CFLAGS+=$(GLIB_CFLAGS)
++
+ vscclient: $(libcacard-y) $(QEMU_OBJS) vscclient.o
+-	$(call quiet-command,$(CC) $(libcacard_libs) -lrt -o $@ $^,"  LINK  $(TARGET_DIR)$@")
++	$(call quiet-command,$(CC) $(libcacard_libs) $(LIBS) -lrt -o $@ $^,"  LINK  $(TARGET_DIR)$@")
+ 
+ all: vscclient
+ 
+diff --git a/qemu-common.h b/qemu-common.h
+index 3047376..42adee8 100644
+--- a/qemu-common.h
++++ b/qemu-common.h
+@@ -28,6 +28,7 @@ typedef struct DeviceState DeviceState;
+ #include <fcntl.h>
+ #include <sys/stat.h>
+ #include <assert.h>
++#include <glib.h>
+ 
+ #ifndef O_LARGEFILE
+ #define O_LARGEFILE 0
+@@ -165,37 +166,6 @@ void qemu_free(void *ptr);
+ char *qemu_strdup(const char *str);
+ char *qemu_strndup(const char *str, size_t size);
+ 
+-/* Emulation of g_malloc and friends */
+-static inline void *g_malloc(unsigned long n_bytes)
+-{
+-    return n_bytes ? qemu_malloc(n_bytes) : NULL;
+-}
+-
+-static inline void *g_malloc0(unsigned long n_bytes)
+-{
+-    return n_bytes ? qemu_mallocz(n_bytes) : NULL;
+-}
+-
+-static inline void g_free(void *mem)
+-{
+-    qemu_free(mem);
+-}
+-
+-static inline void *g_realloc(void *mem, unsigned long n_bytes)
+-{
+-    if (n_bytes == 0) {
+-        g_free(mem);
+-        return NULL;
+-    }
+-
+-    return qemu_realloc(mem, n_bytes);
+-}
+-
+-static inline char *g_strdup(const char *str)
+-{
+-    return qemu_strdup(str);
+-}
+-
+ void qemu_mutex_lock_iothread(void);
+ void qemu_mutex_unlock_iothread(void);
+ 
+-- 
+1.7.7.6
+

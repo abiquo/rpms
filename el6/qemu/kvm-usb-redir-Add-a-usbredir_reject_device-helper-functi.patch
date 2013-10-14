@@ -1,0 +1,74 @@
+From d443b9514f597b35479212f1391df6ff1e214b46 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Fri, 21 Sep 2012 18:57:39 -0300
+Subject: [RHEL6 qemu-kvm PATCH 18/23] usb-redir: Add a usbredir_reject_device
+ helper function
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1348253864-3050-18-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 42195
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 17/22] usb-redir: Add a usbredir_reject_device helper function
+Bugzilla: 805172
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+RH-Acked-by: Arnon Gilboa <agilboa@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream commit: 910c1e6b14e4abb188ff7ef584a629187479f82d
+---
+ usb-redir.c | 21 +++++++++++----------
+ 1 file changed, 11 insertions(+), 10 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ usb-redir.c | 21 +++++++++++----------
+ 1 file changed, 11 insertions(+), 10 deletions(-)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index b266a08..547785b 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -870,16 +870,21 @@ static void usbredir_chardev_open(USBRedirDevice *dev)
+     usbredirparser_do_write(dev->parser);
+ }
+ 
++static void usbredir_reject_device(USBRedirDevice *dev)
++{
++    usbredir_device_disconnect(dev);
++    if (usbredirparser_peer_has_cap(dev->parser, usb_redir_cap_filter)) {
++        usbredirparser_send_filter_reject(dev->parser);
++        usbredirparser_do_write(dev->parser);
++    }
++}
++
+ static void usbredir_do_attach(void *opaque)
+ {
+     USBRedirDevice *dev = opaque;
+ 
+     if (usb_device_attach(&dev->dev) != 0) {
+-        usbredir_device_disconnect(dev);
+-        if (usbredirparser_peer_has_cap(dev->parser, usb_redir_cap_filter)) {
+-            usbredirparser_send_filter_reject(dev->parser);
+-            usbredirparser_do_write(dev->parser);
+-        }
++        usbredir_reject_device(dev);
+     }
+ }
+ 
+@@ -1065,11 +1070,7 @@ static int usbredir_check_filter(USBRedirDevice *dev)
+     return 0;
+ 
+ error:
+-    usbredir_device_disconnect(dev);
+-    if (usbredirparser_peer_has_cap(dev->parser, usb_redir_cap_filter)) {
+-        usbredirparser_send_filter_reject(dev->parser);
+-        usbredirparser_do_write(dev->parser);
+-    }
++    usbredir_reject_device(dev);
+     return -1;
+ }
+ 
+-- 
+1.7.11.4
+

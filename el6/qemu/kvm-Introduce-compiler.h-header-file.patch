@@ -1,0 +1,119 @@
+From 5e1f1c1bc0313092f7ae5d39932b542d969b5726 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@gmail.com>
+Date: Mon, 5 Mar 2012 17:43:37 -0500
+Subject: [PATCH 10/98] Introduce compiler.h header file
+
+This moves compiler related macros from qemu-common.h to compiler.h.
+
+The reason for this change is that there are simple header files that
+depend only on the compiler macros, so including qemu-common.h is overkill.
+
+Besides, qemu-common.h is bloated and will benefit from some splitting.
+
+Please, also note that the QEMU_BUILD_BUG_ON() macro is being fixed to
+not use double underscores as a prefix and the license text was added
+by Vassili Karpov (malc), who is one of the authors of the new file.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@gmail.com>
+(cherry picked from commit 5c0263204da1870243107acd6c73b21f2e7b78f0)
+BZ 632771
+
+Conflicts:
+
+	qemu-common.h
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ compiler.h    |   34 ++++++++++++++++++++++++++++++++++
+ qemu-common.h |   25 +++----------------------
+ 2 files changed, 37 insertions(+), 22 deletions(-)
+ create mode 100644 compiler.h
+
+diff --git a/compiler.h b/compiler.h
+new file mode 100644
+index 0000000..9af5dc6
+--- /dev/null
++++ b/compiler.h
+@@ -0,0 +1,34 @@
++/* public domain */
++
++#ifndef COMPILER_H
++#define COMPILER_H
++
++#include "config-host.h"
++
++#define QEMU_NORETURN __attribute__ ((__noreturn__))
++#ifdef CONFIG_GCC_ATTRIBUTE_WARN_UNUSED_RESULT
++#define QEMU_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
++#else
++#define QEMU_WARN_UNUSED_RESULT
++#endif
++
++#define QEMU_BUILD_BUG_ON(x) \
++    typedef char qemu_build_bug_on__##__LINE__[(x)?-1:1];
++
++#if defined __GNUC__
++# if (__GNUC__ < 4) || \
++     defined(__GNUC_MINOR__) && (__GNUC__ == 4) && (__GNUC_MINOR__ < 4)
++   /* gcc versions before 4.4.x don't support gnu_printf, so use printf. */
++#  define GCC_ATTR __attribute__((__unused__, format(printf, 1, 2)))
++#  define GCC_FMT_ATTR(n, m) __attribute__((format(printf, n, m)))
++# else
++   /* Use gnu_printf when supported (qemu uses standard format strings). */
++#  define GCC_ATTR __attribute__((__unused__, format(gnu_printf, 1, 2)))
++#  define GCC_FMT_ATTR(n, m) __attribute__((format(gnu_printf, n, m)))
++# endif
++#else
++#define GCC_ATTR /**/
++#define GCC_FMT_ATTR(n, m)
++#endif
++
++#endif /* COMPILER_H */
+diff --git a/qemu-common.h b/qemu-common.h
+index 2338d3c..3047376 100644
+--- a/qemu-common.h
++++ b/qemu-common.h
+@@ -2,15 +2,9 @@
+ #ifndef QEMU_COMMON_H
+ #define QEMU_COMMON_H
+ 
++#include "compiler.h"
+ #include "config-host.h"
+ 
+-#define QEMU_NORETURN __attribute__ ((__noreturn__))
+-#ifdef CONFIG_GCC_ATTRIBUTE_WARN_UNUSED_RESULT
+-#define QEMU_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+-#else
+-#define QEMU_WARN_UNUSED_RESULT
+-#endif
+-
+ typedef struct DeviceState DeviceState;
+ 
+ /* Hack around the mess dyngen-exec.h causes: We need QEMU_NORETURN in files that
+@@ -68,21 +62,8 @@ struct iovec {
+ #include <sys/uio.h>
+ #endif
+ 
+-#if defined __GNUC__
+-# if (__GNUC__ < 4) || \
+-     defined(__GNUC_MINOR__) && (__GNUC__ == 4) && (__GNUC_MINOR__ < 4)
+-   /* gcc versions before 4.4.x don't support gnu_printf, so use printf. */
+-#  define GCC_ATTR __attribute__((__unused__, format(printf, 1, 2)))
+-#  define GCC_FMT_ATTR(n, m) __attribute__((format(printf, n, m)))
+-# else
+-   /* Use gnu_printf when supported (qemu uses standard format strings). */
+-#  define GCC_ATTR __attribute__((__unused__, format(gnu_printf, 1, 2)))
+-#  define GCC_FMT_ATTR(n, m) __attribute__((format(gnu_printf, n, m)))
+-# endif
+-#else
+-#define GCC_ATTR /**/
+-#define GCC_FMT_ATTR(n, m)
+-#endif
++typedef int (*fprintf_function)(FILE *f, const char *fmt, ...)
++    GCC_FMT_ATTR(2, 3);
+ 
+ #ifdef _WIN32
+ #define fsync _commit
+-- 
+1.7.7.6
+

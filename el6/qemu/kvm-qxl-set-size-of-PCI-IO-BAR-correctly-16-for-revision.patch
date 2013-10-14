@@ -1,0 +1,67 @@
+From 6c71d9813734e1f5caeb8647da398f5bf7f093df Mon Sep 17 00:00:00 2001
+Message-Id: <6c71d9813734e1f5caeb8647da398f5bf7f093df.1336985644.git.minovotn@redhat.com>
+From: Uri Lublin <uril@redhat.com>
+Date: Thu, 10 May 2012 14:32:18 +0200
+Subject: [PATCH] qxl: set size of PCI IO BAR correctly (16) for revision 2
+
+RH-Author: Uri Lublin <uril@redhat.com>
+Message-id: <1336660338-32576-1-git-send-email-uril@redhat.com>
+Patchwork-id: 39680
+O-Subject: [RHEL-6.3 kvm PATCH] qxl: set size of PCI IO BAR correctly (16) for revision 2
+Bugzilla: 698936
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+
+Also move it up into switch(qxl->revision) block
+
+Upstream-status: sent (http://patchwork.ozlabs.org/patch/158290)
+
+rhbz#698936
+
+Signed-off-by: Uri Lublin <uril@redhat.com>
+---
+ hw/qxl.c |    8 +++-----
+ 1 files changed, 3 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl.c |    8 +++-----
+ 1 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/hw/qxl.c b/hw/qxl.c
+index 4e71fe0..94beab2 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -1676,13 +1676,16 @@ static int qxl_init_common(PCIQXLDevice *qxl)
+     switch (qxl->revision) {
+     case 1: /* spice 0.4 -- qxl-1 */
+         pci_device_rev = QXL_REVISION_STABLE_V04;
++        io_size = 8;
+         break;
+     case 2: /* spice 0.6 -- qxl-2 */
+         pci_device_rev = QXL_REVISION_STABLE_V06;
++        io_size = 16;
+         break;
+     case 3: /* qxl-3 */
+     default:
+         pci_device_rev = QXL_DEFAULT_REVISION;
++        io_size = msb_mask(QXL_IO_RANGE_SIZE * 2 - 1);
+         break;
+     }
+ 
+@@ -1705,11 +1708,6 @@ static int qxl_init_common(PCIQXLDevice *qxl)
+     qxl->vram_size = msb_mask(qxl->vram_size * 2 - 1);
+     qxl->vram_offset = qemu_ram_alloc(&qxl->pci.qdev, "qxl.vram", qxl->vram_size);
+ 
+-    io_size = msb_mask(QXL_IO_RANGE_SIZE * 2 - 1);
+-    if (qxl->revision == 1) {
+-        io_size = 8;
+-    }
+-
+     pci_register_bar(&qxl->pci, QXL_IO_RANGE_INDEX,
+                      io_size, PCI_BASE_ADDRESS_SPACE_IO, qxl_map);
+ 
+-- 
+1.7.7.6
+

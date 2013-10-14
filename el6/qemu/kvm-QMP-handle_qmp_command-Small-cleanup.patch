@@ -1,0 +1,98 @@
+From f7844805a10c2134744eb3f88225c9dcdf695d2a Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:29 -0300
+Subject: [RHEL6 qemu-kvm PATCH 09/21] QMP: handle_qmp_command(): Small cleanup
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <d1eea365bcf1e4f755ba9ff483846bd458be36e5.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38635
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 09/21] QMP: handle_qmp_command(): Small cleanup
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+Drop a unneeded label and QDECREF() call.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit e4940c603a209c82c2ea80cfeb244c5dec8e3118)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ monitor.c |   14 ++++++--------
+ 1 files changed, 6 insertions(+), 8 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ monitor.c |   14 ++++++--------
+ 1 files changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index 7d04744..2e76e0f 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -4673,7 +4673,7 @@ static void handle_qmp_command(JSONMessageParser *parser, QList *tokens)
+     Monitor *mon = cur_mon;
+     const char *cmd_name, *info_item;
+ 
+-    args = NULL;
++    args = input = NULL;
+ 
+     obj = json_parser_parse(tokens, NULL);
+     if (!obj) {
+@@ -4694,7 +4694,7 @@ static void handle_qmp_command(JSONMessageParser *parser, QList *tokens)
+     cmd_name = qdict_get_str(input, "execute");
+     if (invalid_qmp_mode(mon, cmd_name)) {
+         qerror_report(QERR_COMMAND_NOT_FOUND, cmd_name);
+-        goto err_input;
++        goto err_out;
+     }
+ 
+     /*
+@@ -4703,7 +4703,7 @@ static void handle_qmp_command(JSONMessageParser *parser, QList *tokens)
+      */
+     if (compare_cmd(cmd_name, "info")) {
+         qerror_report(QERR_COMMAND_NOT_FOUND, cmd_name);
+-        goto err_input;
++        goto err_out;
+     } else if (strstart(cmd_name, "query-", &info_item)) {
+         cmd = monitor_find_command("info");
+         qdict_put_obj(input, "arguments",
+@@ -4712,7 +4712,7 @@ static void handle_qmp_command(JSONMessageParser *parser, QList *tokens)
+         cmd = monitor_find_command(cmd_name);
+         if (!cmd || !monitor_handler_ported(cmd)) {
+             qerror_report(QERR_COMMAND_NOT_FOUND, cmd_name);
+-            goto err_input;
++            goto err_out;
+         }
+     }
+ 
+@@ -4724,8 +4724,6 @@ static void handle_qmp_command(JSONMessageParser *parser, QList *tokens)
+         QINCREF(args);
+     }
+ 
+-    QDECREF(input);
+-
+     err = qmp_check_client_args(cmd, args);
+     if (err < 0) {
+         goto err_out;
+@@ -4740,13 +4738,13 @@ static void handle_qmp_command(JSONMessageParser *parser, QList *tokens)
+     } else {
+         monitor_call_handler(mon, cmd, args);
+     }
++
+     goto out;
+ 
+-err_input:
+-    QDECREF(input);
+ err_out:
+     monitor_protocol_emitter(mon, NULL);
+ out:
++    QDECREF(input);
+     QDECREF(args);
+ }
+ 
+-- 
+1.7.3.2
+

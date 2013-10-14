@@ -1,0 +1,58 @@
+From c5cb5603937a35fee90ac10d1fd794d7e03f2674 Mon Sep 17 00:00:00 2001
+From: Alon Levy <alevy@redhat.com>
+Date: Sun, 18 Mar 2012 12:17:47 +0100
+Subject: [PATCH 4/9] qxl: drop qxl_spice_update_area_async definition
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1332073072-27934-4-git-send-email-alevy@redhat.com>
+Patchwork-id: 38601
+O-Subject: [PATCHv2 RHEL-6.3 qemu-kvm 3/8] qxl: drop qxl_spice_update_area_async definition
+Bugzilla: 747011
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Yonit Halperin <yhalperi@redhat.com>
+
+It was never used. Introduced in
+5ff4e36c804157bd84af43c139f8cd3a59722db9
+qxl: async io support using new spice api
+
+But not used even then.
+
+Signed-off-by: Alon Levy <alevy@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 45a4b48528aa20b602eb8c764d511fb1c4d6cab7)
+
+Conflicts:
+
+	hw/qxl.h
+
+Due to rhel6_qxl_screendump (rhel only)
+---
+ hw/qxl.h |    6 ------
+ 1 file changed, 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl.h |    6 ------
+ 1 files changed, 0 insertions(+), 6 deletions(-)
+
+diff --git a/hw/qxl.h b/hw/qxl.h
+index 310103f..b5f2df7 100644
+--- a/hw/qxl.h
++++ b/hw/qxl.h
+@@ -133,12 +133,6 @@ void qxl_log_command(PCIQXLDevice *qxl, const char *ring, QXLCommandExt *ext);
+ void qxl_render_resize(PCIQXLDevice *qxl);
+ void qxl_render_update(PCIQXLDevice *qxl);
+ void qxl_render_cursor(PCIQXLDevice *qxl, QXLCommandExt *ext);
+-#if SPICE_INTERFACE_QXL_MINOR >= 1
+-void qxl_spice_update_area_async(PCIQXLDevice *qxl, uint32_t surface_id,
+-                                 struct QXLRect *area,
+-                                 uint32_t clear_dirty_region,
+-                                 int is_vga);
+-#endif
+ 
+ /* rhel6 only */
+ int rhel6_qxl_screendump(const char *id, const char *filename);
+-- 
+1.7.7.6
+

@@ -1,0 +1,74 @@
+From f8d2b6ae0d0a2f4ab8a1b3f03ab4c64e0fdf42d3 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Wed, 29 Feb 2012 20:01:03 +0100
+Subject: [PATCH 08/11] block: Don't call bdrv_eject() if the tray state
+ didn't change
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1330545665-1595-4-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 37791
+O-Subject: [PATCH RHEL6.3 qemu-kvm 3/5] block: Don't call bdrv_eject() if the tray state didn't change
+Bugzilla: 575159
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+It's not needed. Besides we can then assume that bdrv_eject() is
+only called when there's a tray state change, which is useful to
+the DEVICE_TRAY_MOVED event (going to be added in a future
+commit).
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
+Acked-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit d88b1819dd6c6ba4b2270c98bf52ce67a315066d)
+---
+ hw/ide/atapi.c |    7 +++++--
+ hw/scsi-disk.c |    7 +++++--
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/ide/atapi.c |    7 +++++--
+ hw/scsi-disk.c |    7 +++++--
+ 2 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/hw/ide/atapi.c b/hw/ide/atapi.c
+index e174feb..406fbeb 100644
+--- a/hw/ide/atapi.c
++++ b/hw/ide/atapi.c
+@@ -918,8 +918,11 @@ static void cmd_start_stop_unit(IDEState *s, uint8_t* buf)
+             ide_atapi_cmd_error(s, sense, ASC_MEDIA_REMOVAL_PREVENTED);
+             return;
+         }
+-        bdrv_eject(s->bs, !start);
+-        s->tray_open = !start;
++
++        if (s->tray_open != !start) {
++            bdrv_eject(s->bs, !start);
++            s->tray_open = !start;
++        }
+     }
+ 
+     ide_atapi_cmd_ok(s);
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 7689722..faa6a9f 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1132,8 +1132,11 @@ static int scsi_disk_emulate_start_stop(SCSIDiskReq *r)
+                                  : SENSE_CODE(NOT_READY_REMOVAL_PREVENTED));
+             return -1;
+         }
+-        bdrv_eject(s->qdev.conf.bs, !start);
+-        s->tray_open = !start;
++
++        if (s->tray_open != !start) {
++            bdrv_eject(s->qdev.conf.bs, !start);
++            s->tray_open = !start;
++        }
+     }
+     return 0;
+ }
+-- 
+1.7.7.6
+

@@ -1,0 +1,135 @@
+From 50c33b164bbd7fa0d613bd09b072ef7deb09168c Mon Sep 17 00:00:00 2001
+Message-Id: <50c33b164bbd7fa0d613bd09b072ef7deb09168c.1334231944.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 30 Mar 2012 18:32:01 +0200
+Subject: [PATCH 1/4] blockdev: add refcount to DriveInfo
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1333132324-20958-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39049
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 1/4] blockdev: add refcount to DriveInfo
+Bugzilla: 807898
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Marcelo Tosatti <mtosatti@redhat.com>
+
+The host part of a block device can be deleted with in progress
+block migration.
+
+To fix this, add a reference count to DriveInfo, freeing resources
+on last reference.
+
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+CC: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry-picked from upstream commit 84fb392526479d54602a3830326d50d44657f630)
+
+Conflicts:
+
+	blockdev.h
+---
+ blockdev.c       |   18 ++++++++++++++++--
+ blockdev.h       |    4 +++-
+ hw/pci-hotplug.c |    2 +-
+ 3 files changed, 20 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ blockdev.c       |   18 ++++++++++++++++--
+ blockdev.h       |    4 +++-
+ hw/pci-hotplug.c |    2 +-
+ 3 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 9b97069..d82268b 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -74,7 +74,7 @@ void blockdev_auto_del(BlockDriverState *bs)
+     DriveInfo *dinfo = drive_get_by_blockdev(bs);
+ 
+     if (dinfo && dinfo->auto_del) {
+-        drive_uninit(dinfo);
++        drive_put_ref(dinfo);
+     }
+ }
+ 
+@@ -195,7 +195,7 @@ static void bdrv_format_print(void *opaque, const char *name)
+     error_printf(" %s", name);
+ }
+ 
+-void drive_uninit(DriveInfo *dinfo)
++static void drive_uninit(DriveInfo *dinfo)
+ {
+     qemu_opts_del(dinfo->opts);
+     bdrv_delete(dinfo->bdrv);
+@@ -205,6 +205,19 @@ void drive_uninit(DriveInfo *dinfo)
+     qemu_free(dinfo);
+ }
+ 
++void drive_put_ref(DriveInfo *dinfo)
++{
++    assert(dinfo->refcount);
++    if (--dinfo->refcount == 0) {
++        drive_uninit(dinfo);
++    }
++}
++
++void drive_get_ref(DriveInfo *dinfo)
++{
++    dinfo->refcount++;
++}
++
+ static int parse_block_error_action(const char *buf, int is_read)
+ {
+     if (!strcmp(buf, "ignore")) {
+@@ -517,6 +530,7 @@ DriveInfo *drive_init(QemuOpts *opts, int default_to_scsi)
+     dinfo->bus = bus_id;
+     dinfo->unit = unit_id;
+     dinfo->opts = opts;
++    dinfo->refcount = 1;
+     if (serial)
+         strncpy(dinfo->serial, serial, sizeof(dinfo->serial) - 1);
+     QTAILQ_INSERT_TAIL(&drives, dinfo, next);
+diff --git a/blockdev.h b/blockdev.h
+index ae2eb5f..0783241 100644
+--- a/blockdev.h
++++ b/blockdev.h
+@@ -40,6 +40,7 @@ typedef struct DriveInfo {
+     int bdrv_flags;
+     char *file;
+     BlockDriver *drv;
++    int refcount;
+ } DriveInfo;
+ 
+ extern QTAILQ_HEAD(drivelist, DriveInfo) drives;
+@@ -49,9 +50,10 @@ extern DriveInfo *drive_get(BlockInterfaceType type, int bus, int unit);
+ extern DriveInfo *drive_get_by_id(const char *id);
+ DriveInfo *drive_get_by_index(BlockInterfaceType type, int index);
+ extern int drive_get_max_bus(BlockInterfaceType type);
+-extern void drive_uninit(DriveInfo *dinfo);
+ extern DriveInfo *drive_get_by_blockdev(BlockDriverState *bs);
+ extern const char *drive_get_serial(BlockDriverState *bdrv);
++void drive_get_ref(DriveInfo *dinfo);
++void drive_put_ref(DriveInfo *dinfo);
+ 
+ QemuOpts *drive_def(const char *optstr);
+ QemuOpts *drive_add(BlockInterfaceType type, int index, const char *file,
+diff --git a/hw/pci-hotplug.c b/hw/pci-hotplug.c
+index 06a4442..cdb0267 100644
+--- a/hw/pci-hotplug.c
++++ b/hw/pci-hotplug.c
+@@ -144,7 +144,7 @@ void drive_hot_add(Monitor *mon, const QDict *qdict)
+ 
+ err:
+     if (dinfo)
+-        drive_uninit(dinfo);
++        drive_put_ref(dinfo);
+     return;
+ }
+ 
+-- 
+1.7.7.6
+

@@ -1,0 +1,112 @@
+From 4ec8f72176abb00d9e7ec2de64fe42ef239fa889 Mon Sep 17 00:00:00 2001
+Message-Id: <4ec8f72176abb00d9e7ec2de64fe42ef239fa889.1335361915.git.minovotn@redhat.com>
+In-Reply-To: <ce1a7d1539a0b4b36555d1035257f57af7ae8478.1335361915.git.minovotn@redhat.com>
+References: <ce1a7d1539a0b4b36555d1035257f57af7ae8478.1335361915.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 24 Apr 2012 14:01:29 +0200
+Subject: [PATCH 2/8] mirror: remove need for bdrv_drain_all in
+ block_job_cancel
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1335276095-25813-3-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39427
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 2/8] mirror: remove need for bdrv_drain_all in block_job_cancel
+Bugzilla: 813862
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 813810
+
+Making block_job_cancel wait for in-flight I/O was rejected
+upstream, and rightly so.  Revert this part of the blkmirror
+patches, and fully drain AIO within the mirroring job.
+
+In fact, this patch simplifies the code somewhat so that some
+"if"s become assertions (which I find to be a good thing).
+
+Mirroring is not upstream, so RHEL-only.
+---
+ block.c        |    5 -----
+ block/mirror.c |   26 ++++++++++++++------------
+ 2 files changed, 14 insertions(+), 17 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c        |    5 -----
+ block/mirror.c |   28 +++++++++++++++-------------
+ 2 files changed, 15 insertions(+), 18 deletions(-)
+
+diff --git a/block.c b/block.c
+index f497642..d1b5c14 100644
+--- a/block.c
++++ b/block.c
+@@ -3780,11 +3780,6 @@ int block_job_set_speed(BlockJob *job, int64_t value)
+ 
+ void block_job_cancel(BlockJob *job)
+ {
+-    /* Complete all guest I/O before cancelling the job, so that if the
+-     * job chooses to complete itself it will do so with a consistent
+-     * view of the disk.
+-     */
+-    bdrv_drain_all();
+     job->cancelled = true;
+     if (job->co && !job->busy) {
+         qemu_coroutine_enter(job->co, NULL);
+diff --git a/block/mirror.c b/block/mirror.c
+index eb5770a..390d539 100644
+--- a/block/mirror.c
++++ b/block/mirror.c
+@@ -169,17 +169,6 @@ static void coroutine_fn mirror_run(void *opaque)
+             s->common.offset = end * BDRV_SECTOR_SIZE;
+         }
+ 
+-        if (synced && block_job_is_cancelled(&s->common)) {
+-            /* The dirty bitmap is not updated while operations are pending.
+-             * If we're about to exit, wait for pending operations or we may
+-             * exit while the source has dirty data to copy!
+-             */
+-            while (bdrv_get_dirty_count(bs) == 0 &&
+-                   !QLIST_EMPTY(&bs->tracked_requests)) {
+-                qemu_aio_wait();
+-            }
+-        }
+-
+         if (bdrv_get_dirty_count(bs) != 0) {
+             int nb_sectors;
+             sector_num = bdrv_get_next_dirty(bs, sector_num);
+@@ -192,16 +181,29 @@ static void coroutine_fn mirror_run(void *opaque)
+             }
+         }
+ 
++        if (synced && block_job_is_cancelled(&s->common)) {
++            /* The dirty bitmap is not updated while operations are pending.
++             * If we're about to exit, wait for pending operations before
++             * calling bdrv_get_dirty_count(bs), or we may exit while the
++             * source has dirty data to copy!
++             *
++             * Note that I/O can be submitted by the guest while
++             * mirror_populate runs.
++             */
++            bdrv_drain_all();
++        }
++
+         ret = 0;
+         cnt = bdrv_get_dirty_count(bs);
+         if (synced) {
+             if (!block_job_is_cancelled(&s->common)) {
+                 s->common.busy = false;
+                 co_sleep(rt_clock, cnt == 0 ? SLICE_TIME : 0);
+-            } else if (cnt == 0 && QLIST_EMPTY(&bs->tracked_requests)) {
++            } else if (cnt == 0) {
+                 /* The two disks are in sync.  Exit and report successful
+-                 * successful completion.
++                 * completion.
+                  */
++                assert(QLIST_EMPTY(&bs->tracked_requests));
+                 s->common.cancelled = false;
+                 break;
+             }
+-- 
+1.7.7.6
+

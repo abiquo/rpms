@@ -1,0 +1,88 @@
+From 71555531cfd9d8d81f572120cc0eae211f52c7d4 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:59 +0100
+Subject: [PATCH 32/55] block: implement bdrv_co_is_allocated() boundary cases
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <f83c7777cbea305fe39ecbcd5f62fe03871c5eef.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38882
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 32/54] block: implement bdrv_co_is_allocated() boundary cases
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Cases beyond the end of the disk image are only implemented for block
+drivers that do not provide .bdrv_co_is_allocated().  It's worth making
+these cases generic so that block drivers that do implement
+.bdrv_co_is_allocated() also get them for free.
+
+Suggested-by: Mark Wu <wudxw@linux.vnet.ibm.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit bd9533e36ea3d6c964f65b8e407bad00dab59e5d)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c |   26 ++++++++++++++++++--------
+ 1 files changed, 18 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   26 ++++++++++++++++++--------
+ 1 files changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/block.c b/block.c
+index de69a5d..7ab68e3 100644
+--- a/block.c
++++ b/block.c
+@@ -1986,23 +1986,33 @@ typedef struct BdrvCoIsAllocatedData {
+  * not implementing the functionality are assumed to not support backing files,
+  * hence all their sectors are reported as allocated.
+  *
++ * If 'sector_num' is beyond the end of the disk image the return value is 0
++ * and 'pnum' is set to 0.
++ *
+  * 'pnum' is set to the number of sectors (including and immediately following
+  * the specified sector) that are known to be in the same
+  * allocated/unallocated state.
+  *
+- * 'nb_sectors' is the max value 'pnum' should be set to.
++ * 'nb_sectors' is the max value 'pnum' should be set to.  If nb_sectors goes
++ * beyond the end of the disk image it will be clamped.
+  */
+ int coroutine_fn bdrv_co_is_allocated(BlockDriverState *bs, int64_t sector_num,
+                                       int nb_sectors, int *pnum)
+ {
++    int64_t n;
++
++    if (sector_num >= bs->total_sectors) {
++        *pnum = 0;
++        return 0;
++    }
++
++    n = bs->total_sectors - sector_num;
++    if (n < nb_sectors) {
++        nb_sectors = n;
++    }
++
+     if (!bs->drv->bdrv_co_is_allocated) {
+-        int64_t n;
+-        if (sector_num >= bs->total_sectors) {
+-            *pnum = 0;
+-            return 0;
+-        }
+-        n = bs->total_sectors - sector_num;
+-        *pnum = (n < nb_sectors) ? (n) : (nb_sectors);
++        *pnum = nb_sectors;
+         return 1;
+     }
+ 
+-- 
+1.7.7.6
+

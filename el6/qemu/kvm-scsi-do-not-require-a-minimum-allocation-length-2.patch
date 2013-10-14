@@ -1,0 +1,92 @@
+From f2f2a4c3e3e616b1fcb7d930498800919ec8ae94 Mon Sep 17 00:00:00 2001
+From: Miroslav Rezanina <mrezanin@redhat.com>
+Date: Thu, 12 Jul 2012 12:11:19 +0200
+Subject: [RHEL6 qemu-kvm PATCH] scsi: do not require a minimum allocation
+ length for INQUIRY
+
+RH-Author: Miroslav Rezanina <mrezanin@redhat.com>
+Message-id: <a4d53049f36f27f80515c26aad467f1a3fa9418e.1342100155.git.mrezanin@redhat.com>
+Patchwork-id: 40283
+O-Subject: [RHEL6 qemu-kvm PATCH 1/5] scsi: do not require a minimum allocation length for INQUIRY
+Bugzilla: 825188
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Upstream commit: 3c3d8a9
+
+The requirements on the INQUIRY buffer size are not in my copy of SPC
+(SPC-4 r27) and not observed by LIO.  Rip them out.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/scsi-bus.c  |    8 --------
+ hw/scsi-disk.c |   11 -----------
+ 2 files changed, 0 insertions(+), 19 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c  |  8 --------
+ hw/scsi-disk.c | 11 -----------
+ 2 files changed, 19 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 326b1f6..a18688e 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -335,10 +335,6 @@ static bool scsi_target_emulate_inquiry(SCSITargetReq *r)
+     if (r->req.cmd.buf[1] & 0x1) {
+         /* Vital product data */
+         uint8_t page_code = r->req.cmd.buf[2];
+-        if (r->req.cmd.xfer < 4) {
+-            return false;
+-        }
+-
+         r->buf[r->len++] = page_code ; /* this page */
+         r->buf[r->len++] = 0x00;
+ 
+@@ -366,10 +362,6 @@ static bool scsi_target_emulate_inquiry(SCSITargetReq *r)
+     }
+ 
+     /* PAGE CODE == 0 */
+-    if (r->req.cmd.xfer < 5) {
+-        return false;
+-    }
+-
+     r->len = MIN(r->req.cmd.xfer, 36);
+     memset(r->buf, 0, r->len);
+     if (r->req.lun != 0) {
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index e32f6bd..55c5614 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -424,11 +424,6 @@ static int scsi_disk_emulate_inquiry(SCSIRequest *req, uint8_t *outbuf)
+     if (req->cmd.buf[1] & 0x1) {
+         /* Vital product data */
+         uint8_t page_code = req->cmd.buf[2];
+-        if (req->cmd.xfer < 4) {
+-            BADF("Error: Inquiry (EVPD[%02X]) buffer size %zd is "
+-                 "less than 4\n", page_code, req->cmd.xfer);
+-            return -1;
+-        }
+ 
+         outbuf[buflen++] = s->qdev.type & 0x1f;
+         outbuf[buflen++] = page_code ; // this page
+@@ -559,12 +554,6 @@ static int scsi_disk_emulate_inquiry(SCSIRequest *req, uint8_t *outbuf)
+     }
+ 
+     /* PAGE CODE == 0 */
+-    if (req->cmd.xfer < 5) {
+-        BADF("Error: Inquiry (STANDARD) buffer size %zd "
+-             "is less than 5\n", req->cmd.xfer);
+-        return -1;
+-    }
+-
+     buflen = req->cmd.xfer;
+     if (buflen > SCSI_MAX_INQUIRY_LEN) {
+         buflen = SCSI_MAX_INQUIRY_LEN;
+-- 
+1.7.11.4
+

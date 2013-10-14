@@ -1,0 +1,59 @@
+From a2ad6fc25f008739713f447c962a7a36a2e218bd Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Fri, 21 Sep 2012 18:57:38 -0300
+Subject: [RHEL6 qemu-kvm PATCH 17/23] usb-redir: Set ep max_packet_size if
+ available
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1348253864-3050-17-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 42192
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 16/22] usb-redir: Set ep max_packet_size if available
+Bugzilla: 805172
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+RH-Acked-by: Arnon Gilboa <agilboa@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+This is needed for usb-redir to work properly with the xhci emulation.
+
+RHEL-6: Since RHEL-6 qemu does not have per ep info in the usb-core (and no
+xhci either), the added if block is empty, but it is needed for a later patch
+which in turn is needed for migration compatibility with upstream.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream commit: 0fde3b7a826aa654612126cdea9832319a34172c
+Conflicts: usb-redir.c
+---
+ usb-redir.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ usb-redir.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index d59c4d1..b266a08 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -864,6 +864,7 @@ static void usbredir_chardev_open(USBRedirDevice *dev)
+ 
+     usbredirparser_caps_set_cap(caps, usb_redir_cap_connect_device_version);
+     usbredirparser_caps_set_cap(caps, usb_redir_cap_filter);
++    usbredirparser_caps_set_cap(caps, usb_redir_cap_ep_info_max_packet_size);
+     usbredirparser_caps_set_cap(caps, usb_redir_cap_64bits_ids);
+     usbredirparser_init(dev->parser, VERSION, caps, USB_REDIR_CAPS_SIZE, 0);
+     usbredirparser_do_write(dev->parser);
+@@ -1252,6 +1253,9 @@ static void usbredir_ep_info(void *priv,
+             ERROR("Received invalid endpoint type\n");
+             usbredir_device_disconnect(dev);
+         }
++        if (usbredirparser_peer_has_cap(dev->parser,
++                                     usb_redir_cap_ep_info_max_packet_size)) {
++        }
+     }
+ }
+ 
+-- 
+1.7.11.4
+

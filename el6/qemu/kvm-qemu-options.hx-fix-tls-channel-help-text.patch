@@ -1,0 +1,49 @@
+From 1622a4520ee7189e690814a9788e103f5fe3c7a6 Mon Sep 17 00:00:00 2001
+From: Alon Levy <alevy@redhat.com>
+Date: Sun, 26 Feb 2012 13:36:01 +0100
+Subject: [PATCH 02/12] qemu-options.hx: fix tls-channel help text
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1330263361-29135-1-git-send-email-alevy@redhat.com>
+Patchwork-id: 37630
+O-Subject: [PATCH RHEL-6.3 qemu-kvm] qemu-options.hx: fix tls-channel help text
+Bugzilla: 688586
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Remove the default compiled out tunnel channel, add the always available
+cursor channel. Optimally the man page would depend on compiled in
+options, but that's harder to do.
+
+RHBZ: 688586
+
+Upstream: d70d6b31091ab522ce793a52559e3dd9f9913b32
+brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4085621
+---
+ qemu-options.hx |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-options.hx |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/qemu-options.hx b/qemu-options.hx
+index a014459..92f2e12 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -593,8 +593,8 @@ The x509 file names can also be configured individually.
+ @item tls-ciphers=<list>
+ Specify which ciphers to use.
+ 
+-@item tls-channel=[main|display|inputs|record|playback|tunnel]
+-@item plaintext-channel=[main|display|inputs|record|playback|tunnel]
++@item tls-channel=[main|display|cursor|inputs|record|playback]
++@item plaintext-channel=[main|display|cursor|inputs|record|playback]
+ Force specific channel to be used with or without TLS encryption.  The
+ options can be specified multiple times to configure multiple
+ channels.  The special name "default" can be used to set the default
+-- 
+1.7.7.6
+

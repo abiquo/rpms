@@ -1,0 +1,106 @@
+From f721426ae8cef883f7508ad16e9aba1036344114 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:46 +0100
+Subject: [PATCH 21/99] block: set sector dirty on AIO write completion
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-22-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37219
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 21/96] block: set sector dirty on AIO write completion
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Marcelo Tosatti <mtosatti@redhat.com>
+
+Bugzilla: 783950
+
+Sectors are marked dirty in the bitmap on AIO submission. This is wrong
+since data has not reached storage.
+
+Set a given sector as dirty in the dirty bitmap on AIO completion, so that
+reading a sector marked as dirty is guaranteed to return uptodate data.
+
+Reviewed-by: Kevin Wolf <kwolf@redhat.com>
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 4dcafbb1eba2ee201ec86027982659b669f99c70)
+---
+ block.c |   42 +++++++++++++++++++++++++++++++++++++++++-
+ 1 files changed, 41 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   42 +++++++++++++++++++++++++++++++++++++++++-
+ 1 files changed, 41 insertions(+), 1 deletions(-)
+
+diff --git a/block.c b/block.c
+index f8fe868..99a8c0a 100644
+--- a/block.c
++++ b/block.c
+@@ -2064,12 +2064,49 @@ BlockDriverAIOCB *bdrv_aio_readv(BlockDriverState *bs, int64_t sector_num,
+     return drv->bdrv_aio_readv(bs, sector_num, qiov, nb_sectors, cb, opaque);
+ }
+ 
++typedef struct BlockCompleteData {
++    BlockDriverCompletionFunc *cb;
++    void *opaque;
++    BlockDriverState *bs;
++    int64_t sector_num;
++    int nb_sectors;
++} BlockCompleteData;
++
++static void block_complete_cb(void *opaque, int ret)
++{
++    BlockCompleteData *b = opaque;
++
++    if (b->bs->dirty_bitmap) {
++        set_dirty_bitmap(b->bs, b->sector_num, b->nb_sectors, 1);
++    }
++    b->cb(b->opaque, ret);
++    qemu_free(b);
++}
++
++static BlockCompleteData *blk_dirty_cb_alloc(BlockDriverState *bs,
++                                             int64_t sector_num,
++                                             int nb_sectors,
++                                             BlockDriverCompletionFunc *cb,
++                                             void *opaque)
++{
++    BlockCompleteData *blkdata = qemu_mallocz(sizeof(BlockCompleteData));
++
++    blkdata->bs = bs;
++    blkdata->cb = cb;
++    blkdata->opaque = opaque;
++    blkdata->sector_num = sector_num;
++    blkdata->nb_sectors = nb_sectors;
++
++    return blkdata;
++}
++
+ BlockDriverAIOCB *bdrv_aio_writev(BlockDriverState *bs, int64_t sector_num,
+                                   QEMUIOVector *qiov, int nb_sectors,
+                                   BlockDriverCompletionFunc *cb, void *opaque)
+ {
+     BlockDriver *drv = bs->drv;
+     BlockDriverAIOCB *ret;
++    BlockCompleteData *blk_cb_data;
+ 
+     trace_bdrv_aio_writev(bs, sector_num, nb_sectors, opaque);
+ 
+@@ -2081,7 +2118,10 @@ BlockDriverAIOCB *bdrv_aio_writev(BlockDriverState *bs, int64_t sector_num,
+         return NULL;
+ 
+     if (bs->dirty_bitmap) {
+-        set_dirty_bitmap(bs, sector_num, nb_sectors, 1);
++        blk_cb_data = blk_dirty_cb_alloc(bs, sector_num, nb_sectors, cb,
++                                         opaque);
++        cb = &block_complete_cb;
++        opaque = blk_cb_data;
+     }
+ 
+     ret = drv->bdrv_aio_writev(bs, sector_num, qiov, nb_sectors,
+-- 
+1.7.7.5
+

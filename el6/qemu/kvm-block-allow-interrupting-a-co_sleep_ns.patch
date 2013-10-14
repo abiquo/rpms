@@ -1,0 +1,56 @@
+From ac77e6005a60728d74e0b133183d720eed90c27a Mon Sep 17 00:00:00 2001
+Message-Id: <ac77e6005a60728d74e0b133183d720eed90c27a.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:19 +0200
+Subject: [PATCH 11/18] block: allow interrupting a co_sleep_ns
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-10-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39222
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 09/16] block: allow interrupting a co_sleep_ns
+Bugzilla: 806432
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 806432
+
+Upstream status: submitted as part of the mirroring forward-port
+
+In the next patch we want to reenter the coroutine from
+block_job_cancel_sync and cancel the timer.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ qemu-coroutine-sleep.c |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-coroutine-sleep.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/qemu-coroutine-sleep.c b/qemu-coroutine-sleep.c
+index ed115a1..0d5ac23 100644
+--- a/qemu-coroutine-sleep.c
++++ b/qemu-coroutine-sleep.c
+@@ -23,7 +23,6 @@ static void co_sleep_cb(void *opaque)
+ {
+     CoSleepCB *sleep_cb = opaque;
+ 
+-    qemu_free_timer(sleep_cb->ts);
+     qemu_coroutine_enter(sleep_cb->co, NULL);
+ }
+ 
+@@ -35,4 +34,6 @@ void coroutine_fn co_sleep(QEMUClock *clock, int64_t n)
+     sleep_cb.ts = qemu_new_timer(clock, co_sleep_cb, &sleep_cb);
+     qemu_mod_timer(sleep_cb.ts, qemu_get_clock(clock) + n);
+     qemu_coroutine_yield();
++    qemu_del_timer(sleep_cb.ts);
++    qemu_free_timer(sleep_cb.ts);
+ }
+-- 
+1.7.7.6
+

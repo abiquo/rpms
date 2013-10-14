@@ -1,0 +1,195 @@
+From 64bca1d34212d5ee4a062b43197ad44ffeccd329 Mon Sep 17 00:00:00 2001
+From: Amit Shah <amit.shah@redhat.com>
+Date: Thu, 22 Dec 2011 05:01:53 +0100
+Subject: [PATCH 01/10] virtio-serial: kill VirtIOSerialDevice
+
+RH-Author: Amit Shah <amit.shah@redhat.com>
+Message-id: <3879b9e6a5e85f908c3b4db7d8440251237e7599.1324529974.git.amit.shah@redhat.com>
+Patchwork-id: 35919
+O-Subject: [RHEL6.3 qemu-kvm PATCH 01/10] virtio-serial: kill VirtIOSerialDevice
+Bugzilla: 769528
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Gerd Hoffmann <kraxel@redhat.com>
+
+VirtIOSerialDevice is like VirtIOSerialPort with just the first two
+fields, which makes it pretty pointless.  Using VirtIOSerialPort
+directly works equally well and is less confusing.
+
+[Amit: - rebase
+       - rename 'dev' to 'port' in function params in virtio-serial.h ]
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit a43f9c90c9129d1f28e473277abf793d0caed897)
+
+Conflicts:
+
+	hw/virtio-console.c
+	(Trivial conflict due to previous cherry-pick of a later
+	 upstream patch: 0b8b716d6c4)
+---
+ hw/virtio-console.c    |   17 ++++++-----------
+ hw/virtio-serial-bus.c |   15 ++++++---------
+ hw/virtio-serial.h     |    9 ++-------
+ 3 files changed, 14 insertions(+), 27 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-console.c    |   17 ++++++-----------
+ hw/virtio-serial-bus.c |   15 ++++++---------
+ hw/virtio-serial.h     |    9 ++-------
+ 3 files changed, 14 insertions(+), 27 deletions(-)
+
+diff --git a/hw/virtio-console.c b/hw/virtio-console.c
+index 923bc8c..e3aa4d5 100644
+--- a/hw/virtio-console.c
++++ b/hw/virtio-console.c
+@@ -113,12 +113,10 @@ static const QemuChrHandlers chr_handlers_no_flow_control = {
+     .fd_event = chr_event,
+ };
+ 
+-static int generic_port_init(VirtConsole *vcon, VirtIOSerialDevice *dev)
++static int generic_port_init(VirtConsole *vcon, VirtIOSerialPort *port)
+ {
+     static const QemuChrHandlers *handlers;
+ 
+-    vcon->port.info = dev->info;
+-
+     if (vcon->chr) {
+         handlers = &chr_handlers;
+         if (!virtio_serial_flow_control_enabled(&vcon->port)) {
+@@ -133,18 +131,16 @@ static int generic_port_init(VirtConsole *vcon, VirtIOSerialDevice *dev)
+ }
+ 
+ /* Virtio Console Ports */
+-static int virtconsole_initfn(VirtIOSerialDevice *dev)
++static int virtconsole_initfn(VirtIOSerialPort *port)
+ {
+-    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, &dev->qdev);
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+ 
+     port->is_console = true;
+-    return generic_port_init(vcon, dev);
++    return generic_port_init(vcon, port);
+ }
+ 
+-static int virtconsole_exitfn(VirtIOSerialDevice *dev)
++static int virtconsole_exitfn(VirtIOSerialPort *port)
+ {
+-    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, &dev->qdev);
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+ 
+     if (vcon->chr) {
+@@ -179,9 +175,8 @@ static void virtconsole_register(void)
+ device_init(virtconsole_register)
+ 
+ /* Generic Virtio Serial Ports */
+-static int virtserialport_initfn(VirtIOSerialDevice *dev)
++static int virtserialport_initfn(VirtIOSerialPort *port)
+ {
+-    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, &dev->qdev);
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+ 
+     if (port->id == 0) {
+@@ -192,7 +187,7 @@ static int virtserialport_initfn(VirtIOSerialDevice *dev)
+         error_report("Port number 0 on virtio-serial devices reserved for virtconsole devices for backward compatibility.");
+         return -1;
+     }
+-    return generic_port_init(vcon, dev);
++    return generic_port_init(vcon, port);
+ }
+ 
+ static VirtIOSerialPortInfo virtserialport_info = {
+diff --git a/hw/virtio-serial-bus.c b/hw/virtio-serial-bus.c
+index 463863f..849b3a8 100644
+--- a/hw/virtio-serial-bus.c
++++ b/hw/virtio-serial-bus.c
+@@ -717,8 +717,7 @@ static struct BusInfo virtser_bus_info = {
+ 
+ static void virtser_bus_dev_print(Monitor *mon, DeviceState *qdev, int indent)
+ {
+-    VirtIOSerialDevice *dev = DO_UPCAST(VirtIOSerialDevice, qdev, qdev);
+-    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, &dev->qdev);
++    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, qdev);
+ 
+     monitor_printf(mon, "%*s dev-prop-int: id: %u\n",
+                    indent, "", port->id);
+@@ -780,9 +779,8 @@ static void remove_port(VirtIOSerial *vser, uint32_t port_id)
+ 
+ static int virtser_port_qdev_init(DeviceState *qdev, DeviceInfo *base)
+ {
+-    VirtIOSerialDevice *dev = DO_UPCAST(VirtIOSerialDevice, qdev, qdev);
++    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, qdev);
+     VirtIOSerialPortInfo *info = DO_UPCAST(VirtIOSerialPortInfo, qdev, base);
+-    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, &dev->qdev);
+     VirtIOSerialBus *bus = DO_UPCAST(VirtIOSerialBus, qbus, qdev->parent_bus);
+     int ret;
+     bool plugging_port0;
+@@ -821,8 +819,8 @@ static int virtser_port_qdev_init(DeviceState *qdev, DeviceInfo *base)
+         return -1;
+     }
+ 
+-    dev->info = info;
+-    ret = info->init(dev);
++    port->info = info;
++    ret = info->init(port);
+     if (ret) {
+         return ret;
+     }
+@@ -851,8 +849,7 @@ static int virtser_port_qdev_init(DeviceState *qdev, DeviceInfo *base)
+ 
+ static int virtser_port_qdev_exit(DeviceState *qdev)
+ {
+-    VirtIOSerialDevice *dev = DO_UPCAST(VirtIOSerialDevice, qdev, qdev);
+-    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, &dev->qdev);
++    VirtIOSerialPort *port = DO_UPCAST(VirtIOSerialPort, dev, qdev);
+     VirtIOSerial *vser = port->vser;
+ 
+     qemu_bh_delete(port->bh);
+@@ -861,7 +858,7 @@ static int virtser_port_qdev_exit(DeviceState *qdev)
+     QTAILQ_REMOVE(&vser->ports, port, next);
+ 
+     if (port->info->exit)
+-        port->info->exit(dev);
++        port->info->exit(port);
+ 
+     return 0;
+ }
+diff --git a/hw/virtio-serial.h b/hw/virtio-serial.h
+index e0fdec6..95720fe 100644
+--- a/hw/virtio-serial.h
++++ b/hw/virtio-serial.h
+@@ -74,11 +74,6 @@ typedef struct VirtIOSerialBus VirtIOSerialBus;
+ typedef struct VirtIOSerialPort VirtIOSerialPort;
+ typedef struct VirtIOSerialPortInfo VirtIOSerialPortInfo;
+ 
+-typedef struct VirtIOSerialDevice {
+-    DeviceState qdev;
+-    VirtIOSerialPortInfo *info;
+-} VirtIOSerialDevice;
+-
+ /*
+  * This is the state that's shared between all the ports.  Some of the
+  * state is configurable via command-line options. Some of it can be
+@@ -153,12 +148,12 @@ struct VirtIOSerialPortInfo {
+      * The per-port (or per-app) init function that's called when a
+      * new device is found on the bus.
+      */
+-    int (*init)(VirtIOSerialDevice *dev);
++    int (*init)(VirtIOSerialPort *port);
+     /*
+      * Per-port exit function that's called when a port gets
+      * hot-unplugged or removed.
+      */
+-    int (*exit)(VirtIOSerialDevice *dev);
++    int (*exit)(VirtIOSerialPort *port);
+ 
+     /* Callbacks for guest events */
+         /* Guest opened device. */
+-- 
+1.7.7.4
+

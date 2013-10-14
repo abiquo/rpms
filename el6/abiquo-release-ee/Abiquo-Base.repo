@@ -1,0 +1,20 @@
+#
+# Abiquo-Base.repo
+#
+
+[abiquo-base]
+name=abiquo-base-2.6
+baseurl=http://mirror.abiquo.com/abiquo/el6/2.6/os/x86_64/
+enabled=1
+gpgcheck=1
+priority=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo
+
+[abiquo-updates]
+name=abiquo-updates-2.6
+baseurl=http://mirror.abiquo.com/abiquo/el6/2.6/updates/x86_64/
+enabled=1
+gpgcheck=1
+priority=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo
+

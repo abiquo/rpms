@@ -1,0 +1,200 @@
+From 5a621c6e0a6d1f2e7212962ca3d78279177c31d3 Mon Sep 17 00:00:00 2001
+Message-Id: <5a621c6e0a6d1f2e7212962ca3d78279177c31d3.1335361915.git.minovotn@redhat.com>
+In-Reply-To: <ce1a7d1539a0b4b36555d1035257f57af7ae8478.1335361915.git.minovotn@redhat.com>
+References: <ce1a7d1539a0b4b36555d1035257f57af7ae8478.1335361915.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 24 Apr 2012 14:01:30 +0200
+Subject: [PATCH 3/8] block: add block_job_sleep
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1335276095-25813-4-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39428
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 3/8] block: add block_job_sleep
+Bugzilla: 813862
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 813810
+
+Upstream status: submitted.
+
+This function abstracts the pretty complex semantics of the "busy"
+member of BlockJob.  Jobs need not set "busy" anymore.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ block.c        |   11 +++++++++++
+ block/mirror.c |   12 +++++-------
+ block/stream.c |   23 +++++++++--------------
+ block_int.h    |   10 ++++++----
+ 4 files changed, 31 insertions(+), 25 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c        |   11 +++++++++++
+ block/mirror.c |   12 +++++-------
+ block/stream.c |   23 +++++++++--------------
+ block_int.h    |   10 ++++++----
+ 4 files changed, 31 insertions(+), 25 deletions(-)
+
+diff --git a/block.c b/block.c
+index d1b5c14..d3cf964 100644
+--- a/block.c
++++ b/block.c
+@@ -3749,6 +3749,7 @@ void *block_job_create(const BlockJobType *job_type, BlockDriverState *bs,
+     job->bs            = bs;
+     job->cb            = cb;
+     job->opaque        = opaque;
++    job->busy          = true;
+     bs->job = job;
+     return job;
+ }
+@@ -3801,3 +3802,13 @@ void block_job_cancel_sync(BlockJob *job)
+         qemu_aio_wait();
+     }
+ }
++
++void block_job_sleep(BlockJob *job, QEMUClock *clock, int64_t ticks)
++{
++    /* Check cancellation *before* setting busy = false, too!  */
++    if (!block_job_is_cancelled(job)) {
++        job->busy = false;
++        co_sleep(clock, ticks);
++        job->busy = true;
++    }
++}
+diff --git a/block/mirror.c b/block/mirror.c
+index 390d539..03e4db8 100644
+--- a/block/mirror.c
++++ b/block/mirror.c
+@@ -156,8 +156,9 @@ static void coroutine_fn mirror_run(void *opaque)
+ 
+     sector_num = -1;
+     for (;;) {
++        uint64_t delay_ms;
+         int64_t cnt;
+-        s->common.busy = true;
++
+         if (bdrv_get_dirty_count(bs) == 0) {
+             /* Switch out of the streaming phase.  From now on, if the
+              * job is cancelled we will actually complete all pending
+@@ -197,8 +198,8 @@ static void coroutine_fn mirror_run(void *opaque)
+         cnt = bdrv_get_dirty_count(bs);
+         if (synced) {
+             if (!block_job_is_cancelled(&s->common)) {
+-                s->common.busy = false;
+-                co_sleep(rt_clock, cnt == 0 ? SLICE_TIME : 0);
++                delay_ms = (cnt == 0 ? SLICE_TIME : 0);
++                block_job_sleep(&s->common, rt_clock, delay_ms);
+             } else if (cnt == 0) {
+                 /* The two disks are in sync.  Exit and report successful
+                  * completion.
+@@ -214,8 +215,6 @@ static void coroutine_fn mirror_run(void *opaque)
+              * exiting.
+              */
+         } else {
+-            uint64_t delay_ms;
+-
+             /* Publish progress */
+             s->common.offset = end * BDRV_SECTOR_SIZE - cnt * BLOCK_SIZE;
+ 
+@@ -228,8 +227,7 @@ static void coroutine_fn mirror_run(void *opaque)
+             /* Note that even when no rate limit is applied we need to yield
+              * with no pending I/O here so that qemu_aio_flush() returns.
+              */
+-            s->common.busy = false;
+-            co_sleep(rt_clock, delay_ms);
++            block_job_sleep(&s->common, rt_clock, delay_ms);
+             if (block_job_is_cancelled(&s->common)) {
+                 break;
+             }
+diff --git a/block/stream.c b/block/stream.c
+index 1b19ac9..a396be5 100644
+--- a/block/stream.c
++++ b/block/stream.c
+@@ -203,12 +203,17 @@ static void coroutine_fn stream_run(void *opaque)
+     }
+ 
+     for (sector_num = 0; sector_num < end; sector_num += n) {
+-retry:
++        uint64_t delay_ms = 0;
++
++wait:
++        /* Note that even when no rate limit is applied we need to yield
++         * with no pending I/O here so that qemu_aio_flush() returns.
++         */
++        block_job_sleep(&s->common, rt_clock, delay_ms);
+         if (block_job_is_cancelled(&s->common)) {
+             break;
+         }
+ 
+-        s->common.busy = true;
+         if (base) {
+             ret = is_allocated_base(bs, base, sector_num,
+                                     STREAM_BUFFER_SIZE / BDRV_SECTOR_SIZE, &n);
+@@ -220,13 +225,9 @@ retry:
+         trace_stream_one_iteration(s, sector_num, n, ret);
+         if (ret == 0) {
+             if (s->common.speed) {
+-                uint64_t delay_ms = ratelimit_calculate_delay(&s->limit, n);
++                delay_ms = ratelimit_calculate_delay(&s->limit, n);
+                 if (delay_ms > 0) {
+-                    s->common.busy = false;
+-                    co_sleep(rt_clock, delay_ms);
+-
+-                    /* Recheck cancellation and that sectors are unallocated */
+-                    goto retry;
++                    goto wait;
+                 }
+             }
+             ret = stream_populate(bs, sector_num, n, buf);
+@@ -238,12 +239,6 @@ retry:
+ 
+         /* Publish progress */
+         s->common.offset += n * BDRV_SECTOR_SIZE;
+-
+-        /* Note that even when no rate limit is applied we need to yield
+-         * with no pending I/O here so that qemu_aio_flush() returns.
+-         */
+-        s->common.busy = false;
+-        co_sleep(rt_clock, 0);
+     }
+ 
+     if (!s->base) {
+diff --git a/block_int.h b/block_int.h
+index adb234a..2b6fa3d 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -79,15 +79,16 @@ struct BlockJob {
+     /**
+      * Set to true if the job should cancel itself.  The flag must
+      * always be tested just before toggling the busy flag from false
+-     * to true.  After a job has detected that the cancelled flag is
+-     * true, it should not anymore issue any I/O operation to the
+-     * block device.
++     * to true.  After a job has been cancelled, it should only yield
++     * if #qemu_aio_wait will ("sooner or later") reenter the coroutine;
++     * hence always check for cancellation before doing anything else
++     * that can yield, such as sleeping on a timer.
+      */
+     bool cancelled;
+ 
+     /**
+      * Set to false by the job while it is in a quiescent state, where
+-     * no I/O is pending and the job goes to sleep on any condition
++     * no I/O is pending and the job has yielded on any condition
+      * that is not detected by #qemu_aio_wait, such as a timer.
+      */
+     bool busy;
+@@ -312,6 +313,7 @@ int block_job_set_speed(BlockJob *job, int64_t value);
+ void block_job_cancel(BlockJob *job);
+ bool block_job_is_cancelled(BlockJob *job);
+ void block_job_cancel_sync(BlockJob *job);
++void block_job_sleep(BlockJob *job, QEMUClock *clock, int64_t ms);
+ 
+ int stream_start(BlockDriverState *bs, BlockDriverState *base,
+                  const char *base_id, BlockDriverCompletionFunc *cb,
+-- 
+1.7.7.6
+

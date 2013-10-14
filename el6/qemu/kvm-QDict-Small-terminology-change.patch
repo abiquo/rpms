@@ -1,0 +1,148 @@
+From 8b4483a21e672b75cabae874a1c4bcf1f8c0cfcf Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:43:29 -0500
+Subject: [PATCH 02/98] QDict: Small terminology change
+
+Let's call a 'hash' only what is returned by our hash function,
+anything else is a 'bucket'.
+
+This helps avoiding confusion with regard to how we traverse
+our table.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit c8bc3cd72b4c530721d5be1bf9f599edb5d72160)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ check-qdict.c |    2 +-
+ qdict.c       |   24 ++++++++++++------------
+ qdict.h       |    4 ++--
+ 3 files changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/check-qdict.c b/check-qdict.c
+index f2b4826..812341d 100644
+--- a/check-qdict.c
++++ b/check-qdict.c
+@@ -47,7 +47,7 @@ START_TEST(qdict_put_obj_test)
+     qdict_put_obj(qdict, "", QOBJECT(qint_from_int(num)));
+ 
+     fail_unless(qdict_size(qdict) == 1);
+-    ent = QLIST_FIRST(&qdict->table[12345 % QDICT_HASH_SIZE]);
++    ent = QLIST_FIRST(&qdict->table[12345 % QDICT_BUCKET_MAX]);
+     qi = qobject_to_qint(ent->value);
+     fail_unless(qint_get_int(qi) == num);
+ 
+diff --git a/qdict.c b/qdict.c
+index 7d1469d..4139ca4 100644
+--- a/qdict.c
++++ b/qdict.c
+@@ -86,11 +86,11 @@ static QDictEntry *alloc_entry(const char *key, QObject *value)
+  * qdict_find(): List lookup function
+  */
+ static QDictEntry *qdict_find(const QDict *qdict,
+-                              const char *key, unsigned int hash)
++                              const char *key, unsigned int bucket)
+ {
+     QDictEntry *entry;
+ 
+-    QLIST_FOREACH(entry, &qdict->table[hash], next)
++    QLIST_FOREACH(entry, &qdict->table[bucket], next)
+         if (!strcmp(entry->key, key))
+             return entry;
+ 
+@@ -110,11 +110,11 @@ static QDictEntry *qdict_find(const QDict *qdict,
+  */
+ void qdict_put_obj(QDict *qdict, const char *key, QObject *value)
+ {
+-    unsigned int hash;
++    unsigned int bucket;
+     QDictEntry *entry;
+ 
+-    hash = tdb_hash(key) % QDICT_HASH_SIZE;
+-    entry = qdict_find(qdict, key, hash);
++    bucket = tdb_hash(key) % QDICT_BUCKET_MAX;
++    entry = qdict_find(qdict, key, bucket);
+     if (entry) {
+         /* replace key's value */
+         qobject_decref(entry->value);
+@@ -122,7 +122,7 @@ void qdict_put_obj(QDict *qdict, const char *key, QObject *value)
+     } else {
+         /* allocate a new entry */
+         entry = alloc_entry(key, value);
+-        QLIST_INSERT_HEAD(&qdict->table[hash], entry, next);
++        QLIST_INSERT_HEAD(&qdict->table[bucket], entry, next);
+         qdict->size++;
+     }
+ }
+@@ -137,7 +137,7 @@ QObject *qdict_get(const QDict *qdict, const char *key)
+ {
+     QDictEntry *entry;
+ 
+-    entry = qdict_find(qdict, key, tdb_hash(key) % QDICT_HASH_SIZE);
++    entry = qdict_find(qdict, key, tdb_hash(key) % QDICT_BUCKET_MAX);
+     return (entry == NULL ? NULL : entry->value);
+ }
+ 
+@@ -148,8 +148,8 @@ QObject *qdict_get(const QDict *qdict, const char *key)
+  */
+ int qdict_haskey(const QDict *qdict, const char *key)
+ {
+-    unsigned int hash = tdb_hash(key) % QDICT_HASH_SIZE;
+-    return (qdict_find(qdict, key, hash) == NULL ? 0 : 1);
++    unsigned int bucket = tdb_hash(key) % QDICT_BUCKET_MAX;
++    return (qdict_find(qdict, key, bucket) == NULL ? 0 : 1);
+ }
+ 
+ /**
+@@ -318,7 +318,7 @@ void qdict_iter(const QDict *qdict,
+     int i;
+     QDictEntry *entry;
+ 
+-    for (i = 0; i < QDICT_HASH_SIZE; i++) {
++    for (i = 0; i < QDICT_BUCKET_MAX; i++) {
+         QLIST_FOREACH(entry, &qdict->table[i], next)
+             iter(entry->key, entry->value, opaque);
+     }
+@@ -347,7 +347,7 @@ void qdict_del(QDict *qdict, const char *key)
+ {
+     QDictEntry *entry;
+ 
+-    entry = qdict_find(qdict, key, tdb_hash(key) % QDICT_HASH_SIZE);
++    entry = qdict_find(qdict, key, tdb_hash(key) % QDICT_BUCKET_MAX);
+     if (entry) {
+         QLIST_REMOVE(entry, next);
+         qentry_destroy(entry);
+@@ -366,7 +366,7 @@ static void qdict_destroy_obj(QObject *obj)
+     assert(obj != NULL);
+     qdict = qobject_to_qdict(obj);
+ 
+-    for (i = 0; i < QDICT_HASH_SIZE; i++) {
++    for (i = 0; i < QDICT_BUCKET_MAX; i++) {
+         QDictEntry *entry = QLIST_FIRST(&qdict->table[i]);
+         while (entry) {
+             QDictEntry *tmp = QLIST_NEXT(entry, next);
+diff --git a/qdict.h b/qdict.h
+index 579dcdd..082d318 100644
+--- a/qdict.h
++++ b/qdict.h
+@@ -6,7 +6,7 @@
+ #include "qemu-queue.h"
+ #include <stdint.h>
+ 
+-#define QDICT_HASH_SIZE 512
++#define QDICT_BUCKET_MAX 512
+ 
+ typedef struct QDictEntry {
+     char *key;
+@@ -17,7 +17,7 @@ typedef struct QDictEntry {
+ typedef struct QDict {
+     QObject_HEAD;
+     size_t size;
+-    QLIST_HEAD(,QDictEntry) table[QDICT_HASH_SIZE];
++    QLIST_HEAD(,QDictEntry) table[QDICT_BUCKET_MAX];
+ } QDict;
+ 
+ /* Object API */
+-- 
+1.7.7.6
+

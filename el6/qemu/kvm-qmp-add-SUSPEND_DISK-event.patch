@@ -1,0 +1,130 @@
+From 92b721594c9f7f16364c9840606442ce948c5402 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Thu, 13 Sep 2012 17:32:52 -0300
+Subject: [RHEL6 qemu-kvm PATCH 6/6] qmp: add SUSPEND_DISK event
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1347557572-27294-3-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 41918
+O-Subject: [PATCH 2/2] qmp: add SUSPEND_DISK event
+Bugzilla: 827499
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Emitted when the guest makes a request to enter S4 state.
+
+There are three possible ways of having this event, as described here:
+
+ http://lists.gnu.org/archive/html/qemu-devel/2012-07/msg02307.html
+
+I've decided to add a new event and make it indepedent of SHUTDOWN.
+This means that the SHUTDOWN event will eventually follow the
+SUSPEND_DISK event.
+
+I've choosen this way because of two reasons:
+
+ 1. Having an indepedent event makes it possible to query for its
+    existence by using query-events
+
+ 2. In the future, we may allow the user to change what QEMU should
+    do as a result of the guest entering S4. So it's a good idea to
+    keep both events separated
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 25df49f6eb113081f48fdb3a3dd17bf1c0b25600)
+
+Conflicts:
+	hw/acpi.c
+	monitor.c
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ QMP/qmp-events.txt | 14 ++++++++++++++
+ hw/acpi.c          |  2 ++
+ monitor.c          |  3 +++
+ monitor.h          |  1 +
+ 4 files changed, 20 insertions(+)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ QMP/qmp-events.txt | 14 ++++++++++++++
+ hw/acpi.c          |  2 ++
+ monitor.c          |  3 +++
+ monitor.h          |  1 +
+ 4 files changed, 20 insertions(+)
+
+diff --git a/QMP/qmp-events.txt b/QMP/qmp-events.txt
+index cbd01cf..9042297 100644
+--- a/QMP/qmp-events.txt
++++ b/QMP/qmp-events.txt
+@@ -137,6 +137,20 @@ Example:
+ { "event": "SUSPEND",
+      "timestamp": { "seconds": 1344456160, "microseconds": 309119 } }
+ 
++SUSPEND_DISK
++------------
++
++Emitted when the guest makes a request to enter S4 state.
++
++Data: None.
++
++Example:
++
++{ "event": "SUSPEND_DISK",
++     "timestamp": { "seconds": 1344456160, "microseconds": 309119 } }
++
++Note: QEMU shuts down when entering S4 state.
++
+ VNC_CONNECTED
+ -------------
+ 
+diff --git a/hw/acpi.c b/hw/acpi.c
+index 5c712e3..cda4758 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -27,6 +27,7 @@
+ #include "string.h"
+ #include "ioport.h"
+ #include "fw_cfg.h"
++#include "monitor.h"
+ 
+ //#define DEBUG
+ 
+@@ -225,6 +226,7 @@ static void pm_ioport_writew(void *opaque, uint32_t addr, uint32_t val)
+                     break;
+                 default:
+                     if (sus_typ == s->s4_val) { /* S4 request */
++                        monitor_protocol_event(QEVENT_SUSPEND_DISK, NULL);
+                         qemu_system_shutdown_request();
+                     }
+                     break;
+diff --git a/monitor.c b/monitor.c
+index 1a0fcce..a836b94 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -497,6 +497,9 @@ void monitor_protocol_event(MonitorEvent event, QObject *data)
+         case QEVENT_SUSPEND:
+             event_name = "SUSPEND";
+             break;
++        case QEVENT_SUSPEND_DISK:
++            event_name = "SUSPEND_DISK";
++            break;
+         case QEVENT_WAKEUP:
+             event_name = "WAKEUP";
+             break;
+diff --git a/monitor.h b/monitor.h
+index cdfff71..19b5466 100644
+--- a/monitor.h
++++ b/monitor.h
+@@ -44,6 +44,7 @@ typedef enum MonitorEvent {
+     QEVENT_RH_SPICE_INITIALIZED,
+     QEVENT_RH_SPICE_DISCONNECTED,
+     QEVENT_SUSPEND,
++    QEVENT_SUSPEND_DISK,
+     QEVENT_WAKEUP,
+     QEVENT_SPICE_MIGRATE_COMPLETED,
+     QEVENT_MAX,
+-- 
+1.7.11.4
+

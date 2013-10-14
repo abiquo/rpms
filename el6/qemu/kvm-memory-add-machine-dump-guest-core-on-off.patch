@@ -1,0 +1,166 @@
+From 3299c593b4634d271cdeb05667de545c205f3cdb Mon Sep 17 00:00:00 2001
+Message-Id: <3299c593b4634d271cdeb05667de545c205f3cdb.1350567686.git.minovotn@redhat.com>
+In-Reply-To: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+References: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+From: Jason Baron <jbaron@redhat.com>
+Date: Fri, 12 Oct 2012 19:44:33 +0200
+Subject: [PATCH 7/7] memory: add -machine dump-guest-core=on|off
+
+RH-Author: Jason Baron <jbaron@redhat.com>
+Message-id: <e74c1e8ecd769f1380488d13a6b17c99a5d947d9.1350069767.git.jbaron@redhat.com>
+Patchwork-id: 43075
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v4 7/7] memory: add -machine dump-guest-core=on|off
+Bugzilla: 859447
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Jason Baron <jbaron@redhat.com>
+
+Add a new '[,dump-guest-core=on|off]' option to the '-machine' option. When
+'dump-guest-core=off' is specified, guest memory is omitted from the core dump.
+The default behavior continues to be to include guest memory when a core dump is
+triggered. In my testing, this brought the core dump size down from 384MB to 6MB
+on a 2GB guest.
+
+Is anything additional required to preserve this setting for migration or
+savevm? I don't believe so.
+
+Changelog:
+v3:
+    Eliminate globals as per Anthony's suggestion
+    set no dump from qemu_ram_remap() as well
+v2:
+    move the option from -m to -machine, rename option dump -> dump-guest-core
+
+Signed-off-by: Jason Baron <jbaron@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit ddb97f1debbb6be8d871f3b565f7b8befebf0f4f)
+
+Conflicts:
+    exec.c
+    qemu-options.hx
+    osdep.h
+    qemu-config.c
+
+Added #define QEMU_MADVISE 16 for x86_64 to avoid glibc-headers dependency
+Call madvise() directly without wrapper, since its available in RHEL
+
+Signed-off-by: Jason Baron <jbaron@redhat.com>
+---
+ exec.c          |   21 +++++++++++++++++++++
+ osdep.h         |    4 ++++
+ qemu-config.c   |    4 ++++
+ qemu-options.hx |    5 ++++-
+ 4 files changed, 33 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ exec.c          | 21 +++++++++++++++++++++
+ osdep.h         |  4 ++++
+ qemu-config.c   |  4 ++++
+ qemu-options.hx |  5 ++++-
+ 4 files changed, 33 insertions(+), 1 deletion(-)
+
+diff --git a/exec.c b/exec.c
+index 225f19c..298d94c 100644
+--- a/exec.c
++++ b/exec.c
+@@ -2702,6 +2702,24 @@ static ram_addr_t last_ram_offset(void)
+     return last;
+ }
+ 
++static void qemu_ram_setup_dump(void *addr, ram_addr_t size)
++{
++    int ret;
++    QemuOpts *machine_opts;
++
++    /* Use MADV_DONTDUMP, if user doesn't want the guest memory in the core */
++    machine_opts = qemu_opts_find(qemu_find_opts("machine"), 0);
++    if (machine_opts &&
++        !qemu_opt_get_bool(machine_opts, "dump-guest-core", true)) {
++        ret = madvise(addr, size, MADV_DONTDUMP);
++        if (ret) {
++            perror("qemu_madvise");
++            fprintf(stderr, "madvise doesn't support MADV_DONTDUMP, "
++                            "but dump_guest_core=off specified\n");
++        }
++    }
++}
++
+ ram_addr_t qemu_ram_alloc_from_ptr(DeviceState *dev, const char *name,
+                                    ram_addr_t size, void *host)
+ {
+@@ -2792,6 +2810,8 @@ ram_addr_t qemu_ram_alloc_from_ptr(DeviceState *dev, const char *name,
+ 
+     ram_list.dirty_pages += size >> TARGET_PAGE_BITS;
+ 
++    qemu_ram_setup_dump(new_block->host, size);
++
+     if (kvm_enabled())
+         kvm_setup_guest_memory(new_block->host, size);
+ 
+@@ -2899,6 +2919,7 @@ void qemu_ram_remap(ram_addr_t addr, ram_addr_t length)
+                 if (!disable_KSM)
+                     madvise(vaddr, length, MADV_MERGEABLE);
+ #endif
++                qemu_ram_setup_dump(vaddr, length);
+             }
+             return;
+         }
+diff --git a/osdep.h b/osdep.h
+index eae5eee..46ca087 100644
+--- a/osdep.h
++++ b/osdep.h
+@@ -90,6 +90,10 @@
+ # define QEMU_GNUC_PREREQ(maj, min) 0
+ #endif
+ 
++#if defined(__x86_64__)
++#define MADV_DONTDUMP 16
++#endif
++
+ void *qemu_memalign(size_t alignment, size_t size);
+ void *qemu_vmalloc(size_t size);
+ void qemu_vfree(void *ptr);
+diff --git a/qemu-config.c b/qemu-config.c
+index 232f984..cfadf12 100644
+--- a/qemu-config.c
++++ b/qemu-config.c
+@@ -433,6 +433,10 @@ static QemuOptsList qemu_machine_opts = {
+             .name = "accel",
+             .type = QEMU_OPT_STRING,
+             .help = "accelerator list",
++        }, {
++            .name = "dump-guest-core",
++            .type = QEMU_OPT_BOOL,
++            .help = "Include guest memory in  a core dump",
+         },
+         { /* End of list */ }
+     },
+diff --git a/qemu-options.hx b/qemu-options.hx
+index 2e47b06..4bffa74 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -1900,7 +1900,8 @@ DEF("machine", HAS_ARG, QEMU_OPTION_machine, \
+     "-machine [type=]name[,prop[=value][,...]]\n"
+     "                selects emulated machine (-machine ? for list)\n"
+     "                property accel=accel1[:accel2[:...]] selects accelerator\n"
+-    "                supported accelerators are kvm, tcg (default: kvm:tcg)\n")
++    "                supported accelerators are kvm, tcg (default: kvm:tcg)\n"
++    "                dump-guest-core=on|off include guest memory in a core dump (default=on)\n")
+ STEXI
+ @item -machine [type=]@var{name}[,prop=@var{value}[,...]]
+ @findex -machine
+@@ -1910,6 +1911,8 @@ available machines. Supported machine properties are:
+ @item accel=@var{accels1}[:@var{accels2}[:...]]
+ This is used to enable an accelerator. Depending on the target architecture,
+ kvm or tcg can be available. By default, kvm is used if available, else tcg.
++@item dump-guest-core=on|off
++Include guest memory in a core dump. The default is on.
+ @end table
+ ETEXI
+ 
+-- 
+1.7.11.7
+

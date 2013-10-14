@@ -1,0 +1,48 @@
+From 19c7eb1414073dd631a5194061c2e714dc43aecf Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 5 Mar 2012 17:44:28 -0500
+Subject: [PATCH 61/98] qapi: protect against NULL QObject in
+ qmp_input_get_object
+
+A NULL qobj can occur when a parameter is fetched via qdict_get, but
+the parameter is not in the command.  By returning NULL, the caller can
+choose whether to raise a missing parameter error, an invalid parameter
+type error, or use a default value.  For example, qom-set could can
+use this to reset a property to its default value, though at this time
+it will fail with "Invalid parameter type".  In any case, anything is
+better than crashing!
+
+Reviewed-by: Anthony Liguori <anthony@codemonkey.ws>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 47c6d3ecdfc3fc354cf996f873a9f854c2325160)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi/qmp-input-visitor.c |   10 ++++++----
+ 1 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/qapi/qmp-input-visitor.c b/qapi/qmp-input-visitor.c
+index 9babdd4..b52ac0c 100644
+--- a/qapi/qmp-input-visitor.c
++++ b/qapi/qmp-input-visitor.c
+@@ -49,10 +49,12 @@ static const QObject *qmp_input_get_object(QmpInputVisitor *qiv,
+         qobj = qiv->stack[qiv->nb_stack - 1].obj;
+     }
+ 
+-    if (name && qobject_type(qobj) == QTYPE_QDICT) {
+-        return qdict_get(qobject_to_qdict(qobj), name);
+-    } else if (qiv->nb_stack > 0 && qobject_type(qobj) == QTYPE_QLIST) {
+-        return qlist_entry_obj(qiv->stack[qiv->nb_stack - 1].entry);
++    if (qobj) {
++        if (name && qobject_type(qobj) == QTYPE_QDICT) {
++            return qdict_get(qobject_to_qdict(qobj), name);
++        } else if (qiv->nb_stack > 0 && qobject_type(qobj) == QTYPE_QLIST) {
++            return qlist_entry_obj(qiv->stack[qiv->nb_stack - 1].entry);
++        }
+     }
+ 
+     return qobj;
+-- 
+1.7.7.6
+

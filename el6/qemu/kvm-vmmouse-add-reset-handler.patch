@@ -1,0 +1,56 @@
+From 0f907a0cfd6af735a6ffdb064c5cf59565f4b4aa Mon Sep 17 00:00:00 2001
+Message-Id: <0f907a0cfd6af735a6ffdb064c5cf59565f4b4aa.1355928222.git.minovotn@redhat.com>
+In-Reply-To: <5bb1efba7d5e7913c8641db9d9acc3ed80e03ed7.1355928222.git.minovotn@redhat.com>
+References: <5bb1efba7d5e7913c8641db9d9acc3ed80e03ed7.1355928222.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Thu, 13 Dec 2012 09:25:18 +0100
+Subject: [PATCH 2/6] vmmouse: add reset handler
+
+Partly backport of upstream commit 91c9e09147ba1f3604a3d5d29b4de7702082a33f
+Left out the qdev bits because the conversion is incomplete anyway and
+it doesn't buy us anything but conflicts.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/vmmouse.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/hw/vmmouse.c b/hw/vmmouse.c
+index c6f1a2e..fca16f6 100644
+--- a/hw/vmmouse.c
++++ b/hw/vmmouse.c
+@@ -270,6 +270,13 @@ static const VMStateDescription vmstate_vmmouse = {
+     }
+ };
+ 
++static void vmmouse_reset(void *opaque)
++{
++    VMMouseState *s = opaque;
++
++    s->status = 0xffff;
++}
++
+ void *vmmouse_init(void *m)
+ {
+     VMMouseState *s = NULL;
+@@ -278,14 +285,14 @@ void *vmmouse_init(void *m)
+ 
+     s = qemu_mallocz(sizeof(VMMouseState));
+ 
+-    s->status = 0xffff;
+     s->ps2_mouse = m;
+-    s->queue_size = VMMOUSE_QUEUE_SIZE;
++    vmmouse_reset(s);
+ 
+     vmport_register(VMMOUSE_STATUS, vmmouse_ioport_read, s);
+     vmport_register(VMMOUSE_COMMAND, vmmouse_ioport_read, s);
+     vmport_register(VMMOUSE_DATA, vmmouse_ioport_read, s);
+     vmstate_register(NULL, 0, &vmstate_vmmouse, s);
++    qemu_register_reset(vmmouse_reset, s);
+ 
+     return s;
+ }
+-- 
+1.7.11.7
+

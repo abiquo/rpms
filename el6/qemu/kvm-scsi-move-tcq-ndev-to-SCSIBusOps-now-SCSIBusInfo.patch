@@ -1,0 +1,217 @@
+From cdd60944a5ed8977001d3b823537690e4f914d57 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:36 +0100
+Subject: [PATCH 020/109] scsi: move tcq/ndev to SCSIBusOps (now SCSIBusInfo)
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-20-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37500
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 019/102] scsi: move tcq/ndev to SCSIBusOps (now SCSIBusInfo)
+Bugzilla: 782029
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from afd4030c16d290e460cc93f8f9e353516b5451a2)
+
+Conflicts:
+	hw/esp.c (not merged because it's not on x86)
+	hw/lsi53c895a.c (not merged because we disable it)
+	hw/spapr_vscsi.c (absent in RHEL6)
+---
+ hw/scsi-bus.c  |   27 ++++++++++++---------------
+ hw/scsi-disk.c |    2 +-
+ hw/scsi.h      |   11 +++++------
+ hw/usb-msd.c   |    7 +++++--
+ 4 files changed, 23 insertions(+), 24 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c  |   27 ++++++++++++---------------
+ hw/scsi-disk.c |    2 +-
+ hw/scsi.h      |   11 +++++------
+ hw/usb-msd.c   |    7 +++++--
+ 4 files changed, 23 insertions(+), 24 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 8b803a2..2d5b2b7 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -24,14 +24,11 @@ static struct BusInfo scsi_bus_info = {
+ static int next_scsi_bus;
+ 
+ /* Create a scsi bus, and attach devices to it.  */
+-void scsi_bus_new(SCSIBus *bus, DeviceState *host, int tcq, int ndev,
+-                  const SCSIBusOps *ops)
++void scsi_bus_new(SCSIBus *bus, DeviceState *host, const SCSIBusInfo *info)
+ {
+     qbus_create_inplace(&bus->qbus, &scsi_bus_info, host, NULL);
+     bus->busnr = next_scsi_bus++;
+-    bus->tcq = tcq;
+-    bus->ndev = ndev;
+-    bus->ops = ops;
++    bus->info = info;
+     bus->qbus.allow_hotplug = 1;
+ }
+ 
+@@ -43,12 +40,12 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+     int rc = -1;
+ 
+     if (dev->id == -1) {
+-        for (dev->id = 0; dev->id < bus->ndev; dev->id++) {
++        for (dev->id = 0; dev->id < bus->info->ndev; dev->id++) {
+             if (bus->devs[dev->id] == NULL)
+                 break;
+         }
+     }
+-    if (dev->id >= bus->ndev) {
++    if (dev->id >= bus->info->ndev) {
+         error_report("bad scsi device id: %d", dev->id);
+         goto err;
+     }
+@@ -120,7 +117,7 @@ int scsi_bus_legacy_handle_cmdline(SCSIBus *bus)
+     int res = 0, unit;
+ 
+     loc_push_none(&loc);
+-    for (unit = 0; unit < bus->ndev; unit++) {
++    for (unit = 0; unit < bus->info->ndev; unit++) {
+         dinfo = drive_get(IF_SCSI, bus->busnr, unit);
+         if (dinfo == NULL) {
+             continue;
+@@ -265,7 +262,7 @@ static bool scsi_target_emulate_inquiry(SCSITargetReq *r)
+         r->buf[2] = 5; /* Version */
+         r->buf[3] = 2 | 0x10; /* HiSup, response data format */
+         r->buf[4] = r->len - 5; /* Additional Length = (Len - 1) - 4 */
+-        r->buf[7] = 0x10 | (r->req.bus->tcq ? 0x02 : 0); /* Sync, TCQ.  */
++        r->buf[7] = 0x10 | (r->req.bus->info->tcq ? 0x02 : 0); /* Sync, TCQ.  */
+         memcpy(&r->buf[8], "QEMU    ", 8);
+         memcpy(&r->buf[16], "QEMU TARGET     ", 16);
+         strncpy((char *) &r->buf[32], QEMU_VERSION, 4);
+@@ -1048,7 +1045,7 @@ void scsi_req_continue(SCSIRequest *req)
+ void scsi_req_data(SCSIRequest *req, int len)
+ {
+     trace_scsi_req_data(req->dev->id, req->lun, req->tag, len);
+-    req->bus->ops->transfer_data(req, len);
++    req->bus->info->transfer_data(req, len);
+ }
+ 
+ void scsi_req_print(SCSIRequest *req)
+@@ -1103,7 +1100,7 @@ void scsi_req_complete(SCSIRequest *req, int status)
+ 
+     scsi_req_ref(req);
+     scsi_req_dequeue(req);
+-    req->bus->ops->complete(req, req->status);
++    req->bus->info->complete(req, req->status);
+     scsi_req_unref(req);
+ }
+ 
+@@ -1114,8 +1111,8 @@ void scsi_req_cancel(SCSIRequest *req)
+     }
+     scsi_req_ref(req);
+     scsi_req_dequeue(req);
+-    if (req->bus->ops->cancel) {
+-        req->bus->ops->cancel(req);
++    if (req->bus->info->cancel) {
++        req->bus->info->cancel(req);
+     }
+     scsi_req_unref(req);
+ }
+@@ -1146,13 +1143,13 @@ static char *scsibus_get_fw_dev_path(DeviceState *dev)
+     char path[100];
+     int i;
+ 
+-    for (i = 0; i < bus->ndev; i++) {
++    for (i = 0; i < bus->info->ndev; i++) {
+         if (bus->devs[i] == d) {
+             break;
+         }
+     }
+ 
+-    assert(i != bus->ndev);
++    assert(i != bus->info->ndev);
+ 
+     snprintf(path, sizeof(path), "%s@%x", qdev_fw_name(dev), i);
+ 
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 3872ca4..2cc61d7 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -564,7 +564,7 @@ static int scsi_disk_emulate_inquiry(SCSIRequest *req, uint8_t *outbuf)
+     }
+ 
+     /* Sync data transfer and TCQ.  */
+-    outbuf[7] = 0x10 | (req->bus->tcq ? 0x02 : 0);
++    outbuf[7] = 0x10 | (req->bus->info->tcq ? 0x02 : 0);
+     return buflen;
+ }
+ 
+diff --git a/hw/scsi.h b/hw/scsi.h
+index a28cd68..502fd0d 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -10,7 +10,7 @@
+ #define SCSI_CMD_BUF_SIZE     16
+ 
+ typedef struct SCSIBus SCSIBus;
+-typedef struct SCSIBusOps SCSIBusOps;
++typedef struct SCSIBusInfo SCSIBusInfo;
+ typedef struct SCSICommand SCSICommand;
+ typedef struct SCSIDevice SCSIDevice;
+ typedef struct SCSIDeviceInfo SCSIDeviceInfo;
+@@ -96,7 +96,8 @@ struct SCSIDeviceInfo {
+     SCSIReqOps reqops;
+ };
+ 
+-struct SCSIBusOps {
++struct SCSIBusInfo {
++    int tcq, ndev;
+     void (*transfer_data)(SCSIRequest *req, uint32_t arg);
+     void (*complete)(SCSIRequest *req, uint32_t arg);
+     void (*cancel)(SCSIRequest *req);
+@@ -107,14 +108,12 @@ struct SCSIBus {
+     int busnr;
+ 
+     SCSISense unit_attention;
+-    int tcq, ndev;
+-    const SCSIBusOps *ops;
++    const SCSIBusInfo *info;
+ 
+     SCSIDevice *devs[MAX_SCSI_DEVS];
+ };
+ 
+-void scsi_bus_new(SCSIBus *bus, DeviceState *host, int tcq, int ndev,
+-                  const SCSIBusOps *ops);
++void scsi_bus_new(SCSIBus *bus, DeviceState *host, const SCSIBusInfo *info);
+ void scsi_qdev_register(SCSIDeviceInfo *info);
+ 
+ static inline SCSIBus *scsi_bus_from_device(SCSIDevice *d)
+diff --git a/hw/usb-msd.c b/hw/usb-msd.c
+index 27721ad..f098d5e 100644
+--- a/hw/usb-msd.c
++++ b/hw/usb-msd.c
+@@ -512,7 +512,10 @@ static void usb_msd_password_cb(void *opaque, int err)
+         qdev_unplug(&s->dev.qdev);
+ }
+ 
+-static const struct SCSIBusOps usb_msd_scsi_ops = {
++static const struct SCSIBusInfo usb_msd_scsi_info = {
++    .tcq = false,
++    .ndev = 1,
++
+     .transfer_data = usb_msd_transfer_data,
+     .complete = usb_msd_command_complete,
+     .cancel = usb_msd_request_cancelled
+@@ -553,7 +556,7 @@ static int usb_msd_initfn(USBDevice *dev)
+     }
+ 
+     usb_desc_init(dev);
+-    scsi_bus_new(&s->bus, &s->dev.qdev, 0, 1, &usb_msd_scsi_ops);
++    scsi_bus_new(&s->bus, &s->dev.qdev, &usb_msd_scsi_info);
+     s->scsi_dev = scsi_bus_legacy_add_drive(&s->bus, bs, 0, !!s->removable);
+     if (!s->scsi_dev) {
+         return -1;
+-- 
+1.7.7.6
+

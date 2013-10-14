@@ -1,0 +1,80 @@
+From bfdd5cf85692f517d8bae8dbfaf50d43884452bb Mon Sep 17 00:00:00 2001
+Message-Id: <bfdd5cf85692f517d8bae8dbfaf50d43884452bb.1351793582.git.minovotn@redhat.com>
+In-Reply-To: <e74f21f4030b33aaac45cab138ecabe18aac615b.1351793582.git.minovotn@redhat.com>
+References: <e74f21f4030b33aaac45cab138ecabe18aac615b.1351793582.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Thu, 25 Oct 2012 19:28:15 +0200
+Subject: [PATCH 2/8] i386: kvm: kvm_arch_get_supported_cpuid: replace nested
+ 'if's with single 'if'
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351193301-31675-3-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43647
+O-Subject: [RHEL6.4 qemu-kvm PATCH 2/8] i386: kvm: kvm_arch_get_supported_cpuid: replace nested 'if's with single 'if'
+Bugzilla: 691638
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 691638
+Upstream status: equivalent patch submitted
+ Message-Id: <1349383747-19383-8-git-send-email-ehabkost@redhat.com>
+
+Additional fixups will be added, and making them a single 'if/else if'
+chain makes it clearer than two nested 'if' statements.
+
+[RHEL note: the upstream code is on target-i386/kvm.c, this
+ changes the equivalent RHEL-6 code, at qemu-kvm-x86.c]
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ qemu-kvm-x86.c | 24 ++++++++++--------------
+ 1 file changed, 10 insertions(+), 14 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-kvm-x86.c | 24 ++++++++++--------------
+ 1 file changed, 10 insertions(+), 14 deletions(-)
+
+diff --git a/qemu-kvm-x86.c b/qemu-kvm-x86.c
+index d3b5ace..70d0885 100644
+--- a/qemu-kvm-x86.c
++++ b/qemu-kvm-x86.c
+@@ -745,24 +745,20 @@ uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+ 
+ 	/* Fixups for the data returned by KVM, below */
+ 
+-	if (reg == R_EDX) {
+-		if (function == 1) {
+-			/* kvm misreports the following features
+-			 */
+-			ret |= 1 << 12; /* MTRR */
+-			ret |= 1 << 16; /* PAT */
+-			ret |= 1 << 7;  /* MCE */
+-			ret |= 1 << 14; /* MCA */
+-		}
+-
++	if (function == 1 && reg == R_EDX) {
++		/* kvm misreports the following features
++		 */
++		ret |= 1 << 12; /* MTRR */
++		ret |= 1 << 16; /* PAT */
++		ret |= 1 << 7;  /* MCE */
++		ret |= 1 << 14; /* MCA */
++	} else if (function == 0x80000001 && reg == R_EDX) {
+ 		/* On Intel, kvm returns cpuid according to
+ 		 * the Intel spec, so add missing bits
+ 		 * according to the AMD spec:
+ 		 */
+-		if (function == 0x80000001) {
+-			cpuid_1_edx = kvm_get_supported_cpuid(kvm, 1, 0, R_EDX);
+-			ret |= cpuid_1_edx & 0x183f7ff;
+-		}
++		cpuid_1_edx = kvm_get_supported_cpuid(kvm, 1, 0, R_EDX);
++		ret |= cpuid_1_edx & 0x183f7ff;
+ 	}
+ 
+ 	free(cpuid);
+-- 
+1.7.11.7
+

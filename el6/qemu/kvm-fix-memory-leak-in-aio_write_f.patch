@@ -1,0 +1,46 @@
+From 46dbafc37e5cdfe5fe9fd70ab24930057b338acd Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:19 +0100
+Subject: [PATCH 25/52] fix memory leak in aio_write_f
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-26-git-send-email-armbru@redhat.com>
+Patchwork-id: 36616
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 25/52] fix memory leak in aio_write_f
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Alex Jia <ajia@redhat.com>
+
+Haven't released memory of 'ctx' before return.
+
+Signed-off-by: Alex Jia <ajia@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit b1b1dad31f3a092e046b09795f4476705c4e564e)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ qemu-io.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-io.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/qemu-io.c b/qemu-io.c
+index 4c70a99..f82f209 100644
+--- a/qemu-io.c
++++ b/qemu-io.c
+@@ -1054,6 +1054,7 @@ static int aio_write_f(int argc, char **argv)
+         case 'P':
+             pattern = parse_pattern(optarg);
+             if (pattern < 0) {
++                free(ctx);
+                 return 0;
+             }
+             break;
+-- 
+1.7.7.5
+

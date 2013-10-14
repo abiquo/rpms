@@ -1,0 +1,915 @@
+From b7c19cf2629a037e0d611caf72f08db42a210216 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:13 +0100
+Subject: [PATCH 19/52] Do not use dprintf
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-20-git-send-email-armbru@redhat.com>
+Patchwork-id: 36592
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 19/52] Do not use dprintf
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: malc <av1474@comtv.ru>
+
+dprintf is already claimed by POSIX[1], and on at least one system
+is implemented as a macro
+
+[1] http://www.opengroup.org/onlinepubs/9699919799/functions/dprintf.html
+
+Signed-off-by: malc <av1474@comtv.ru>
+(cherry picked from commit d0f2c4c60263e29a87681433e696844401514194)
+
+Conflicts:
+
+	block-migration.c
+	buffered_file.c
+	hw/usb-ohci.c
+	migration-exec.c
+	migration-fd.c
+	migration-tcp.c
+	migration-unix.c
+	migration.c
+	usb-linux.c
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ block/curl.c  |   16 +++++++-------
+ hw/gt64xxx.c  |   36 +++++++++++++++++-----------------
+ hw/hpet.c     |   46 +++++++++++++++++++++---------------------
+ hw/usb-ohci.c |   60 ++++++++++++++++++++++++++++----------------------------
+ hw/usb-uhci.c |   40 +++++++++++++++++++-------------------
+ slirp/bootp.c |   18 ++++++++--------
+ 6 files changed, 108 insertions(+), 108 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/curl.c  |   16 +++++++-------
+ hw/gt64xxx.c  |   36 +++++++++++++++++-----------------
+ hw/hpet.c     |   46 +++++++++++++++++++++---------------------
+ hw/usb-ohci.c |   60 ++++++++++++++++++++++++++++----------------------------
+ hw/usb-uhci.c |   40 +++++++++++++++++++-------------------
+ slirp/bootp.c |   18 ++++++++--------
+ 6 files changed, 108 insertions(+), 108 deletions(-)
+
+diff --git a/block/curl.c b/block/curl.c
+index d6f5089..5f51bfc 100644
+--- a/block/curl.c
++++ b/block/curl.c
+@@ -29,9 +29,9 @@
+ // #define DEBUG_VERBOSE
+ 
+ #ifdef DEBUG_CURL
+-#define dprintf(fmt, ...) do { printf(fmt, ## __VA_ARGS__); } while (0)
++#define DPRINTF(fmt, ...) do { printf(fmt, ## __VA_ARGS__); } while (0)
+ #else
+-#define dprintf(fmt, ...) do { } while (0)
++#define DPRINTF(fmt, ...) do { } while (0)
+ #endif
+ 
+ #define CURL_NUM_STATES 8
+@@ -80,7 +80,7 @@ static void curl_multi_do(void *arg);
+ static int curl_sock_cb(CURL *curl, curl_socket_t fd, int action,
+                         void *s, void *sp)
+ {
+-    dprintf("CURL (AIO): Sock action %d on fd %d\n", action, fd);
++    DPRINTF("CURL (AIO): Sock action %d on fd %d\n", action, fd);
+     switch (action) {
+         case CURL_POLL_IN:
+             qemu_aio_set_fd_handler(fd, curl_multi_do, NULL, NULL, NULL, s);
+@@ -118,7 +118,7 @@ static size_t curl_read_cb(void *ptr, size_t size, size_t nmemb, void *opaque)
+     size_t realsize = size * nmemb;
+     int i;
+ 
+-    dprintf("CURL: Just reading %lld bytes\n", (unsigned long long)realsize);
++    DPRINTF("CURL: Just reading %lld bytes\n", (unsigned long long)realsize);
+ 
+     if (!s || !s->orig_buf)
+         goto read_end;
+@@ -349,7 +349,7 @@ static int curl_open(BlockDriverState *bs, const char *filename, int flags)
+         inited = 1;
+     }
+ 
+-    dprintf("CURL: Opening %s\n", file);
++    DPRINTF("CURL: Opening %s\n", file);
+     s->url = file;
+     state = curl_init_state(s);
+     if (!state)
+@@ -368,7 +368,7 @@ static int curl_open(BlockDriverState *bs, const char *filename, int flags)
+         s->len = (size_t)d;
+     else if(!s->len)
+         goto out;
+-    dprintf("CURL: Size = %lld\n", (long long)s->len);
++    DPRINTF("CURL: Size = %lld\n", (long long)s->len);
+ 
+     curl_clean_state(state);
+     curl_easy_cleanup(state->curl);
+@@ -451,7 +451,7 @@ static BlockDriverAIOCB *curl_aio_readv(BlockDriverState *bs,
+     state->acb[0] = acb;
+ 
+     snprintf(state->range, 127, "%lld-%lld", (long long)start, (long long)end);
+-    dprintf("CURL (AIO): Reading %d at %lld (%s)\n", (nb_sectors * SECTOR_SIZE), start, state->range);
++    DPRINTF("CURL (AIO): Reading %d at %lld (%s)\n", (nb_sectors * SECTOR_SIZE), start, state->range);
+     curl_easy_setopt(state->curl, CURLOPT_RANGE, state->range);
+ 
+     curl_multi_add_handle(s->multi, state->curl);
+@@ -465,7 +465,7 @@ static void curl_close(BlockDriverState *bs)
+     BDRVCURLState *s = bs->opaque;
+     int i;
+ 
+-    dprintf("CURL: Close\n");
++    DPRINTF("CURL: Close\n");
+     for (i=0; i<CURL_NUM_STATES; i++) {
+         if (s->states[i].in_use)
+             curl_clean_state(&s->states[i]);
+diff --git a/hw/gt64xxx.c b/hw/gt64xxx.c
+index 0d0e2a5..d891acf 100644
+--- a/hw/gt64xxx.c
++++ b/hw/gt64xxx.c
+@@ -31,9 +31,9 @@
+ //#define DEBUG
+ 
+ #ifdef DEBUG
+-#define dprintf(fmt, ...) fprintf(stderr, "%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
++#define DPRINTF(fmt, ...) fprintf(stderr, "%s: " fmt, __FUNCTION__, ##__VA_ARGS__)
+ #else
+-#define dprintf(fmt, ...)
++#define DPRINTF(fmt, ...)
+ #endif
+ 
+ #define GT_REGS			(0x1000 >> 2)
+@@ -276,7 +276,7 @@ static void gt64120_isd_mapping(GT64120State *s)
+     check_reserved_space(&start, &length);
+     length = 0x1000;
+     /* Map new address */
+-    dprintf("ISD: %x@%x -> %x@%x, %x\n", s->ISD_length, s->ISD_start,
++    DPRINTF("ISD: %x@%x -> %x@%x, %x\n", s->ISD_length, s->ISD_start,
+             length, start, s->ISD_handle);
+     s->ISD_start = start;
+     s->ISD_length = length;
+@@ -423,7 +423,7 @@ static void gt64120_writel (void *opaque, target_phys_addr_t addr,
+     case GT_DEV_B3:
+     case GT_DEV_BOOT:
+         /* Not implemented */
+-        dprintf ("Unimplemented device register offset 0x%x\n", saddr << 2);
++        DPRINTF ("Unimplemented device register offset 0x%x\n", saddr << 2);
+         break;
+ 
+     /* ECC */
+@@ -457,7 +457,7 @@ static void gt64120_writel (void *opaque, target_phys_addr_t addr,
+     case GT_DMA2_CUR:
+     case GT_DMA3_CUR:
+         /* Not implemented */
+-        dprintf ("Unimplemented DMA register offset 0x%x\n", saddr << 2);
++        DPRINTF ("Unimplemented DMA register offset 0x%x\n", saddr << 2);
+         break;
+ 
+     /* DMA Channel Control */
+@@ -466,13 +466,13 @@ static void gt64120_writel (void *opaque, target_phys_addr_t addr,
+     case GT_DMA2_CTRL:
+     case GT_DMA3_CTRL:
+         /* Not implemented */
+-        dprintf ("Unimplemented DMA register offset 0x%x\n", saddr << 2);
++        DPRINTF ("Unimplemented DMA register offset 0x%x\n", saddr << 2);
+         break;
+ 
+     /* DMA Arbiter */
+     case GT_DMA_ARB:
+         /* Not implemented */
+-        dprintf ("Unimplemented DMA register offset 0x%x\n", saddr << 2);
++        DPRINTF ("Unimplemented DMA register offset 0x%x\n", saddr << 2);
+         break;
+ 
+     /* Timer/Counter */
+@@ -482,7 +482,7 @@ static void gt64120_writel (void *opaque, target_phys_addr_t addr,
+     case GT_TC3:
+     case GT_TC_CONTROL:
+         /* Not implemented */
+-        dprintf ("Unimplemented timer register offset 0x%x\n", saddr << 2);
++        DPRINTF ("Unimplemented timer register offset 0x%x\n", saddr << 2);
+         break;
+ 
+     /* PCI Internal */
+@@ -539,19 +539,19 @@ static void gt64120_writel (void *opaque, target_phys_addr_t addr,
+         /* not really implemented */
+         s->regs[saddr] = ~(~(s->regs[saddr]) | ~(val & 0xfffffffe));
+         s->regs[saddr] |= !!(s->regs[saddr] & 0xfffffffe);
+-        dprintf("INTRCAUSE %x\n", val);
++        DPRINTF("INTRCAUSE %x\n", val);
+         break;
+     case GT_INTRMASK:
+         s->regs[saddr] = val & 0x3c3ffffe;
+-        dprintf("INTRMASK %x\n", val);
++        DPRINTF("INTRMASK %x\n", val);
+         break;
+     case GT_PCI0_ICMASK:
+         s->regs[saddr] = val & 0x03fffffe;
+-        dprintf("ICMASK %x\n", val);
++        DPRINTF("ICMASK %x\n", val);
+         break;
+     case GT_PCI0_SERR0MASK:
+         s->regs[saddr] = val & 0x0000003f;
+-        dprintf("SERR0MASK %x\n", val);
++        DPRINTF("SERR0MASK %x\n", val);
+         break;
+ 
+     /* Reserved when only PCI_0 is configured. */
+@@ -575,7 +575,7 @@ static void gt64120_writel (void *opaque, target_phys_addr_t addr,
+         break;
+ 
+     default:
+-        dprintf ("Bad register offset 0x%x\n", (int)addr);
++        DPRINTF ("Bad register offset 0x%x\n", (int)addr);
+         break;
+     }
+ }
+@@ -815,19 +815,19 @@ static uint32_t gt64120_readl (void *opaque,
+     /* Interrupts */
+     case GT_INTRCAUSE:
+         val = s->regs[saddr];
+-        dprintf("INTRCAUSE %x\n", val);
++        DPRINTF("INTRCAUSE %x\n", val);
+         break;
+     case GT_INTRMASK:
+         val = s->regs[saddr];
+-        dprintf("INTRMASK %x\n", val);
++        DPRINTF("INTRMASK %x\n", val);
+         break;
+     case GT_PCI0_ICMASK:
+         val = s->regs[saddr];
+-        dprintf("ICMASK %x\n", val);
++        DPRINTF("ICMASK %x\n", val);
+         break;
+     case GT_PCI0_SERR0MASK:
+         val = s->regs[saddr];
+-        dprintf("SERR0MASK %x\n", val);
++        DPRINTF("SERR0MASK %x\n", val);
+         break;
+ 
+     /* Reserved when only PCI_0 is configured. */
+@@ -842,7 +842,7 @@ static uint32_t gt64120_readl (void *opaque,
+ 
+     default:
+         val = s->regs[saddr];
+-        dprintf ("Bad register offset 0x%x\n", (int)addr);
++        DPRINTF ("Bad register offset 0x%x\n", (int)addr);
+         break;
+     }
+ 
+diff --git a/hw/hpet.c b/hw/hpet.c
+index b253755..b3f6faa 100644
+--- a/hw/hpet.c
++++ b/hw/hpet.c
+@@ -32,9 +32,9 @@
+ 
+ //#define HPET_DEBUG
+ #ifdef HPET_DEBUG
+-#define dprintf printf
++#define DPRINTF printf
+ #else
+-#define dprintf(...)
++#define DPRINTF(...)
+ #endif
+ 
+ static HPETState *hpet_statep;
+@@ -293,7 +293,7 @@ static uint32_t hpet_ram_readl(void *opaque, target_phys_addr_t addr)
+     HPETState *s = (HPETState *)opaque;
+     uint64_t cur_tick, index;
+ 
+-    dprintf("qemu: Enter hpet_ram_readl at %" PRIx64 "\n", addr);
++    DPRINTF("qemu: Enter hpet_ram_readl at %" PRIx64 "\n", addr);
+     index = addr;
+     /*address range of all TN regs*/
+     if (index >= 0x100 && index <= 0x3ff) {
+@@ -316,7 +316,7 @@ static uint32_t hpet_ram_readl(void *opaque, target_phys_addr_t addr)
+             case HPET_TN_ROUTE:
+                 return timer->fsb >> 32;
+             default:
+-                dprintf("qemu: invalid hpet_ram_readl\n");
++                DPRINTF("qemu: invalid hpet_ram_readl\n");
+                 break;
+         }
+     } else {
+@@ -328,26 +328,26 @@ static uint32_t hpet_ram_readl(void *opaque, target_phys_addr_t addr)
+             case HPET_CFG:
+                 return s->config;
+             case HPET_CFG + 4:
+-                dprintf("qemu: invalid HPET_CFG + 4 hpet_ram_readl \n");
++                DPRINTF("qemu: invalid HPET_CFG + 4 hpet_ram_readl \n");
+                 return 0;
+             case HPET_COUNTER:
+                 if (hpet_enabled())
+                     cur_tick = hpet_get_ticks();
+                 else
+                     cur_tick = s->hpet_counter;
+-                dprintf("qemu: reading counter  = %" PRIx64 "\n", cur_tick);
++                DPRINTF("qemu: reading counter  = %" PRIx64 "\n", cur_tick);
+                 return cur_tick;
+             case HPET_COUNTER + 4:
+                 if (hpet_enabled())
+                     cur_tick = hpet_get_ticks();
+                 else
+                     cur_tick = s->hpet_counter;
+-                dprintf("qemu: reading counter + 4  = %" PRIx64 "\n", cur_tick);
++                DPRINTF("qemu: reading counter + 4  = %" PRIx64 "\n", cur_tick);
+                 return cur_tick >> 32;
+             case HPET_STATUS:
+                 return s->isr;
+             default:
+-                dprintf("qemu: invalid hpet_ram_readl\n");
++                DPRINTF("qemu: invalid hpet_ram_readl\n");
+                 break;
+         }
+     }
+@@ -377,7 +377,7 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+     HPETState *s = (HPETState *)opaque;
+     uint64_t old_val, new_val, val, index;
+ 
+-    dprintf("qemu: Enter hpet_ram_writel at %" PRIx64 " = %#x\n", addr, value);
++    DPRINTF("qemu: Enter hpet_ram_writel at %" PRIx64 " = %#x\n", addr, value);
+     index = addr;
+     old_val = hpet_ram_readl(opaque, addr);
+     new_val = value;
+@@ -385,12 +385,12 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+     /*address range of all TN regs*/
+     if (index >= 0x100 && index <= 0x3ff) {
+         uint8_t timer_id = (addr - 0x100) / 0x20;
+-        dprintf("qemu: hpet_ram_writel timer_id = %#x \n", timer_id);
++        DPRINTF("qemu: hpet_ram_writel timer_id = %#x \n", timer_id);
+         HPETTimer *timer = &s->timer[timer_id];
+ 
+         switch ((addr - 0x100) % 0x20) {
+             case HPET_TN_CFG:
+-                dprintf("qemu: hpet_ram_writel HPET_TN_CFG\n");
++                DPRINTF("qemu: hpet_ram_writel HPET_TN_CFG\n");
+                 val = hpet_fixup_reg(new_val, old_val, HPET_TN_CFG_WRITE_MASK);
+                 timer->config = (timer->config & 0xffffffff00000000ULL) | val;
+                 if (new_val & HPET_TN_32BIT) {
+@@ -404,10 +404,10 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+ 
+                 break;
+             case HPET_TN_CFG + 4: // Interrupt capabilities
+-                dprintf("qemu: invalid HPET_TN_CFG+4 write\n");
++                DPRINTF("qemu: invalid HPET_TN_CFG+4 write\n");
+                 break;
+             case HPET_TN_CMP: // comparator register
+-                dprintf("qemu: hpet_ram_writel HPET_TN_CMP \n");
++                DPRINTF("qemu: hpet_ram_writel HPET_TN_CMP \n");
+                 if (timer->config & HPET_TN_32BIT)
+                     new_val = (uint32_t)new_val;
+                 if (!timer_is_periodic(timer) ||
+@@ -428,7 +428,7 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+                     hpet_set_timer(timer);
+                 break;
+             case HPET_TN_CMP + 4: // comparator register high order
+-                dprintf("qemu: hpet_ram_writel HPET_TN_CMP + 4\n");
++                DPRINTF("qemu: hpet_ram_writel HPET_TN_CMP + 4\n");
+                 if (!timer_is_periodic(timer) ||
+                            (timer->config & HPET_TN_SETVAL))
+                     timer->cmp = (timer->cmp & 0xffffffffULL)
+@@ -448,10 +448,10 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+                     hpet_set_timer(timer);
+                 break;
+             case HPET_TN_ROUTE + 4:
+-                dprintf("qemu: hpet_ram_writel HPET_TN_ROUTE + 4\n");
++                DPRINTF("qemu: hpet_ram_writel HPET_TN_ROUTE + 4\n");
+                 break;
+             default:
+-                dprintf("qemu: invalid hpet_ram_writel\n");
++                DPRINTF("qemu: invalid hpet_ram_writel\n");
+                 break;
+         }
+         return;
+@@ -479,14 +479,14 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+                 /* i8254 and RTC are disabled when HPET is in legacy mode */
+                 if (activating_bit(old_val, new_val, HPET_CFG_LEGACY)) {
+                     hpet_disable_pit();
+-                    dprintf("qemu: hpet disabled pit\n");
++                    DPRINTF("qemu: hpet disabled pit\n");
+                 } else if (deactivating_bit(old_val, new_val, HPET_CFG_LEGACY)) {
+                     hpet_enable_pit();
+-                    dprintf("qemu: hpet enabled pit\n");
++                    DPRINTF("qemu: hpet enabled pit\n");
+                 }
+                 break;
+             case HPET_CFG + 4:
+-                dprintf("qemu: invalid HPET_CFG+4 write \n");
++                DPRINTF("qemu: invalid HPET_CFG+4 write \n");
+                 break;
+             case HPET_STATUS:
+                 /* FIXME: need to handle level-triggered interrupts */
+@@ -496,7 +496,7 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+                    printf("qemu: Writing counter while HPET enabled!\n");
+                s->hpet_counter = (s->hpet_counter & 0xffffffff00000000ULL)
+                                   | value;
+-               dprintf("qemu: HPET counter written. ctr = %#x -> %" PRIx64 "\n",
++               DPRINTF("qemu: HPET counter written. ctr = %#x -> %" PRIx64 "\n",
+                         value, s->hpet_counter);
+                break;
+             case HPET_COUNTER + 4:
+@@ -504,11 +504,11 @@ static void hpet_ram_writel(void *opaque, target_phys_addr_t addr,
+                    printf("qemu: Writing counter while HPET enabled!\n");
+                s->hpet_counter = (s->hpet_counter & 0xffffffffULL)
+                                   | (((uint64_t)value) << 32);
+-               dprintf("qemu: HPET counter + 4 written. ctr = %#x -> %" PRIx64 "\n",
++               DPRINTF("qemu: HPET counter + 4 written. ctr = %#x -> %" PRIx64 "\n",
+                         value, s->hpet_counter);
+                break;
+             default:
+-               dprintf("qemu: invalid hpet_ram_writel\n");
++               DPRINTF("qemu: invalid hpet_ram_writel\n");
+                break;
+         }
+     }
+@@ -575,7 +575,7 @@ void hpet_init(qemu_irq *irq) {
+     int i, iomemtype;
+     HPETState *s;
+ 
+-    dprintf ("hpet_init\n");
++    DPRINTF ("hpet_init\n");
+ 
+     s = qemu_mallocz(sizeof(HPETState));
+     hpet_statep = s;
+diff --git a/hw/usb-ohci.c b/hw/usb-ohci.c
+index bdeddbd..5597b4d 100644
+--- a/hw/usb-ohci.c
++++ b/hw/usb-ohci.c
+@@ -42,9 +42,9 @@
+ //#define OHCI_TIME_WARP 1
+ 
+ #ifdef DEBUG_OHCI
+-#define dprintf printf
++#define DPRINTF printf
+ #else
+-#define dprintf(...)
++#define DPRINTF(...)
+ #endif
+ 
+ /* Number of Downstream Ports on the root hub.  */
+@@ -422,7 +422,7 @@ static void ohci_reset(void *opaque)
+         usb_cancel_packet(&ohci->usb_packet);
+         ohci->async_td = 0;
+     }
+-    dprintf("usb-ohci: Reset %s\n", ohci->name);
++    DPRINTF("usb-ohci: Reset %s\n", ohci->name);
+ }
+ 
+ /* Get an array of dwords from main memory */
+@@ -588,7 +588,7 @@ static void ohci_async_complete_packet(USBDevice *dev, USBPacket *packet)
+ {
+     OHCIState *ohci = container_of(packet, OHCIState, usb_packet);
+ #ifdef DEBUG_PACKET
+-    dprintf("Async packet complete\n");
++    DPRINTF("Async packet complete\n");
+ #endif
+     ohci->async_complete = 1;
+     ohci_process_lists(ohci, 1);
+@@ -643,12 +643,12 @@ static int ohci_service_iso_td(OHCIState *ohci, struct ohci_ed *ed,
+ #endif
+ 
+     if (relative_frame_number < 0) {
+-        dprintf("usb-ohci: ISO_TD R=%d < 0\n", relative_frame_number);
++        DPRINTF("usb-ohci: ISO_TD R=%d < 0\n", relative_frame_number);
+         return 1;
+     } else if (relative_frame_number > frame_count) {
+         /* ISO TD expired - retire the TD to the Done Queue and continue with
+            the next ISO TD of the same ED */
+-        dprintf("usb-ohci: ISO_TD R=%d > FC=%d\n", relative_frame_number, 
++        DPRINTF("usb-ohci: ISO_TD R=%d > FC=%d\n", relative_frame_number, 
+                frame_count);
+         OHCI_SET_BM(iso_td.flags, TD_CC, OHCI_CC_DATAOVERRUN);
+         ed->head &= ~OHCI_DPTR_MASK;
+@@ -849,7 +849,7 @@ static int ohci_service_td(OHCIState *ohci, struct ohci_ed *ed)
+     completion = (addr == ohci->async_td);
+     if (completion && !ohci->async_complete) {
+ #ifdef DEBUG_PACKET
+-        dprintf("Skipping async TD\n");
++        DPRINTF("Skipping async TD\n");
+ #endif
+         return 1;
+     }
+@@ -900,14 +900,14 @@ static int ohci_service_td(OHCIState *ohci, struct ohci_ed *ed)
+ 
+     flag_r = (td.flags & OHCI_TD_R) != 0;
+ #ifdef DEBUG_PACKET
+-    dprintf(" TD @ 0x%.8x %" PRId64 " bytes %s r=%d cbp=0x%.8x be=0x%.8x\n",
++    DPRINTF(" TD @ 0x%.8x %" PRId64 " bytes %s r=%d cbp=0x%.8x be=0x%.8x\n",
+             addr, len, str, flag_r, td.cbp, td.be);
+ 
+     if (len > 0 && dir != OHCI_TD_DIR_IN) {
+-        dprintf("  data:");
++        DPRINTF("  data:");
+         for (i = 0; i < len; i++)
+             printf(" %.2x", ohci->usb_buf[i]);
+-        dprintf("\n");
++        DPRINTF("\n");
+     }
+ #endif
+     if (completion) {
+@@ -928,7 +928,7 @@ static int ohci_service_td(OHCIState *ohci, struct ohci_ed *ed)
+                    timely manner.
+                  */
+ #ifdef DEBUG_PACKET
+-                dprintf("Too many pending packets\n");
++                DPRINTF("Too many pending packets\n");
+ #endif
+                 return 1;
+             }
+@@ -942,7 +942,7 @@ static int ohci_service_td(OHCIState *ohci, struct ohci_ed *ed)
+                 break;
+         }
+ #ifdef DEBUG_PACKET
+-        dprintf("ret=%d\n", ret);
++        DPRINTF("ret=%d\n", ret);
+ #endif
+         if (ret == USB_RET_ASYNC) {
+             ohci->async_td = addr;
+@@ -953,10 +953,10 @@ static int ohci_service_td(OHCIState *ohci, struct ohci_ed *ed)
+         if (dir == OHCI_TD_DIR_IN) {
+             ohci_copy_td(ohci, &td, ohci->usb_buf, ret, 1);
+ #ifdef DEBUG_PACKET
+-            dprintf("  data:");
++            DPRINTF("  data:");
+             for (i = 0; i < ret; i++)
+                 printf(" %.2x", ohci->usb_buf[i]);
+-            dprintf("\n");
++            DPRINTF("\n");
+ #endif
+         } else {
+             ret = len;
+@@ -985,21 +985,21 @@ static int ohci_service_td(OHCIState *ohci, struct ohci_ed *ed)
+             ed->head |= OHCI_ED_C;
+     } else {
+         if (ret >= 0) {
+-            dprintf("usb-ohci: Underrun\n");
++            DPRINTF("usb-ohci: Underrun\n");
+             OHCI_SET_BM(td.flags, TD_CC, OHCI_CC_DATAUNDERRUN);
+         } else {
+             switch (ret) {
+             case USB_RET_NODEV:
+                 OHCI_SET_BM(td.flags, TD_CC, OHCI_CC_DEVICENOTRESPONDING);
+             case USB_RET_NAK:
+-                dprintf("usb-ohci: got NAK\n");
++                DPRINTF("usb-ohci: got NAK\n");
+                 return 1;
+             case USB_RET_STALL:
+-                dprintf("usb-ohci: got STALL\n");
++                DPRINTF("usb-ohci: got STALL\n");
+                 OHCI_SET_BM(td.flags, TD_CC, OHCI_CC_STALL);
+                 break;
+             case USB_RET_BABBLE:
+-                dprintf("usb-ohci: got BABBLE\n");
++                DPRINTF("usb-ohci: got BABBLE\n");
+                 OHCI_SET_BM(td.flags, TD_CC, OHCI_CC_DATAOVERRUN);
+                 break;
+             default:
+@@ -1058,7 +1058,7 @@ static int ohci_service_ed_list(OHCIState *ohci, uint32_t head, int completion)
+ 
+         while ((ed.head & OHCI_DPTR_MASK) != ed.tail) {
+ #ifdef DEBUG_PACKET
+-            dprintf("ED @ 0x%.8x fa=%u en=%u d=%u s=%u k=%u f=%u mps=%u "
++            DPRINTF("ED @ 0x%.8x fa=%u en=%u d=%u s=%u k=%u f=%u mps=%u "
+                     "h=%u c=%u\n  head=0x%.8x tailp=0x%.8x next=0x%.8x\n", cur,
+                     OHCI_BM(ed.flags, ED_FA), OHCI_BM(ed.flags, ED_EN),
+                     OHCI_BM(ed.flags, ED_D), (ed.flags & OHCI_ED_S)!= 0,
+@@ -1098,7 +1098,7 @@ static void ohci_process_lists(OHCIState *ohci, int completion)
+ {
+     if ((ohci->ctl & OHCI_CTL_CLE) && (ohci->status & OHCI_STATUS_CLF)) {
+         if (ohci->ctrl_cur && ohci->ctrl_cur != ohci->ctrl_head)
+-          dprintf("usb-ohci: head %x, cur %x\n",
++          DPRINTF("usb-ohci: head %x, cur %x\n",
+                           ohci->ctrl_head, ohci->ctrl_cur);
+         if (!ohci_service_ed_list(ohci, ohci->ctrl_head, completion)) {
+             ohci->ctrl_cur = 0;
+@@ -1182,7 +1182,7 @@ static int ohci_bus_start(OHCIState *ohci)
+         return 0;
+     }
+ 
+-    dprintf("usb-ohci: %s: USB Operational\n", ohci->name);
++    DPRINTF("usb-ohci: %s: USB Operational\n", ohci->name);
+ 
+     ohci_sof(ohci);
+ 
+@@ -1235,7 +1235,7 @@ static void ohci_set_frame_interval(OHCIState *ohci, uint16_t val)
+     val &= OHCI_FMI_FI;
+ 
+     if (val != ohci->fi) {
+-        dprintf("usb-ohci: %s: FrameInterval = 0x%x (%u)\n",
++        DPRINTF("usb-ohci: %s: FrameInterval = 0x%x (%u)\n",
+             ohci->name, ohci->fi, ohci->fi);
+     }
+ 
+@@ -1274,14 +1274,14 @@ static void ohci_set_ctl(OHCIState *ohci, uint32_t val)
+         break;
+     case OHCI_USB_SUSPEND:
+         ohci_bus_stop(ohci);
+-        dprintf("usb-ohci: %s: USB Suspended\n", ohci->name);
++        DPRINTF("usb-ohci: %s: USB Suspended\n", ohci->name);
+         break;
+     case OHCI_USB_RESUME:
+-        dprintf("usb-ohci: %s: USB Resume\n", ohci->name);
++        DPRINTF("usb-ohci: %s: USB Resume\n", ohci->name);
+         break;
+     case OHCI_USB_RESET:
+         ohci_reset(ohci);
+-        dprintf("usb-ohci: %s: USB Reset\n", ohci->name);
++        DPRINTF("usb-ohci: %s: USB Reset\n", ohci->name);
+         break;
+     }
+ }
+@@ -1326,7 +1326,7 @@ static void ohci_set_hub_status(OHCIState *ohci, uint32_t val)
+ 
+         for (i = 0; i < ohci->num_ports; i++)
+             ohci_port_power(ohci, i, 0);
+-        dprintf("usb-ohci: powered down all ports\n");
++        DPRINTF("usb-ohci: powered down all ports\n");
+     }
+ 
+     if (val & OHCI_RHS_LPSC) {
+@@ -1334,7 +1334,7 @@ static void ohci_set_hub_status(OHCIState *ohci, uint32_t val)
+ 
+         for (i = 0; i < ohci->num_ports; i++)
+             ohci_port_power(ohci, i, 1);
+-        dprintf("usb-ohci: powered up all ports\n");
++        DPRINTF("usb-ohci: powered up all ports\n");
+     }
+ 
+     if (val & OHCI_RHS_DRWE)
+@@ -1366,10 +1366,10 @@ static void ohci_port_set_status(OHCIState *ohci, int portnum, uint32_t val)
+     ohci_port_set_if_connected(ohci, portnum, val & OHCI_PORT_PES);
+ 
+     if (ohci_port_set_if_connected(ohci, portnum, val & OHCI_PORT_PSS))
+-        dprintf("usb-ohci: port %d: SUSPEND\n", portnum);
++        DPRINTF("usb-ohci: port %d: SUSPEND\n", portnum);
+ 
+     if (ohci_port_set_if_connected(ohci, portnum, val & OHCI_PORT_PRS)) {
+-        dprintf("usb-ohci: port %d: RESET\n", portnum);
++        DPRINTF("usb-ohci: port %d: RESET\n", portnum);
+         usb_send_msg(port->port.dev, USB_MSG_RESET);
+         port->ctrl &= ~OHCI_PORT_PRS;
+         /* ??? Should this also set OHCI_PORT_PESC.  */
+@@ -1691,7 +1691,7 @@ static void usb_ohci_init(OHCIState *ohci, DeviceState *dev,
+             usb_bit_time = 1;
+         }
+ #endif
+-        dprintf("usb-ohci: usb_bit_time=%" PRId64 " usb_frame_time=%" PRId64 "\n",
++        DPRINTF("usb-ohci: usb_bit_time=%" PRId64 " usb_frame_time=%" PRId64 "\n",
+                 usb_frame_time, usb_bit_time);
+     }
+ 
+diff --git a/hw/usb-uhci.c b/hw/usb-uhci.c
+index 10ed2b8..b54d481 100644
+--- a/hw/usb-uhci.c
++++ b/hw/usb-uhci.c
+@@ -76,7 +76,7 @@
+ #define NB_PORTS 2
+ 
+ #ifdef DEBUG
+-#define dprintf printf
++#define DPRINTF printf
+ 
+ static const char *pid2str(int pid)
+ {
+@@ -89,7 +89,7 @@ static const char *pid2str(int pid)
+ }
+ 
+ #else
+-#define dprintf(...)
++#define DPRINTF(...)
+ #endif
+ 
+ #ifdef DEBUG_DUMP_DATA
+@@ -197,7 +197,7 @@ static void uhci_async_unlink(UHCIState *s, UHCIAsync *async)
+ 
+ static void uhci_async_cancel(UHCIState *s, UHCIAsync *async)
+ {
+-    dprintf("uhci: cancel td 0x%x token 0x%x done %u\n",
++    DPRINTF("uhci: cancel td 0x%x token 0x%x done %u\n",
+            async->td, async->token, async->done);
+ 
+     if (!async->done)
+@@ -319,7 +319,7 @@ static void uhci_reset(void *opaque)
+     int i;
+     UHCIPort *port;
+ 
+-    dprintf("uhci: full reset\n");
++    DPRINTF("uhci: full reset\n");
+ 
+     pci_conf = s->dev.config;
+ 
+@@ -418,7 +418,7 @@ static void uhci_ioport_writew(void *opaque, uint32_t addr, uint32_t val)
+     UHCIState *s = opaque;
+ 
+     addr &= 0x1f;
+-    dprintf("uhci: writew port=0x%04x val=0x%04x\n", addr, val);
++    DPRINTF("uhci: writew port=0x%04x val=0x%04x\n", addr, val);
+ 
+     switch(addr) {
+     case 0x00:
+@@ -530,7 +530,7 @@ static uint32_t uhci_ioport_readw(void *opaque, uint32_t addr)
+         break;
+     }
+ 
+-    dprintf("uhci: readw port=0x%04x val=0x%04x\n", addr, val);
++    DPRINTF("uhci: readw port=0x%04x val=0x%04x\n", addr, val);
+ 
+     return val;
+ }
+@@ -540,7 +540,7 @@ static void uhci_ioport_writel(void *opaque, uint32_t addr, uint32_t val)
+     UHCIState *s = opaque;
+ 
+     addr &= 0x1f;
+-    dprintf("uhci: writel port=0x%04x val=0x%08x\n", addr, val);
++    DPRINTF("uhci: writel port=0x%04x val=0x%08x\n", addr, val);
+ 
+     switch(addr) {
+     case 0x08:
+@@ -642,7 +642,7 @@ static int uhci_broadcast_packet(UHCIState *s, USBPacket *p)
+ {
+     int i, ret;
+ 
+-    dprintf("uhci: packet enter. pid %s addr 0x%02x ep %d len %d\n",
++    DPRINTF("uhci: packet enter. pid %s addr 0x%02x ep %d len %d\n",
+            pid2str(p->pid), p->devaddr, p->devep, p->len);
+     if (p->pid == USB_TOKEN_OUT || p->pid == USB_TOKEN_SETUP)
+         dump_data(p->data, p->len);
+@@ -657,7 +657,7 @@ static int uhci_broadcast_packet(UHCIState *s, USBPacket *p)
+         }
+     }
+ 
+-    dprintf("uhci: packet exit. ret %d len %d\n", ret, p->len);
++    DPRINTF("uhci: packet exit. ret %d len %d\n", ret, p->len);
+     if (p->pid == USB_TOKEN_IN && ret > 0)
+         dump_data(p->data, ret);
+ 
+@@ -712,7 +712,7 @@ static int uhci_complete_td(UHCIState *s, UHCI_TD *td, UHCIAsync *async, uint32_
+         if ((td->ctrl & TD_CTRL_SPD) && len < max_len) {
+             *int_mask |= 0x02;
+             /* short packet: do not update QH */
+-            dprintf("uhci: short packet. td 0x%x token 0x%x\n", async->td, async->token);
++            DPRINTF("uhci: short packet. td 0x%x token 0x%x\n", async->td, async->token);
+             return 1;
+         }
+     }
+@@ -846,7 +846,7 @@ static void uhci_async_complete(USBPort *port, USBPacket *packet)
+     UHCIAsync *async = container_of(packet, UHCIAsync, packet);
+     UHCIState *s = async->uhci;
+ 
+-    dprintf("uhci: async complete. td 0x%x token 0x%x\n", async->td, async->token);
++    DPRINTF("uhci: async complete. td 0x%x token 0x%x\n", async->td, async->token);
+ 
+     async->done = 1;
+ 
+@@ -906,7 +906,7 @@ static void uhci_process_frame(UHCIState *s)
+ 
+     frame_addr = s->fl_base_addr + ((s->frnum & 0x3ff) << 2);
+ 
+-    dprintf("uhci: processing frame %d addr 0x%x\n" , s->frnum, frame_addr);
++    DPRINTF("uhci: processing frame %d addr 0x%x\n" , s->frnum, frame_addr);
+ 
+     cpu_physical_memory_read(frame_addr, (uint8_t *)&link, 4);
+     le32_to_cpus(&link);
+@@ -928,7 +928,7 @@ static void uhci_process_frame(UHCIState *s)
+                  * are already done, and async completion handler will re-process 
+                  * the frame when something is ready.
+                  */
+-                dprintf("uhci: detected loop. qh 0x%x\n", link);
++                DPRINTF("uhci: detected loop. qh 0x%x\n", link);
+                 break;
+             }
+ 
+@@ -936,7 +936,7 @@ static void uhci_process_frame(UHCIState *s)
+             le32_to_cpus(&qh.link);
+             le32_to_cpus(&qh.el_link);
+ 
+-            dprintf("uhci: QH 0x%x load. link 0x%x elink 0x%x\n",
++            DPRINTF("uhci: QH 0x%x load. link 0x%x elink 0x%x\n",
+                     link, qh.link, qh.el_link);
+ 
+             if (!is_valid(qh.el_link)) {
+@@ -958,7 +958,7 @@ static void uhci_process_frame(UHCIState *s)
+         le32_to_cpus(&td.token);
+         le32_to_cpus(&td.buffer);
+ 
+-        dprintf("uhci: TD 0x%x load. link 0x%x ctrl 0x%x token 0x%x qh 0x%x\n", 
++        DPRINTF("uhci: TD 0x%x load. link 0x%x ctrl 0x%x token 0x%x qh 0x%x\n", 
+                 link, td.link, td.ctrl, td.token, curr_qh);
+ 
+         old_td_ctrl = td.ctrl;
+@@ -976,7 +976,7 @@ static void uhci_process_frame(UHCIState *s)
+         }
+ 
+         if (ret == 2 || ret == 1) {
+-            dprintf("uhci: TD 0x%x %s. link 0x%x ctrl 0x%x token 0x%x qh 0x%x\n",
++            DPRINTF("uhci: TD 0x%x %s. link 0x%x ctrl 0x%x token 0x%x qh 0x%x\n",
+                     link, ret == 2 ? "pend" : "skip",
+                     td.link, td.ctrl, td.token, curr_qh);
+ 
+@@ -986,7 +986,7 @@ static void uhci_process_frame(UHCIState *s)
+ 
+         /* completed TD */
+ 
+-        dprintf("uhci: TD 0x%x done. link 0x%x ctrl 0x%x token 0x%x qh 0x%x\n", 
++        DPRINTF("uhci: TD 0x%x done. link 0x%x ctrl 0x%x token 0x%x qh 0x%x\n", 
+                 link, td.link, td.ctrl, td.token, curr_qh);
+ 
+         link = td.link;
+@@ -1001,7 +1001,7 @@ static void uhci_process_frame(UHCIState *s)
+             if (!depth_first(link)) {
+                /* done with this QH */
+ 
+-               dprintf("uhci: QH 0x%x done. link 0x%x elink 0x%x\n",
++               DPRINTF("uhci: QH 0x%x done. link 0x%x elink 0x%x\n",
+                        curr_qh, qh.link, qh.el_link);
+ 
+                curr_qh = 0;
+@@ -1026,7 +1026,7 @@ static void uhci_frame_timer(void *opaque)
+         /* set hchalted bit in status - UHCI11D 2.1.2 */
+         s->status |= UHCI_STS_HCHALTED;
+ 
+-        dprintf("uhci: halted\n");
++        DPRINTF("uhci: halted\n");
+         return;
+     }
+ 
+@@ -1040,7 +1040,7 @@ static void uhci_frame_timer(void *opaque)
+     /* Start new frame */
+     s->frnum = (s->frnum + 1) & 0x7ff;
+ 
+-    dprintf("uhci: new frame #%u\n" , s->frnum);
++    DPRINTF("uhci: new frame #%u\n" , s->frnum);
+ 
+     uhci_async_validate_begin(s);
+ 
+diff --git a/slirp/bootp.c b/slirp/bootp.c
+index 911ec71..261762a 100644
+--- a/slirp/bootp.c
++++ b/slirp/bootp.c
+@@ -30,10 +30,10 @@
+ static const uint8_t rfc1533_cookie[] = { RFC1533_COOKIE };
+ 
+ #ifdef DEBUG
+-#define dprintf(fmt, ...) \
++#define DPRINTF(fmt, ...) \
+ do if (slirp_debug & DBG_CALL) { fprintf(dfd, fmt, ##  __VA_ARGS__); fflush(dfd); } while (0)
+ #else
+-#define dprintf(fmt, ...)
++#define DPRINTF(fmt, ...)
+ #endif
+ 
+ static BOOTPClient *get_new_addr(Slirp *slirp, struct in_addr *paddr,
+@@ -116,7 +116,7 @@ static void dhcp_decode(const struct bootp_t *bp, int *pmsg_type,
+             if (p >= p_end)
+                 break;
+             len = *p++;
+-            dprintf("dhcp: tag=%d len=%d\n", tag, len);
++            DPRINTF("dhcp: tag=%d len=%d\n", tag, len);
+ 
+             switch(tag) {
+             case RFC2132_MSG_TYPE:
+@@ -150,11 +150,11 @@ static void bootp_reply(Slirp *slirp, const struct bootp_t *bp)
+ 
+     /* extract exact DHCP msg type */
+     dhcp_decode(bp, &dhcp_msg_type, &preq_addr);
+-    dprintf("bootp packet op=%d msgtype=%d", bp->bp_op, dhcp_msg_type);
++    DPRINTF("bootp packet op=%d msgtype=%d", bp->bp_op, dhcp_msg_type);
+     if (preq_addr)
+-        dprintf(" req_addr=%08x\n", ntohl(preq_addr->s_addr));
++        DPRINTF(" req_addr=%08x\n", ntohl(preq_addr->s_addr));
+     else
+-        dprintf("\n");
++        DPRINTF("\n");
+ 
+     if (dhcp_msg_type == 0)
+         dhcp_msg_type = DHCPREQUEST; /* Force reply for old BOOTP clients */
+@@ -185,7 +185,7 @@ static void bootp_reply(Slirp *slirp, const struct bootp_t *bp)
+          new_addr:
+             bc = get_new_addr(slirp, &daddr.sin_addr, slirp->client_ethaddr);
+             if (!bc) {
+-                dprintf("no address left\n");
++                DPRINTF("no address left\n");
+                 return;
+             }
+         }
+@@ -226,7 +226,7 @@ static void bootp_reply(Slirp *slirp, const struct bootp_t *bp)
+     q += 4;
+ 
+     if (bc) {
+-        dprintf("%s addr=%08x\n",
++        DPRINTF("%s addr=%08x\n",
+                 (dhcp_msg_type == DHCPDISCOVER) ? "offered" : "ack'ed",
+                 ntohl(daddr.sin_addr.s_addr));
+ 
+@@ -282,7 +282,7 @@ static void bootp_reply(Slirp *slirp, const struct bootp_t *bp)
+     } else {
+         static const char nak_msg[] = "requested address not available";
+ 
+-        dprintf("nak'ed addr=%08x\n", ntohl(preq_addr->s_addr));
++        DPRINTF("nak'ed addr=%08x\n", ntohl(preq_addr->s_addr));
+ 
+         *q++ = RFC2132_MSG_TYPE;
+         *q++ = 1;
+-- 
+1.7.7.5
+

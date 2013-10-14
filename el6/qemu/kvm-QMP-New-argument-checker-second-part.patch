@@ -1,0 +1,174 @@
+From bcfe2732f43d36160b2512e1ad2e92392cfa80a5 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:24 -0300
+Subject: [RHEL6 qemu-kvm PATCH 04/21] QMP: New argument checker (second part)
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <391435950fb532a7d39ab95785f7be3c5a5509bb.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38637
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 04/21] QMP: New argument checker (second part)
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+This commit introduces the second (and last) part of QMP's new
+argument checker.
+
+The job is done by check_client_args_type(), it iterates over
+the client's argument qdict and for for each argument it checks
+if it exists and if its type is valid.
+
+It's important to observe the following changes from the existing
+argument checker:
+
+  - If the handler accepts an O-type argument, unknown arguments
+    are passed down to it. It's up to O-type handlers to validate
+    their arguments
+
+  - Boolean types (eg. 'b' and '-') don't accept integers anymore,
+    only json-bool
+
+  - Argument types '/' and '.' are currently unsupported under QMP,
+    thus they're not handled
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 4af9193ae954f87225e1ba5d527f6a13e37b1e0e)
+
+RHEL6 Note: Added "case 'o'" to check_client_args_type, to allow for
+            octet type.
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ monitor.c |   95 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 files changed, 94 insertions(+), 1 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ monitor.c |   95 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 files changed, 94 insertions(+), 1 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index 4ae260f..448157f 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -4589,6 +4589,96 @@ static int invalid_qmp_mode(const Monitor *mon, const char *cmd_name)
+ }
+ 
+ /*
++ * Argument validation rules:
++ *
++ * 1. The argument must exist in cmd_args qdict
++ * 2. The argument type must be the expected one
++ *
++ * Special case: If the argument doesn't exist in cmd_args and
++ *               the QMP_ACCEPT_UNKNOWNS flag is set, then the
++ *               checking is skipped for it.
++ */
++static int check_client_args_type(const QDict *client_args,
++                                  const QDict *cmd_args, int flags)
++{
++    const QDictEntry *ent;
++
++    for (ent = qdict_first(client_args); ent;ent = qdict_next(client_args,ent)){
++        QObject *obj;
++        QString *arg_type;
++        const QObject *client_arg = qdict_entry_value(ent);
++        const char *client_arg_name = qdict_entry_key(ent);
++
++        obj = qdict_get(cmd_args, client_arg_name);
++        if (!obj) {
++            if (flags & QMP_ACCEPT_UNKNOWNS) {
++                /* handler accepts unknowns */
++                continue;
++            }
++            /* client arg doesn't exist */
++            qerror_report(QERR_INVALID_PARAMETER, client_arg_name);
++            return -1;
++        }
++
++        arg_type = qobject_to_qstring(obj);
++        assert(arg_type != NULL);
++
++        /* check if argument's type is correct */
++        switch (qstring_get_str(arg_type)[0]) {
++        case 'F':
++        case 'B':
++        case 's':
++            if (qobject_type(client_arg) != QTYPE_QSTRING) {
++                qerror_report(QERR_INVALID_PARAMETER_TYPE, client_arg_name,
++                              "string");
++                return -1;
++            }
++        break;
++        case 'i':
++        case 'l':
++        case 'M':
++        case 'o':
++            if (qobject_type(client_arg) != QTYPE_QINT) {
++                qerror_report(QERR_INVALID_PARAMETER_TYPE, client_arg_name,
++                              "int");
++                return -1; 
++            }
++            break;
++        case 'f':
++        case 'T':
++            if (qobject_type(client_arg) != QTYPE_QINT &&
++                qobject_type(client_arg) != QTYPE_QFLOAT) {
++                qerror_report(QERR_INVALID_PARAMETER_TYPE, client_arg_name,
++                              "number");
++               return -1; 
++            }
++            break;
++        case 'b':
++        case '-':
++            if (qobject_type(client_arg) != QTYPE_QBOOL) {
++                qerror_report(QERR_INVALID_PARAMETER_TYPE, client_arg_name,
++                              "bool");
++               return -1; 
++            }
++            break;
++        case 'O':
++            assert(flags & QMP_ACCEPT_UNKNOWNS);
++            break;
++        case '/':
++        case '.':
++            /*
++             * These types are not supported by QMP and thus are not
++             * handled here. Fall through.
++             */
++        default:
++            abort();
++        }
++    }
++
++    return 0;
++}
++
++/*
+  * - Check if the client has passed all mandatory args
+  * - Set special flags for argument validation
+  */
+@@ -4665,6 +4755,9 @@ out:
+  * Client argument checking rules:
+  *
+  * 1. Client must provide all mandatory arguments
++ * 2. Each argument provided by the client must be expected
++ * 3. Each argument provided by the client must have the type expected
++ *    by the command
+  */
+ static int qmp_check_client_args(const mon_cmd_t *cmd, QDict *client_args)
+ {
+@@ -4679,7 +4772,7 @@ static int qmp_check_client_args(const mon_cmd_t *cmd, QDict *client_args)
+         goto out;
+     }
+ 
+-    /* TODO: Check client args type */
++    err = check_client_args_type(client_args, cmd_args, flags);
+ 
+ out:
+     QDECREF(cmd_args);
+-- 
+1.7.3.2
+

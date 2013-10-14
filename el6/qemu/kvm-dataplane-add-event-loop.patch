@@ -1,0 +1,211 @@
+From 134c363c7758ca6fcd3ca2215e3333e66bb2f98b Mon Sep 17 00:00:00 2001
+Message-Id: <134c363c7758ca6fcd3ca2215e3333e66bb2f98b.1357726992.git.minovotn@redhat.com>
+In-Reply-To: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+References: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Wed, 2 Jan 2013 15:02:30 +0100
+Subject: [PATCH 07/16] dataplane: add event loop
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1357138959-1918-8-git-send-email-stefanha@redhat.com>
+Patchwork-id: 45520
+O-Subject: [RHEL6.4 qemu-kvm PATCH v5 07/16] dataplane: add event loop
+Bugzilla: 877836
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+Outside the safety of the global mutex we need to poll on file
+descriptors.  I found epoll(2) is a convenient way to do that, although
+other options could replace this module in the future (such as an
+AioContext-based loop or glib's GMainLoop).
+
+One important feature of this small event loop implementation is that
+the loop can be terminated in a thread-safe way.  This allows QEMU to
+stop the data plane thread cleanly.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ Makefile.target           |   1 +
+ hw/dataplane/event-poll.c | 100 ++++++++++++++++++++++++++++++++++++++++++++++
+ hw/dataplane/event-poll.h |  40 +++++++++++++++++++
+ 3 files changed, 141 insertions(+)
+ create mode 100644 hw/dataplane/event-poll.c
+ create mode 100644 hw/dataplane/event-poll.h
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.target           |   1 +
+ hw/dataplane/event-poll.c | 100 ++++++++++++++++++++++++++++++++++++++++++++++
+ hw/dataplane/event-poll.h |  40 +++++++++++++++++++
+ 3 files changed, 141 insertions(+)
+ create mode 100644 hw/dataplane/event-poll.c
+ create mode 100644 hw/dataplane/event-poll.h
+
+diff --git a/Makefile.target b/Makefile.target
+index e573741..b9802e1 100644
+--- a/Makefile.target
++++ b/Makefile.target
+@@ -210,6 +210,7 @@ obj-y += vhost_net.o
+ obj-$(CONFIG_VHOST_NET) += vhost.o
+ obj-$(CONFIG_KVM) += kvm.o kvm-all.o hyperv.o
+ obj-$(CONFIG_VIRTIO_BLK_DATA_PLANE) += dataplane/hostmem.o dataplane/vring.o
++obj-$(CONFIG_VIRTIO_BLK_DATA_PLANE) += dataplane/event-poll.o
+ # MSI-X depends on kvm for interrupt injection,
+ # so moved it from Makefile.hw to Makefile.target for now
+ obj-y += msix.o
+diff --git a/hw/dataplane/event-poll.c b/hw/dataplane/event-poll.c
+new file mode 100644
+index 0000000..2b55c6e
+--- /dev/null
++++ b/hw/dataplane/event-poll.c
+@@ -0,0 +1,100 @@
++/*
++ * Event loop with file descriptor polling
++ *
++ * Copyright 2012 IBM, Corp.
++ * Copyright 2012 Red Hat, Inc. and/or its affiliates
++ *
++ * Authors:
++ *   Stefan Hajnoczi <stefanha@redhat.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or later.
++ * See the COPYING file in the top-level directory.
++ *
++ */
++
++#include <sys/epoll.h>
++#include "hw/dataplane/event-poll.h"
++
++/* Add an event notifier and its callback for polling */
++void event_poll_add(EventPoll *poll, EventHandler *handler,
++                    EventNotifier *notifier, EventCallback *callback)
++{
++    struct epoll_event event = {
++        .events = EPOLLIN,
++        .data.ptr = handler,
++    };
++    handler->notifier = notifier;
++    handler->callback = callback;
++    if (epoll_ctl(poll->epoll_fd, EPOLL_CTL_ADD,
++                  event_notifier_get_fd(notifier), &event) != 0) {
++        fprintf(stderr, "failed to add event handler to epoll: %m\n");
++        exit(1);
++    }
++}
++
++/* Event callback for stopping event_poll() */
++static void handle_stop(EventHandler *handler)
++{
++    /* Do nothing */
++}
++
++void event_poll_init(EventPoll *poll)
++{
++    /* Create epoll file descriptor */
++    poll->epoll_fd = epoll_create1(EPOLL_CLOEXEC);
++    if (poll->epoll_fd < 0) {
++        fprintf(stderr, "epoll_create1 failed: %m\n");
++        exit(1);
++    }
++
++    /* Set up stop notifier */
++    if (event_notifier_init(&poll->stop_notifier, 0) < 0) {
++        fprintf(stderr, "failed to init stop notifier\n");
++        exit(1);
++    }
++    event_poll_add(poll, &poll->stop_handler,
++                   &poll->stop_notifier, handle_stop);
++}
++
++void event_poll_cleanup(EventPoll *poll)
++{
++    event_notifier_cleanup(&poll->stop_notifier);
++    close(poll->epoll_fd);
++    poll->epoll_fd = -1;
++}
++
++/* Block until the next event and invoke its callback */
++void event_poll(EventPoll *poll)
++{
++    EventHandler *handler;
++    struct epoll_event event;
++    int nevents;
++
++    /* Wait for the next event.  Only do one event per call to keep the
++     * function simple, this could be changed later. */
++    do {
++        nevents = epoll_wait(poll->epoll_fd, &event, 1, -1);
++    } while (nevents < 0 && errno == EINTR);
++    if (unlikely(nevents != 1)) {
++        fprintf(stderr, "epoll_wait failed: %m\n");
++        exit(1); /* should never happen */
++    }
++
++    /* Find out which event handler has become active */
++    handler = event.data.ptr;
++
++    /* Clear the eventfd */
++    event_notifier_test_and_clear(handler->notifier);
++
++    /* Handle the event */
++    handler->callback(handler);
++}
++
++/* Stop event_poll()
++ *
++ * This function can be used from another thread.
++ */
++void event_poll_notify(EventPoll *poll)
++{
++    event_notifier_set(&poll->stop_notifier);
++}
+diff --git a/hw/dataplane/event-poll.h b/hw/dataplane/event-poll.h
+new file mode 100644
+index 0000000..74c2b77
+--- /dev/null
++++ b/hw/dataplane/event-poll.h
+@@ -0,0 +1,40 @@
++/*
++ * Event loop with file descriptor polling
++ *
++ * Copyright 2012 IBM, Corp.
++ * Copyright 2012 Red Hat, Inc. and/or its affiliates
++ *
++ * Authors:
++ *   Stefan Hajnoczi <stefanha@redhat.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or later.
++ * See the COPYING file in the top-level directory.
++ *
++ */
++
++#ifndef EVENT_POLL_H
++#define EVENT_POLL_H
++
++#include "hw/event_notifier.h"
++
++typedef struct EventHandler EventHandler;
++typedef void EventCallback(EventHandler *handler);
++struct EventHandler {
++    EventNotifier *notifier;        /* eventfd */
++    EventCallback *callback;        /* callback function */
++};
++
++typedef struct {
++    int epoll_fd;                   /* epoll(2) file descriptor */
++    EventNotifier stop_notifier;    /* stop poll notifier */
++    EventHandler stop_handler;      /* stop poll handler */
++} EventPoll;
++
++void event_poll_add(EventPoll *poll, EventHandler *handler,
++                    EventNotifier *notifier, EventCallback *callback);
++void event_poll_init(EventPoll *poll);
++void event_poll_cleanup(EventPoll *poll);
++void event_poll(EventPoll *poll);
++void event_poll_notify(EventPoll *poll);
++
++#endif /* EVENT_POLL_H */
+-- 
+1.7.11.7
+

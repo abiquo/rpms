@@ -1,0 +1,109 @@
+From 26ec261aeb3dc2f4a862cb1a8d5859212e4b323b Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 29 Feb 2012 12:39:26 +0100
+Subject: [PATCH 11/35] spice-qemu-char: Generate chardev open/close events
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1330519171-24231-12-git-send-email-kraxel@redhat.com>
+Patchwork-id: 37762
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 11/16] spice-qemu-char: Generate chardev open/close events
+Bugzilla: 758104
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+From: Hans de Goede <hdegoede@redhat.com>
+
+Define a state callback and make that generate chardev open/close events when
+called by the spice-server.
+
+Notes:
+
+1) For all but the newest spice-server versions (which have a fix for this)
+the code ignores these events for a spicevmc with a subtype of vdagent, this
+subtype specific knowledge is undesirable, but unavoidable for now, see:
+http://lists.freedesktop.org/archives/spice-devel/2011-July/004837.html
+
+2) This code deliberately sends the events immediately rather then from a
+bh. This is done this way because:
+a) There is no need to do it from a bh; and
+b) Doing it from a bh actually causes issues because the spice-server may send
+data immediately after the open and when the open runs from a bh, then
+qemu_chr_be_can_write will return 0 for the first write which the spice-server
+does not expect, when this happens the spice-server will never retry the write
+causing communication to stall.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit f76e4c7f16c7ab966a792310b6630d3e240688b3)
+---
+ spice-qemu-char.c |   36 +++++++++++++++++++++++++++++++++++-
+ 1 files changed, 35 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ spice-qemu-char.c |   36 +++++++++++++++++++++++++++++++++++-
+ 1 files changed, 35 insertions(+), 1 deletions(-)
+
+diff --git a/spice-qemu-char.c b/spice-qemu-char.c
+index 84ef965..773c5be 100644
+--- a/spice-qemu-char.c
++++ b/spice-qemu-char.c
+@@ -86,11 +86,40 @@ static int vmc_read(SpiceCharDeviceInstance *sin, uint8_t *buf, int len)
+     return bytes;
+ }
+ 
++static void vmc_state(SpiceCharDeviceInstance *sin, int connected)
++{
++    SpiceCharDriver *scd = container_of(sin, SpiceCharDriver, sin);
++
++#if SPICE_SERVER_VERSION < 0x000901
++    /*
++     * spice-server calls the state callback for the agent channel when the
++     * spice client connects / disconnects. Given that not the client but
++     * the server is doing the parsing of the messages this is wrong as the
++     * server is still listening. Worse, this causes the parser in the server
++     * to go out of sync, so we ignore state calls for subtype vdagent
++     * spicevmc chardevs. For the full story see:
++     * http://lists.freedesktop.org/archives/spice-devel/2011-July/004837.html
++     */
++    if (strcmp(sin->subtype, "vdagent") == 0) {
++        return;
++    }
++#endif
++
++    if ((scd->chr->opened && connected) ||
++        (!scd->chr->opened && !connected)) {
++        return;
++    }
++
++    qemu_chr_event(scd->chr,
++                   connected ? CHR_EVENT_OPENED : CHR_EVENT_CLOSED);
++}
++
+ static SpiceCharDeviceInterface vmc_interface = {
+     .base.type          = SPICE_INTERFACE_CHAR_DEVICE,
+     .base.description   = "spice virtual channel char device",
+     .base.major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
+     .base.minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
++    .state              = vmc_state,
+     .write              = vmc_write,
+     .read               = vmc_read,
+ };
+@@ -217,7 +246,12 @@ CharDriverState *qemu_chr_open_spice(QemuOpts *opts)
+     chr->chr_guest_close = spice_chr_guest_close;
+     s->unblock_timer = qemu_new_timer(vm_clock, spice_chr_unblock, s);
+ 
+-    qemu_chr_generic_open(chr);
++#if SPICE_SERVER_VERSION < 0x000901
++    /* See comment in vmc_state() */
++    if (strcmp(subtype, "vdagent") == 0) {
++        qemu_chr_generic_open(chr);
++    }
++#endif
+ 
+     return chr;
+ }
+-- 
+1.7.7.6
+

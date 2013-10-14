@@ -1,0 +1,92 @@
+From 11ae799587983f60669e7833d196c40ceba019d8 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Sun, 4 Mar 2012 11:57:55 +0100
+Subject: [PATCH 33/35] usb: return BABBLE rather then NAK when we receive too
+ much data
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1330862278-22314-19-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 37932
+O-Subject: [PATCH 18/21] usb: return BABBLE rather then NAK when we receive too much data
+Bugzilla: 758104
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+
+Upstream commit: 4d819a9bde7f52e7421d4128dc69c296c9fd017a
+Upstream: http://patchwork.ozlabs.org/patch/144360/
+(waiting for next usb pull request)
+
+[ rhel6: resolve conflicts ]
+---
+ usb-linux.c |    8 +++++++-
+ usb-redir.c |    4 ++--
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ usb-linux.c |    8 +++++++-
+ usb-redir.c |    4 ++--
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/usb-linux.c b/usb-linux.c
+index 98e9303..4723694 100644
+--- a/usb-linux.c
++++ b/usb-linux.c
+@@ -386,6 +386,10 @@ static void async_complete(void *opaque)
+ 		p->len = USB_RET_STALL;
+                 break;
+ 
++            case -EOVERFLOW:
++                p->len = USB_RET_BABBLE;
++                break;
++
+             default:
+                 p->len = USB_RET_NAK;
+                 break;
+@@ -725,6 +729,8 @@ static int urb_status_to_usb_ret(int status)
+     switch (status) {
+     case -EPIPE:
+         return USB_RET_STALL;
++    case -EOVERFLOW:
++        return USB_RET_BABBLE;
+     default:
+         return USB_RET_NAK;
+     }
+@@ -760,7 +766,7 @@ static int usb_host_handle_iso_data(USBHostDevice *s, USBPacket *p, int in)
+             /* Check the frame fits */
+             } else if (aurb[i].urb.iso_frame_desc[j].actual_length > p->len) {
+                 printf("husb: received iso data is larger then packet\n");
+-                len = USB_RET_NAK;
++                len = USB_RET_BABBLE;
+             /* All good copy data over */
+             } else {
+                 len = aurb[i].urb.iso_frame_desc[j].actual_length;
+diff --git a/usb-redir.c b/usb-redir.c
+index 007df2a..cef6979 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -457,7 +457,7 @@ static int usbredir_handle_iso_data(USBRedirDevice *dev, USBPacket *p,
+             ERROR("received iso data is larger then packet ep %02X (%d > %d)\n",
+                   ep, len, (int)p->len);
+             bufp_free(dev, isop, ep);
+-            return USB_RET_NAK;
++            return USB_RET_BABBLE;
+         }
+         memcpy(p->data, isop->data, len);
+         bufp_free(dev, isop, ep);
+@@ -571,7 +571,7 @@ static int usbredir_handle_interrupt_data(USBRedirDevice *dev,
+         if (len > p->len) {
+             ERROR("received int data is larger then packet ep %02X\n", ep);
+             bufp_free(dev, intp, ep);
+-            return USB_RET_NAK;
++            return USB_RET_BABBLE;
+         }
+         memcpy(p->data, intp->data, len);
+         bufp_free(dev, intp, ep);
+-- 
+1.7.7.6
+

@@ -1,0 +1,163 @@
+From 65cf8941e09687978c1d31ae8173f9f26951863a Mon Sep 17 00:00:00 2001
+Message-Id: <65cf8941e09687978c1d31ae8173f9f26951863a.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Sat, 29 Sep 2012 03:42:42 +0200
+Subject: [PATCH 20/34] add a boot parameter to set reboot timeout
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1348890162-29391-3-git-send-email-akong@redhat.com>
+Patchwork-id: 42549
+O-Subject: [RHEL-6.4 qemu-kvm PATCH v2 2/2] add a boot parameter to set reboot timeout
+Bugzilla: 854191
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Jason Baron <jbaron@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+Added an option to let qemu transfer a configuration file to bios,
+"etc/boot-fail-wait", which could be specified by command
+    -boot reboot-timeout=T
+T have a max value of 0xffff, unit is ms.
+
+With this option, guest will wait for a given time if not find
+bootabled device, then reboot. If reboot-timeout is '-1', guest
+will not reboot, qemu passes '-1' to bios by default.
+
+This feature need the new seabios's support.
+
+Seabios pulls the value from the fwcfg "file" interface, this
+interface is used because SeaBIOS needs a reliable way of
+obtaining a name, value size, and value. It in no way requires
+that there be a real file on the user's host machine.
+(cherry-picked from commit ac05f3492421caeb05809ffa02c6198ede179e43)
+
+Conflicts:
+    hw/fw_cfg.c
+    qemu-config.c
+    qemu-options.hx
+    vl.c
+
+Signed-off-by: Amos Kong <akong@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+---
+ hw/fw_cfg.c     |   25 +++++++++++++++++++++++++
+ qemu-config.c   |    3 +++
+ qemu-options.hx |   13 ++++++++++---
+ vl.c            |    3 ++-
+ 4 files changed, 40 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/fw_cfg.c     | 25 +++++++++++++++++++++++++
+ qemu-config.c   |  3 +++
+ qemu-options.hx | 13 ++++++++++---
+ vl.c            |  3 ++-
+ 4 files changed, 40 insertions(+), 4 deletions(-)
+
+diff --git a/hw/fw_cfg.c b/hw/fw_cfg.c
+index 89e4beb..d3b1f14 100644
+--- a/hw/fw_cfg.c
++++ b/hw/fw_cfg.c
+@@ -53,6 +53,30 @@ struct _FWCfgState {
+     Notifier machine_ready;
+ };
+ 
++static void fw_cfg_reboot(FWCfgState *s)
++{
++    int reboot_timeout = -1;
++    char *p;
++    const char *temp;
++
++    /* get user configuration */
++    QemuOptsList *plist = qemu_find_opts("boot-opts");
++    QemuOpts *opts = QTAILQ_FIRST(&plist->head);
++    if (opts != NULL) {
++        temp = qemu_opt_get(opts, "reboot-timeout");
++        if (temp != NULL) {
++            p = (char *)temp;
++            reboot_timeout = strtol(p, (char **)&p, 10);
++        }
++    }
++    /* validate the input */
++    if (reboot_timeout > 0xffff) {
++        error_report("reboot timeout is larger than 65535, force it to 65535.");
++        reboot_timeout = 0xffff;
++    }
++    fw_cfg_add_file(s, "etc/boot-fail-wait", g_memdup(&reboot_timeout, 4), 4);
++}
++
+ static void fw_cfg_write(FWCfgState *s, uint8_t value)
+ {
+     int arch = !!(s->cur_entry & FW_CFG_ARCH_LOCAL);
+@@ -357,6 +381,7 @@ FWCfgState *fw_cfg_init(uint32_t ctl_port, uint32_t data_port,
+     vmstate_register(NULL, -1, &vmstate_fw_cfg, s);
+     qemu_register_reset(fw_cfg_reset, s);
+ 
++    fw_cfg_reboot(s);
+ 
+     s->machine_ready.notify = fw_cfg_machine_ready;
+     qemu_add_machine_init_done_notifier(&s->machine_ready);
+diff --git a/qemu-config.c b/qemu-config.c
+index 6d0815c..a7b2a58 100644
+--- a/qemu-config.c
++++ b/qemu-config.c
+@@ -434,6 +434,9 @@ QemuOptsList qemu_boot_opts = {
+             .name = "menu",
+             .type = QEMU_OPT_STRING,
+         /* following are really used */
++        }, {
++            .name = "reboot-timeout",
++            .type = QEMU_OPT_STRING,
+         },
+         { /*End of list */ }
+     },
+diff --git a/qemu-options.hx b/qemu-options.hx
+index 27e3d51..3efbe5b 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -268,10 +268,12 @@ ETEXI
+ 
+ DEF("boot", HAS_ARG, QEMU_OPTION_boot,
+     "-boot [order=drives][,once=drives][,menu=on|off]\n"
+-    "                'drives': floppy (a), hard disk (c), CD-ROM (d), network (n)\n")
++    "      [,reboot-timeout=rb_time]\n"
++    "                'drives': floppy (a), hard disk (c), CD-ROM (d), network (n)\n"
++    "                'rb_timeout': the timeout before guest reboot when boot failed, unit is ms\n")
+ STEXI
+-@item -boot [order=@var{drives}][,once=@var{drives}][,menu=on|off]
+-
++@item -boot [order=@var{drives}][,once=@var{drives}][,menu=on|off][,reboot-timeout=@var{rb_timeout}]
++@findex -boot
+ Specify boot order @var{drives} as a string of drive letters. Valid
+ drive letters depend on the target achitecture. The x86 PC uses: a, b
+ (floppy 1 and 2), c (first hard disk), d (first CD-ROM), n-p (Etherboot
+@@ -282,6 +284,11 @@ particular boot order only on the first startup, specify it via
+ Interactive boot menus/prompts can be enabled via @option{menu=on} as far
+ as firmware/BIOS supports them. The default is non-interactive boot.
+ 
++A timeout could be passed to bios, guest will pause for @var{rb_timeout} ms
++when boot failed, then reboot. If @var{rb_timeout} is '-1', guest will not
++reboot, qemu passes '-1' to bios by default. Currently Seabios for X86
++system support it.
++
+ @example
+ # try to boot from network first, then from hard disk
+ qemu -boot order=nc
+diff --git a/vl.c b/vl.c
+index 9cfbf2e..ec5fd25 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5326,7 +5326,8 @@ int main(int argc, char **argv, char **envp)
+             case QEMU_OPTION_boot:
+                 {
+                     static const char * const params[] = {
+-                        "order", "once", "menu", NULL
++                        "order", "once", "menu",
++                        "reboot-timeout", NULL
+                     };
+                     char buf[sizeof(boot_devices)];
+                     char *standard_boot_devices;
+-- 
+1.7.11.4
+

@@ -1,0 +1,54 @@
+From 1961419ab5c0a9c24b50cd715356e6842954968c Mon Sep 17 00:00:00 2001
+From: Christophe Fergeau <cfergeau@redhat.com>
+Date: Wed, 12 Sep 2012 14:59:21 -0300
+Subject: [RHEL6 qemu-kvm PATCH 3/6] spice: abort on invalid streaming cmdline
+ params
+
+RH-Author: Christophe Fergeau <cfergeau@redhat.com>
+Message-id: <1347461961-11499-1-git-send-email-cfergeau@redhat.com>
+Patchwork-id: 41862
+O-Subject: [RHEL-6.4 qemu-kvm PATCH] spice: abort on invalid streaming cmdline params
+Bugzilla: 831708
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+
+When parsing its command line parameters, spice aborts when it
+finds unexpected values, except for the 'streaming-video' option.
+This happens because the parsing of the parameters for this option
+is done using the 'name2enum' helper, which does not error out
+on unknown values. Using the 'parse_name' helper makes sure we
+error out in this case. Looking at git history, the use of
+'name2enum' instead of 'parse_name' seems to have been an oversight,
+so let's change to that now.
+
+Fixes rhbz#831708
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream-commit: 835cab85ad83ed8dfe1c13243aeda5959b153e3e
+---
+ ui/spice-core.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ ui/spice-core.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/ui/spice-core.c b/ui/spice-core.c
+index 1d43fee..4b88624 100644
+--- a/ui/spice-core.c
++++ b/ui/spice-core.c
+@@ -415,7 +415,8 @@ static const char *stream_video_names[] = {
+     [ SPICE_STREAM_VIDEO_FILTER ] = "filter",
+ };
+ #define parse_stream_video(_name) \
+-    name2enum(_name, stream_video_names, ARRAY_SIZE(stream_video_names))
++    parse_name(_name, "stream video control", \
++               stream_video_names, ARRAY_SIZE(stream_video_names))
+ 
+ #endif /* >= 0.6.0 */
+ 
+-- 
+1.7.11.4
+

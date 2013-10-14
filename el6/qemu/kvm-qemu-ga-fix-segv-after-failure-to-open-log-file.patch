@@ -1,0 +1,63 @@
+From 1997f8ac6dd571b36e46944cb8576979f7cde73f Mon Sep 17 00:00:00 2001
+Message-Id: <1997f8ac6dd571b36e46944cb8576979f7cde73f.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:46 +0200
+Subject: [PATCH 37/41] qemu-ga: fix segv after failure to open log file
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-32-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39929
+O-Subject: [PATCH RHEL6.4 qemu-kvm 31/36] qemu-ga: fix segv after failure to open log file
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+
+Currently, if we fail to open the specified log file (generally due to a
+permissions issue), we'll assign NULL to the logfile handle (stderr,
+initially) used by the logging routines, which can cause a segfault to
+occur when we attempt to report the error before exiting.
+
+Instead, only re-assign if the open() was successful.
+
+Reviewed-by: Michal Privoznik <mprivozn@redhat.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+(cherry picked from commit 6c615ec57e83bf8cc7b1721bcd58c7d1ed93ef65)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qemu-ga.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-ga.c |    5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 3a88333..42e271f 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -836,12 +836,13 @@ int main(int argc, char **argv)
+             become_daemon(pid_filepath);
+         }
+         if (log_filepath) {
+-            s->log_file = fopen(log_filepath, "a");
+-            if (!s->log_file) {
++            FILE *log_file = fopen(log_filepath, "a");
++            if (!log_file) {
+                 g_critical("unable to open specified log file: %s",
+                            strerror(errno));
+                 goto out_bad;
+             }
++            s->log_file = log_file;
+         }
+     }
+ 
+-- 
+1.7.10.4
+

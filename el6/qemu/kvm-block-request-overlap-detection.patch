@@ -1,0 +1,109 @@
+From 9ffea646c2e25b081bab3b5cf610db8093280aac Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:55 +0100
+Subject: [PATCH 28/55] block: request overlap detection
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <1f296a89632e9e19657cb9165896af849157b763.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38878
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 28/54] block: request overlap detection
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Detect overlapping requests and remember to align to cluster boundaries
+if the image format uses them.  This assumes that allocating I/O is
+performed in cluster granularity - which is true for qcow2, qed, etc.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit d83947ac6d2a58fdaf128fbe1b22bc9639e79fe5)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c |   45 +++++++++++++++++++++++++++++++++++++++++++--
+ 1 files changed, 43 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   45 +++++++++++++++++++++++++++++++++++++++++++--
+ 1 files changed, 43 insertions(+), 2 deletions(-)
+
+diff --git a/block.c b/block.c
+index 14d9201..9aefe51 100644
+--- a/block.c
++++ b/block.c
+@@ -1138,21 +1138,62 @@ static void tracked_request_begin(BdrvTrackedRequest *req,
+     QLIST_INSERT_HEAD(&bs->tracked_requests, req, list);
+ }
+ 
++/**
++ * Round a region to cluster boundaries
++ */
++static void round_to_clusters(BlockDriverState *bs,
++                              int64_t sector_num, int nb_sectors,
++                              int64_t *cluster_sector_num,
++                              int *cluster_nb_sectors)
++{
++    BlockDriverInfo bdi;
++
++    if (bdrv_get_info(bs, &bdi) < 0 || bdi.cluster_size == 0) {
++        *cluster_sector_num = sector_num;
++        *cluster_nb_sectors = nb_sectors;
++    } else {
++        int64_t c = bdi.cluster_size / BDRV_SECTOR_SIZE;
++        *cluster_sector_num = QEMU_ALIGN_DOWN(sector_num, c);
++        *cluster_nb_sectors = QEMU_ALIGN_UP(sector_num - *cluster_sector_num +
++                                            nb_sectors, c);
++    }
++}
++
+ static bool tracked_request_overlaps(BdrvTrackedRequest *req,
+                                      int64_t sector_num, int nb_sectors) {
+-    return false; /* not yet implemented */
++    /*        aaaa   bbbb */
++    if (sector_num >= req->sector_num + req->nb_sectors) {
++        return false;
++    }
++    /* bbbb   aaaa        */
++    if (req->sector_num >= sector_num + nb_sectors) {
++        return false;
++    }
++    return true;
+ }
+ 
+ static void coroutine_fn wait_for_overlapping_requests(BlockDriverState *bs,
+         int64_t sector_num, int nb_sectors)
+ {
+     BdrvTrackedRequest *req;
++    int64_t cluster_sector_num;
++    int cluster_nb_sectors;
+     bool retry;
+ 
++    /* If we touch the same cluster it counts as an overlap.  This guarantees
++     * that allocating writes will be serialized and not race with each other
++     * for the same cluster.  For example, in copy-on-read it ensures that the
++     * CoR read and write operations are atomic and guest writes cannot
++     * interleave between them.
++     */
++    round_to_clusters(bs, sector_num, nb_sectors,
++                      &cluster_sector_num, &cluster_nb_sectors);
++
+     do {
+         retry = false;
+         QLIST_FOREACH(req, &bs->tracked_requests, list) {
+-            if (tracked_request_overlaps(req, sector_num, nb_sectors)) {
++            if (tracked_request_overlaps(req, cluster_sector_num,
++                                         cluster_nb_sectors)) {
+                 qemu_co_queue_wait(&req->wait_queue);
+                 retry = true;
+                 break;
+-- 
+1.7.7.6
+

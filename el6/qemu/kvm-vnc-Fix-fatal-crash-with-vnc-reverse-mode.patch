@@ -1,0 +1,57 @@
+From 9a7105beeb1cc63c88fbd21cb25994e80f2b6807 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Fri, 17 Feb 2012 10:10:55 +0100
+Subject: [PATCH 1/4] vnc: Fix fatal crash with vnc reverse mode
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1329473455-22544-1-git-send-email-kraxel@redhat.com>
+Patchwork-id: 37407
+O-Subject: [RHEL-6.3 qemu-kvm PATCH] vnc: Fix fatal crash with vnc reverse mode
+Bugzilla: 769142
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Weil <weil@mail.berlios.de>
+
+Reverse mode is unusable:
+
+	qemu -vnc localhost:5500,reverse
+
+crashes in vnc_refresh_server_surface because some pointers are NULL.
+
+Fix this by calling vnc_dpy_resize (which initializes these pointers)
+before calling vnc_refresh.
+
+Cc: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Stefan Weil <weil@mail.berlios.de>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 5db8378a7710df7899544004967597eb395418c2)
+
+bugzilla: #769142 - Qemu-kvm core dumped when connecting to listening
+                    vnc with "reverse"
+brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4053337
+---
+ vnc.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vnc.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/vnc.c b/vnc.c
+index edcc448..e4ad937 100644
+--- a/vnc.c
++++ b/vnc.c
+@@ -2389,6 +2389,7 @@ static void vnc_init_timer(VncDisplay *vd)
+     vd->timer_interval = VNC_REFRESH_INTERVAL_BASE;
+     if (vd->timer == NULL && vd->clients != NULL) {
+         vd->timer = qemu_new_timer(rt_clock, vnc_refresh, vd);
++        vnc_dpy_resize(vd->ds);
+         vnc_refresh(vd);
+     }
+ }
+-- 
+1.7.7.6
+

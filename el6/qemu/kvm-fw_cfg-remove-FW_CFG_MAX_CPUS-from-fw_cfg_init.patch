@@ -1,0 +1,138 @@
+From 79e654a75ab7ad550ef3904f9b39242f593bdbd0 Mon Sep 17 00:00:00 2001
+Message-Id: <79e654a75ab7ad550ef3904f9b39242f593bdbd0.1351776104.git.minovotn@redhat.com>
+In-Reply-To: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+References: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Mon, 29 Oct 2012 18:52:30 +0100
+Subject: [PATCH 04/11] fw_cfg: remove FW_CFG_MAX_CPUS from fw_cfg_init()
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351536756-16475-5-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43760
+O-Subject: [RHEL6.4 qemu-kvm PATCH 04/10] fw_cfg: remove FW_CFG_MAX_CPUS from fw_cfg_init()
+Bugzilla: 733720
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Bugzilla: 733720
+Related TestOnly BZs: 816804, 815958, 782648
+Upstream status: submitted
+ Message-Id: <1351101001-14589-22-git-send-email-ehabkost@redhat.com>
+ http://article.gmane.org/gmane.comp.emulators.qemu/177685
+
+PC will not use max_cpus for that field, so move it outside the common
+code so it can use a different value on PC.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/fw_cfg.c       | 1 -
+ hw/pc.c           | 2 +-
+ hw/ppc_newworld.c | 1 +
+ hw/ppc_oldworld.c | 1 +
+ hw/sun4m.c        | 3 +++
+ hw/sun4u.c        | 1 +
+ 6 files changed, 7 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/fw_cfg.c       | 1 -
+ hw/pc.c           | 2 +-
+ hw/ppc_newworld.c | 1 +
+ hw/ppc_oldworld.c | 1 +
+ hw/sun4m.c        | 3 +++
+ hw/sun4u.c        | 1 +
+ 6 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/hw/fw_cfg.c b/hw/fw_cfg.c
+index d3b1f14..e480fd9 100644
+--- a/hw/fw_cfg.c
++++ b/hw/fw_cfg.c
+@@ -375,7 +375,6 @@ FWCfgState *fw_cfg_init(uint32_t ctl_port, uint32_t data_port,
+     fw_cfg_add_bytes(s, FW_CFG_UUID, qemu_uuid, 16);
+     fw_cfg_add_i16(s, FW_CFG_NOGRAPHIC, (uint16_t)(display_type == DT_NOGRAPHIC));
+     fw_cfg_add_i16(s, FW_CFG_NB_CPUS, (uint16_t)smp_cpus);
+-    fw_cfg_add_i16(s, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i16(s, FW_CFG_BOOT_MENU, (uint16_t)boot_menu);
+ 
+     vmstate_register(NULL, -1, &vmstate_fw_cfg, s);
+diff --git a/hw/pc.c b/hw/pc.c
+index fcc760d..b7e7b79 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -475,7 +475,7 @@ static void *bochs_bios_init(void)
+     register_ioport_write(0x503, 1, 1, bochs_bios_write, NULL);
+ 
+     fw_cfg = fw_cfg_init(BIOS_CFG_IOPORT, BIOS_CFG_IOPORT + 1, 0, 0);
+-
++    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i32(fw_cfg, FW_CFG_ID, 1);
+     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
+     fw_cfg_add_bytes(fw_cfg, FW_CFG_ACPI_TABLES, (uint8_t *)acpi_tables,
+diff --git a/hw/ppc_newworld.c b/hw/ppc_newworld.c
+index 47b527b..a90eec0 100644
+--- a/hw/ppc_newworld.c
++++ b/hw/ppc_newworld.c
+@@ -362,6 +362,7 @@ static void ppc_core99_init (ram_addr_t ram_size,
+     /* No PCI init: the BIOS will do it */
+ 
+     fw_cfg = fw_cfg_init(0, 0, CFG_ADDR, CFG_ADDR + 2);
++    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i32(fw_cfg, FW_CFG_ID, 1);
+     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
+     fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, ARCH_MAC99);
+diff --git a/hw/ppc_oldworld.c b/hw/ppc_oldworld.c
+index c0cbe62..76c54cd 100644
+--- a/hw/ppc_oldworld.c
++++ b/hw/ppc_oldworld.c
+@@ -382,6 +382,7 @@ static void ppc_heathrow_init (ram_addr_t ram_size,
+     /* No PCI init: the BIOS will do it */
+ 
+     fw_cfg = fw_cfg_init(0, 0, CFG_ADDR, CFG_ADDR + 2);
++    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i32(fw_cfg, FW_CFG_ID, 1);
+     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
+     fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, ARCH_HEATHROW);
+diff --git a/hw/sun4m.c b/hw/sun4m.c
+index a70c23b..f865132 100644
+--- a/hw/sun4m.c
++++ b/hw/sun4m.c
+@@ -869,6 +869,7 @@ static void sun4m_hw_init(const struct sun4m_hwdef *hwdef, ram_addr_t RAM_size,
+                  hwdef->ecc_version);
+ 
+     fw_cfg = fw_cfg_init(0, 0, CFG_ADDR, CFG_ADDR + 2);
++    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i32(fw_cfg, FW_CFG_ID, 1);
+     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
+     fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, hwdef->machine_id);
+@@ -1451,6 +1452,7 @@ static void sun4d_hw_init(const struct sun4d_hwdef *hwdef, ram_addr_t RAM_size,
+                "Sun4d");
+ 
+     fw_cfg = fw_cfg_init(0, 0, CFG_ADDR, CFG_ADDR + 2);
++    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i32(fw_cfg, FW_CFG_ID, 1);
+     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
+     fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, hwdef->machine_id);
+@@ -1639,6 +1641,7 @@ static void sun4c_hw_init(const struct sun4c_hwdef *hwdef, ram_addr_t RAM_size,
+                "Sun4c");
+ 
+     fw_cfg = fw_cfg_init(0, 0, CFG_ADDR, CFG_ADDR + 2);
++    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i32(fw_cfg, FW_CFG_ID, 1);
+     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
+     fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, hwdef->machine_id);
+diff --git a/hw/sun4u.c b/hw/sun4u.c
+index e257366..c4bdfc6 100644
+--- a/hw/sun4u.c
++++ b/hw/sun4u.c
+@@ -643,6 +643,7 @@ static void sun4uv_init(ram_addr_t RAM_size,
+                            (uint8_t *)&nd_table[0].macaddr);
+ 
+     fw_cfg = fw_cfg_init(BIOS_CFG_IOPORT, BIOS_CFG_IOPORT + 1, 0, 0);
++    fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)max_cpus);
+     fw_cfg_add_i32(fw_cfg, FW_CFG_ID, 1);
+     fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
+     fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, hwdef->machine_id);
+-- 
+1.7.11.7
+

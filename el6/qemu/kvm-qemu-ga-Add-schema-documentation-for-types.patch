@@ -1,0 +1,215 @@
+From a59b123457b32a3b16233bee29ed42cb3739f8ad Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Wed, 7 Mar 2012 11:35:46 -0500
+Subject: [PATCH 86/98] qemu-ga: Add schema documentation for types
+
+Document guest agent schema types in similar fashion to qmp schema
+types.
+(cherry picked from commit 54383726dd6e751288b026845ad00c034404098a)
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |  118 +++++++++++++++++++++++++++++++++++++++---------
+ 1 files changed, 97 insertions(+), 21 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 29989fe..80f1635 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -37,17 +37,42 @@
+ { 'command': 'guest-ping' }
+ 
+ ##
+-# @guest-info:
++# @GuestAgentCommandInfo:
+ #
+-# Get some information about the guest agent.
++# Information about guest agent commands.
+ #
+-# Since: 0.15.0
++# @name: name of the command
++#
++# @enabled: whether command is currently enabled by guest admin
++#
++# Since 1.1.0
+ ##
+ { 'type': 'GuestAgentCommandInfo',
+   'data': { 'name': 'str', 'enabled': 'bool' } }
++
++##
++# @GuestAgentInfo
++#
++# Information about guest agent.
++#
++# @version: guest agent version
++#
++# @supported_commands: Information about guest agent commands
++#
++# Since 0.15.0
++##
+ { 'type': 'GuestAgentInfo',
+   'data': { 'version': 'str',
+             'supported_commands': ['GuestAgentCommandInfo'] } }
++##
++# @guest-info:
++#
++# Get some information about the guest agent.
++#
++# Returns: @GuestAgentInfo
++#
++# Since: 0.15.0
++##
+ { 'command': 'guest-info',
+   'returns': 'GuestAgentInfo' }
+ 
+@@ -98,6 +123,23 @@
+   'data': { 'handle': 'int' } }
+ 
+ ##
++# @GuestFileRead
++#
++# Result of guest agent file-read operation
++#
++# @count: number of bytes read (note: count is *before*
++#         base64-encoding is applied)
++#
++# @buf-b64: base64-encoded bytes read
++#
++# @eof: whether EOF was encountered during read operation.
++#
++# Since: 0.15.0
++##
++{ 'type': 'GuestFileRead',
++  'data': { 'count': 'int', 'buf-b64': 'str', 'eof': 'bool' } }
++
++##
+ # @guest-file-read:
+ #
+ # Read from an open file in the guest. Data will be base64-encoded
+@@ -106,19 +148,30 @@
+ #
+ # @count: #optional maximum number of bytes to read (default is 4KB)
+ #
+-# Returns: GuestFileRead on success. Note: count is number of bytes read
+-#          *before* base64 encoding bytes read.
++# Returns: @GuestFileRead on success.
+ #
+ # Since: 0.15.0
+ ##
+-{ 'type': 'GuestFileRead',
+-  'data': { 'count': 'int', 'buf-b64': 'str', 'eof': 'bool' } }
+-
+ { 'command': 'guest-file-read',
+   'data':    { 'handle': 'int', '*count': 'int' },
+   'returns': 'GuestFileRead' }
+ 
+ ##
++# @GuestFileWrite
++#
++# Result of guest agent file-write operation
++#
++# @count: number of bytes written (note: count is actual bytes
++#         written, after base64-decoding of provided buffer)
++#
++# @eof: whether EOF was encountered during write operation.
++#
++# Since: 0.15.0
++##
++{ 'type': 'GuestFileWrite',
++  'data': { 'count': 'int', 'eof': 'bool' } }
++
++##
+ # @guest-file-write:
+ #
+ # Write to an open file in the guest.
+@@ -130,17 +183,29 @@
+ # @count: #optional bytes to write (actual bytes, after base64-decode),
+ #         default is all content in buf-b64 buffer after base64 decoding
+ #
+-# Returns: GuestFileWrite on success. Note: count is the number of bytes
+-#          base64-decoded bytes written
++# Returns: @GuestFileWrite on success.
+ #
+ # Since: 0.15.0
+ ##
+-{ 'type': 'GuestFileWrite',
+-  'data': { 'count': 'int', 'eof': 'bool' } }
+ { 'command': 'guest-file-write',
+   'data':    { 'handle': 'int', 'buf-b64': 'str', '*count': 'int' },
+   'returns': 'GuestFileWrite' }
+ 
++
++##
++# @GuestFileSeek
++#
++# Result of guest agent file-seek operation
++#
++# @position: current file position
++#
++# @eof: whether EOF was encountered during file seek
++#
++# Since: 0.15.0
++##
++{ 'type': 'GuestFileSeek',
++  'data': { 'position': 'int', 'eof': 'bool' } }
++
+ ##
+ # @guest-file-seek:
+ #
+@@ -154,13 +219,10 @@
+ #
+ # @whence: SEEK_SET, SEEK_CUR, or SEEK_END, as with fseek()
+ #
+-# Returns: GuestFileSeek on success.
++# Returns: @GuestFileSeek on success.
+ #
+ # Since: 0.15.0
+ ##
+-{ 'type': 'GuestFileSeek',
+-  'data': { 'position': 'int', 'eof': 'bool' } }
+-
+ { 'command': 'guest-file-seek',
+   'data':    { 'handle': 'int', 'offset': 'int', 'whence': 'int' },
+   'returns': 'GuestFileSeek' }
+@@ -180,18 +242,32 @@
+   'data': { 'handle': 'int' } }
+ 
+ ##
+-# @guest-fsfreeze-status:
++# @GuestFsFreezeStatus
+ #
+-# Get guest fsfreeze state. error state indicates failure to thaw 1 or more
+-# previously frozen filesystems, or failure to open a previously cached
+-# filesytem (filesystem unmounted/directory changes, etc).
++# An enumation of filesystem freeze states
+ #
+-# Returns: GuestFsfreezeStatus ("thawed", "frozen", etc., as defined below)
++# @thawed: filesystems thawed/unfrozen
++#
++# @frozen: all non-network guest filesystems frozen
++#
++# @error: failure to thaw 1 or more
++#         previously frozen filesystems, or failure to open a previously
++#         cached filesytem (filesystem unmounted/directory changes, etc).
+ #
+ # Since: 0.15.0
+ ##
+ { 'enum': 'GuestFsfreezeStatus',
+   'data': [ 'thawed', 'frozen', 'error' ] }
++
++##
++# @guest-fsfreeze-status:
++#
++# Get guest fsfreeze state. error state indicates
++#
++# Returns: GuestFsfreezeStatus ("thawed", "frozen", etc., as defined below)
++#
++# Since: 0.15.0
++##
+ { 'command': 'guest-fsfreeze-status',
+   'returns': 'GuestFsfreezeStatus' }
+ 
+-- 
+1.7.7.6
+

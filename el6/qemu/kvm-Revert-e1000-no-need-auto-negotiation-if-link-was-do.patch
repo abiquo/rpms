@@ -1,0 +1,57 @@
+From be8f28b7cbbf0169960c8a6ae6f3dc939b24e8b5 Mon Sep 17 00:00:00 2001
+Message-Id: <be8f28b7cbbf0169960c8a6ae6f3dc939b24e8b5.1360164820.git.minovotn@redhat.com>
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 4 Feb 2013 18:53:59 +0800
+Subject: [PATCH] Revert "e1000: no need auto-negotiation if link was down"
+
+Bugzilla: https://brewweb.devel.redhat.com/taskinfo?taskID=5353762
+Brew Build: 907397
+Test Status: Tested by my local desktop
+Notes:
+- After this revert, the bug fixes by original patch may occur, but it only
+happens when management sets the link status. So this revert solves a major bug
+(guest network stop working).
+
+This reverts commit 84dd2120247a7d25ff1bb337de21c0e76816ad2d.
+
+I'm not sure what issue the original commit was meant to fix, or if
+the logic is actually wrong, but it causes e1000 to stop working
+after a guest issues a reset.
+
+>From what I can tell a guest with an e1000 nic has no way of changing
+the link status, as far as it's NetClient peer is concerned, except
+in the auto-negotiation path, so with this patch in place there's no
+recovery after a reset, since the link goes down and stays that way.
+
+Revert this patch now to fix the bigger problem, and handle any
+lingering issues with a follow-up.
+
+Reproduced/tested with qemu-jeos and Ubuntu 12.10.
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 70ddd9f66d1d5234b38b4444f209c511e7757ce6)
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/e1000.c | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/hw/e1000.c b/hw/e1000.c
+index 0c57899..016aae1 100644
+--- a/hw/e1000.c
++++ b/hw/e1000.c
+@@ -162,11 +162,6 @@ static void
+ set_phy_ctrl(E1000State *s, int index, uint16_t val)
+ {
+     if ((val & MII_CR_AUTO_NEG_EN) && (val & MII_CR_RESTART_AUTO_NEG)) {
+-        /* no need auto-negotiation if link was down */
+-        if (s->nic->nc.link_down) {
+-            s->phy_reg[PHY_STATUS] |= MII_SR_AUTONEG_COMPLETE;
+-            return;
+-        }
+         s->nic->nc.link_down = true;
+         e1000_link_down(s);
+         s->phy_reg[PHY_STATUS] &= ~MII_SR_AUTONEG_COMPLETE;
+-- 
+1.7.11.7
+

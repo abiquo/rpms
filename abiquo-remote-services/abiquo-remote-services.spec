@@ -1,16 +1,18 @@
 %define abiquo_basedir /opt/abiquo
+%define prev_version 2.4.0
 
 Name:     abiquo-remote-services
-Version:  2.4.0
-Release:  1%{?dist}
+Version:  2.6.0
+Release:  4%{?dist}
 Summary:  Abiquo Remote Services
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 Source0:  README 
 Source1:  abiquo.properties.remoteservices
+Source2:  redis-delta-%{prev_version}_to_%{version}.py
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-virtualfactory libvirt-client dhcp redis nfs-utils OpenIPMI-tools
+Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-virtualfactory dhcp redis nfs-utils OpenIPMI-tools
 BuildArch: noarch
 
 %description
@@ -27,6 +29,7 @@ mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp ../SOURCES/README $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
+cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/
 
 
 %clean
@@ -53,10 +56,19 @@ EOF
 
 %files
 %defattr(-,root,root,-)
-%doc %{_docdir}/%{name}/README
+%doc %{_docdir}/%{name}/
 %{abiquo_basedir}/config/examples/abiquo.properties.remoteservices
 
 %changelog
+* Tue Sep 10 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-4
+- Added redis delta.
+
+* Thu Jun 06 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-3
+- Libvirt dependencies removed.
+
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
+- Bumped version to 2.6.0
+
 * Wed Dec 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
 - Bumped version to 2.4.0
 

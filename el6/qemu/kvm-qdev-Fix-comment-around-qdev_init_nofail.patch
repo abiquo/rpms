@@ -1,0 +1,51 @@
+From 18c7968fdb5c545928283b13ae6e356e23c214d4 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Mon, 9 Jan 2012 13:37:34 +0100
+Subject: [PATCH 7/9] qdev: Fix comment around qdev_init_nofail()
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326116256-3685-8-git-send-email-armbru@redhat.com>
+Patchwork-id: 36280
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 7/9] qdev: Fix comment around qdev_init_nofail()
+Bugzilla: 737879
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Michael Tokarev <mjt@tls.msk.ru>
+
+In previous life qdev_init_nofail() used to call hw_error() which
+did register dump and other scary things.  Now it calls
+error_report() and does a regular exit(1).  Fix the comment
+to match reality.
+
+Signed-off-by: Michael Tokarev <mjt@tls.msk.ru>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 3b29a1018457875a983bf10667cfe3a80c9d6dfd)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ hw/qdev.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qdev.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/hw/qdev.c b/hw/qdev.c
+index b630284..4c2cedf 100644
+--- a/hw/qdev.c
++++ b/hw/qdev.c
+@@ -317,7 +317,8 @@ int qdev_simple_unplug_cb(DeviceState *dev)
+     return 0;
+ }
+ 
+-/* Like qdev_init(), but terminate program via hw_error() instead of
++
++/* Like qdev_init(), but terminate program via error_report() instead of
+    returning an error value.  This is okay during machine creation.
+    Don't use for hotplug, because there callers need to recover from
+    failure.  Exception: if you know the device's init() callback can't
+-- 
+1.7.7.4
+

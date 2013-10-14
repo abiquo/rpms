@@ -1,0 +1,79 @@
+From 24ace787bd73066b79e107e3b32e0cc2cfc8ab41 Mon Sep 17 00:00:00 2001
+Message-Id: <24ace787bd73066b79e107e3b32e0cc2cfc8ab41.1357726992.git.minovotn@redhat.com>
+In-Reply-To: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+References: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Wed, 2 Jan 2013 15:02:29 +0100
+Subject: [PATCH 06/16] event_notifier: add event_notifier_set
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1357138959-1918-7-git-send-email-stefanha@redhat.com>
+Patchwork-id: 45519
+O-Subject: [RHEL6.4 qemu-kvm PATCH v5 06/16] event_notifier: add event_notifier_set
+Bugzilla: 877836
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+EventNotifier right now cannot be used as an inter-thread communication
+primitive.  It only works if something else (the kernel) sets the eventfd.
+Add a primitive to signal an EventNotifier that another thread is waiting
+on.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Avi Kivity <avi@redhat.com>
+(cherry picked from commit 2ec10b952b40d287037a50387a8b66d9ccc5124b)
+
+The filename is event_notifier.c upstream but in RHEL it is the older
+hw/event_notifier.c filename, hence the conflict.
+
+Conflicts:
+	event_notifier.c
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ hw/event_notifier.c | 7 +++++++
+ hw/event_notifier.h | 1 +
+ 2 files changed, 8 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/event_notifier.c | 7 +++++++
+ hw/event_notifier.h | 1 +
+ 2 files changed, 8 insertions(+)
+
+diff --git a/hw/event_notifier.c b/hw/event_notifier.c
+index fb9618c..10ffb65 100644
+--- a/hw/event_notifier.c
++++ b/hw/event_notifier.c
+@@ -39,6 +39,13 @@ int event_notifier_get_fd(EventNotifier *e)
+ 	return e->fd;
+ }
+ 
++int event_notifier_set(EventNotifier *e)
++{
++    uint64_t value = 1;
++    int r = write(e->fd, &value, sizeof(value));
++    return r == sizeof(value);
++}
++
+ int event_notifier_test_and_clear(EventNotifier *e)
+ {
+ 	uint64_t value;
+diff --git a/hw/event_notifier.h b/hw/event_notifier.h
+index 24117ea..8d5735f 100644
+--- a/hw/event_notifier.h
++++ b/hw/event_notifier.h
+@@ -10,6 +10,7 @@ struct EventNotifier {
+ int event_notifier_init(EventNotifier *, int active);
+ void event_notifier_cleanup(EventNotifier *);
+ int event_notifier_get_fd(EventNotifier *);
++int event_notifier_set(EventNotifier *);
+ int event_notifier_test_and_clear(EventNotifier *);
+ int event_notifier_test(EventNotifier *);
+ 
+-- 
+1.7.11.7
+

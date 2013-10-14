@@ -1,0 +1,63 @@
+From af37d40f5a6d3a76b32c1f7ed29c285b5f337a00 Mon Sep 17 00:00:00 2001
+Message-Id: <af37d40f5a6d3a76b32c1f7ed29c285b5f337a00.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:17 +0200
+Subject: [PATCH 08/41] qemu-ga: win32: add guest-suspend-* stubs
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-3-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39899
+O-Subject: [PATCH RHEL6.4 qemu-kvm 02/36] qemu-ga: win32: add guest-suspend-* stubs
+Bugzilla: 827612
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+
+The commits that added suspend support to qemu-ga upstream (11d0f125, fbf42210,
+95f4f404) also added stubs to qga/commands-win32.c. However, this wasn't
+backported by the commits that added suspend support downstream (975aa0d5,
+8030666b, 531218b7).
+
+Add them now to avoid future conflicts. This is a RHEL-only commit.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qga/commands-win32.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qga/commands-win32.c |   15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/qga/commands-win32.c b/qga/commands-win32.c
+index 4aa0f0d..7ef185f 100644
+--- a/qga/commands-win32.c
++++ b/qga/commands-win32.c
+@@ -124,6 +124,21 @@ int64_t qmp_guest_fsfreeze_thaw(Error **err)
+     return 0;
+ }
+ 
++void qmp_guest_suspend_disk(Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++}
++
++void qmp_guest_suspend_ram(Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++}
++
++void qmp_guest_suspend_hybrid(Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++}
++
+ /* register init/cleanup routines for stateful command groups */
+ void ga_command_state_init(GAState *s, GACommandState *cs)
+ {
+-- 
+1.7.10.4
+

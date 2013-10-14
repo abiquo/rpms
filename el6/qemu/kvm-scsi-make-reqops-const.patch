@@ -1,0 +1,139 @@
+From c09c73f957ca52cabd9bf36cbfb5eba98f17a8f0 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:23 +0100
+Subject: [PATCH 067/109] scsi: make reqops const
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-67-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37547
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 066/102] scsi: make reqops const
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Also delete a stale occurrence of SCSIReqOps inside SCSIDeviceInfo.
+
+[ ... which we didn't have because of earlier conflicts in the series ]
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from adcf2754b99dcab33c5c0c523eb3b970c1a24f6c)
+---
+ hw/scsi-bus.c     |   10 +++++-----
+ hw/scsi-disk.c    |    2 +-
+ hw/scsi-generic.c |    2 +-
+ hw/scsi.h         |    7 +++----
+ 4 files changed, 10 insertions(+), 11 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c     |   10 +++++-----
+ hw/scsi-disk.c    |    2 +-
+ hw/scsi-generic.c |    2 +-
+ hw/scsi.h         |    7 +++----
+ 4 files changed, 10 insertions(+), 11 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index dd1217b..117463c 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -160,7 +160,7 @@ static int32_t scsi_invalid_command(SCSIRequest *req, uint8_t *buf)
+     return 0;
+ }
+ 
+-struct SCSIReqOps reqops_invalid_opcode = {
++static const struct SCSIReqOps reqops_invalid_opcode = {
+     .size         = sizeof(SCSIRequest),
+     .send_command = scsi_invalid_command
+ };
+@@ -178,7 +178,7 @@ static int32_t scsi_unit_attention(SCSIRequest *req, uint8_t *buf)
+     return 0;
+ }
+ 
+-struct SCSIReqOps reqops_unit_attention = {
++static const struct SCSIReqOps reqops_unit_attention = {
+     .size         = sizeof(SCSIRequest),
+     .send_command = scsi_unit_attention
+ };
+@@ -389,7 +389,7 @@ static uint8_t *scsi_target_get_buf(SCSIRequest *req)
+     return r->buf;
+ }
+ 
+-struct SCSIReqOps reqops_target_command = {
++static const struct SCSIReqOps reqops_target_command = {
+     .size         = sizeof(SCSITargetReq),
+     .send_command = scsi_target_send_command,
+     .read_data    = scsi_target_read_data,
+@@ -397,8 +397,8 @@ struct SCSIReqOps reqops_target_command = {
+ };
+ 
+ 
+-SCSIRequest *scsi_req_alloc(SCSIReqOps *reqops, SCSIDevice *d, uint32_t tag,
+-                            uint32_t lun, void *hba_private)
++SCSIRequest *scsi_req_alloc(const SCSIReqOps *reqops, SCSIDevice *d,
++                            uint32_t tag, uint32_t lun, void *hba_private)
+ {
+     SCSIRequest *req;
+ 
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 4d35851..d4c6135 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1643,7 +1643,7 @@ static int scsi_disk_initfn(SCSIDevice *dev)
+     }
+ }
+ 
+-static SCSIReqOps scsi_disk_reqops = {
++static const SCSIReqOps scsi_disk_reqops = {
+     .size         = sizeof(SCSIDiskReq),
+     .free_req     = scsi_free_request,
+     .send_command = scsi_send_command,
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index c303b2d..dda8805 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -426,7 +426,7 @@ static int scsi_generic_initfn(SCSIDevice *s)
+     return 0;
+ }
+ 
+-static SCSIReqOps scsi_generic_req_ops = {
++static const SCSIReqOps scsi_generic_req_ops = {
+     .size         = sizeof(SCSIGenericReq),
+     .free_req     = scsi_free_request,
+     .send_command = scsi_send_command,
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 52b5315..6670d94 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -42,7 +42,7 @@ struct SCSICommand {
+ struct SCSIRequest {
+     SCSIBus           *bus;
+     SCSIDevice        *dev;
+-    SCSIReqOps        *ops;
++    const SCSIReqOps  *ops;
+     uint32_t          refcount;
+     uint32_t          tag;
+     uint32_t          lun;
+@@ -98,7 +98,6 @@ struct SCSIDeviceInfo {
+     SCSIRequest *(*alloc_req)(SCSIDevice *s, uint32_t tag, uint32_t lun,
+                               void *hba_private);
+     void (*unit_attention_reported)(SCSIDevice *s);
+-    SCSIReqOps reqops;
+ };
+ 
+ struct SCSIBusInfo {
+@@ -178,8 +177,8 @@ extern const struct SCSISense sense_code_DEVICE_INTERNAL_RESET;
+ 
+ int scsi_sense_valid(SCSISense sense);
+ 
+-SCSIRequest *scsi_req_alloc(SCSIReqOps *reqops, SCSIDevice *d, uint32_t tag,
+-                            uint32_t lun, void *hba_private);
++SCSIRequest *scsi_req_alloc(const SCSIReqOps *reqops, SCSIDevice *d,
++                            uint32_t tag, uint32_t lun, void *hba_private);
+ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
+                           uint8_t *buf, void *hba_private);
+ int32_t scsi_req_enqueue(SCSIRequest *req);
+-- 
+1.7.7.6
+

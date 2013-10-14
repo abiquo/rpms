@@ -1,0 +1,53 @@
+From 7f468b80fdbd860f4102fc0a136fad7c9cc074ba Mon Sep 17 00:00:00 2001
+From: "ddugger@redhat.com" <ddugger@redhat.com>
+Date: Tue, 1 Nov 2011 16:20:20 +0100
+Subject: [PATCH] bz716261: qemu-kvm: Fix XSAVE for active AVX usage
+
+RH-Author: ddugger@redhat.com
+Message-id: <20111101162020.GB3848@sobek.n0ano.com>
+Patchwork-id: 34803
+O-Subject: [RHEL 6.2 PATCH] bz716261: qemu-kvm: Fix XSAVE for active AVX usage
+Bugzilla: 716261
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+XSAVE/XRSTOR is not working when the guest is actively using AVX
+instructions.  This patch fixes the problem by putting the correct
+name into the XSAVE sub-section of the save file.
+
+Upstream status - N/A (the sub-section is only there to not break the
+		       ABI with RHEL 6.1)
+
+Testing: Guests that are actively using AVX instructions can now live
+migrate with this patch installed.
+
+Brew Build: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=3757700
+
+Signed-off-by: Xiantao.Zhang@intel.com>
+Signed-off-by: Don Dugger <donald.d.dugger@intel.com>
+---
+ target-i386/machine.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/machine.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/target-i386/machine.c b/target-i386/machine.c
+index d7ea048..07076b7 100644
+--- a/target-i386/machine.c
++++ b/target-i386/machine.c
+@@ -407,7 +407,7 @@ static bool vmstate_xsave_needed(void *opaque)
+ }
+ 
+ static const VMStateDescription vmstate_xsave ={
+-    .name = "xsave",
++    .name = "cpu/xsave",
+     .version_id = 1,
+     .minimum_version_id = 1,
+     .minimum_version_id_old = 1,
+-- 
+1.7.7.4
+

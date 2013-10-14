@@ -1,0 +1,69 @@
+From 2c43bbac9427151bc35d8318d04126444ed8558b Mon Sep 17 00:00:00 2001
+Message-Id: <2c43bbac9427151bc35d8318d04126444ed8558b.1344844502.git.minovotn@redhat.com>
+In-Reply-To: <0c740d356f8d30310bcff2b06cfefad0e72769e2.1344844502.git.minovotn@redhat.com>
+References: <0c740d356f8d30310bcff2b06cfefad0e72769e2.1344844502.git.minovotn@redhat.com>
+From: Alex Williamson <alex.williamson@redhat.com>
+Date: Tue, 7 Aug 2012 19:41:33 +0200
+Subject: [PATCH 4/5] acpi_piix4: Re-define PCI hotplug eject register read
+
+RH-Author: Alex Williamson <alex.williamson@redhat.com>
+Message-id: <20120807194132.6021.30266.stgit@bling.home>
+Patchwork-id: 40608
+O-Subject: [RHEL6.4 qemu-kvm PATCH 4/5] acpi_piix4: Re-define PCI hotplug eject register read
+Bugzilla: 807391
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Don Dutile <ddutile@redhat.com>
+
+Bugzilla: 807391
+Upstream commit: 9290f364c1f0c0a5a2ee8e03607f4804455c0d0e
+
+The PCI hotplug eject register has always returned 0, so let's redefine
+it as a hotplug feature register.  The existing model of using separate
+up & down read-only registers and an eject via write to this register
+becomes the base implementation.  As we make use of new interfaces we'll
+set bits here to allow the BIOS and AML implementation to optimize for
+the platform implementation.
+
+Signed-off-by: Alex Williamson <alex.williamson@redhat.com>
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+---
+
+ hw/acpi.c |    7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/acpi.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index 6db0693..e1d8288 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -862,10 +862,11 @@ static uint32_t pci_down_read(void *opaque, uint32_t addr)
+     return val;
+ }
+ 
+-static uint32_t pciej_read(void *opaque, uint32_t addr)
++static uint32_t pci_features_read(void *opaque, uint32_t addr)
+ {
++    /* No feature defined yet */
+ #if defined(DEBUG)
+-    printf("pciej read %x\n", addr);
++    printf("pci_features_read %x\n", 0);
+ #endif
+     return 0;
+ }
+@@ -909,7 +910,7 @@ void piix4_acpi_system_hot_add_init(PCIBus *bus, const char *cpu_model)
+     register_ioport_read(PCI_DOWN_BASE, 4, 4, pci_down_read, pm_state);
+ 
+     register_ioport_write(PCI_EJ_BASE, 4, 4, pciej_write, pm_state);
+-    register_ioport_read(PCI_EJ_BASE, 4, 4,  pciej_read, pm_state);
++    register_ioport_read(PCI_EJ_BASE, 4, 4,  pci_features_read, pm_state);
+ 
+     register_ioport_read(PCI_RMV_BASE, 4, 4,  pcirmv_read, pm_state);
+ 
+-- 
+1.7.11.2
+

@@ -1,0 +1,43 @@
+From d193e5c5c3494bfdbcdfc03e2ef69a5f52206dc8 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:55 +0100
+Subject: [PATCH 039/109] scsi: pass correct sense code for ENOMEDIUM
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-39-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37517
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 038/102] scsi: pass correct sense code for ENOMEDIUM
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 7e218df5181f1c26d52ef525b30a416c60a2160b)
+---
+ hw/scsi-disk.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 1ca49db..e80a366 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -259,6 +259,9 @@ static int scsi_handle_rw_error(SCSIDiskReq *r, int error, int type)
+         scsi_req_ref(&r->req);
+     } else {
+         switch (error) {
++        case ENOMEDIUM:
++            scsi_check_condition(r, SENSE_CODE(NO_MEDIUM));
++            break;
+         case ENOMEM:
+             scsi_check_condition(r, SENSE_CODE(TARGET_FAILURE));
+             break;
+-- 
+1.7.7.6
+

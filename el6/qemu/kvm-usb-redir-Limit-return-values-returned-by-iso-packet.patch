@@ -1,0 +1,57 @@
+From 19a6f14c59f24936c80f0f737a5a4d8e9c5acb30 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Sun, 4 Mar 2012 11:57:43 +0100
+Subject: [PATCH 21/35] usb-redir: Limit return values returned by iso packets
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1330862278-22314-7-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 37921
+O-Subject: [PATCH 06/21] usb-redir: Limit return values returned by iso packets
+Bugzilla: 758104
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+The usbredir protocol uses a status of usb_redir_stall to indicate that
+an iso data stream has stopped (ie because the urbs failed on resubmit),
+but iso packets should never return a result of USB_RET_STALL, since iso
+endpoints cannot stall. So instead simply always return USB_RET_NAK on
+iso stream errors.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+(cherry picked from commit d86b8853e1f0c7ffb917a7a48f2e44bc3d8e9f8a)
+---
+ usb-redir.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ usb-redir.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index 2cf0e53..f20fb86 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -441,7 +441,7 @@ static int usbredir_handle_iso_data(USBRedirDevice *dev, USBPacket *p,
+             /* Check iso_error for stream errors, otherwise its an underrun */
+             status = dev->endpoint[EP2I(ep)].iso_error;
+             dev->endpoint[EP2I(ep)].iso_error = 0;
+-            return usbredir_handle_status(dev, status, 0);
++            return status ? USB_RET_NAK : 0;
+         }
+         DPRINTF2("iso-token-in ep %02X status %d len %d queue-size: %d\n", ep,
+                  isop->status, isop->len, dev->endpoint[EP2I(ep)].bufpq_size);
+@@ -449,7 +449,7 @@ static int usbredir_handle_iso_data(USBRedirDevice *dev, USBPacket *p,
+         status = isop->status;
+         if (status != usb_redir_success) {
+             bufp_free(dev, isop, ep);
+-            return usbredir_handle_status(dev, status, 0);
++            return USB_RET_NAK;
+         }
+ 
+         len = isop->len;
+-- 
+1.7.7.6
+

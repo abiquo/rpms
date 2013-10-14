@@ -61,16 +61,13 @@ def main(selected=nil)
     abiquo-nodecollector
     abiquo-lvmiscsi
     abiquo-core
-    abiquo-cloud-node
     abiquo-client-premium
     abiquo-api
     abiquo-am
-    abiquo-aim
+    abiquo-m
     abiquo-release-ee
     abiquo-release-notes-ee
     abiquo-vsm
-    rubygem-abiquo-etk
-    abiquo-logos-ee
   }
 
   build_host = 'vbuilder' 

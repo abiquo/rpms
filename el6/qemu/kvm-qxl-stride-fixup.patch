@@ -1,0 +1,121 @@
+From 0a24d5c302b7cccb72e1f5a926ed9e03f84cdd1b Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Tue, 14 Feb 2012 15:28:15 +0100
+Subject: [PATCH 1/4] qxl: stride fixup
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1329233296-19360-2-git-send-email-kraxel@redhat.com>
+Patchwork-id: 37295
+O-Subject: [RHEL-6.3 qemu-kvm PATCH 1/2] qxl: stride fixup
+Bugzilla: 748810
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+
+spice uses negative stride value to signal the bitmap is upside down.
+The qxl renderer (used for scl, vnc and screenshots) wants a positive
+value because it is easier to work with.  The positive value is then
+stored in the very same variable, which has the drawback that the
+upside-down test works only once.  Fix by using two variables.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 0e2487bd6f56445b43307536a465ee2ba810aed9)
+
+Conflicts:
+
+	hw/qxl-render.c
+---
+ hw/qxl-render.c |   20 ++++++++++----------
+ hw/qxl.h        |    3 ++-
+ 2 files changed, 12 insertions(+), 11 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl-render.c |   20 ++++++++++----------
+ hw/qxl.h        |    3 ++-
+ 2 files changed, 12 insertions(+), 11 deletions(-)
+
+diff --git a/hw/qxl-render.c b/hw/qxl-render.c
+index 643ff2d..fa7977a 100644
+--- a/hw/qxl-render.c
++++ b/hw/qxl-render.c
+@@ -28,16 +28,16 @@ static void qxl_flip(PCIQXLDevice *qxl, QXLRect *rect)
+     int len, i;
+ 
+     src += (qxl->guest_primary.surface.height - rect->top - 1) *
+-        qxl->guest_primary.stride;
+-    dst += rect->top  * qxl->guest_primary.stride;
++        qxl->guest_primary.abs_stride;
++    dst += rect->top  * qxl->guest_primary.abs_stride;
+     src += rect->left * qxl->guest_primary.bytes_pp;
+     dst += rect->left * qxl->guest_primary.bytes_pp;
+     len  = (rect->right - rect->left) * qxl->guest_primary.bytes_pp;
+ 
+     for (i = rect->top; i < rect->bottom; i++) {
+         memcpy(dst, src, len);
+-        dst += qxl->guest_primary.stride;
+-        src -= qxl->guest_primary.stride;
++        dst += qxl->guest_primary.abs_stride;
++        src -= qxl->guest_primary.abs_stride;
+     }
+ }
+ 
+@@ -45,7 +45,8 @@ void qxl_render_resize(PCIQXLDevice *qxl)
+ {
+     QXLSurfaceCreate *sc = &qxl->guest_primary.surface;
+ 
+-    qxl->guest_primary.stride = sc->stride;
++    qxl->guest_primary.qxl_stride = sc->stride;
++    qxl->guest_primary.abs_stride = abs(sc->stride);
+     qxl->guest_primary.resized++;
+     switch (sc->format) {
+     case SPICE_SURFACE_FMT_16_555:
+@@ -87,11 +88,10 @@ void qxl_render_update(PCIQXLDevice *qxl)
+         qemu_free_displaysurface(vga->ds);
+ 
+         qxl->guest_primary.data = qemu_get_ram_ptr(qxl->vga.vram_offset);
+-        if (qxl->guest_primary.stride < 0) {
++        if (qxl->guest_primary.qxl_stride < 0) {
+             /* spice surface is upside down -> need extra buffer to flip */
+-            qxl->guest_primary.stride = -qxl->guest_primary.stride;
+             qxl->guest_primary.flipped = qemu_malloc(qxl->guest_primary.surface.width *
+-                                                     qxl->guest_primary.stride);
++                                                     qxl->guest_primary.abs_stride);
+             ptr = qxl->guest_primary.flipped;
+         } else {
+             ptr = qxl->guest_primary.data;
+@@ -100,7 +100,7 @@ void qxl_render_update(PCIQXLDevice *qxl)
+                __FUNCTION__,
+                qxl->guest_primary.surface.width,
+                qxl->guest_primary.surface.height,
+-               qxl->guest_primary.stride,
++               qxl->guest_primary.qxl_stride,
+                qxl->guest_primary.bytes_pp,
+                qxl->guest_primary.bits_pp,
+                qxl->guest_primary.flipped ? "yes" : "no");
+@@ -108,7 +108,7 @@ void qxl_render_update(PCIQXLDevice *qxl)
+             qemu_create_displaysurface_from(qxl->guest_primary.surface.width,
+                                             qxl->guest_primary.surface.height,
+                                             qxl->guest_primary.bits_pp,
+-                                            qxl->guest_primary.stride,
++                                            qxl->guest_primary.abs_stride,
+                                             ptr);
+         dpy_resize(vga->ds);
+     }
+diff --git a/hw/qxl.h b/hw/qxl.h
+index 64c0ee5..310103f 100644
+--- a/hw/qxl.h
++++ b/hw/qxl.h
+@@ -47,7 +47,8 @@ typedef struct PCIQXLDevice {
+         QXLSurfaceCreate surface;
+         uint32_t       commands;
+         uint32_t       resized;
+-        int32_t        stride;
++        int32_t        qxl_stride;
++        uint32_t       abs_stride;
+         uint32_t       bits_pp;
+         uint32_t       bytes_pp;
+         uint8_t        *data, *flipped;
+-- 
+1.7.7.5
+

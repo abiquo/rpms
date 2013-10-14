@@ -1,0 +1,79 @@
+From 471d7282aef0b13c24df2cbf2f168d5c2e56d3a6 Mon Sep 17 00:00:00 2001
+Message-Id: <471d7282aef0b13c24df2cbf2f168d5c2e56d3a6.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:20 +0200
+Subject: [PATCH 07/35] stream: fix ratelimiting corner case
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <1ea8350b55936d2b4041d870d020c8c5bf079991.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43262
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 07/35] stream: fix ratelimiting corner case
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+This fixes inability to make progress in streaming if the quota is set
+to less than the amount of data that an I/O operation has to write.
+
+In this case, limit->dispatched + n will always be above the quota and,
+due to the "goto retry" to recheck cancellation and allocation, streaming
+will livelock.
+
+This can be reproduced with "block_job_set_speed ide0-hd0 1b".  Of course,
+with this patch the requested limit will not be obeyed.  That could be
+done with another patch that caps is_allocated's n argument by the slice
+quota.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit b21d677ee9efe431a4acc653a8cfb12650e44cec)
+
+Conflicts:
+	block/stream.c
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/stream.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/stream.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/block/stream.c b/block/stream.c
+index 713ed93..dd07534 100644
+--- a/block/stream.c
++++ b/block/stream.c
+@@ -33,19 +33,19 @@ typedef struct {
+ 
+ static int64_t ratelimit_calculate_delay(RateLimit *limit, uint64_t n)
+ {
+-    int64_t delay_ns = 0;
+     int64_t now = qemu_get_clock(rt_clock);
+ 
+     if (limit->next_slice_time < now) {
+         limit->next_slice_time = now + SLICE_TIME;
+         limit->dispatched = 0;
+     }
+-    if (limit->dispatched + n > limit->slice_quota) {
+-        delay_ns = limit->next_slice_time - now;
+-    } else {
++    if (limit->dispatched == 0 || limit->dispatched + n <= limit->slice_quota) {
+         limit->dispatched += n;
++        return 0;
++    } else {
++        limit->dispatched = n;
++        return limit->next_slice_time - now;
+     }
+-    return delay_ns;
+ }
+ 
+ static void ratelimit_set_speed(RateLimit *limit, uint64_t speed)
+-- 
+1.7.11.7
+

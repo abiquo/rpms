@@ -1,8 +1,9 @@
 %define abiquo_basedir /opt/abiquo
+%define prev_version 2.4.0
 
 Name:           abiquo-server
-Version:        2.4.0
-Release:        1%{?dist}%{?buildstamp}
+Version:        2.6.0
+Release:        6%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -10,10 +11,10 @@ Summary:        Abiquo Server Enterprise Edition
 Source0:        abiquo.properties.server
 Source1:        abiquo-accounting.cron
 Source2:	%{?abiquo_binaries_url}database/kinton-schema.sql
-Source3:	%{?abiquo_binaries_url}database/kinton-%{version}-delta.sql
-Source4:        kinton-delta-disable-wizard
+Source3:	%{?abiquo_binaries_url}database/kinton-delta-%{prev_version}_to_%{version}.sql
+#Source4:	redis-delta-%{prev_version}_to_%{version}.py
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires:       abiquo-core abiquo-client-premium nfs-utils sos wget ruby ntp libvirt-client redis 
+Requires:       abiquo-core abiquo-client-premium abiquo-api abiquo-m nfs-utils sos wget ruby ntp redis 
 Requires:       /usr/sbin/sendmail /usr/bin/which
 BuildRequires:  /usr/bin/unzip
 BuildArch: 	noarch
@@ -27,8 +28,6 @@ This package includes software developed by third-party.
 Make sure that you read the license agrements in /usr/share/doc/abiquo-core licenses before using this software.
 
 %prep
-# Abiquo wizard fix
-cat %{SOURCE4} >> %{SOURCE3}
 
 %install
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}
@@ -53,6 +52,24 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/config/examples/abiquo.properties.server
 
 %changelog
+* Tue Sep 10 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-6
+- Moved redis delta to RS.
+
+* Tue Sep 10 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-5
+- Added api and m.
+
+* Tue Jun 18 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-4
+- Added redis delta.
+
+* Thu Jun 13 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-3
+- New delta naming
+
+* Thu Jun 06 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
+- Libvirt dependencies removed.
+
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-1
+- Bumped version to 2.6.0
+
 * Wed Dec 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
 - Bumped version to 2.4.0
 

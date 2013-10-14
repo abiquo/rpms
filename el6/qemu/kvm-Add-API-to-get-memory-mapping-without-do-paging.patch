@@ -1,0 +1,73 @@
+From acd61976255b41154834ec46b827468f75a742c4 Mon Sep 17 00:00:00 2001
+Message-Id: <acd61976255b41154834ec46b827468f75a742c4.1349774431.git.minovotn@redhat.com>
+In-Reply-To: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+References: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Fri, 5 Oct 2012 17:46:21 +0200
+Subject: [PATCH 09/21] Add API to get memory mapping without do paging
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349459193-18226-8-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42755
+O-Subject: [RHEL6.4 qemu-kvm PATCH 07/19] Add API to get memory mapping without do paging
+Bugzilla: 832458
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Wen Congyang <wency@cn.fujitsu.com>
+
+crash does not need the virtual address and physical address mapping, and the
+mapping does not include the memory that is not referenced by the page table.
+crash does not use the virtual address, so we can create the mapping for all
+physical memory(virtual address is always 0). This patch provides a API to do
+this thing, and it will be used in the following patch.
+
+Signed-off-by: Wen Congyang <wency@cn.fujitsu.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 2b05ab5229f880720ab6ca0e52577089889c10f9)
+---
+ memory_mapping.c | 9 +++++++++
+ memory_mapping.h | 3 +++
+ 2 files changed, 12 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ memory_mapping.c | 9 +++++++++
+ memory_mapping.h | 3 +++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/memory_mapping.c b/memory_mapping.c
+index 627397a..adb1595 100644
+--- a/memory_mapping.c
++++ b/memory_mapping.c
+@@ -211,3 +211,12 @@ int qemu_get_guest_memory_mapping(MemoryMappingList *list)
+     return 0;
+ }
+ #endif
++
++void qemu_get_guest_simple_memory_mapping(MemoryMappingList *list)
++{
++    RAMBlock *block;
++
++    QLIST_FOREACH(block, &ram_list.blocks, next) {
++        create_new_memory_mapping(list, block->offset, 0, block->length);
++    }
++}
+diff --git a/memory_mapping.h b/memory_mapping.h
+index 7f3c256..190de12 100644
+--- a/memory_mapping.h
++++ b/memory_mapping.h
+@@ -60,6 +60,9 @@ static inline int qemu_get_guest_memory_mapping(MemoryMappingList *list)
+ }
+ #endif
+ 
++/* get guest's memory mapping without do paging(virtual address is 0). */
++void qemu_get_guest_simple_memory_mapping(MemoryMappingList *list);
++
+ #else
+ 
+ /* We use MemoryMappingList* in cpu-all.h */
+-- 
+1.7.11.4
+

@@ -1,0 +1,121 @@
+From 47d8426011d5776a5faf97aea18479133132cf6d Mon Sep 17 00:00:00 2001
+Message-Id: <47d8426011d5776a5faf97aea18479133132cf6d.1335361915.git.minovotn@redhat.com>
+In-Reply-To: <ce1a7d1539a0b4b36555d1035257f57af7ae8478.1335361915.git.minovotn@redhat.com>
+References: <ce1a7d1539a0b4b36555d1035257f57af7ae8478.1335361915.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 24 Apr 2012 14:01:31 +0200
+Subject: [PATCH 4/8] block: wait for job callback in block_job_cancel_sync
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1335276095-25813-5-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39429
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 4/8] block: wait for job callback in block_job_cancel_sync
+Bugzilla: 813862
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 813810
+
+Upstream status: submitted
+
+The limitation on not having I/O after cancellation cannot really be
+honored.  Even streaming has a very small race window where you could
+cancel a job and have it report completion.  If this window is hit,
+bdrv_change_backing_file() will yield and possibly cause accesses to
+dangling pointers etc.
+
+So, let's just assume that we cannot know exactly what will happen
+after the coroutine has set busy to false.  We can set a very lax
+condition:
+
+- if we cancel the job, the coroutine won't set it to false again
+(and hence will not call co_sleep_ns again).
+
+- block_job_cancel_sync will wait for the coroutine to exit, which
+pretty much ensures no race.
+
+The condition on what to do while busy = false is and remains very
+strict. First of all, the coroutine must never set busy = false while
+the job has been cancelled.  Second, the coroutine can be reentered
+arbitrarily while it is quiescent, so you cannot really do anything
+but co_sleep_ns at that time.  This condition is obeyed by the
+block_job_sleep function.
+---
+ block.c     |   33 +++++++++++++++++++++++++++++++--
+ block_int.h |    2 +-
+ 2 files changed, 32 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c     |   33 +++++++++++++++++++++++++++++++--
+ block_int.h |    2 +-
+ 2 files changed, 32 insertions(+), 3 deletions(-)
+
+diff --git a/block.c b/block.c
+index d3cf964..d9008e2 100644
+--- a/block.c
++++ b/block.c
+@@ -3792,15 +3792,44 @@ bool block_job_is_cancelled(BlockJob *job)
+     return job->cancelled;
+ }
+ 
+-void block_job_cancel_sync(BlockJob *job)
++struct BlockCancelData {
++    BlockJob *job;
++    BlockDriverCompletionFunc *cb;
++    void *opaque;
++    bool cancelled;
++    int ret;
++};
++
++static void block_job_cancel_cb(void *opaque, int ret)
++{
++    struct BlockCancelData *data = opaque;
++
++    data->cancelled = block_job_is_cancelled(data->job);
++    data->ret = ret;
++    data->cb(data->opaque, ret);
++}
++
++int block_job_cancel_sync(BlockJob *job)
+ {
++    struct BlockCancelData data;
+     BlockDriverState *bs = job->bs;
+ 
+     assert(bs->job == job);
++
++    /* Set up our own callback to store the result and chain to
++     * the original callback.
++     */
++    data.job = job;
++    data.cb = job->cb;
++    data.opaque = job->opaque;
++    data.ret = -EINPROGRESS;
++    job->cb = block_job_cancel_cb;
++    job->opaque = &data;
+     block_job_cancel(job);
+-    while (bs->job != NULL && bs->job->busy) {
++    while (data.ret == -EINPROGRESS) {
+         qemu_aio_wait();
+     }
++    return (data.cancelled && data.ret == 0) ? -ECANCELED : data.ret;
+ }
+ 
+ void block_job_sleep(BlockJob *job, QEMUClock *clock, int64_t ticks)
+diff --git a/block_int.h b/block_int.h
+index 2b6fa3d..2313ce5 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -312,7 +312,7 @@ void block_job_complete(BlockJob *job, int ret);
+ int block_job_set_speed(BlockJob *job, int64_t value);
+ void block_job_cancel(BlockJob *job);
+ bool block_job_is_cancelled(BlockJob *job);
+-void block_job_cancel_sync(BlockJob *job);
++int block_job_cancel_sync(BlockJob *job);
+ void block_job_sleep(BlockJob *job, QEMUClock *clock, int64_t ms);
+ 
+ int stream_start(BlockDriverState *bs, BlockDriverState *base,
+-- 
+1.7.7.6
+

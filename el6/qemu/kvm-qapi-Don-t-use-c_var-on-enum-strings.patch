@@ -1,0 +1,34 @@
+From 1e8a2c5bcb3caa94e792d6dffff9b1e7a40f6187 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:44:21 -0500
+Subject: [PATCH 54/98] qapi: Don't use c_var() on enum strings
+
+Otherwise if we have something like 'foo-bar' in the schema,
+it will be generated as 'foo_bar' in the string lookup table.
+
+c_var() is good for C variables, but not for enum strings.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit d2a80d6bb3fdf319d28f25eb034b32a9f3da7334)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ scripts/qapi-types.py |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/scripts/qapi-types.py b/scripts/qapi-types.py
+index 4797a70..3bacc0c 100644
+--- a/scripts/qapi-types.py
++++ b/scripts/qapi-types.py
+@@ -70,7 +70,7 @@ const char *%(name)s_lookup[] = {
+         ret += mcgen('''
+     "%(value)s",
+ ''',
+-                     value=c_var(value).lower())
++                     value=value.lower())
+ 
+     ret += mcgen('''
+     NULL,
+-- 
+1.7.7.6
+

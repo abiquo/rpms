@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo/lvmiscsi
 
 Name:           abiquo-lvmiscsi
-Version:        2.4.0
+Version:        2.6.0
 Release:        1%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
@@ -61,6 +61,10 @@ install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
 
 
 %changelog
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-1
+- Bumped version to 2.6.0 
+- Updated tomcat version
+
 * Wed Nov 21 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
 - Bumped version to 2.4
 

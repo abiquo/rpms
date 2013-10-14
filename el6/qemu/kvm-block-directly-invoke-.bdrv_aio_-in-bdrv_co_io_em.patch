@@ -1,0 +1,64 @@
+From f346dcbe964765a1829908a915fb633cba7b9e28 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:39 +0100
+Subject: [PATCH 74/99] block: directly invoke .bdrv_aio_*() in
+ bdrv_co_io_em()
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-75-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37272
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 74/96] block: directly invoke .bdrv_aio_*() in bdrv_co_io_em()
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Bugzilla: 783950
+
+We will unify block layer request processing across sync, aio, and
+coroutines and this means a .bdrv_co_*() emulation function should not
+call back into the public interface.  There's no need here, just call
+.bdrv_aio_*() directly.
+
+The gory details: bdrv_co_io_em() cannot call back into the public
+bdrv_aio_*() interface since that will be handled using coroutines,
+which causes us to call into bdrv_co_io_em() again in an infinite loop
+:).
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit a652d16025030013116c4d63883b9e1ec08a4359)
+---
+ block.c |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/block.c b/block.c
+index 274e973..3b9a4d7 100644
+--- a/block.c
++++ b/block.c
+@@ -2864,11 +2864,11 @@ static int coroutine_fn bdrv_co_io_em(BlockDriverState *bs, int64_t sector_num,
+     BlockDriverAIOCB *acb;
+ 
+     if (is_write) {
+-        acb = bdrv_aio_writev(bs, sector_num, iov, nb_sectors,
+-                              bdrv_co_io_em_complete, &co);
++        acb = bs->drv->bdrv_aio_writev(bs, sector_num, iov, nb_sectors,
++                                       bdrv_co_io_em_complete, &co);
+     } else {
+-        acb = bdrv_aio_readv(bs, sector_num, iov, nb_sectors,
+-                             bdrv_co_io_em_complete, &co);
++        acb = bs->drv->bdrv_aio_readv(bs, sector_num, iov, nb_sectors,
++                                      bdrv_co_io_em_complete, &co);
+     }
+ 
+     trace_bdrv_co_io(is_write, acb);
+-- 
+1.7.7.5
+

@@ -1,0 +1,54 @@
+From 5928404a5b49e26d0fdba80f10bd87636415c4ab Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Wed, 12 Sep 2012 13:10:21 -0300
+Subject: [RHEL6 qemu-kvm PATCH 02/14] usb-redir: Notify our peer when we
+ reject a device due to a speed
+ mismatch
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1347455431-11260-3-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 41847
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 02/12] usb-redir: Notify our peer when we reject a device due to a speed mismatch
+Bugzilla:
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Christophe Fergeau <cfergeau@redhat.com>
+Bugzilla-related: 805172
+
+Also cleanup (reset) our device state when we reject a device due to a
+speed mismatch.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream commit: 714f9db06c209fd42d67e6dffd4f7fd932b51b65
+---
+ usb-redir.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ usb-redir.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index f19c374..80f67f4 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -842,7 +842,13 @@ static void usbredir_do_attach(void *opaque)
+ {
+     USBRedirDevice *dev = opaque;
+ 
+-    usb_device_attach(&dev->dev);
++    if (usb_device_attach(&dev->dev) != 0) {
++        usbredir_device_disconnect(dev);
++        if (usbredirparser_peer_has_cap(dev->parser, usb_redir_cap_filter)) {
++            usbredirparser_send_filter_reject(dev->parser);
++            usbredirparser_do_write(dev->parser);
++        }
++    }
+ }
+ 
+ /*
+-- 
+1.7.11.4
+

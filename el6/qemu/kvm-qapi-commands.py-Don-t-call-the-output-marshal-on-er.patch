@@ -1,0 +1,55 @@
+From 25a466d2d854c20ffa4f7254fcd49943390f1802 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:44:23 -0500
+Subject: [PATCH 56/98] qapi-commands.py: Don't call the output marshal on
+ error
+
+Today we generate something like this:
+
+    int qmp_marshal_input_query_foo(...)
+
+        ...
+
+        retval = qmp_query_foo(errp);
+        qmp_marshal_output_query_foo(retval, ret, errp);
+
+        ...
+
+However, if qmp_query_foo() fails 'retval' will probably be NULL,
+which can cause a segfault as not all visitors check if 'retval'
+is valid.
+
+This commit fixes that by changing the code generator to only
+call the output marshal if qmp_query_foo() succeeds, like this:
+
+    retval = qmp_query_foo(errp);
+    if (!error_is_set(errp)) {
+        qmp_marshal_output_query_foo(retval, ret, errp);
+    }
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 694a099a542563f40116743c963066ce142a7755)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ scripts/qapi-commands.py |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/scripts/qapi-commands.py b/scripts/qapi-commands.py
+index c947ba4..f7def16 100644
+--- a/scripts/qapi-commands.py
++++ b/scripts/qapi-commands.py
+@@ -62,7 +62,9 @@ def gen_sync_call(name, args, ret_type, indent=0):
+                 name=c_var(name), args=arglist, retval=retval).rstrip()
+     if ret_type:
+         ret += "\n" + mcgen(''''
+-%(marshal_output_call)s
++if (!error_is_set(errp)) {
++    %(marshal_output_call)s
++}
+ ''',
+                             marshal_output_call=gen_marshal_output_call(name, ret_type)).rstrip()
+     pop_indent(indent)
+-- 
+1.7.7.6
+

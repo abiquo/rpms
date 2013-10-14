@@ -1,0 +1,45 @@
+From 567a7564188e4975b3e0f10887be2f39f9a41ea1 Mon Sep 17 00:00:00 2001
+Message-Id: <567a7564188e4975b3e0f10887be2f39f9a41ea1.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 12 Oct 2012 16:22:45 +0200
+Subject: [PATCH 13/17] virtio-scsi: do not report dropped events after reset
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1350058967-27351-9-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 43063
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v2 08/10] virtio-scsi: do not report dropped events after reset
+Bugzilla: 808660
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 808660
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit 2baa1beb1e47ec207e0f9bcacdb5c68e4bf1d8f5)
+---
+ hw/virtio-scsi.c | 1 +
+ 1 file modificato, 1 inserzione(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-scsi.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hw/virtio-scsi.c b/hw/virtio-scsi.c
+index 92d4dac..c2c36c1 100644
+--- a/hw/virtio-scsi.c
++++ b/hw/virtio-scsi.c
+@@ -569,6 +569,7 @@ static void virtio_scsi_reset(VirtIODevice *vdev)
+ 
+     s->sense_size = VIRTIO_SCSI_SENSE_SIZE;
+     s->cdb_size = VIRTIO_SCSI_CDB_SIZE;
++    s->events_dropped = false;
+ }
+ 
+ /* The device does not have anything to save beyond the virtio data.
+-- 
+1.7.11.7
+

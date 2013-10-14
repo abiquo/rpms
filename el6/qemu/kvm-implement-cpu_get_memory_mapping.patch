@@ -1,0 +1,402 @@
+From 4bc2b3580606f76be11f7e14a49d826ab2faa6a8 Mon Sep 17 00:00:00 2001
+Message-Id: <4bc2b3580606f76be11f7e14a49d826ab2faa6a8.1349774431.git.minovotn@redhat.com>
+In-Reply-To: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+References: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Fri, 5 Oct 2012 17:46:18 +0200
+Subject: [PATCH 06/21] implement cpu_get_memory_mapping()
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349459193-18226-5-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42752
+O-Subject: [RHEL6.4 qemu-kvm PATCH 04/19] implement cpu_get_memory_mapping()
+Bugzilla: 832458
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Wen Congyang <wency@cn.fujitsu.com>
+
+Walk cpu's page table and collect all virtual address and physical address mapping.
+Then, add these mapping into memory mapping list. If the guest does not use paging,
+it will do nothing. Note: the I/O memory will be skipped.
+
+Signed-off-by: Wen Congyang <wency@cn.fujitsu.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit fae001f55190b4de511269ca63eb635646d1c7c9)
+
+Conflicts:
+	configure
+	cpu-all.h
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ Makefile.target                   |   1 +
+ configure                         |   4 +
+ cpu-all.h                         |  11 ++
+ memory_mapping.h                  |   6 +
+ target-i386/arch_memory_mapping.c | 266 ++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 288 insertions(+)
+ create mode 100644 target-i386/arch_memory_mapping.c
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.target                   |   1 +
+ configure                         |   4 +
+ cpu-all.h                         |  11 ++
+ memory_mapping.h                  |   6 +
+ target-i386/arch_memory_mapping.c | 266 ++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 288 insertions(+)
+ create mode 100644 target-i386/arch_memory_mapping.c
+
+diff --git a/Makefile.target b/Makefile.target
+index 62295ff..80f4536 100644
+--- a/Makefile.target
++++ b/Makefile.target
+@@ -215,6 +215,7 @@ obj-y += msix.o
+ 
+ obj-$(CONFIG_ISA_MMIO) += isa_mmio.o
+ obj-y += memory_mapping.o
++obj-$(CONFIG_HAVE_GET_MEMORY_MAPPING) += arch_memory_mapping.o
+ LIBS+=-lz
+ 
+ sound-obj-y =
+diff --git a/configure b/configure
+index aa15276..83c2e95 100755
+--- a/configure
++++ b/configure
+@@ -2892,6 +2892,10 @@ case "$target_arch2" in
+     fi
+ esac
+ echo "TARGET_PHYS_ADDR_BITS=$target_phys_bits" >> $config_target_mak
++case "$target_arch2" in
++  i386|x86_64)
++    echo "CONFIG_HAVE_GET_MEMORY_MAPPING=y" >> $config_target_mak
++esac
+ if test "$target_bigendian" = "yes" ; then
+   echo "TARGET_WORDS_BIGENDIAN=y" >> $config_target_mak
+ fi
+diff --git a/cpu-all.h b/cpu-all.h
+index 65206e2..c413f30 100644
+--- a/cpu-all.h
++++ b/cpu-all.h
+@@ -21,6 +21,7 @@
+ 
+ #include "qemu-common.h"
+ #include "cpu-common.h"
++#include "memory_mapping.h"
+ 
+ /* some important defines:
+  *
+@@ -1104,4 +1105,14 @@ void cpu_inject_x86_mce(CPUState *cenv, int bank, uint64_t status,
+ void resume_all_vcpus(void);
+ void pause_all_vcpus(void);
+ 
++#if defined(CONFIG_HAVE_GET_MEMORY_MAPPING)
++int cpu_get_memory_mapping(MemoryMappingList *list, CPUArchState *env);
++#else
++static inline int cpu_get_memory_mapping(MemoryMappingList *list,
++                                         CPUArchState *env)
++{
++    return -1;
++}
++#endif
++
+ #endif /* CPU_ALL_H */
+diff --git a/memory_mapping.h b/memory_mapping.h
+index 836b047..e486d10 100644
+--- a/memory_mapping.h
++++ b/memory_mapping.h
+@@ -16,6 +16,7 @@
+ 
+ #include "qemu-queue.h"
+ 
++#ifndef CONFIG_USER_ONLY
+ /* The physical and virtual address in the memory mapping are contiguous. */
+ typedef struct MemoryMapping {
+     target_phys_addr_t phys_addr;
+@@ -44,4 +45,9 @@ void memory_mapping_list_free(MemoryMappingList *list);
+ 
+ void memory_mapping_list_init(MemoryMappingList *list);
+ 
++#else
++
++/* We use MemoryMappingList* in cpu-all.h */
++typedef struct MemoryMappingList MemoryMappingList;
++#endif
+ #endif
+diff --git a/target-i386/arch_memory_mapping.c b/target-i386/arch_memory_mapping.c
+new file mode 100644
+index 0000000..dd64bec
+--- /dev/null
++++ b/target-i386/arch_memory_mapping.c
+@@ -0,0 +1,266 @@
++/*
++ * i386 memory mapping
++ *
++ * Copyright Fujitsu, Corp. 2011, 2012
++ *
++ * Authors:
++ *     Wen Congyang <wency@cn.fujitsu.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2.  See
++ * the COPYING file in the top-level directory.
++ *
++ */
++
++#include "cpu.h"
++#include "cpu-all.h"
++
++/* PAE Paging or IA-32e Paging */
++static void walk_pte(MemoryMappingList *list, target_phys_addr_t pte_start_addr,
++                     int32_t a20_mask, target_ulong start_line_addr)
++{
++    target_phys_addr_t pte_addr, start_paddr;
++    uint64_t pte;
++    target_ulong start_vaddr;
++    int i;
++
++    for (i = 0; i < 512; i++) {
++        pte_addr = (pte_start_addr + i * 8) & a20_mask;
++        pte = ldq_phys(pte_addr);
++        if (!(pte & PG_PRESENT_MASK)) {
++            /* not present */
++            continue;
++        }
++
++        start_paddr = (pte & ~0xfff) & ~(0x1ULL << 63);
++        if (cpu_physical_memory_is_io(start_paddr)) {
++            /* I/O region */
++            continue;
++        }
++
++        start_vaddr = start_line_addr | ((i & 0x1fff) << 12);
++        memory_mapping_list_add_merge_sorted(list, start_paddr,
++                                             start_vaddr, 1 << 12);
++    }
++}
++
++/* 32-bit Paging */
++static void walk_pte2(MemoryMappingList *list,
++                      target_phys_addr_t pte_start_addr, int32_t a20_mask,
++                      target_ulong start_line_addr)
++{
++    target_phys_addr_t pte_addr, start_paddr;
++    uint32_t pte;
++    target_ulong start_vaddr;
++    int i;
++
++    for (i = 0; i < 1024; i++) {
++        pte_addr = (pte_start_addr + i * 4) & a20_mask;
++        pte = ldl_phys(pte_addr);
++        if (!(pte & PG_PRESENT_MASK)) {
++            /* not present */
++            continue;
++        }
++
++        start_paddr = pte & ~0xfff;
++        if (cpu_physical_memory_is_io(start_paddr)) {
++            /* I/O region */
++            continue;
++        }
++
++        start_vaddr = start_line_addr | ((i & 0x3ff) << 12);
++        memory_mapping_list_add_merge_sorted(list, start_paddr,
++                                             start_vaddr, 1 << 12);
++    }
++}
++
++/* PAE Paging or IA-32e Paging */
++static void walk_pde(MemoryMappingList *list, target_phys_addr_t pde_start_addr,
++                     int32_t a20_mask, target_ulong start_line_addr)
++{
++    target_phys_addr_t pde_addr, pte_start_addr, start_paddr;
++    uint64_t pde;
++    target_ulong line_addr, start_vaddr;
++    int i;
++
++    for (i = 0; i < 512; i++) {
++        pde_addr = (pde_start_addr + i * 8) & a20_mask;
++        pde = ldq_phys(pde_addr);
++        if (!(pde & PG_PRESENT_MASK)) {
++            /* not present */
++            continue;
++        }
++
++        line_addr = start_line_addr | ((i & 0x1ff) << 21);
++        if (pde & PG_PSE_MASK) {
++            /* 2 MB page */
++            start_paddr = (pde & ~0x1fffff) & ~(0x1ULL << 63);
++            if (cpu_physical_memory_is_io(start_paddr)) {
++                /* I/O region */
++                continue;
++            }
++            start_vaddr = line_addr;
++            memory_mapping_list_add_merge_sorted(list, start_paddr,
++                                                 start_vaddr, 1 << 21);
++            continue;
++        }
++
++        pte_start_addr = (pde & ~0xfff) & a20_mask;
++        walk_pte(list, pte_start_addr, a20_mask, line_addr);
++    }
++}
++
++/* 32-bit Paging */
++static void walk_pde2(MemoryMappingList *list,
++                      target_phys_addr_t pde_start_addr, int32_t a20_mask,
++                      bool pse)
++{
++    target_phys_addr_t pde_addr, pte_start_addr, start_paddr;
++    uint32_t pde;
++    target_ulong line_addr, start_vaddr;
++    int i;
++
++    for (i = 0; i < 1024; i++) {
++        pde_addr = (pde_start_addr + i * 4) & a20_mask;
++        pde = ldl_phys(pde_addr);
++        if (!(pde & PG_PRESENT_MASK)) {
++            /* not present */
++            continue;
++        }
++
++        line_addr = (((unsigned int)i & 0x3ff) << 22);
++        if ((pde & PG_PSE_MASK) && pse) {
++            /* 4 MB page */
++            start_paddr = (pde & ~0x3fffff) | ((pde & 0x1fe000) << 19);
++            if (cpu_physical_memory_is_io(start_paddr)) {
++                /* I/O region */
++                continue;
++            }
++            start_vaddr = line_addr;
++            memory_mapping_list_add_merge_sorted(list, start_paddr,
++                                                 start_vaddr, 1 << 22);
++            continue;
++        }
++
++        pte_start_addr = (pde & ~0xfff) & a20_mask;
++        walk_pte2(list, pte_start_addr, a20_mask, line_addr);
++    }
++}
++
++/* PAE Paging */
++static void walk_pdpe2(MemoryMappingList *list,
++                       target_phys_addr_t pdpe_start_addr, int32_t a20_mask)
++{
++    target_phys_addr_t pdpe_addr, pde_start_addr;
++    uint64_t pdpe;
++    target_ulong line_addr;
++    int i;
++
++    for (i = 0; i < 4; i++) {
++        pdpe_addr = (pdpe_start_addr + i * 8) & a20_mask;
++        pdpe = ldq_phys(pdpe_addr);
++        if (!(pdpe & PG_PRESENT_MASK)) {
++            /* not present */
++            continue;
++        }
++
++        line_addr = (((unsigned int)i & 0x3) << 30);
++        pde_start_addr = (pdpe & ~0xfff) & a20_mask;
++        walk_pde(list, pde_start_addr, a20_mask, line_addr);
++    }
++}
++
++#ifdef TARGET_X86_64
++/* IA-32e Paging */
++static void walk_pdpe(MemoryMappingList *list,
++                      target_phys_addr_t pdpe_start_addr, int32_t a20_mask,
++                      target_ulong start_line_addr)
++{
++    target_phys_addr_t pdpe_addr, pde_start_addr, start_paddr;
++    uint64_t pdpe;
++    target_ulong line_addr, start_vaddr;
++    int i;
++
++    for (i = 0; i < 512; i++) {
++        pdpe_addr = (pdpe_start_addr + i * 8) & a20_mask;
++        pdpe = ldq_phys(pdpe_addr);
++        if (!(pdpe & PG_PRESENT_MASK)) {
++            /* not present */
++            continue;
++        }
++
++        line_addr = start_line_addr | ((i & 0x1ffULL) << 30);
++        if (pdpe & PG_PSE_MASK) {
++            /* 1 GB page */
++            start_paddr = (pdpe & ~0x3fffffff) & ~(0x1ULL << 63);
++            if (cpu_physical_memory_is_io(start_paddr)) {
++                /* I/O region */
++                continue;
++            }
++            start_vaddr = line_addr;
++            memory_mapping_list_add_merge_sorted(list, start_paddr,
++                                                 start_vaddr, 1 << 30);
++            continue;
++        }
++
++        pde_start_addr = (pdpe & ~0xfff) & a20_mask;
++        walk_pde(list, pde_start_addr, a20_mask, line_addr);
++    }
++}
++
++/* IA-32e Paging */
++static void walk_pml4e(MemoryMappingList *list,
++                       target_phys_addr_t pml4e_start_addr, int32_t a20_mask)
++{
++    target_phys_addr_t pml4e_addr, pdpe_start_addr;
++    uint64_t pml4e;
++    target_ulong line_addr;
++    int i;
++
++    for (i = 0; i < 512; i++) {
++        pml4e_addr = (pml4e_start_addr + i * 8) & a20_mask;
++        pml4e = ldq_phys(pml4e_addr);
++        if (!(pml4e & PG_PRESENT_MASK)) {
++            /* not present */
++            continue;
++        }
++
++        line_addr = ((i & 0x1ffULL) << 39) | (0xffffULL << 48);
++        pdpe_start_addr = (pml4e & ~0xfff) & a20_mask;
++        walk_pdpe(list, pdpe_start_addr, a20_mask, line_addr);
++    }
++}
++#endif
++
++int cpu_get_memory_mapping(MemoryMappingList *list, CPUArchState *env)
++{
++    if (!(env->cr[0] & CR0_PG_MASK)) {
++        /* paging is disabled */
++        return 0;
++    }
++
++    if (env->cr[4] & CR4_PAE_MASK) {
++#ifdef TARGET_X86_64
++        if (env->hflags & HF_LMA_MASK) {
++            target_phys_addr_t pml4e_addr;
++
++            pml4e_addr = (env->cr[3] & ~0xfff) & env->a20_mask;
++            walk_pml4e(list, pml4e_addr, env->a20_mask);
++        } else
++#endif
++        {
++            target_phys_addr_t pdpe_addr;
++
++            pdpe_addr = (env->cr[3] & ~0x1f) & env->a20_mask;
++            walk_pdpe2(list, pdpe_addr, env->a20_mask);
++        }
++    } else {
++        target_phys_addr_t pde_addr;
++        bool pse;
++
++        pde_addr = (env->cr[3] & ~0xfff) & env->a20_mask;
++        pse = !!(env->cr[4] & CR4_PSE_MASK);
++        walk_pde2(list, pde_addr, env->a20_mask, pse);
++    }
++
++    return 0;
++}
+-- 
+1.7.11.4
+

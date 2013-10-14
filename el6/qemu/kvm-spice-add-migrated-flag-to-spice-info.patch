@@ -1,0 +1,107 @@
+From 99c35f6672aed8b04a7398e0210e6bf548034bf3 Mon Sep 17 00:00:00 2001
+Message-Id: <99c35f6672aed8b04a7398e0210e6bf548034bf3.1346761472.git.minovotn@redhat.com>
+In-Reply-To: <66350080c56dd39cd894591e70182434d5d2de75.1346761472.git.minovotn@redhat.com>
+References: <66350080c56dd39cd894591e70182434d5d2de75.1346761472.git.minovotn@redhat.com>
+From: Yonit Halperin <yhalperi@redhat.com>
+Date: Sun, 26 Aug 2012 09:54:10 +0200
+Subject: [PATCH 07/10] spice: add 'migrated' flag to spice info
+
+RH-Author: Yonit Halperin <yhalperi@redhat.com>
+Message-id: <1345974852-592-4-git-send-email-yhalperi@redhat.com>
+Patchwork-id: 41272
+O-Subject: [PATCH 4/6] spice: add 'migrated' flag to spice info
+Bugzilla: 836133
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+
+The flag is 'true' when spice migration has completed on the src side.
+It is needed for a case where libvirt dies before migration completes
+and it misses the event QEVENT_SPICE_MIGRATE_COMPLETED.
+When libvirt is restored and queries the migration status, it also needs
+to query spice and check if its migration has completed.
+
+Signed-off-by: Yonit Halperin <yhalperi@redhat.com>
+---
+ qemu-monitor.hx |    3 +++
+ ui/spice-core.c |    9 +++++++++
+ 2 files changed, 12 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-monitor.hx | 3 +++
+ ui/spice-core.c | 9 +++++++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 3c173f7..4bb1390 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -2882,6 +2882,8 @@ as a json-array of json-objects.
+ The main json-object contains the following:
+ 
+ - "enabled": true or false (json-bool)
++- "migrated": true if migration occured and has completed, and spice has completed
++              its migration as well (json-bool)
+ - "host": server's IP address (json-string)
+ - "port": server's port number (json-int, optional)
+ - "tls-port": server's port number (json-int, optional)
+@@ -2910,6 +2912,7 @@ Example:
+ <- {
+       "return": {
+          "enabled": true,
++         "migrated": false,
+          "auth": "spice",
+          "port": 5920,
+          "tls-port": 5921,
+diff --git a/ui/spice-core.c b/ui/spice-core.c
+index 1b3575e..4823047 100644
+--- a/ui/spice-core.c
++++ b/ui/spice-core.c
+@@ -45,6 +45,7 @@ static Notifier migration_state;
+ static const char *auth = "spice";
+ static char *auth_passwd;
+ static time_t auth_expires = TIME_MAX;
++static int spice_migration_completed;
+ int using_spice = 0;
+ 
+ static pthread_t me;
+@@ -369,6 +370,7 @@ static void migrate_connect_complete_cb(SpiceMigrateInstance *sin)
+ static void migrate_end_complete_cb(SpiceMigrateInstance *sin)
+ {
+     monitor_protocol_event(QEVENT_SPICE_MIGRATE_COMPLETED, NULL);
++    spice_migration_completed = true;
+ }
+ 
+ #endif
+@@ -472,6 +474,11 @@ void do_info_spice_print(Monitor *mon, const QObject *data)
+     }
+ 
+     monitor_printf(mon, "Server:\n");
++    if (qdict_get_bool(server, "migrated")) {
++        monitor_printf(mon, "     migrated: true\n");
++    } else {
++        monitor_printf(mon, "     migrated: false\n");
++    }
+     host = qdict_get_str(server, "host");
+     port = qdict_get_try_int(server, "port", -1);
+     if (port != -1) {
+@@ -511,6 +518,7 @@ void do_info_spice(Monitor *mon, QObject **ret_data)
+ 
+     server = qdict_new();
+     qdict_put(server, "enabled", qbool_from_int(true));
++    qdict_put(server, "migrated", qbool_from_int(spice_migration_completed));
+     qdict_put(server, "auth", qstring_from_str(auth));
+     qdict_put(server, "host", qstring_from_str(addr ? addr : "0.0.0.0"));
+     if (port) {
+@@ -537,6 +545,7 @@ static void migration_state_notifier(Notifier *notifier, void *data)
+ #ifndef SPICE_INTERFACE_MIGRATION
+         spice_server_migrate_switch(spice_server);
+         monitor_protocol_event(QEVENT_SPICE_MIGRATE_COMPLETED, NULL);
++        spice_migration_completed = true;
+ #else
+         spice_server_migrate_end(spice_server, true);
+     } else if (state == MIG_STATE_CANCELLED || state == MIG_STATE_ERROR) {
+-- 
+1.7.11.4
+

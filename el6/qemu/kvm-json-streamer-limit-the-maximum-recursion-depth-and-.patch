@@ -1,0 +1,67 @@
+From b81ce7b56616cf9f5dbb790d65111cd5cb7f92d6 Mon Sep 17 00:00:00 2001
+From: Anthony Liguori <aliguori@us.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:33 -0500
+Subject: [PATCH 66/98] json-streamer: limit the maximum recursion depth and
+ maximum token count
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 29c75ddd87ff7904005da08ff1056395261d90f1)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ json-streamer.c |   17 +++++++++++++++++
+ 1 files changed, 17 insertions(+), 0 deletions(-)
+
+diff --git a/json-streamer.c b/json-streamer.c
+index 549e9b7..6b9af63 100644
+--- a/json-streamer.c
++++ b/json-streamer.c
+@@ -18,6 +18,9 @@
+ #include "json-lexer.h"
+ #include "json-streamer.h"
+ 
++#define MAX_TOKEN_SIZE (64ULL << 20)
++#define MAX_NESTING (1ULL << 10)
++
+ static void json_message_process_token(JSONLexer *lexer, QString *token, JSONTokenType type, int x, int y)
+ {
+     JSONMessageParser *parser = container_of(lexer, JSONMessageParser, lexer);
+@@ -49,6 +52,8 @@ static void json_message_process_token(JSONLexer *lexer, QString *token, JSONTok
+     qdict_put(dict, "x", qint_from_int(x));
+     qdict_put(dict, "y", qint_from_int(y));
+ 
++    parser->token_size += token->length;
++
+     qlist_append(parser->tokens, dict);
+ 
+     if (parser->brace_count < 0 ||
+@@ -60,6 +65,17 @@ static void json_message_process_token(JSONLexer *lexer, QString *token, JSONTok
+         parser->emit(parser, parser->tokens);
+         QDECREF(parser->tokens);
+         parser->tokens = qlist_new();
++    } else if (parser->token_size > MAX_TOKEN_SIZE ||
++               parser->bracket_count > MAX_NESTING ||
++               parser->brace_count > MAX_NESTING) {
++        /* Security consideration, we limit total memory allocated per object
++         * and the maximum recursion depth that a message can force.
++         */
++        parser->brace_count = 0;
++        parser->bracket_count = 0;
++        parser->emit(parser, parser->tokens);
++        QDECREF(parser->tokens);
++        parser->tokens = qlist_new();
+     }
+ }
+ 
+@@ -70,6 +86,7 @@ void json_message_parser_init(JSONMessageParser *parser,
+     parser->brace_count = 0;
+     parser->bracket_count = 0;
+     parser->tokens = qlist_new();
++    parser->token_size = 0;
+ 
+     json_lexer_init(&parser->lexer, json_message_process_token);
+ }
+-- 
+1.7.7.6
+

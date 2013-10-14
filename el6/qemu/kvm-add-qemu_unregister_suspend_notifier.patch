@@ -1,0 +1,59 @@
+From 37d66efec92e73bb93ba59b2186e7e86ff3cd46b Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 7 Mar 2012 08:00:24 +0100
+Subject: [PATCH 10/12] add qemu_unregister_suspend_notifier
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1331107226-21901-11-git-send-email-kraxel@redhat.com>
+Patchwork-id: 38363
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v3 10/12] add qemu_unregister_suspend_notifier
+Bugzilla: 766303
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+Next patch needs unregister, so add it.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ sysemu.h |    1 +
+ vl.c     |    5 +++++
+ 2 files changed, 6 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ sysemu.h |    1 +
+ vl.c     |    5 +++++
+ 2 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/sysemu.h b/sysemu.h
+index 43de0f7..45c7ead 100644
+--- a/sysemu.h
++++ b/sysemu.h
+@@ -76,6 +76,7 @@ typedef enum WakeupReason {
+ void qemu_system_reset_request(void);
+ void qemu_system_suspend_request(void);
+ void qemu_register_suspend_notifier(Notifier *notifier);
++void qemu_unregister_suspend_notifier(Notifier *notifier);
+ void qemu_system_wakeup_request(WakeupReason reason);
+ void qemu_system_wakeup_enable(WakeupReason reason, bool enabled);
+ void qemu_register_wakeup_notifier(Notifier *notifier);
+diff --git a/vl.c b/vl.c
+index e2fa13d..1e19f5c 100644
+--- a/vl.c
++++ b/vl.c
+@@ -3440,6 +3440,11 @@ void qemu_register_suspend_notifier(Notifier *notifier)
+     notifier_list_add(&suspend_notifiers, notifier);
+ }
+ 
++void qemu_unregister_suspend_notifier(Notifier *notifier)
++{
++    notifier_list_remove(&suspend_notifiers, notifier);
++}
++
+ void qemu_system_wakeup_request(WakeupReason reason)
+ {
+     if (!is_suspended) {
+-- 
+1.7.7.6
+

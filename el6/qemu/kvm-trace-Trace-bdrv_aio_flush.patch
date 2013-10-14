@@ -1,0 +1,62 @@
+From 4835da02ef17280684ffa529c2bb14ee053b945c Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:47 +0100
+Subject: [PATCH 22/99] trace: Trace bdrv_aio_flush()
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-23-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37214
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 22/96] trace: Trace bdrv_aio_flush()
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Bugzilla: 783950
+
+Add a trace event for bdrv_aio_flush() to complement the existing
+bdrv_aio_readv() and bdrv_aio_writev() events.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit a13aac04e13b246edab6c0c08513504ecb71bbd4)
+---
+ block.c      |    2 ++
+ trace-events |    1 +
+ 2 files changed, 3 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c      |    2 ++
+ trace-events |    1 +
+ 2 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index 99a8c0a..52aacee 100644
+--- a/block.c
++++ b/block.c
+@@ -2416,6 +2416,8 @@ BlockDriverAIOCB *bdrv_aio_flush(BlockDriverState *bs,
+ {
+     BlockDriver *drv = bs->drv;
+ 
++    trace_bdrv_aio_flush(bs, opaque);
++
+     if (bs->open_flags & BDRV_O_NO_FLUSH) {
+         return bdrv_aio_noop_em(bs, cb, opaque);
+     }
+diff --git a/trace-events b/trace-events
+index a44025a..0f8ff55 100644
+--- a/trace-events
++++ b/trace-events
+@@ -51,6 +51,7 @@ disable multiwrite_cb(void *mcb, int ret) "mcb %p ret %d"
+ disable bdrv_aio_multiwrite(void *mcb, int num_callbacks, int num_reqs) "mcb %p num_callbacks %d num_reqs %d"
+ disable bdrv_aio_multiwrite_earlyfail(void *mcb) "mcb %p"
+ disable bdrv_aio_multiwrite_latefail(void *mcb, int i) "mcb %p i %d"
++disable bdrv_aio_flush(void *bs, void *opaque) "bs %p opaque %p"
+ disable bdrv_aio_readv(void *bs, int64_t sector_num, int nb_sectors, void *opaque) "bs %p sector_num %"PRId64" nb_sectors %d opaque %p"
+ disable bdrv_aio_writev(void *bs, int64_t sector_num, int nb_sectors, void *opaque) "bs %p sector_num %"PRId64" nb_sectors %d opaque %p"
+ disable bdrv_lock_medium(void *bs, int locked) "bs %p locked %d"
+-- 
+1.7.7.5
+

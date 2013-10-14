@@ -1,0 +1,73 @@
+From efef1f01f1c4b0c1877c800ba868b8e691ab445e Mon Sep 17 00:00:00 2001
+Message-Id: <efef1f01f1c4b0c1877c800ba868b8e691ab445e.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:16 +0200
+Subject: [PATCH 08/18] block: fix shift in dirty bitmap calculation
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-7-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39218
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 06/16] block: fix shift in dirty bitmap calculation
+Bugzilla: 806432
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+From: Marcelo Tosatti <mtosatti@redhat.com>
+
+Bugzilla: 806432
+
+Otherwise upper 32 bits of bitmap entries are not correctly calculated.
+
+Reviewed-by: Kevin Wolf <kwolf@redhat.com>
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry-picked from upstream commit 6d59fec11eeff8a784dc4991c8fe4f8538510475)
+---
+ block.c |   12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   12 ++++++------
+ 1 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/block.c b/block.c
+index bfd479f..5ad176a 100644
+--- a/block.c
++++ b/block.c
+@@ -1383,14 +1383,14 @@ static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
+         bit = start % (sizeof(unsigned long) * 8);
+         val = bs->dirty_bitmap[idx];
+         if (dirty) {
+-            if (!(val & (1 << bit))) {
++            if (!(val & (1UL << bit))) {
+                 bs->dirty_count++;
+-                val |= 1 << bit;
++                val |= 1UL << bit;
+             }
+         } else {
+-            if (val & (1 << bit)) {
++            if (val & (1UL << bit)) {
+                 bs->dirty_count--;
+-                val &= ~(1 << bit);
++                val &= ~(1UL << bit);
+             }
+         }
+         bs->dirty_bitmap[idx] = val;
+@@ -3441,8 +3441,8 @@ int bdrv_get_dirty(BlockDriverState *bs, int64_t sector)
+ 
+     if (bs->dirty_bitmap &&
+         (sector << BDRV_SECTOR_BITS) < bdrv_getlength(bs)) {
+-        return bs->dirty_bitmap[chunk / (sizeof(unsigned long) * 8)] &
+-            (1 << (chunk % (sizeof(unsigned long) * 8)));
++        return !!(bs->dirty_bitmap[chunk / (sizeof(unsigned long) * 8)] &
++            (1UL << (chunk % (sizeof(unsigned long) * 8))));
+     } else {
+         return 0;
+     }
+-- 
+1.7.7.6
+

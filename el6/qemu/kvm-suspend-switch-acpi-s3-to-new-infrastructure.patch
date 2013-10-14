@@ -1,0 +1,169 @@
+From 33e9f19bd9ea94bbac06514171b7816bf084ec1e Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 7 Mar 2012 08:00:17 +0100
+Subject: [PATCH 03/12] suspend: switch acpi s3 to new infrastructure.
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1331107226-21901-4-git-send-email-kraxel@redhat.com>
+Patchwork-id: 38358
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v3 03/12] suspend: switch acpi s3 to new infrastructure.
+Bugzilla: 766303
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+This patch switches pc s3 suspend over to the new infrastructure.
+The cmos_s3 qemu_irq is killed, the new notifier is used instead.
+The xen hack goes away with that too, the hypercall can simply be
+done in a notifier function now.
+
+This patch also makes the guest actually stay suspended instead
+of leaving suspend instantly, so it is useful for more than just
+testing whenever the suspend/resume cycle actually works.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+
+[ rhel6: more a rewrite than a backport due to apci code reorganization
+         upstream which is *way* to invasive for backporting ]
+
+upstream: da98c8eb4c35225049cad8cf767647eb39788b5d
+---
+ hw/acpi.c        |   27 ++++++++++++++++++++-------
+ hw/mc146818rtc.c |   12 ++++++++++++
+ hw/pc.c          |    8 --------
+ hw/pc.h          |    1 -
+ 4 files changed, 32 insertions(+), 16 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/acpi.c        |   27 ++++++++++++++++++++-------
+ hw/mc146818rtc.c |   12 ++++++++++++
+ hw/pc.c          |    8 --------
+ hw/pc.h          |    1 -
+ 4 files changed, 32 insertions(+), 16 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index ee128c7..120865f 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -73,6 +73,7 @@ typedef struct PIIX4PMState {
+ 
+     uint32_t smb_io_base;
+     Notifier machine_ready;
++    Notifier wakeup;
+ 
+     /* for pci hotplug */
+     struct gpe_regs gpe;
+@@ -145,6 +146,21 @@ static void pm_tmr_timer(void *opaque)
+     pm_update_sci(s);
+ }
+ 
++static void acpi_notify_wakeup(Notifier *notifier, void *data)
++{
++    PIIX4PMState *s = container_of(notifier, PIIX4PMState, wakeup);
++    WakeupReason *reason = data;
++
++    switch (*reason) {
++    case QEMU_WAKEUP_REASON_OTHER:
++    default:
++        /* RSM_STS should be set on resume. Pretend that resume
++           was caused by power button */
++        s->pmsts |= (RSM_STS | PWRBTN_STS);
++        break;
++    }
++}
++
+ static void pm_ioport_writew(void *opaque, uint32_t addr, uint32_t val)
+ {
+     PIIX4PMState *s = opaque;
+@@ -181,13 +197,8 @@ static void pm_ioport_writew(void *opaque, uint32_t addr, uint32_t val)
+                     qemu_system_shutdown_request();
+                     break;
+                 case 1:
+-                    /* RSM_STS should be set on resume. Pretend that resume
+-                       was caused by power button */
+-                    s->pmsts |= (RSM_STS | PWRBTN_STS);
+-                    qemu_system_reset_request();
+-#if defined(TARGET_I386)
+-                    cmos_set_s3_resume();
+-#endif
++                    qemu_system_suspend_request();
++                    break;
+                 default:
+                     break;
+                 }
+@@ -640,6 +651,8 @@ static int piix4_pm_initfn(PCIDevice *dev)
+     s->smbus = i2c_init_bus(NULL, "i2c");
+     s->machine_ready.notify = piix4_pm_machine_ready;
+     qemu_add_machine_init_done_notifier(&s->machine_ready);
++    s->wakeup.notify = acpi_notify_wakeup;
++    qemu_register_wakeup_notifier(&s->wakeup);
+     qemu_register_reset(piix4_reset, s);
+ 
+     return 0;
+diff --git a/hw/mc146818rtc.c b/hw/mc146818rtc.c
+index 4fd4ad9..be08e00 100644
+--- a/hw/mc146818rtc.c
++++ b/hw/mc146818rtc.c
+@@ -84,8 +84,17 @@ struct RTCState {
+     QEMUTimer *coalesced_timer;
+     QEMUTimer *second_timer;
+     QEMUTimer *second_timer2;
++    Notifier suspend_notifier;
+ };
+ 
++/* set CMOS shutdown status register (index 0xF) as S3_resume(0xFE)
++   BIOS will read it and start S3 resume at POST Entry */
++static void rtc_notify_suspend(Notifier *notifier, void *data)
++{
++    RTCState *s = container_of(notifier, RTCState, suspend_notifier);
++    rtc_set_memory(s, 0xF, 0xFE);
++}
++
+ static void rtc_irq_raise(qemu_irq irq)
+ {
+     /* When HPET is operating in legacy mode, RTC interrupts are disabled
+@@ -600,6 +609,9 @@ static int rtc_initfn(ISADevice *dev)
+     s->second_timer = qemu_new_timer(rtc_clock, rtc_update_second, s);
+     s->second_timer2 = qemu_new_timer(rtc_clock, rtc_update_second2, s);
+ 
++    s->suspend_notifier.notify = rtc_notify_suspend;
++    qemu_register_suspend_notifier(&s->suspend_notifier);
++
+     s->next_second_time =
+         qemu_get_clock(rtc_clock) + (get_ticks_per_sec() * 99) / 100;
+     qemu_mod_timer(s->second_timer2, s->next_second_time);
+diff --git a/hw/pc.c b/hw/pc.c
+index fe78c00..b4cfa9a 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -1406,14 +1406,6 @@ static void pc_init_isa(ram_addr_t ram_size,
+ }
+ #endif
+ 
+-/* set CMOS shutdown status register (index 0xF) as S3_resume(0xFE)
+-   BIOS will read it and start S3 resume at POST Entry */
+-void cmos_set_s3_resume(void)
+-{
+-    if (rtc_state)
+-        rtc_set_memory(rtc_state, 0xF, 0xFE);
+-}
+-
+ #if 0 /* Disabled for Red Hat Enterprise Linux */
+ static QEMUMachine pc_machine = {
+     .name = "pc-0.12",
+diff --git a/hw/pc.h b/hw/pc.h
+index aa9dc6d..2c08bd3 100644
+--- a/hw/pc.h
++++ b/hw/pc.h
+@@ -101,7 +101,6 @@ typedef struct RTCState RTCState;
+ RTCState *rtc_init(int base_year);
+ void rtc_set_memory(RTCState *s, int addr, int val);
+ void rtc_set_date(RTCState *s, const struct tm *tm);
+-void cmos_set_s3_resume(void);
+ 
+ /* pc.c */
+ extern int fd_bootchk;
+-- 
+1.7.7.6
+

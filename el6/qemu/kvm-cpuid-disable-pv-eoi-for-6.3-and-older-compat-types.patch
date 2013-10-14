@@ -1,0 +1,132 @@
+From fe340e3e7a529d855b6dbe93adbc4657b07a0547 Mon Sep 17 00:00:00 2001
+Message-Id: <fe340e3e7a529d855b6dbe93adbc4657b07a0547.1346761472.git.minovotn@redhat.com>
+In-Reply-To: <66350080c56dd39cd894591e70182434d5d2de75.1346761472.git.minovotn@redhat.com>
+References: <66350080c56dd39cd894591e70182434d5d2de75.1346761472.git.minovotn@redhat.com>
+From: "Michael S. Tsirkin" <mst@redhat.com>
+Date: Thu, 23 Aug 2012 15:19:13 +0200
+Subject: [PATCH 02/10] cpuid: disable pv eoi for 6.3 and older compat types
+
+RH-Author: Michael S. Tsirkin <mst@redhat.com>
+Message-id: <440b012ad1b980ab162e3d4d4b1ffb4c1498cf3a.1345733688.git.mst@redhat.com>
+Patchwork-id: 41176
+O-Subject: [PATCHv2 RHEL6.4 2/3] cpuid: disable pv eoi for 6.3 and older compat types
+Bugzilla: 835101
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+In preparation for backporting PV EOI support in RHEL6.X
+kernel, disable PV EOI by default for RHEL6.3 and older, to avoid
+CPUID changing during migration.
+
+PV EOI can still be enabled/disabled by specifying it explicitly.
+Enable for 6.3:
+-M rhel6.3.0 -cpu cpu64-rhel6,+kvm_pv_eoi
+Disable for 6.4:
+-M rhel6.4.0 -cpu cpu64-rhel6,-kvm_pv_eoi
+
+Tested on upstream 3.6.0-rc2 guest and host kernel (RHEL backport still
+in development).
+
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+---
+ hw/pc.c                        |  1 +
+ hw/pc.h                        |  2 ++
+ kvm/include/x86/asm/kvm_para.h |  1 +
+ target-i386/cpuid.c            | 19 +++++++++++++++++++
+ 4 files changed, 23 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/pc.c                        |  1 +
+ hw/pc.h                        |  2 ++
+ kvm/include/x86/asm/kvm_para.h |  1 +
+ target-i386/cpuid.c            | 19 +++++++++++++++++++
+ 4 files changed, 23 insertions(+)
+
+diff --git a/hw/pc.c b/hw/pc.c
+index 54f1b49..8187aa1 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -1631,6 +1631,7 @@ static void rhel_common_init(const char *type1_version,
+ 
+ static void pc_rhel630_compat(void)
+ {
++    disable_kvm_pv_eoi();
+ }
+ 
+ static void pc_rhel620_compat(void)
+diff --git a/hw/pc.h b/hw/pc.h
+index e49f853..c79e45b 100644
+--- a/hw/pc.h
++++ b/hw/pc.h
+@@ -179,4 +179,6 @@ void extboot_init(BlockDriverState *bs, int cmd);
+ int cpu_is_bsp(CPUState *env);
+ 
+ void disable_cpuid_leaf10(void);
++
++void disable_kvm_pv_eoi(void);
+ #endif
+diff --git a/kvm/include/x86/asm/kvm_para.h b/kvm/include/x86/asm/kvm_para.h
+index c584076..8f30857 100644
+--- a/kvm/include/x86/asm/kvm_para.h
++++ b/kvm/include/x86/asm/kvm_para.h
+@@ -15,6 +15,7 @@
+ #define KVM_FEATURE_CLOCKSOURCE		0
+ #define KVM_FEATURE_NOP_IO_DELAY	1
+ #define KVM_FEATURE_MMU_OP		2
++#define KVM_FEATURE_PV_EOI		6
+ 
+ #define MSR_KVM_WALL_CLOCK  0x11
+ #define MSR_KVM_SYSTEM_TIME 0x12
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 18a3ea2..6e69659 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -23,6 +23,7 @@
+ 
+ #include "cpu.h"
+ #include "kvm.h"
++#include "asm/kvm_para.h"
+ 
+ #include "qemu-option.h"
+ #include "qemu-config.h"
+@@ -541,6 +542,8 @@ static int check_features_against_host(CPUX86State *env, x86_def_t *guest_def)
+     return rv;
+ }
+ 
++static bool kvm_pv_eoi_disabled;
++
+ static int cpu_x86_find_by_name(x86_def_t *x86_cpu_def, const char *cpu_model)
+ {
+     unsigned int i;
+@@ -565,6 +568,11 @@ static int cpu_x86_find_by_name(x86_def_t *x86_cpu_def, const char *cpu_model)
+     }
+ 
+     plus_kvm_features = ~0; /* not supported bits will be filtered out later */
++    /* Disable PV EOI for old machine types.
++     * Feature flags can still override. */
++    if (kvm_pv_eoi_disabled) {
++        plus_kvm_features &= ~(0x1 << KVM_FEATURE_PV_EOI);
++    }
+ 
+     add_flagname_to_bitmaps("hypervisor", &plus_features,
+         &plus_ext_features, &plus_ext2_features, &plus_ext3_features,
+@@ -1269,3 +1277,14 @@ void disable_cpuid_leaf10(void)
+ {
+ 	cpuid_leaf10_disabled = true;
+ }
++
++/* Called from hw/pc.c but there is no header
++ * both files include to put this into.
++ * Put it here to silence compiler warning.
++ */
++void disable_kvm_pv_eoi(void);
++
++void disable_kvm_pv_eoi(void)
++{
++	kvm_pv_eoi_disabled = true;
++}
+-- 
+1.7.11.4
+

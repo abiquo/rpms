@@ -1,0 +1,123 @@
+From 75edc2fd8aba3cfddfd6178323b055e4c67058c7 Mon Sep 17 00:00:00 2001
+Message-Id: <75edc2fd8aba3cfddfd6178323b055e4c67058c7.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Mon, 21 May 2012 11:38:39 +0200
+Subject: [PATCH 06/41] hda-audio: send v1 migration format for rhel6.1.0
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1337600319-5479-1-git-send-email-kraxel@redhat.com>
+Patchwork-id: 39742
+O-Subject: [RHEL-6.3 qemu-kvm PATCH] hda-audio: send v1 migration format for rhel6.1.0
+Bugzilla: 821692
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+hda-audio had a bug in the (v1) migration format, which was fixed in v2.
+Problem is that this broke migration to older qemu versions.  This patch
+fixes it by adding a compat property which makes hda-* device models send
+out the v1 format when set.
+
+Bugzilla: 821692 - Migration always failed from rhel6.3 to rhel6.1 host
+                   with sound device
+upstream: no
+brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4430947
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ hw/hda-audio.c |   23 ++++++++++++++++++++++-
+ hw/pc.c        |    8 ++++++++
+ 2 files changed, 30 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/hda-audio.c |   23 ++++++++++++++++++++++-
+ hw/pc.c        |    8 ++++++++
+ 2 files changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/hw/hda-audio.c b/hw/hda-audio.c
+index 9b089e6..3169635 100644
+--- a/hw/hda-audio.c
++++ b/hw/hda-audio.c
+@@ -471,6 +471,7 @@ struct HDAAudioState {
+ 
+     /* properties */
+     uint32_t debug;
++    uint32_t mcompat;
+ };
+ 
+ static void hda_audio_input_cb(void *opaque, int avail)
+@@ -768,6 +769,8 @@ static void hda_audio_stream(HDACodecDevice *hda, uint32_t stnr, bool running, b
+     }
+ }
+ 
++extern const VMStateDescription vmstate_hda_audio_v1;
++
+ static int hda_audio_init(HDACodecDevice *hda, const struct desc_codec *desc)
+ {
+     HDAAudioState *a = DO_UPCAST(HDAAudioState, hda, hda);
+@@ -780,6 +783,10 @@ static int hda_audio_init(HDACodecDevice *hda, const struct desc_codec *desc)
+     a->name = a->hda.qdev.info->name;
+     dprint(a, 1, "%s: cad %d\n", __FUNCTION__, a->hda.cad);
+ 
++    if (a->mcompat) {
++        hda->qdev.info->vmsd = &vmstate_hda_audio_v1;
++    }
++
+     AUD_register_card("hda", &a->card);
+     for (i = 0; i < a->desc->nnodes; i++) {
+         node = a->desc->nodes + i;
+@@ -877,6 +884,19 @@ static const VMStateDescription vmstate_hda_audio_stream = {
+     }
+ };
+ 
++const VMStateDescription vmstate_hda_audio_v1 = {
++    .name = "hda-audio",
++    .version_id = 1,
++    .post_load = hda_audio_post_load,
++    .fields = (VMStateField []) {
++        VMSTATE_STRUCT_ARRAY(st, HDAAudioState, 4, 0,
++                             vmstate_hda_audio_stream,
++                             HDAAudioStream),
++        VMSTATE_BOOL_ARRAY(running_compat, HDAAudioState, 16),
++        VMSTATE_END_OF_LIST()
++    }
++};
++
+ static const VMStateDescription vmstate_hda_audio = {
+     .name = "hda-audio",
+     .version_id = 2,
+@@ -892,7 +912,8 @@ static const VMStateDescription vmstate_hda_audio = {
+ };
+ 
+ static Property hda_audio_properties[] = {
+-    DEFINE_PROP_UINT32("debug", HDAAudioState, debug, 0),
++    DEFINE_PROP_UINT32("debug",   HDAAudioState, debug,   0),
++    DEFINE_PROP_UINT32("mcompat", HDAAudioState, mcompat, 0),
+     DEFINE_PROP_END_OF_LIST(),
+ };
+ 
+diff --git a/hw/pc.c b/hw/pc.c
+index 4371b38..8c78310 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -1581,6 +1581,14 @@ static void rhel_common_init(const char *type1_version,
+             .property = "migrate",\
+             .value    = stringify(0),\
+         },{\
++            .driver   = "hda-output",\
++            .property = "mcompat",\
++            .value    = stringify(1),\
++        },{\
++            .driver   = "hda-duplex",\
++            .property = "mcompat",\
++            .value    = stringify(1),\
++        },{\
+             .driver   = "virtio-blk-pci",\
+             .property = "event_idx",\
+             .value    = "off",\
+-- 
+1.7.10.4
+

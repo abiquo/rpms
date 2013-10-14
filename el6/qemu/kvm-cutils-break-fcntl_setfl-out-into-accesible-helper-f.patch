@@ -1,0 +1,108 @@
+From 941ca8694bd392efb677b377bd136771c9bfe8be Mon Sep 17 00:00:00 2001
+Message-Id: <941ca8694bd392efb677b377bd136771c9bfe8be.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:30 +0200
+Subject: [PATCH 17/35] cutils: break fcntl_setfl out into accesible helper
+ function
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <a5976e34610dba28626982fd143e5894c6f65019.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43275
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 17/35] cutils: break fcntl_setfl out into accesible helper function
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+fcntl_setfl is a static function in vl.c, however reopen() makes
+use of fcntl_setfl.  Upstream this was moved into cutils.c as part
+of a larger patch splitting out timers (db1a497).  Rather than pull
+that entire patch in, move the helper function out in cutils.
+
+Downstream only.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ cutils.c      | 17 +++++++++++++++++
+ qemu-common.h |  1 +
+ vl.c          | 15 ---------------
+ 3 files changed, 18 insertions(+), 15 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ cutils.c      | 17 +++++++++++++++++
+ qemu-common.h |  1 +
+ vl.c          | 15 ---------------
+ 3 files changed, 18 insertions(+), 15 deletions(-)
+
+diff --git a/cutils.c b/cutils.c
+index b7b13f1..7941325 100644
+--- a/cutils.c
++++ b/cutils.c
+@@ -341,6 +341,23 @@ bool buffer_is_zero(const void *buf, size_t len)
+     return true;
+ }
+ 
++#ifndef _WIN32
++/* Sets a specific flag */
++int fcntl_setfl(int fd, int flag)
++{
++    int flags;
++
++    flags = fcntl(fd, F_GETFL);
++    if (flags == -1)
++        return -errno;
++
++    if (fcntl(fd, F_SETFL, flags | flag) == -1)
++        return -errno;
++
++    return 0;
++}
++#endif
++
+ /*
+  * Convert string to bytes, allowing either B/b for bytes, K/k for KB,
+  * M/m for MB, G/g for GB or T/t for TB. End pointer will be returned
+diff --git a/qemu-common.h b/qemu-common.h
+index 9f0c52c..03cd2b0 100644
+--- a/qemu-common.h
++++ b/qemu-common.h
+@@ -130,6 +130,7 @@ int qemu_strnlen(const char *s, int max_len);
+ time_t mktimegm(struct tm *tm);
+ int qemu_fls(int i);
+ int qemu_fdatasync(int fd);
++int fcntl_setfl(int fd, int flag);
+ 
+ #define STRTOSZ_DEFSUFFIX_TB	'T'
+ #define STRTOSZ_DEFSUFFIX_GB	'G'
+diff --git a/vl.c b/vl.c
+index 91582ed..fd662dd 100644
+--- a/vl.c
++++ b/vl.c
+@@ -1517,21 +1517,6 @@ static uint64_t qemu_next_deadline_dyntick(void)
+ 
+ #ifndef _WIN32
+ 
+-/* Sets a specific flag */
+-static int fcntl_setfl(int fd, int flag)
+-{
+-    int flags;
+-
+-    flags = fcntl(fd, F_GETFL);
+-    if (flags == -1)
+-        return -errno;
+-
+-    if (fcntl(fd, F_SETFL, flags | flag) == -1)
+-        return -errno;
+-
+-    return 0;
+-}
+-
+ #if defined(__linux__)
+ 
+ #define RTC_FREQ 1024
+-- 
+1.7.11.7
+

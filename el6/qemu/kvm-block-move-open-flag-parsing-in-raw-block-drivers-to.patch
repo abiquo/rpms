@@ -1,0 +1,173 @@
+From d226773eba0afd2792f9c56be943b7edf21c1187 Mon Sep 17 00:00:00 2001
+Message-Id: <d226773eba0afd2792f9c56be943b7edf21c1187.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:27 +0200
+Subject: [PATCH 14/35] block: move open flag parsing in raw block drivers to
+ helper functions
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <7311d43ae4df7b7303db6ade2fd36cad48f70d13.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43272
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 14/35] block: move open flag parsing in raw block drivers to helper functions
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Code motion, to move parsing of open flags into a helper function.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 6a8dc0422e508fc85390e55cbca1b93cb242d22d)
+
+Conflicts:
+	block/raw-posix.c
+	block/raw-win32.c
+---
+ block/raw-posix.c | 38 ++++++++++++++++++++++++--------------
+ block/raw-win32.c | 49 ++++++++++++++++++++++++-------------------------
+ 2 files changed, 48 insertions(+), 39 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/raw-posix.c | 38 ++++++++++++++++++++++++--------------
+ block/raw-win32.c | 49 ++++++++++++++++++++++++-------------------------
+ 2 files changed, 48 insertions(+), 39 deletions(-)
+
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 2c78433..374b2f2 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -172,6 +172,28 @@ static bool is_vectored_io_slow(int fd, int bdrv_flags)
+ }
+ #endif
+ 
++static void raw_parse_flags(int bdrv_flags, int *open_flags)
++{
++    assert(open_flags != NULL);
++
++    *open_flags |= O_BINARY;
++    *open_flags &= ~O_ACCMODE;
++    if (bdrv_flags & BDRV_O_RDWR) {
++        *open_flags |= O_RDWR;
++    } else {
++        *open_flags |= O_RDONLY;
++    }
++
++    /* Use O_DSYNC for write-through caching, no flags for write-back caching,
++     * and O_DIRECT for no caching. */
++    if ((bdrv_flags & BDRV_O_NOCACHE)) {
++        *open_flags |= O_DIRECT;
++    }
++    if (!(bdrv_flags & BDRV_O_CACHE_WB)) {
++        *open_flags |= O_DSYNC;
++    }
++}
++
+ #ifdef CONFIG_LINUX_AIO
+ static int raw_set_aio(void **aio_ctx, int *use_aio, int bdrv_flags)
+ {
+@@ -210,20 +232,8 @@ static int raw_open_common(BlockDriverState *bs, const char *filename,
+     BDRVRawState *s = bs->opaque;
+     int fd, ret;
+ 
+-    s->open_flags = open_flags | O_BINARY;
+-    s->open_flags &= ~O_ACCMODE;
+-    if (bdrv_flags & BDRV_O_RDWR) {
+-        s->open_flags |= O_RDWR;
+-    } else {
+-        s->open_flags |= O_RDONLY;
+-    }
+-
+-    /* Use O_DSYNC for write-through caching, no flags for write-back caching,
+-     * and O_DIRECT for no caching. */
+-    if ((bdrv_flags & BDRV_O_NOCACHE))
+-        s->open_flags |= O_DIRECT;
+-    if (!(bdrv_flags & BDRV_O_CACHE_WB))
+-        s->open_flags |= O_DSYNC;
++    s->open_flags = open_flags;
++    raw_parse_flags(bdrv_flags, &s->open_flags);
+ 
+     s->fd = -1;
+     fd = qemu_open(filename, s->open_flags, 0644);
+diff --git a/block/raw-win32.c b/block/raw-win32.c
+index 9b283e0..e3d9dc6 100644
+--- a/block/raw-win32.c
++++ b/block/raw-win32.c
+@@ -73,6 +73,26 @@ static int set_sparse(int fd)
+ 				 NULL, 0, NULL, 0, &returned, NULL);
+ }
+ 
++static void raw_parse_flags(int flags, int *access_flags, DWORD *overlapped)
++{
++    assert(access_flags != NULL);
++    assert(overlapped != NULL);
++
++    if (flags & BDRV_O_RDWR) {
++        *access_flags = GENERIC_READ | GENERIC_WRITE;
++    } else {
++        *access_flags = GENERIC_READ;
++    }
++
++    *overlapped = FILE_ATTRIBUTE_NORMAL;
++    if (flags & BDRV_O_NOCACHE) {
++        *overlapped |= FILE_FLAG_NO_BUFFERING;
++    }
++    if (!(flags & BDRV_O_CACHE_WB)) {
++        *overlapped |= FILE_FLAG_WRITE_THROUGH;
++    }
++}
++
+ static int raw_open(BlockDriverState *bs, const char *filename, int flags)
+ {
+     BDRVRawState *s = bs->opaque;
+@@ -81,21 +101,8 @@ static int raw_open(BlockDriverState *bs, const char *filename, int flags)
+ 
+     s->type = FTYPE_FILE;
+ 
+-    if (flags & BDRV_O_RDWR) {
+-        access_flags = GENERIC_READ | GENERIC_WRITE;
+-    } else {
+-        access_flags = GENERIC_READ;
+-    }
+-    if (flags & BDRV_O_CREAT) {
+-        create_flags = CREATE_ALWAYS;
+-    } else {
+-        create_flags = OPEN_EXISTING;
+-    }
+-    overlapped = FILE_ATTRIBUTE_NORMAL;
+-    if (flags & BDRV_O_NOCACHE)
+-        overlapped |= FILE_FLAG_NO_BUFFERING;
+-    if (!(flags & BDRV_O_CACHE_WB))
+-        overlapped |= FILE_FLAG_WRITE_THROUGH;
++    raw_parse_flags(flags, &access_flags, &overlapped);
++
+     s->hfile = CreateFile(filename, access_flags,
+                           FILE_SHARE_READ, NULL,
+                           create_flags, overlapped, NULL);
+@@ -345,18 +352,10 @@ static int hdev_open(BlockDriverState *bs, const char *filename, int flags)
+     }
+     s->type = find_device_type(bs, filename);
+ 
+-    if (flags & BDRV_O_RDWR) {
+-        access_flags = GENERIC_READ | GENERIC_WRITE;
+-    } else {
+-        access_flags = GENERIC_READ;
+-    }
++    raw_parse_flags(flags, &access_flags, &overlapped);
++
+     create_flags = OPEN_EXISTING;
+ 
+-    overlapped = FILE_ATTRIBUTE_NORMAL;
+-    if (flags & BDRV_O_NOCACHE)
+-        overlapped |= FILE_FLAG_NO_BUFFERING;
+-    if (!(flags & BDRV_O_CACHE_WB))
+-        overlapped |= FILE_FLAG_WRITE_THROUGH;
+     s->hfile = CreateFile(filename, access_flags,
+                           FILE_SHARE_READ, NULL,
+                           create_flags, overlapped, NULL);
+-- 
+1.7.11.7
+

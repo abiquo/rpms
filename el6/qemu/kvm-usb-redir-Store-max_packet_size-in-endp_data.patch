@@ -1,0 +1,54 @@
+From 331697dafcff51ac6e2ec51a6ce78de5ced083d2 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Fri, 21 Sep 2012 18:57:42 -0300
+Subject: [RHEL6 qemu-kvm PATCH 21/23] usb-redir: Store max_packet_size in
+ endp_data
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1348253864-3050-21-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 42197
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 20/22] usb-redir: Store max_packet_size in endp_data
+Bugzilla: 805172
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+RH-Acked-by: Arnon Gilboa <agilboa@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+So that we've a place to migrate it to / from to allow restoring it after
+migration.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream commit: 3f4be32824ccc5f6a5566b93c900df989a96d048
+Conflicts: usb-redir.c
+---
+ usb-redir.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ usb-redir.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index c1c20a1..d953469 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -58,6 +58,7 @@ struct endp_data {
+     uint8_t type;
+     uint8_t interval;
+     uint8_t interface; /* bInterfaceNumber this ep belongs to */
++    uint16_t max_packet_size; /* In bytes, not wMaxPacketSize format !! */
+     uint8_t iso_started;
+     uint8_t iso_error; /* For reporting iso errors to the HC */
+     uint8_t interrupt_started;
+@@ -1331,6 +1332,7 @@ static void usbredir_ep_info(void *priv,
+         }
+         if (usbredirparser_peer_has_cap(dev->parser,
+                                      usb_redir_cap_ep_info_max_packet_size)) {
++            dev->endpoint[i].max_packet_size = ep_info->max_packet_size[i];
+         }
+     }
+ }
+-- 
+1.7.11.4
+

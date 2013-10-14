@@ -1,0 +1,68 @@
+From 45e8c6b71072cbc0d601527b073ea3d2290b8860 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 29 Feb 2012 12:39:25 +0100
+Subject: [PATCH 10/35] qemu-char: make qemu_chr_event public
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1330519171-24231-11-git-send-email-kraxel@redhat.com>
+Patchwork-id: 37771
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 10/16] qemu-char: make qemu_chr_event public
+Bugzilla: 758104
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+From: Hans de Goede <hdegoede@redhat.com>
+
+Note the original commit message title this was cherry picked from was:
+"qemu-char: rename qemu_chr_event to qemu_chr_be_event and make it public"
+But the rename only makes sense upstream where all chr functions have
+been renamed in similar fasion, so this cherry-pick only makes
+qemu_chr_event public and does not rename it.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit a425d23f8fad482f7792745036896eb2f72330de)
+
+Conflicts:
+	qemu-char.c
+	qemu-char.h
+---
+ qemu-char.c |    2 +-
+ qemu-char.h |    1 +
+ 2 files changed, 2 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-char.c |    2 +-
+ qemu-char.h |    1 +
+ 2 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/qemu-char.c b/qemu-char.c
+index a8d6878..91645d2 100644
+--- a/qemu-char.c
++++ b/qemu-char.c
+@@ -120,7 +120,7 @@ static void char_write_unblocked(void *opaque)
+     chr->chr_write_unblocked(chr->handler_opaque);
+ }
+ 
+-static void qemu_chr_event(CharDriverState *s, int event)
++void qemu_chr_event(CharDriverState *s, int event)
+ {
+     /* Keep track if the char device is open */
+     switch (event) {
+diff --git a/qemu-char.h b/qemu-char.h
+index 06579d3..f3f8b56 100644
+--- a/qemu-char.h
++++ b/qemu-char.h
+@@ -100,6 +100,7 @@ int qemu_chr_write(CharDriverState *s, const uint8_t *buf, int len);
+ void qemu_chr_send_event(CharDriverState *s, int event);
+ void qemu_chr_add_handlers(CharDriverState *s, const QemuChrHandlers *handlers,
+                            void *opaque);
++void qemu_chr_event(CharDriverState *s, int event);
+ int qemu_chr_ioctl(CharDriverState *s, int cmd, void *arg);
+ void qemu_chr_generic_open(CharDriverState *s);
+ int qemu_chr_can_read(CharDriverState *s);
+-- 
+1.7.7.6
+

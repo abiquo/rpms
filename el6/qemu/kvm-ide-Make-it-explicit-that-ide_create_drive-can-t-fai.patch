@@ -1,0 +1,53 @@
+From 3346a505537b9c262a6a10ac4edee677e88b1ec6 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Mon, 9 Jan 2012 13:37:28 +0100
+Subject: [PATCH 1/9] ide: Make it explicit that ide_create_drive() can't fail
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326116256-3685-2-git-send-email-armbru@redhat.com>
+Patchwork-id: 36282
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 1/9] ide: Make it explicit that ide_create_drive() can't fail
+Bugzilla: 737879
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+All callers of ide_create_drive() ignore its value.  Currently
+harmless, because it fails only when qdev_init() fails, which fails
+only when ide_drive_initfn() fails, which never fails.
+
+Brittle.  Change it to die instead of silently ignoring failure.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit fa12fbbecefc6f9bf20374daa275a598096d113c)
+
+Conflicts:
+
+	hw/ide/qdev.c
+---
+ hw/ide/qdev.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/ide/qdev.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/hw/ide/qdev.c b/hw/ide/qdev.c
+index 044f0e0..703de84 100644
+--- a/hw/ide/qdev.c
++++ b/hw/ide/qdev.c
+@@ -99,8 +99,7 @@ IDEDevice *ide_create_drive(IDEBus *bus, int unit, DriveInfo *drive)
+     dev = qdev_create(&bus->qbus, "ide-drive");
+     qdev_prop_set_uint32(dev, "unit", unit);
+     qdev_prop_set_drive_nofail(dev, "drive", drive->bdrv);
+-    if (qdev_init(dev) < 0)
+-        return NULL;
++    qdev_init_nofail(dev);
+     return DO_UPCAST(IDEDevice, qdev, dev);
+ }
+ 
+-- 
+1.7.7.4
+

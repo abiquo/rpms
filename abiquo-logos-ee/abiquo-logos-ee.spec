@@ -1,7 +1,7 @@
 Name: abiquo-logos-ee
 Summary: FrameOS-related icons and pictures.
 Version: 4.9.99
-Release: 12.el5.abiquo
+Release: 13.el5.abiquo
 Group: System Environment/Base
 Source0: http://mirror.abiquo.com/sources/redhat-logos-%{version}-centos.tar.bz2
 Source1: http://mirror.abiquo.com/sources/redhat-logos-anaconda-abiquo-5.1.tar.bz2
@@ -96,6 +96,9 @@ rm -rf $RPM_BUILD_ROOT
 # end i386 bits
 
 %changelog
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 4.9.99-13.el5.abiquo
+- Bumped version to 2.6.0
+
 * Tue Jul 06 2010 Sergio Rubio <sergio@rubio.name> 4.9.99-12.el5.abiquo
 - Added Abiquo artwork
 - Removed GDM and KDE artwork

@@ -1,0 +1,95 @@
+From d4199e76677bfd1e032e846452035f7c9831c501 Mon Sep 17 00:00:00 2001
+Message-Id: <d4199e76677bfd1e032e846452035f7c9831c501.1354535052.git.minovotn@redhat.com>
+In-Reply-To: <8d77905c18814ff2e0c9d4336f80d2d8a8fd7250.1354535052.git.minovotn@redhat.com>
+References: <8d77905c18814ff2e0c9d4336f80d2d8a8fd7250.1354535052.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Nov 2012 16:40:03 +0100
+Subject: [PATCH 2/4] block: add bdrv_reopen() support for raw hdev, floppy,
+ and cdrom
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <f65a3e0ea0f12101cf83d6bf3132f005b786d091.1353513766.git.jcody@redhat.com>
+Patchwork-id: 44337
+O-Subject: [RHEL6.4 qemu-kvm PATCH] block: add bdrv_reopen() support for raw hdev, floppy, and cdrom
+Bugzilla: 877339
+RH-Acked-by: Stefan Hajnoczi <stefanha@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+For hdev, floppy, and cdrom, the reopen() handlers are the same as
+for the file reopen handler.  For floppy and cdrom types, however,
+we keep O_NONBLOCK, as in the _open function.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+(cherry picked from commit 1bc6b705eed02dab9feb0e663219b5623f3d684d)
+
+BZ 877339
+Brew: https://brewweb.devel.redhat.com/taskinfo?taskID=5115721
+---
+ block/raw-posix.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/raw-posix.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 5d62f66..1d44e30 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -314,6 +314,10 @@ static int raw_reopen_prepare(BDRVReopenState *state,
+     }
+ #endif
+ 
++    if (s->type == FTYPE_FD || s->type == FTYPE_CD) {
++        raw_s->open_flags |= O_NONBLOCK;
++    }
++
+     raw_parse_flags(state->flags, &raw_s->open_flags);
+ 
+     raw_s->fd = -1;
+@@ -957,6 +961,9 @@ static BlockDriver bdrv_host_device = {
+     .bdrv_probe_device  = hdev_probe_device,
+     .bdrv_file_open     = hdev_open,
+     .bdrv_close         = raw_close,
++    .bdrv_reopen_prepare = raw_reopen_prepare,
++    .bdrv_reopen_commit  = raw_reopen_commit,
++    .bdrv_reopen_abort   = raw_reopen_abort,
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+@@ -1051,6 +1058,9 @@ static BlockDriver bdrv_host_floppy = {
+     .bdrv_probe_device	= floppy_probe_device,
+     .bdrv_file_open     = floppy_open,
+     .bdrv_close         = raw_close,
++    .bdrv_reopen_prepare = raw_reopen_prepare,
++    .bdrv_reopen_commit  = raw_reopen_commit,
++    .bdrv_reopen_abort   = raw_reopen_abort,
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+@@ -1145,6 +1155,9 @@ static BlockDriver bdrv_host_cdrom = {
+     .bdrv_probe_device	= cdrom_probe_device,
+     .bdrv_file_open     = cdrom_open,
+     .bdrv_close         = raw_close,
++    .bdrv_reopen_prepare = raw_reopen_prepare,
++    .bdrv_reopen_commit  = raw_reopen_commit,
++    .bdrv_reopen_abort   = raw_reopen_abort,
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+@@ -1262,6 +1275,9 @@ static BlockDriver bdrv_host_cdrom = {
+     .bdrv_probe_device	= cdrom_probe_device,
+     .bdrv_file_open     = cdrom_open,
+     .bdrv_close         = raw_close,
++    .bdrv_reopen_prepare = raw_reopen_prepare,
++    .bdrv_reopen_commit  = raw_reopen_commit,
++    .bdrv_reopen_abort   = raw_reopen_abort,
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+-- 
+1.7.11.7
+

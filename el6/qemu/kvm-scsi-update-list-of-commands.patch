@@ -1,0 +1,187 @@
+From ea68083adef710e61b27841a73638590cab44d95 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:30 +0100
+Subject: [PATCH 074/109] scsi: update list of commands
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-74-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37552
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 073/102] scsi: update list of commands
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Add more commands and their names, and remove SEEK(6) which is obsolete.
+Instead, use SET_CAPACITY which is still in SSC.
+
+Tested-by: Thomas Schmitt <scdbackup@gmx.net>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 00a01ad47ae471a88cb64ccac6ed648c5c70d5f3)
+---
+ hw/scsi-bus.c  |   25 +++++++++++++++++++------
+ hw/scsi-defs.h |   10 +++++++++-
+ hw/scsi-disk.c |    4 +---
+ 3 files changed, 29 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c  |   25 +++++++++++++++++++------
+ hw/scsi-defs.h |   10 +++++++++-
+ hw/scsi-disk.c |    4 +---
+ 3 files changed, 29 insertions(+), 10 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index f8a105c..7addda4 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -686,7 +686,7 @@ static int scsi_req_length(SCSICommand *cmd, SCSIDevice *dev, uint8_t *buf)
+     case TEST_UNIT_READY:
+     case REWIND:
+     case START_STOP:
+-    case SEEK_6:
++    case SET_CAPACITY:
+     case WRITE_FILEMARKS:
+     case SPACE:
+     case RESERVE:
+@@ -1049,7 +1049,7 @@ static const char *scsi_command_name(uint8_t cmd)
+         [ REASSIGN_BLOCKS          ] = "REASSIGN_BLOCKS",
+         [ READ_6                   ] = "READ_6",
+         [ WRITE_6                  ] = "WRITE_6",
+-        [ SEEK_6                   ] = "SEEK_6",
++        [ SET_CAPACITY             ] = "SET_CAPACITY",
+         [ READ_REVERSE             ] = "READ_REVERSE",
+         [ WRITE_FILEMARKS          ] = "WRITE_FILEMARKS",
+         [ SPACE                    ] = "SPACE",
+@@ -1077,7 +1077,7 @@ static const char *scsi_command_name(uint8_t cmd)
+         [ SEARCH_EQUAL             ] = "SEARCH_EQUAL",
+         [ SEARCH_LOW               ] = "SEARCH_LOW",
+         [ SET_LIMITS               ] = "SET_LIMITS",
+-        [ PRE_FETCH                ] = "PRE_FETCH",
++        [ PRE_FETCH                ] = "PRE_FETCH/READ_POSITION",
+         /* READ_POSITION and PRE_FETCH use the same operation code */
+         [ SYNCHRONIZE_CACHE        ] = "SYNCHRONIZE_CACHE",
+         [ LOCK_UNLOCK_CACHE        ] = "LOCK_UNLOCK_CACHE",
+@@ -1114,9 +1114,11 @@ static const char *scsi_command_name(uint8_t cmd)
+         [ WRITE_16                 ] = "WRITE_16",
+         [ WRITE_VERIFY_16          ] = "WRITE_VERIFY_16",
+         [ VERIFY_16                ] = "VERIFY_16",
+-        [ SYNCHRONIZE_CACHE_16     ] = "SYNCHRONIZE_CACHE_16",
++        [ PRE_FETCH_16             ] = "PRE_FETCH_16",
++        [ SYNCHRONIZE_CACHE_16     ] = "SPACE_16/SYNCHRONIZE_CACHE_16",
++        /* SPACE_16 and SYNCHRONIZE_CACHE_16 use the same operation code */
+         [ LOCATE_16                ] = "LOCATE_16",
+-        [ WRITE_SAME_16            ] = "WRITE_SAME_16",
++        [ WRITE_SAME_16            ] = "ERASE_16/WRITE_SAME_16",
+         /* ERASE_16 and WRITE_SAME_16 use the same operation code */
+         [ SERVICE_ACTION_IN_16     ] = "SERVICE_ACTION_IN_16",
+         [ WRITE_LONG_16            ] = "WRITE_LONG_16",
+@@ -1126,6 +1128,8 @@ static const char *scsi_command_name(uint8_t cmd)
+         [ LOAD_UNLOAD              ] = "LOAD_UNLOAD",
+         [ READ_12                  ] = "READ_12",
+         [ WRITE_12                 ] = "WRITE_12",
++        [ ERASE_12                 ] = "ERASE_12/GET_PERFORMANCE",
++        /* ERASE_12 and GET_PERFORMANCE use the same operation code */
+         [ SERVICE_ACTION_IN_12     ] = "SERVICE_ACTION_IN_12",
+         [ WRITE_VERIFY_12          ] = "WRITE_VERIFY_12",
+         [ VERIFY_12                ] = "VERIFY_12",
+@@ -1133,9 +1137,18 @@ static const char *scsi_command_name(uint8_t cmd)
+         [ SEARCH_EQUAL_12          ] = "SEARCH_EQUAL_12",
+         [ SEARCH_LOW_12            ] = "SEARCH_LOW_12",
+         [ READ_ELEMENT_STATUS      ] = "READ_ELEMENT_STATUS",
+-        [ SEND_VOLUME_TAG          ] = "SEND_VOLUME_TAG",
++        [ SEND_VOLUME_TAG          ] = "SEND_VOLUME_TAG/SET_STREAMING",
++        /* SEND_VOLUME_TAG and SET_STREAMING use the same operation code */
++        [ READ_CD                  ] = "READ_CD",
+         [ READ_DEFECT_DATA_12      ] = "READ_DEFECT_DATA_12",
++        [ READ_DVD_STRUCTURE       ] = "READ_DVD_STRUCTURE",
++        [ RESERVE_TRACK            ] = "RESERVE_TRACK",
++        [ SEND_CUE_SHEET           ] = "SEND_CUE_SHEET",
++        [ SEND_DVD_STRUCTURE       ] = "SEND_DVD_STRUCTURE",
+         [ SET_CD_SPEED             ] = "SET_CD_SPEED",
++        [ SET_READ_AHEAD           ] = "SET_READ_AHEAD",
++        [ ALLOW_OVERWRITE          ] = "ALLOW_OVERWRITE",
++        [ MECHANISM_STATUS         ] = "MECHANISM_STATUS",
+     };
+ 
+     if (cmd >= ARRAY_SIZE(names) || names[cmd] == NULL)
+diff --git a/hw/scsi-defs.h b/hw/scsi-defs.h
+index d0a467a..354ed7b 100644
+--- a/hw/scsi-defs.h
++++ b/hw/scsi-defs.h
+@@ -32,7 +32,7 @@
+ #define REASSIGN_BLOCKS       0x07
+ #define READ_6                0x08
+ #define WRITE_6               0x0a
+-#define SEEK_6                0x0b
++#define SET_CAPACITY          0x0b
+ #define READ_REVERSE          0x0f
+ #define WRITE_FILEMARKS       0x10
+ #define SPACE                 0x11
+@@ -81,14 +81,17 @@
+ #define GET_EVENT_STATUS_NOTIFICATION 0x4a
+ #define LOG_SELECT            0x4c
+ #define LOG_SENSE             0x4d
++#define RESERVE_TRACK         0x53
+ #define MODE_SELECT_10        0x55
+ #define RESERVE_10            0x56
+ #define RELEASE_10            0x57
+ #define MODE_SENSE_10         0x5a
++#define SEND_CUE_SHEET        0x5d
+ #define PERSISTENT_RESERVE_IN 0x5e
+ #define PERSISTENT_RESERVE_OUT 0x5f
+ #define VARLENGTH_CDB         0x7f
+ #define WRITE_FILEMARKS_16    0x80
++#define ALLOW_OVERWRITE       0x82
+ #define EXTENDED_COPY         0x83
+ #define ATA_PASSTHROUGH       0x85
+ #define ACCESS_CONTROL_IN     0x86
+@@ -98,6 +101,8 @@
+ #define WRITE_16              0x8a
+ #define WRITE_VERIFY_16       0x8e
+ #define VERIFY_16             0x8f
++#define PRE_FETCH_16          0x90
++#define SPACE_16              0x91
+ #define SYNCHRONIZE_CACHE_16  0x91
+ #define LOCATE_16             0x92
+ #define WRITE_SAME_16         0x93
+@@ -110,9 +115,11 @@
+ #define MAINTENANCE_OUT       0xa4
+ #define MOVE_MEDIUM           0xa5
+ #define LOAD_UNLOAD           0xa6
++#define SET_READ_AHEAD        0xa7
+ #define READ_12               0xa8
+ #define WRITE_12              0xaa
+ #define SERVICE_ACTION_IN_12  0xab
++#define ERASE_12              0xac
+ #define READ_DVD_STRUCTURE    0xad
+ #define WRITE_VERIFY_12       0xae
+ #define VERIFY_12             0xaf
+@@ -125,6 +132,7 @@
+ #define SET_CD_SPEED          0xbb
+ #define MECHANISM_STATUS      0xbd
+ #define READ_CD               0xbe
++#define SEND_DVD_STRUCTURE    0xbf
+ 
+ /*
+  * SERVICE ACTION IN subcodes
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index a691a63..e62958c 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1373,10 +1373,8 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *buf)
+             goto fail;
+         }
+         break;
+-    case SEEK_6:
+     case SEEK_10:
+-        DPRINTF("Seek(%d) (sector %" PRId64 ")\n", command == SEEK_6 ? 6 : 10,
+-                r->req.cmd.lba);
++        DPRINTF("Seek(10) (sector %" PRId64 ")\n", r->req.cmd.lba);
+         if (r->req.cmd.lba > s->qdev.max_lba) {
+             goto illegal_lba;
+         }
+-- 
+1.7.7.6
+

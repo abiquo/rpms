@@ -1,0 +1,67 @@
+From 1347dd5dc9453eda78f4b206f834e1d2a423b578 Mon Sep 17 00:00:00 2001
+Message-Id: <1347dd5dc9453eda78f4b206f834e1d2a423b578.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:37 +0200
+Subject: [PATCH 28/41] qemu-ga: guest-shutdown: don't emit a success response
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-23-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39919
+O-Subject: [PATCH RHEL6.4 qemu-kvm 22/36] qemu-ga: guest-shutdown: don't emit a success response
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Today, qemu-ga may not be able to emit a success response when
+guest-shutdown completes. This happens because the VM may vanish
+before qemu-ga is able to emit a response.
+
+This semantic is a bit confusing, as it's not clear for clients if
+they should wait for a response or how they should check for success.
+
+This commit solves that problem by changing guest-shutdown to never
+emit a success response and suggests in the documentation what
+clients could do to check for success.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+(cherry picked from commit 8926817219d18403e04625afddd29e6ad25c3162)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qapi-schema-guest.json | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |    8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 692b570..1dd3454 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -131,11 +131,15 @@
+ #
+ # @mode: #optional "halt", "powerdown" (default), or "reboot"
+ #
+-# Returns: Nothing on success
++# This command does NOT return a response on success. Success condition
++# is indicated by the VM exiting with a zero exit status or, when
++# running with --no-shutdown, by issuing the query-status QMP command
++# to confirm the VM status is "shutdown".
+ #
+ # Since: 0.15.0
+ ##
+-{ 'command': 'guest-shutdown', 'data': { '*mode': 'str' } }
++{ 'command': 'guest-shutdown', 'data': { '*mode': 'str' },
++  'success-response': 'no' }
+ 
+ ##
+ # @guest-file-open:
+-- 
+1.7.10.4
+

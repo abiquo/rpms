@@ -1,0 +1,107 @@
+From 1686e43f043b213c5960c34e6f5b034596876fdb Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:45 +0100
+Subject: [PATCH 089/109] scsi: pass residual amount to command_complete
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-89-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37569
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 088/102] scsi: pass residual amount to command_complete
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+With the upcoming sglist support, HBAs will not see any transfer_data
+call and will not have a way to detect short transfers.  So pass the
+residual amount of data upon command completion.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/scsi-bus.c |   12 ++++++++----
+ hw/scsi.h     |    3 ++-
+ hw/usb-msd.c  |    2 +-
+ 3 files changed, 11 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |   12 ++++++++----
+ hw/scsi.h     |    3 ++-
+ hw/usb-msd.c  |    2 +-
+ 3 files changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 1d3fba6..2444224 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -515,6 +515,8 @@ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
+     }
+ 
+     req->cmd = cmd;
++    req->resid = req->cmd.xfer;
++
+     switch (buf[0]) {
+     case INQUIRY:
+         trace_scsi_inquiry(d->id, lun, tag, cmd.buf[1], cmd.buf[2]);
+@@ -1270,10 +1272,12 @@ void scsi_req_data(SCSIRequest *req, int len)
+ {
+     if (req->io_canceled) {
+         trace_scsi_req_data_canceled(req->dev->id, req->lun, req->tag, len);
+-    } else {
+-        trace_scsi_req_data(req->dev->id, req->lun, req->tag, len);
+-        req->bus->info->transfer_data(req, len);
++        return;
+     }
++    trace_scsi_req_data(req->dev->id, req->lun, req->tag, len);
++    assert(req->cmd.mode != SCSI_XFER_NONE);
++    req->resid -= len;
++    req->bus->info->transfer_data(req, len);
+ }
+ 
+ void scsi_req_print(SCSIRequest *req)
+@@ -1332,7 +1336,7 @@ void scsi_req_complete(SCSIRequest *req, int status)
+ 
+     scsi_req_ref(req);
+     scsi_req_dequeue(req);
+-    req->bus->info->complete(req, req->status);
++    req->bus->info->complete(req, req->status, req->resid);
+     scsi_req_unref(req);
+ }
+ 
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 81570d5..008d8c4 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -48,6 +48,7 @@ struct SCSIRequest {
+     uint32_t          tag;
+     uint32_t          lun;
+     uint32_t          status;
++    size_t            resid;
+     SCSICommand       cmd;
+     BlockDriverAIOCB  *aiocb;
+     uint8_t sense[SCSI_SENSE_BUF_SIZE];
+@@ -108,7 +109,7 @@ struct SCSIBusInfo {
+     int tcq;
+     int max_channel, max_target, max_lun;
+     void (*transfer_data)(SCSIRequest *req, uint32_t arg);
+-    void (*complete)(SCSIRequest *req, uint32_t arg);
++    void (*complete)(SCSIRequest *req, uint32_t arg, int32_t len);
+     void (*cancel)(SCSIRequest *req);
+ };
+ 
+diff --git a/hw/usb-msd.c b/hw/usb-msd.c
+index 1232ab4..7a16de7 100644
+--- a/hw/usb-msd.c
++++ b/hw/usb-msd.c
+@@ -230,7 +230,7 @@ static void usb_msd_transfer_data(SCSIRequest *req, uint32_t len)
+     }
+ }
+ 
+-static void usb_msd_command_complete(SCSIRequest *req, uint32_t status)
++static void usb_msd_command_complete(SCSIRequest *req, uint32_t status, int32_t resid)
+ {
+     MSDState *s = DO_UPCAST(MSDState, dev.qdev, req->bus->qbus.parent);
+     USBPacket *p = s->packet;
+-- 
+1.7.7.6
+

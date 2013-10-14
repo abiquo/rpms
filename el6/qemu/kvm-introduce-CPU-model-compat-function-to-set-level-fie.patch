@@ -1,0 +1,80 @@
+From 159760c5b743170cb1d22b43639e29dc1b0a6a16 Mon Sep 17 00:00:00 2001
+Message-Id: <159760c5b743170cb1d22b43639e29dc1b0a6a16.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Fri, 28 Sep 2012 16:50:22 +0200
+Subject: [PATCH 17/34] introduce CPU model compat function to set "level"
+ field
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1348851023-31907-18-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 42508
+O-Subject: [RHEL6 qemu-kvm PATCH 17/18] introduce CPU model compat function to set "level" field
+Bugzilla: 689665
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+
+Bugzilla: 689665
+Upstream status: not applicable
+ (Upstream CPU model compatibility will be implemented using qdev and
+ global properties)
+
+This adds a new RHEL-specific CPU model compatibility function to change
+the "level" field on some CPU models. It will be used to keep
+machine-type compatibility when increasing the level field on CPU models
+Penryn, Conroe, and Nehalem.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/pc.h             |  1 +
+ target-i386/cpuid.c | 11 +++++++++++
+ 2 files changed, 12 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/pc.h             |  1 +
+ target-i386/cpuid.c | 11 +++++++++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/hw/pc.h b/hw/pc.h
+index 73bbf10..f0b0bb7 100644
+--- a/hw/pc.h
++++ b/hw/pc.h
+@@ -182,5 +182,6 @@ int cpu_is_bsp(CPUState *env);
+ void set_pmu_passthrough(bool enable);
+ void disable_kvm_pv_eoi(void);
+ void disable_tsc_deadline(void);
++void set_cpu_model_level(const char *name, int level);
+ 
+ #endif
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index ad6300e..713da82 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -1412,6 +1412,7 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
+ void set_pmu_passthrough(bool enable);
+ void disable_kvm_pv_eoi(void);
+ void disable_tsc_deadline(void);
++void set_cpu_model_level(const char *name, int level);
+ 
+ void set_pmu_passthrough(bool enable)
+ {
+@@ -1427,3 +1428,13 @@ void disable_tsc_deadline(void)
+ {
+     tsc_deadline_disabled = true;
+ }
++
++void set_cpu_model_level(const char *name, int level)
++{
++    x86_def_t *def;
++    for (def = x86_defs; def; def = def->next) {
++        if (!strcmp(name, def->name)) {
++            def->level = level;
++        }
++    }
++}
+-- 
+1.7.11.4
+

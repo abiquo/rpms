@@ -1,0 +1,57 @@
+From caf3059397fe853808cc5f8f524d9a6580f12abc Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:17 +0100
+Subject: [PATCH 52/99] Allow nested qemu_bh_poll() after BH deletion
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-53-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37244
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 52/96] Allow nested qemu_bh_poll() after BH deletion
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+Without this, qemu segfaults when a BH handler first deletes its BH and
+then calls another function which involves a nested qemu_bh_poll() call.
+
+This can be reproduced by generating an I/O error (e.g. with blkdebug) on
+an IDE device and using rerror/werror=stop to stop the VM. When continuing
+the VM, qemu segfaults.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+Reviewed-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 7887f6201ff3fdc9a142eba14d61c563adb57596)
+---
+ async.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ async.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/async.c b/async.c
+index 57ac3a8..fd313df 100644
+--- a/async.c
++++ b/async.c
+@@ -137,11 +137,12 @@ QEMUBH *qemu_bh_new(QEMUBHFunc *cb, void *opaque)
+ 
+ int qemu_bh_poll(void)
+ {
+-    QEMUBH *bh, **bhp;
++    QEMUBH *bh, **bhp, *next;
+     int ret;
+ 
+     ret = 0;
+-    for (bh = async_context->first_bh; bh; bh = bh->next) {
++    for (bh = async_context->first_bh; bh; bh = next) {
++        next = bh->next;
+         if (!bh->deleted && bh->scheduled) {
+             bh->scheduled = 0;
+             if (!bh->idle)
+-- 
+1.7.7.5
+

@@ -1,0 +1,78 @@
+From 898cb2d3cf4087e566679a9510b05f889eb6b1bb Mon Sep 17 00:00:00 2001
+Message-Id: <898cb2d3cf4087e566679a9510b05f889eb6b1bb.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:40 +0200
+Subject: [PATCH 31/41] qemu-ga: guest-suspend-hybrid: don't emit a success
+ response
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-26-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39922
+O-Subject: [PATCH RHEL6.4 qemu-kvm 25/36] qemu-ga: guest-suspend-hybrid: don't emit a success response
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Today, qemu-ga may not be able to emit a success response when
+guest-suspend-hybrid completes. This happens because the VM may
+suspend before qemu-ga is able to emit a response.
+
+This semantic is a bit confusing, as it's not clear for clients if
+they should wait for a response or how they should check for success.
+
+This commit solves that problem by changing guest-suspend-hybrid to
+never emit a success response and suggests in the documentation
+what clients should do to check for success.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+(cherry picked from commit d9fcd2a1c825791cec9b21e634013b728422972f)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qapi-schema-guest.json | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |   16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 50e2815..7c6cb21 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -422,17 +422,21 @@
+ # command.  Thus, it's *required* to query QEMU for the presence of the
+ # 'system_wakeup' command before issuing guest-suspend-hybrid.
+ #
+-# Returns: nothing on success
++# This command does NOT return a response on success. There are two options
++# to check for success:
++#   1. Wait for the SUSPEND QMP event from QEMU
++#   2. Issue the query-status QMP command to confirm the VM status is
++#      "suspended"
++#
++# The following errors may be returned:
+ #          If hybrid suspend is not supported, Unsupported
+ #
+-# Notes: o This is an asynchronous request. There's no guarantee a response
+-#          will be sent
+-#        o It's strongly recommended to issue the guest-sync command before
+-#          sending commands when the guest resumes
++# Notes: It's strongly recommended to issue the guest-sync command before
++#        sending commands when the guest resumes
+ #
+ # Since: 1.1
+ ##
+-{ 'command': 'guest-suspend-hybrid' }
++{ 'command': 'guest-suspend-hybrid', 'success-response': 'no' }
+ 
+ ##
+ # @GuestIpAddressType:
+-- 
+1.7.10.4
+

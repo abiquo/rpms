@@ -1,0 +1,173 @@
+From e0023919a0e48dd955ec4456b56b0f4403de2889 Mon Sep 17 00:00:00 2001
+Message-Id: <e0023919a0e48dd955ec4456b56b0f4403de2889.1350567686.git.minovotn@redhat.com>
+In-Reply-To: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+References: <e8d21dedbb11e84476f54f7285e4758556f1395f.1350567686.git.minovotn@redhat.com>
+From: Jason Baron <jbaron@redhat.com>
+Date: Fri, 12 Oct 2012 19:44:30 +0200
+Subject: [PATCH 2/7] Generalize -machine command line option
+
+RH-Author: Jason Baron <jbaron@redhat.com>
+Message-id: <2ea15f53074766a2c3fc831521d676c6d3b647c3.1350069767.git.jbaron@redhat.com>
+Patchwork-id: 43072
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v4 2/7] Generalize -machine command line option
+Bugzilla: 859447
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Jan Kiszka <jan.kiszka@siemens.com>
+
+-machine somehow suggests that it selects the machine, but it doesn't.
+Fix that before this command is set in stone.
+
+Actually, -machine should supersede -M and allow to introduce arbitrary
+per-machine options to the command line. That will change the internal
+realization again, but we will be able to keep the user interface
+stable.
+
+Tested-by: Ian Campbell <ian.campbell@citrix.com>
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 9052ea6bf4962b1342aa56d4341bb55176ed9e45)
+
+Conflicts:
+    qemu-options.hx
+    vl.c
+
+Left out 'default_machine_opts' bits.
+
+Signed-off-by: Jason Baron <jbaron@redhat.com>
+---
+ qemu-config.c   |    5 +++++
+ qemu-options.hx |   17 ++++++++++++-----
+ vl.c            |   39 ++++++++++++++++++++++++---------------
+ 3 files changed, 41 insertions(+), 20 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-config.c   |  5 +++++
+ qemu-options.hx | 17 ++++++++++++-----
+ vl.c            | 39 ++++++++++++++++++++++++---------------
+ 3 files changed, 41 insertions(+), 20 deletions(-)
+
+diff --git a/qemu-config.c b/qemu-config.c
+index ac5b4e6..aba8be5 100644
+--- a/qemu-config.c
++++ b/qemu-config.c
+@@ -421,9 +421,14 @@ QemuOptsList qemu_option_rom_opts = {
+ 
+ static QemuOptsList qemu_machine_opts = {
+     .name = "machine",
++    .implied_opt_name = "type",
+     .head = QTAILQ_HEAD_INITIALIZER(qemu_machine_opts.head),
+     .desc = {
+         {
++            .name = "type",
++            .type = QEMU_OPT_STRING,
++            .help = "emulated machine"
++        }, {
+             .name = "accel",
+             .type = QEMU_OPT_STRING,
+             .help = "accelerator list",
+diff --git a/qemu-options.hx b/qemu-options.hx
+index 31dbfce..2e47b06 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -1897,13 +1897,20 @@ if KVM support is enabled when compiling.
+ ETEXI
+ 
+ DEF("machine", HAS_ARG, QEMU_OPTION_machine, \
+-    "-machine accel=accel1[:accel2]    use an accelerator (kvm,tcg), default is kvm:tcg\n")
++    "-machine [type=]name[,prop[=value][,...]]\n"
++    "                selects emulated machine (-machine ? for list)\n"
++    "                property accel=accel1[:accel2[:...]] selects accelerator\n"
++    "                supported accelerators are kvm, tcg (default: kvm:tcg)\n")
+ STEXI
+-@item -machine accel=@var{accels}
++@item -machine [type=]@var{name}[,prop=@var{value}[,...]]
+ @findex -machine
+-This is use to enable an accelerator, in kvm,tcg.
+-By default, it use only kvm. If there a more than one accelerator
+-specified, the next one is used if the first don't work.
++Select the emulated machine by @var{name}. Use @code{-machine ?} to list
++available machines. Supported machine properties are:
++@table @option
++@item accel=@var{accels1}[:@var{accels2}[:...]]
++This is used to enable an accelerator. Depending on the target architecture,
++kvm or tcg can be available. By default, kvm is used if available, else tcg.
++@end table
+ ETEXI
+ 
+ #ifdef CONFIG_XEN
+diff --git a/vl.c b/vl.c
+index bde1396..77afed0 100644
+--- a/vl.c
++++ b/vl.c
+@@ -4941,6 +4941,27 @@ static int tcg_available(void)
+     return 1;
+ }
+ 
++static QEMUMachine *machine_parse(const char *name)
++{
++    QEMUMachine *m, *machine = NULL;
++
++    if (name) {
++        machine = find_machine(name);
++    }
++    if (machine) {
++        return machine;
++    }
++    printf("Supported machines are:\n");
++    for (m = first_machine; m != NULL; m = m->next) {
++        if (m->alias) {
++            printf("%-10s %s (alias of %s)\n", m->alias, m->desc, m->name);
++        }
++        printf("%-10s %s%s\n", m->name, m->desc,
++               m->is_default ? " (default)" : "");
++    }
++    exit(!name || *name != '?');
++}
++
+ static int tcg_init(int smp_cpus)
+ {
+     return 0;
+@@ -5239,20 +5260,7 @@ int main(int argc, char **argv, char **envp)
+             popt = lookup_opt(argc, argv, &optarg, &optind);
+             switch(popt->index) {
+             case QEMU_OPTION_M:
+-                machine = find_machine(optarg);
+-                if (!machine) {
+-                    QEMUMachine *m;
+-                    printf("Supported machines are:\n");
+-                    for(m = first_machine; m != NULL; m = m->next) {
+-                        if (m->alias)
+-                            printf("%-10s %s (alias of %s)\n",
+-                                   m->alias, m->desc, m->name);
+-                        printf("%-10s %s%s\n",
+-                               m->name, m->desc,
+-                               m->is_default ? " (default)" : "");
+-                    }
+-                    exit(*optarg != '?');
+-                }
++                machine = machine_parse(optarg);
+                 break;
+             case QEMU_OPTION_cpu:
+                 /* hw initialization will check this */
+@@ -5761,11 +5769,12 @@ int main(int argc, char **argv, char **envp)
+             case QEMU_OPTION_machine:
+                 olist = qemu_find_opts("machine");
+                 qemu_opts_reset(olist);
+-                opts = qemu_opts_parse(olist, optarg, 0);
++                opts = qemu_opts_parse(olist, optarg, 1);
+                 if (!opts) {
+                     fprintf(stderr, "parse error: %s\n", optarg);
+                     exit(1);
+                 }
++                machine = machine_parse(qemu_opt_get(opts, "type"));
+                 break;
+             case QEMU_OPTION_usb:
+                 usb_enabled = 1;
+-- 
+1.7.11.7
+

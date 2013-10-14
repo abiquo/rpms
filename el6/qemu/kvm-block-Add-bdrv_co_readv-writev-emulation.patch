@@ -1,0 +1,156 @@
+From 35c025a496b37533fcbe81842864e057592c5beb Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:05 +0100
+Subject: [PATCH 40/99] block: Add bdrv_co_readv/writev emulation
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-41-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37225
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 40/96] block: Add bdrv_co_readv/writev emulation
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+In order to be able to call bdrv_co_readv/writev for drivers that don't
+implement the functions natively, add an emulation that uses the AIO functions
+to implement them.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit f9f05dc58c50d19ad762e6c1ce6b5def9814a4ed)
+---
+ block.c      |   83 ++++++++++++++++++++++++++++++++++++++++++++++++++++-----
+ trace-events |    1 +
+ 2 files changed, 76 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c      |   83 ++++++++++++++++++++++++++++++++++++++++++++++++++++-----
+ trace-events |    1 +
+ 2 files changed, 76 insertions(+), 8 deletions(-)
+
+diff --git a/block.c b/block.c
+index 124e467..8fb2bc7 100644
+--- a/block.c
++++ b/block.c
+@@ -65,6 +65,12 @@ static BlockDriverAIOCB *bdrv_co_aio_readv_em(BlockDriverState *bs,
+ static BlockDriverAIOCB *bdrv_co_aio_writev_em(BlockDriverState *bs,
+         int64_t sector_num, QEMUIOVector *qiov, int nb_sectors,
+         BlockDriverCompletionFunc *cb, void *opaque);
++static int coroutine_fn bdrv_co_readv_em(BlockDriverState *bs,
++                                         int64_t sector_num, int nb_sectors,
++                                         QEMUIOVector *iov);
++static int coroutine_fn bdrv_co_writev_em(BlockDriverState *bs,
++                                         int64_t sector_num, int nb_sectors,
++                                         QEMUIOVector *iov);
+ 
+ static QTAILQ_HEAD(, BlockDriverState) bdrv_states =
+     QTAILQ_HEAD_INITIALIZER(bdrv_states);
+@@ -150,14 +156,19 @@ void bdrv_register(BlockDriver *bdrv)
+         bdrv->bdrv_aio_writev = bdrv_co_aio_writev_em;
+         bdrv->bdrv_read = bdrv_read_em;
+         bdrv->bdrv_write = bdrv_write_em;
+-     } else if (!bdrv->bdrv_aio_readv) {
+-        /* add AIO emulation layer */
+-        bdrv->bdrv_aio_readv = bdrv_aio_readv_em;
+-        bdrv->bdrv_aio_writev = bdrv_aio_writev_em;
+-    } else if (!bdrv->bdrv_read) {
+-        /* add synchronous IO emulation layer */
+-        bdrv->bdrv_read = bdrv_read_em;
+-        bdrv->bdrv_write = bdrv_write_em;
++     } else {
++        bdrv->bdrv_co_readv = bdrv_co_readv_em;
++        bdrv->bdrv_co_writev = bdrv_co_writev_em;
++
++        if (!bdrv->bdrv_aio_readv) {
++            /* add AIO emulation layer */
++            bdrv->bdrv_aio_readv = bdrv_aio_readv_em;
++            bdrv->bdrv_aio_writev = bdrv_aio_writev_em;
++        } else if (!bdrv->bdrv_read) {
++            /* add synchronous IO emulation layer */
++            bdrv->bdrv_read = bdrv_read_em;
++            bdrv->bdrv_write = bdrv_write_em;
++        }
+     }
+ 
+     if (!bdrv->bdrv_aio_flush)
+@@ -2792,6 +2803,62 @@ void qemu_aio_release(void *p)
+ }
+ 
+ /**************************************************************/
++/* Coroutine block device emulation */
++
++typedef struct CoroutineIOCompletion {
++    Coroutine *coroutine;
++    int ret;
++} CoroutineIOCompletion;
++
++static void bdrv_co_io_em_complete(void *opaque, int ret)
++{
++    CoroutineIOCompletion *co = opaque;
++
++    co->ret = ret;
++    qemu_coroutine_enter(co->coroutine, NULL);
++}
++
++static int coroutine_fn bdrv_co_io_em(BlockDriverState *bs, int64_t sector_num,
++                                      int nb_sectors, QEMUIOVector *iov,
++                                      bool is_write)
++{
++    CoroutineIOCompletion co = {
++        .coroutine = qemu_coroutine_self(),
++    };
++    BlockDriverAIOCB *acb;
++
++    if (is_write) {
++        acb = bdrv_aio_writev(bs, sector_num, iov, nb_sectors,
++                              bdrv_co_io_em_complete, &co);
++    } else {
++        acb = bdrv_aio_readv(bs, sector_num, iov, nb_sectors,
++                             bdrv_co_io_em_complete, &co);
++    }
++
++    trace_bdrv_co_io(is_write, acb);
++    if (!acb) {
++        return -EIO;
++    }
++    qemu_coroutine_yield();
++
++    return co.ret;
++}
++
++static int coroutine_fn bdrv_co_readv_em(BlockDriverState *bs,
++                                         int64_t sector_num, int nb_sectors,
++                                         QEMUIOVector *iov)
++{
++    return bdrv_co_io_em(bs, sector_num, nb_sectors, iov, false);
++}
++
++static int coroutine_fn bdrv_co_writev_em(BlockDriverState *bs,
++                                         int64_t sector_num, int nb_sectors,
++                                         QEMUIOVector *iov)
++{
++    return bdrv_co_io_em(bs, sector_num, nb_sectors, iov, true);
++}
++
++/**************************************************************/
+ /* removable device support */
+ 
+ /**
+diff --git a/trace-events b/trace-events
+index a569a9f..dff3db4 100644
+--- a/trace-events
++++ b/trace-events
+@@ -57,6 +57,7 @@ disable bdrv_aio_writev(void *bs, int64_t sector_num, int nb_sectors, void *opaq
+ disable bdrv_lock_medium(void *bs, int locked) "bs %p locked %d"
+ disable bdrv_co_readv(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
+ disable bdrv_co_writev(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
++disable bdrv_co_io(int is_write, void *acb) "is_write %d acb %p"
+ 
+ # hw/virtio-blk.c
+ disable virtio_blk_req_complete(void *req, int status) "req %p status %d"
+-- 
+1.7.7.5
+

@@ -1,0 +1,36 @@
+From 2ef493f1592a2479e896b56482a470f424390f89 Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:43:45 -0500
+Subject: [PATCH 18/98] qapi: add module init types for qapi
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@gmail.com>
+(cherry picked from commit c7aa841e9f75f0ff77fec9f918779b1951ab6b9d)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ module.h |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/module.h b/module.h
+index 9263f1c..ef66730 100644
+--- a/module.h
++++ b/module.h
+@@ -24,12 +24,14 @@ typedef enum {
+     MODULE_INIT_BLOCK,
+     MODULE_INIT_DEVICE,
+     MODULE_INIT_MACHINE,
++    MODULE_INIT_QAPI,
+     MODULE_INIT_MAX
+ } module_init_type;
+ 
+ #define block_init(function) module_init(function, MODULE_INIT_BLOCK)
+ #define device_init(function) module_init(function, MODULE_INIT_DEVICE)
+ #define machine_init(function) module_init(function, MODULE_INIT_MACHINE)
++#define qapi_init(function) module_init(function, MODULE_INIT_QAPI)
+ 
+ void register_module_init(void (*fn)(void), module_init_type type);
+ 
+-- 
+1.7.7.6
+

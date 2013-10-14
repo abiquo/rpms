@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-client-premium
-Version:  2.4.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  2.6.0
+Release:  2%{?dist}%{?buildstamp}
 Summary:  Abiquo Flex Client
 Group:    Development/System 
 License:  Multiple 
@@ -45,9 +45,14 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/tomcat/webapps/client-premium
 %{abiquo_basedir}/tomcat/webapps/ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/client-premium.xml
+%config(noreplace) %{abiquo_basedir}/tomcat/webapps/client-premium/config/client-config.xml.jsp
+
 %{_docdir}/%{name}
 
 %changelog
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
+- Bumped version to 2.6.0
+
 * Mon Nov 19 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
 - Bumped version to 2.4
 

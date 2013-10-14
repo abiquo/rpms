@@ -1,0 +1,143 @@
+From 1aa3420302ed8168e4b60589e64b0c15faaa54ac Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:13 +0100
+Subject: [PATCH 48/99] qcow: Avoid direct AIO callback
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-49-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37241
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 48/96] qcow: Avoid direct AIO callback
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+bdrv_aio_* must not call the callback before returning to its caller. In qcow,
+this could happen in some error cases. This starts the real requests processing
+in a BH to avoid this situation.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit b11a24dee661dd1e1de0dcbc149052ed67b0647a)
+---
+ block/qcow.c |   58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 files changed, 56 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow.c |   58 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 files changed, 56 insertions(+), 2 deletions(-)
+
+diff --git a/block/qcow.c b/block/qcow.c
+index c3a3519..e33eaaa 100644
+--- a/block/qcow.c
++++ b/block/qcow.c
+@@ -495,6 +495,8 @@ typedef struct QCowAIOCB {
+     uint64_t cluster_offset;
+     uint8_t *cluster_data;
+     struct iovec hd_iov;
++    bool is_write;
++    QEMUBH *bh;
+     QEMUIOVector hd_qiov;
+     BlockDriverAIOCB *hd_aiocb;
+ } QCowAIOCB;
+@@ -524,6 +526,8 @@ static QCowAIOCB *qcow_aio_setup(BlockDriverState *bs,
+     acb->hd_aiocb = NULL;
+     acb->sector_num = sector_num;
+     acb->qiov = qiov;
++    acb->is_write = is_write;
++
+     if (qiov->niov > 1) {
+         acb->buf = acb->orig_buf = qemu_blockalign(bs, qiov->size);
+         if (is_write)
+@@ -537,6 +541,38 @@ static QCowAIOCB *qcow_aio_setup(BlockDriverState *bs,
+     return acb;
+ }
+ 
++static void qcow_aio_read_cb(void *opaque, int ret);
++static void qcow_aio_write_cb(void *opaque, int ret);
++
++static void qcow_aio_rw_bh(void *opaque)
++{
++    QCowAIOCB *acb = opaque;
++    qemu_bh_delete(acb->bh);
++    acb->bh = NULL;
++
++    if (acb->is_write) {
++        qcow_aio_write_cb(opaque, 0);
++    } else {
++        qcow_aio_read_cb(opaque, 0);
++    }
++}
++
++static int qcow_schedule_bh(QEMUBHFunc *cb, QCowAIOCB *acb)
++{
++    if (acb->bh) {
++        return -EIO;
++    }
++
++    acb->bh = qemu_bh_new(cb, acb);
++    if (!acb->bh) {
++        return -EIO;
++    }
++
++    qemu_bh_schedule(acb->bh);
++
++    return 0;
++}
++
+ static void qcow_aio_read_cb(void *opaque, int ret)
+ {
+     QCowAIOCB *acb = opaque;
+@@ -639,12 +675,21 @@ static BlockDriverAIOCB *qcow_aio_readv(BlockDriverState *bs,
+         BlockDriverCompletionFunc *cb, void *opaque)
+ {
+     QCowAIOCB *acb;
++    int ret;
+ 
+     acb = qcow_aio_setup(bs, sector_num, qiov, nb_sectors, cb, opaque, 0);
+     if (!acb)
+         return NULL;
+ 
+-    qcow_aio_read_cb(acb, 0);
++    ret = qcow_schedule_bh(qcow_aio_rw_bh, acb);
++    if (ret < 0) {
++        if (acb->qiov->niov > 1) {
++            qemu_vfree(acb->orig_buf);
++        }
++        qemu_aio_release(acb);
++        return NULL;
++    }
++
+     return &acb->common;
+ }
+ 
+@@ -724,6 +769,7 @@ static BlockDriverAIOCB *qcow_aio_writev(BlockDriverState *bs,
+ {
+     BDRVQcowState *s = bs->opaque;
+     QCowAIOCB *acb;
++    int ret;
+ 
+     s->cluster_cache_offset = -1; /* disable compressed cache */
+ 
+@@ -732,7 +778,15 @@ static BlockDriverAIOCB *qcow_aio_writev(BlockDriverState *bs,
+         return NULL;
+ 
+ 
+-    qcow_aio_write_cb(acb, 0);
++    ret = qcow_schedule_bh(qcow_aio_rw_bh, acb);
++    if (ret < 0) {
++        if (acb->qiov->niov > 1) {
++            qemu_vfree(acb->orig_buf);
++        }
++        qemu_aio_release(acb);
++        return NULL;
++    }
++
+     return &acb->common;
+ }
+ 
+-- 
+1.7.7.5
+

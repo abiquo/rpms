@@ -1,0 +1,81 @@
+From 540a613a9ad82808c76155b3da575327b911f9aa Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:16 -0500
+Subject: [PATCH 49/98] qapi: dealloc visitor, fix premature free and
+ iteration logic
+
+Currently we do 3 things wrong:
+
+1) The list iterator, in practice, is used in a manner where the pointer
+we pass in is the same as the pointer we assign the output to from
+visit_next_list(). This causes an infinite loop where we keep freeing
+the same structures.
+
+2) We attempt to free list->value rather than list. visit_type_<type>
+handles this. We should only be concerned with the containing list.
+
+3) We free prematurely: iterator function will continue accessing values
+we've already freed.
+
+This patch should fix all of these issues. QmpOutputVisitor also suffers
+from 1).
+
+Reviewed-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 5666dd19dd95d966be00d0c3e7efdfaecc096ff3)
+
+Conflicts:
+
+	qapi/qapi-dealloc-visitor.c
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi/qapi-dealloc-visitor.c |   20 +++++++++++++++-----
+ 1 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/qapi/qapi-dealloc-visitor.c b/qapi/qapi-dealloc-visitor.c
+index 8cde4dd..28b23c1 100644
+--- a/qapi/qapi-dealloc-visitor.c
++++ b/qapi/qapi-dealloc-visitor.c
+@@ -26,6 +26,7 @@ struct QapiDeallocVisitor
+ {
+     Visitor visitor;
+     QTAILQ_HEAD(, StackEntry) stack;
++    bool is_list_head;
+ };
+ 
+ static QapiDeallocVisitor *to_qov(Visitor *v)
+@@ -70,15 +71,24 @@ static void qapi_dealloc_end_struct(Visitor *v, Error **errp)
+ 
+ static void qapi_dealloc_start_list(Visitor *v, const char *name, Error **errp)
+ {
++    QapiDeallocVisitor *qov = to_qov(v);
++    qov->is_list_head = true;
+ }
+ 
+-static GenericList *qapi_dealloc_next_list(Visitor *v, GenericList **list,
++static GenericList *qapi_dealloc_next_list(Visitor *v, GenericList **listp,
+                                            Error **errp)
+ {
+-    GenericList *retval = *list;
+-    qemu_free(retval->value);
+-    *list = retval->next;
+-    return retval;
++    GenericList *list = *listp;
++    QapiDeallocVisitor *qov = to_qov(v);
++
++    if (!qov->is_list_head) {
++        *listp = list->next;
++        qemu_free(list);
++        return *listp;
++    }
++
++    qov->is_list_head = false;
++    return list;
+ }
+ 
+ static void qapi_dealloc_end_list(Visitor *v, Error **errp)
+-- 
+1.7.7.6
+

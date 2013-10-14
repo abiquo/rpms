@@ -1,0 +1,50 @@
+From 9837b84dcccd1851f8da358e5e714584010e7d58 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:06 +0100
+Subject: [PATCH 12/52] qemu-io: fix a memory leak
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-13-git-send-email-armbru@redhat.com>
+Patchwork-id: 36574
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 12/52] qemu-io: fix a memory leak
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Blue Swirl <blauwirbel@gmail.com>
+
+Fix a memory leak, reported by cppcheck:
+[/src/qemu/qemu-io.c:1135]: (error) Memory leak: ctx
+
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 1afec9138f848cfba517bd2d80167b27216b9df9)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ qemu-io.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-io.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/qemu-io.c b/qemu-io.c
+index 139a964..b1484f3 100644
+--- a/qemu-io.c
++++ b/qemu-io.c
+@@ -938,8 +938,10 @@ aio_read_f(int argc, char **argv)
+ 		case 'P':
+ 			ctx->Pflag = 1;
+ 			ctx->pattern = parse_pattern(optarg);
+-			if (ctx->pattern < 0)
++			if (ctx->pattern < 0) {
++                                free(ctx);
+ 				return 0;
++                        }
+ 			break;
+ 		case 'q':
+ 			ctx->qflag = 1;
+-- 
+1.7.7.5
+

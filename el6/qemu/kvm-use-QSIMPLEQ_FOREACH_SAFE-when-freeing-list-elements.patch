@@ -1,0 +1,56 @@
+From f24cfb417dbf8dc9f4b94d7d4a4df68f564607c2 Mon Sep 17 00:00:00 2001
+From: Federico Simoncelli <fsimonce@redhat.com>
+Date: Fri, 23 Mar 2012 12:12:48 -0300
+Subject: [RHEL6 qemu-kvm PATCH 3/9] use QSIMPLEQ_FOREACH_SAFE when freeing list elements
+
+RH-Author: Federico Simoncelli <fsimonce@redhat.com>
+Message-id: <1332504778-17403-4-git-send-email-fsimonce@redhat.com>
+Patchwork-id: 38952
+O-Subject: [RHEL6.3 qemu-kvm PATCH v6 03/13] use QSIMPLEQ_FOREACH_SAFE when freeing list elements
+Bugzilla: 802284
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+BZ: 802284
+
+(cherry picked from commit 622d241998b6a981483594712b039190ee94eff8)
+---
+ blockdev.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ blockdev.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 130c23e..72a2e14 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -719,7 +719,7 @@ void qmp_blockdev_group_snapshot_sync(SnapshotDevList *dev_list,
+     int ret = 0;
+     SnapshotDevList *dev_entry = dev_list;
+     SnapshotDev *dev_info = NULL;
+-    BlkGroupSnapshotStates *states;
++    BlkGroupSnapshotStates *states, *next;
+     BlockDriver *proto_drv;
+     BlockDriver *drv;
+     int flags;
+@@ -824,7 +824,7 @@ delete_and_fail:
+         }
+     }
+ exit:
+-    QSIMPLEQ_FOREACH(states, &snap_bdrv_states, entry) {
++    QSIMPLEQ_FOREACH_SAFE(states, &snap_bdrv_states, entry, next) {
+         g_free(states);
+     }
+     return;
+-- 
+1.7.3.2
+

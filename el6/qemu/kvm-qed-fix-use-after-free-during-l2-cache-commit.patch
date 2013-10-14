@@ -1,0 +1,97 @@
+From 663b645e2c965fdfb992e54572fcdcf91908371a Mon Sep 17 00:00:00 2001
+From: Anthony Liguori <aliguori@redhat.com>
+Date: Mon, 5 Mar 2012 20:04:18 +0100
+Subject: [PATCH 7/7] qed: fix use-after-free during l2 cache commit
+
+RH-Author: Anthony Liguori <aliguori@redhat.com>
+Message-id: <1330977858-4720-1-git-send-email-aliguori@redhat.com>
+Patchwork-id: 38148
+O-Subject: [RHEL6.4 qemu-kvm PATCH] qed: fix use-after-free during l2 cache commit
+Bugzilla: 742841
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Bugzilla: 742841
+Upstream-status: Merged
+
+QED's metadata caching strategy allows two parallel requests to race for
+metadata lookup.  The first one to complete will populate the metadata
+cache and the second one will drop the data it just read in favor of the
+cached data.
+
+There is a use-after-free in qed_read_l2_table_cb() and
+qed_commit_l2_update() where l2_table->offset was used after the
+l2_table may have been freed due to a metadata lookup race.  Fix this by
+keeping the l2_offset in a local variable and not reaching into the
+possibly freed l2_table.
+
+Reported-by: Amit Shah <amit.shah@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+---
+ block/qed-table.c |    6 +++---
+ block/qed.c       |    4 ++--
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qed-table.c |    6 +++---
+ block/qed.c       |    4 ++--
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/block/qed-table.c b/block/qed-table.c
+index d96afa8..f31f9ff 100644
+--- a/block/qed-table.c
++++ b/block/qed-table.c
+@@ -222,21 +222,21 @@ static void qed_read_l2_table_cb(void *opaque, int ret)
+     QEDRequest *request = read_l2_table_cb->request;
+     BDRVQEDState *s = read_l2_table_cb->s;
+     CachedL2Table *l2_table = request->l2_table;
++    uint64_t l2_offset = read_l2_table_cb->l2_offset;
+ 
+     if (ret) {
+         /* can't trust loaded L2 table anymore */
+         qed_unref_l2_cache_entry(l2_table);
+         request->l2_table = NULL;
+     } else {
+-        l2_table->offset = read_l2_table_cb->l2_offset;
++        l2_table->offset = l2_offset;
+ 
+         qed_commit_l2_cache_entry(&s->l2_cache, l2_table);
+ 
+         /* This is guaranteed to succeed because we just committed the entry
+          * to the cache.
+          */
+-        request->l2_table = qed_find_l2_cache_entry(&s->l2_cache,
+-                                                    l2_table->offset);
++        request->l2_table = qed_find_l2_cache_entry(&s->l2_cache, l2_offset);
+         assert(request->l2_table != NULL);
+     }
+ 
+diff --git a/block/qed.c b/block/qed.c
+index 6e55a90..3f11233 100644
+--- a/block/qed.c
++++ b/block/qed.c
+@@ -899,14 +899,14 @@ static void qed_commit_l2_update(void *opaque, int ret)
+     QEDAIOCB *acb = opaque;
+     BDRVQEDState *s = acb_to_s(acb);
+     CachedL2Table *l2_table = acb->request.l2_table;
++    uint64_t l2_offset = l2_table->offset;
+ 
+     qed_commit_l2_cache_entry(&s->l2_cache, l2_table);
+ 
+     /* This is guaranteed to succeed because we just committed the entry to the
+      * cache.
+      */
+-    acb->request.l2_table = qed_find_l2_cache_entry(&s->l2_cache,
+-                                                    l2_table->offset);
++    acb->request.l2_table = qed_find_l2_cache_entry(&s->l2_cache, l2_offset);
+     assert(acb->request.l2_table != NULL);
+ 
+     qed_aio_next_io(opaque, ret);
+-- 
+1.7.7.6
+

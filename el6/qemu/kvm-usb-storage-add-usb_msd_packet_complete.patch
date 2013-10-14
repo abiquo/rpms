@@ -1,0 +1,98 @@
+From 9317db2ec87d3ab1633173be4c27952998b88eb7 Mon Sep 17 00:00:00 2001
+Message-Id: <9317db2ec87d3ab1633173be4c27952998b88eb7.1346940159.git.minovotn@redhat.com>
+In-Reply-To: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+References: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Thu, 16 Aug 2012 11:39:14 +0200
+Subject: [PATCH 12/18] usb-storage: add usb_msd_packet_complete()
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1345117160-21046-13-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40933
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 12/18] usb-storage: add usb_msd_packet_complete()
+Bugzilla: 805172
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Factor out packet completion to a separate function which
+cares to get the MSDState->packet update right.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 1e6ed80b90e3d9632532b4c496d26b0d101ced6b)
+
+Conflicts:
+
+	hw/usb-msd.c
+---
+ hw/usb-msd.c |   28 ++++++++++++++++------------
+ 1 files changed, 16 insertions(+), 12 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-msd.c | 28 ++++++++++++++++------------
+ 1 file changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/hw/usb-msd.c b/hw/usb-msd.c
+index 7fd12d5..2f7316e 100644
+--- a/hw/usb-msd.c
++++ b/hw/usb-msd.c
+@@ -208,6 +208,18 @@ static void usb_msd_send_status(MSDState *s, USBPacket *p)
+     memset(&s->csw, 0, sizeof(s->csw));
+ }
+ 
++static void usb_msd_packet_complete(MSDState *s)
++{
++    USBPacket *p = s->packet;
++
++    /* Set s->packet to NULL before calling usb_packet_complete
++       because another request may be issued before
++       usb_packet_complete returns.  */
++    DPRINTF("Packet complete %p\n", p);
++    s->packet = NULL;
++    usb_packet_complete(&s->dev, p);
++}
++
+ static void usb_msd_transfer_data(SCSIRequest *req, uint32_t len)
+ {
+     MSDState *s = DO_UPCAST(MSDState, dev.qdev, req->bus->qbus.parent);
+@@ -219,12 +231,7 @@ static void usb_msd_transfer_data(SCSIRequest *req, uint32_t len)
+     if (p) {
+         usb_msd_copy_data(s);
+         if (s->packet && s->usb_len == 0) {
+-            /* Set s->packet to NULL before calling usb_packet_complete
+-               because another request may be issued before
+-               usb_packet_complete returns.  */
+-            DPRINTF("Packet complete %p\n", p);
+-            s->packet = NULL;
+-            usb_packet_complete(&s->dev, p);
++            usb_msd_packet_complete(s);
+         }
+     }
+ }
+@@ -262,8 +269,7 @@ static void usb_msd_command_complete(SCSIRequest *req, uint32_t status, int32_t
+                 s->mode = USB_MSDM_CSW;
+             }
+         }
+-        s->packet = NULL;
+-        usb_packet_complete(&s->dev, p);
++        usb_msd_packet_complete(s);
+     } else if (s->data_len == 0) {
+         s->mode = USB_MSDM_CSW;
+     }
+@@ -293,10 +299,8 @@ static void usb_msd_handle_reset(USBDevice *dev)
+     assert(s->req == NULL);
+ 
+     if (s->packet) {
+-        USBPacket *p = s->packet;
+-        s->packet = NULL;
+-        p->len = USB_RET_STALL;
+-        usb_packet_complete(dev, p);
++        s->packet->len = USB_RET_STALL;
++        usb_msd_packet_complete(s);
+     }
+ 
+     s->mode = USB_MSDM_CBW;
+-- 
+1.7.11.4
+

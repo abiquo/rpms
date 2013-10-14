@@ -1,0 +1,107 @@
+From ebe208ff027371e43ebcd24c76039e9228b221df Mon Sep 17 00:00:00 2001
+Message-Id: <ebe208ff027371e43ebcd24c76039e9228b221df.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:43 +0200
+Subject: [PATCH 30/35] qerror: Error types for block-commit
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <018ac112d4281caf7d319b1cbfaf2c61d6fa9acb.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43288
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 30/35] qerror: Error types for block-commit
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Upstream, block-commit uses the new error_setg() for most error
+messages.  Implement these error types in the older qerror.[ch]
+error message format.
+
+To maintain consistency upstream, make all of these error class
+types 'GenericError'.  Note, this has a bit of hackery to make
+sure they are each unique (noted inline via comments in qerror.h)
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ qerror.c | 16 ++++++++++++++++
+ qerror.h | 15 +++++++++++++++
+ 2 files changed, 31 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qerror.c | 16 ++++++++++++++++
+ qerror.h | 15 +++++++++++++++
+ 2 files changed, 31 insertions(+)
+
+diff --git a/qerror.c b/qerror.c
+index ae13998..407263c 100644
+--- a/qerror.c
++++ b/qerror.c
+@@ -53,6 +53,10 @@ static const QErrorStringTable qerror_table[] = {
+         .desc      = "Base '%(base)' not found",
+     },
+     {
++        .error_fmt = QERR_BASE_NOT_REACHABLE,
++        .desc      = "Base '%(base)' not reachable from top '%(top)'",
++    },
++    {
+         .error_fmt = QERR_BUS_NOT_FOUND,
+         .desc      = "Bus '%(bus)' not found",
+     },
+@@ -238,6 +242,18 @@ static const QErrorStringTable qerror_table[] = {
+         .desc      = "Too many open files",
+     },
+     {
++        .error_fmt = QERR_TOP_AND_BASE_IDENTICAL,
++        .desc      = "Invalid files for merge: top and base are the same",
++    },
++    {
++        .error_fmt = QERR_TOP_IS_ACTIVE,
++        .desc      = "Top image as the active layer is currently unsupported",
++    },
++    {
++        .error_fmt = QERR_TOP_NOT_FOUND,
++        .desc      = "Top '%(top)' not found",
++    },
++    {
+         .error_fmt = QERR_UNDEFINED_ERROR,
+         .desc      = "An undefined error has ocurred",
+     },
+diff --git a/qerror.h b/qerror.h
+index a12da27..ae7b5a5 100644
+--- a/qerror.h
++++ b/qerror.h
+@@ -57,6 +57,10 @@ QError *qobject_to_qerror(const QObject *obj);
+ 
+ #define QERR_BASE_NOT_FOUND \
+     "{ 'class': 'BaseNotFound', 'data': { 'base': %s } }"
++
++#define QERR_BASE_NOT_REACHABLE \
++    "{ 'class': 'GenericError', 'data': { 'base': %s, 'top': %s } }"
++
+ #define QERR_BUS_NOT_FOUND \
+     "{ 'class': 'BusNotFound', 'data': { 'bus': %s } }"
+ 
+@@ -199,6 +203,17 @@ QError *qobject_to_qerror(const QObject *obj);
+ #define QERR_TOO_MANY_FILES \
+     "{ 'class': 'TooManyFiles', 'data': {} }"
+ 
++#define QERR_TOP_AND_BASE_IDENTICAL \
++    "{ 'class': 'GenericError', 'data': {} }"
++
++/* Note: the extra space after the '}' and before the '"' is intentional
++ *       so that it is different from QERR_TOP_AND_BASE_IDENTICAL */
++#define QERR_TOP_IS_ACTIVE \
++    "{ 'class': 'GenericError', 'data': {} } "
++
++#define QERR_TOP_NOT_FOUND \
++    "{ 'class': 'GenericError', 'data': { 'top': %s } }"
++
+ #define QERR_UNDEFINED_ERROR \
+     "{ 'class': 'UndefinedError', 'data': {} }"
+ 
+-- 
+1.7.11.7
+

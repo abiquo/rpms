@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-core
-Version: 	2.4.0
-Release: 	2%{?dist}
+Version: 	2.6.0
+Release: 	5%{?dist}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -71,6 +71,16 @@ fi
 %config %{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %changelog
+* Thu Jul 04 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-5
+- Added Catalina opts for slash decoder.
+
+* Mon Jun 17 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-4
+- Init order decreased.
+
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-3
+- Bumped version to 2.6.0. 
+- Tomcat version upgraded to 6.0.37
+
 * Mon Mar 25 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-2
 - New properties in abiquo-tomcat.jar
 

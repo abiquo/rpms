@@ -1,0 +1,60 @@
+From a1e1c7af53ad1c830e49899f4f83d3764fe5984d Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:16 +0100
+Subject: [PATCH 060/109] scsi-generic: check ioctl statuses when SG_IO
+ succeeds
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-60-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37539
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 059/102] scsi-generic: check ioctl statuses when SG_IO succeeds
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+A succeeding ioctl does not imply that the SCSI command succeeded.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from fe0ed71279eb442b920f0080c763438dbaa09f74)
+---
+ hw/scsi-generic.c |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-generic.c |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index d4530f5..c17b68b 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -310,9 +310,9 @@ static int get_blocksize(BlockDriverState *bdrv)
+     io_header.timeout = 6000; /* XXX */
+ 
+     ret = bdrv_ioctl(bdrv, SG_IO, &io_header);
+-    if (ret < 0)
++    if (ret < 0 || io_header.driver_status || io_header.host_status) {
+         return -1;
+-
++    }
+     return (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+ }
+ 
+@@ -341,9 +341,9 @@ static int get_stream_blocksize(BlockDriverState *bdrv)
+     io_header.timeout = 6000; /* XXX */
+ 
+     ret = bdrv_ioctl(bdrv, SG_IO, &io_header);
+-    if (ret < 0)
++    if (ret < 0 || io_header.driver_status || io_header.host_status) {
+         return -1;
+-
++    }
+     return (buf[9] << 16) | (buf[10] << 8) | buf[11];
+ }
+ 
+-- 
+1.7.7.6
+

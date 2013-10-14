@@ -1,0 +1,55 @@
+From 9601c5faa35c1d341f6b28d0c21e48c48b7f98ed Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:35 -0300
+Subject: [RHEL6 qemu-kvm PATCH 15/21] QMP: Fix default response regression
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <13da26109aa59e83eba3966722aedea7b0fbed21.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38641
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 15/21] QMP: Fix default response regression
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+Commit 030db6e89d dropped do_info() usage from QMP and introduced
+qmp_call_query_cmd(). However, the new function doesn't emit QMP's
+default OK response when the handler doesn't return data.
+
+Fix that by also calling monitor_protocol_emitter() when
+ret_data == NULL, so that the default response is emitted.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit c01e68853148764d32c3a27ab4b39cb553c567fc)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ monitor.c |    6 ++----
+ 1 files changed, 2 insertions(+), 4 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ monitor.c |    6 ++----
+ 1 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index 7672c2b..7cd84e9 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -4702,10 +4702,8 @@ static void qmp_call_query_cmd(Monitor *mon, const mon_cmd_t *cmd)
+         }
+     } else {
+         cmd->mhandler.info_new(mon, &ret_data);
+-        if (ret_data) {
+-            monitor_protocol_emitter(mon, ret_data);
+-            qobject_decref(ret_data);
+-        }
++        monitor_protocol_emitter(mon, ret_data);
++        qobject_decref(ret_data);
+     }
+ }
+ 
+-- 
+1.7.3.2
+

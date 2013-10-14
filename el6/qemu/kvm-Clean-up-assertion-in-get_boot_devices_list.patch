@@ -1,0 +1,50 @@
+From 3ee7adee815063ac974745d4aea5541c4b692662 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:27 +0100
+Subject: [PATCH 33/52] Clean up assertion in get_boot_devices_list()
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-34-git-send-email-armbru@redhat.com>
+Patchwork-id: 36593
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 33/52] Clean up assertion in get_boot_devices_list()
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+g_strdup() can't fail, remove assertion.  Assert its argument can't be
+null, because that's not obvious (add_boot_device_path() ensures it).
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 1bf6ccd372aeb8e1a36da35fa15cf24e42f7e0b7)
+
+Conflicts:
+
+	vl.c
+---
+ vl.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vl.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/vl.c b/vl.c
+index 176fb6c..0e91a41 100644
+--- a/vl.c
++++ b/vl.c
+@@ -2332,8 +2332,8 @@ char *get_boot_devices_list(uint32_t *size)
+         } else if (devpath) {
+             bootpath = devpath;
+         } else {
++            assert(i->suffix);
+             bootpath = qemu_strdup(i->suffix);
+-            assert(bootpath);
+         }
+ 
+         if (total) {
+-- 
+1.7.7.5
+

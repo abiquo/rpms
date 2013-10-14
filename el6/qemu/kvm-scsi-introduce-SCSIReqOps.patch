@@ -1,0 +1,195 @@
+From 7be4c7f7e2e0cbfae34f19417804cabdfd71a2d8 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:22 +0100
+Subject: [PATCH 006/109] scsi: introduce SCSIReqOps
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-6-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37485
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 005/102] scsi: introduce SCSIReqOps
+Bugzilla: 782029
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+This will let allow requests to be dispatched through different callbacks,
+either common or per-device.
+
+This patch adjusts the API, the next one will move members to SCSIReqOps.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from 8dbd4574882cade8261c2b6225df68a65345c75c)
+---
+ hw/scsi-bus.c     |    5 +++--
+ hw/scsi-disk.c    |   30 +++++++++++++++++-------------
+ hw/scsi-generic.c |   22 +++++++++++++---------
+ hw/scsi.h         |    8 +++++++-
+ 4 files changed, 40 insertions(+), 25 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c     |    5 +++--
+ hw/scsi-disk.c    |   30 +++++++++++++++++-------------
+ hw/scsi-generic.c |   22 +++++++++++++---------
+ hw/scsi.h         |    8 +++++++-
+ 4 files changed, 40 insertions(+), 25 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 7fda82e..5dbfab0 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -133,12 +133,12 @@ int scsi_bus_legacy_handle_cmdline(SCSIBus *bus)
+     return res;
+ }
+ 
+-SCSIRequest *scsi_req_alloc(size_t size, SCSIDevice *d, uint32_t tag,
++SCSIRequest *scsi_req_alloc(SCSIReqOps *reqops, SCSIDevice *d, uint32_t tag,
+                             uint32_t lun, void *hba_private)
+ {
+     SCSIRequest *req;
+ 
+-    req = qemu_mallocz(size);
++    req = qemu_mallocz(reqops->size);
+     req->refcount = 1;
+     req->bus = scsi_bus_from_device(d);
+     req->dev = d;
+@@ -147,6 +147,7 @@ SCSIRequest *scsi_req_alloc(size_t size, SCSIDevice *d, uint32_t tag,
+     req->hba_private = hba_private;
+     req->status = -1;
+     req->sense_len = 0;
++    req->ops = reqops;
+     trace_scsi_req_alloc(req->dev->id, req->lun, req->tag);
+     return req;
+ }
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index bc698d7..364704e 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -79,19 +79,6 @@ struct SCSIDiskState
+ static int scsi_handle_rw_error(SCSIDiskReq *r, int error, int type);
+ static int scsi_disk_emulate_command(SCSIDiskReq *r, uint8_t *outbuf);
+ 
+-static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag,
+-                                     uint32_t lun, void *hba_private)
+-{
+-    SCSIDiskState *s = DO_UPCAST(SCSIDiskState, qdev, d);
+-    SCSIRequest *req;
+-    SCSIDiskReq *r;
+-
+-    req = scsi_req_alloc(sizeof(SCSIDiskReq), &s->qdev, tag, lun, hba_private);
+-    r = DO_UPCAST(SCSIDiskReq, req, req);
+-    r->iov.iov_base = qemu_blockalign(s->bs, SCSI_DMA_BUF_SIZE);
+-    return req;
+-}
+-
+ static void scsi_free_request(SCSIRequest *req)
+ {
+     SCSIDiskReq *r = DO_UPCAST(SCSIDiskReq, req, req);
+@@ -1330,6 +1317,23 @@ static int scsi_disk_initfn(SCSIDevice *dev)
+     return scsi_initfn(dev, scsi_type);
+ }
+ 
++static SCSIReqOps scsi_disk_reqops = {
++    .size         = sizeof(SCSIDiskReq),
++};
++
++static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag,
++                                     uint32_t lun, void *hba_private)
++{
++    SCSIDiskState *s = DO_UPCAST(SCSIDiskState, qdev, d);
++    SCSIRequest *req;
++    SCSIDiskReq *r;
++
++    req = scsi_req_alloc(&scsi_disk_reqops, &s->qdev, tag, lun, hba_private);
++    r = DO_UPCAST(SCSIDiskReq, req, req);
++    r->iov.iov_base = qemu_blockalign(s->bs, SCSI_DMA_BUF_SIZE);
++    return req;
++}
++
+ #define DEFINE_SCSI_DISK_PROPERTIES()                           \
+     DEFINE_BLOCK_PROPERTIES(SCSIDiskState, qdev.conf),          \
+     DEFINE_PROP_STRING("ver",  SCSIDiskState, version),         \
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index 210f3e5..095ac22 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -63,15 +63,6 @@ struct SCSIGenericState
+     int lun;
+ };
+ 
+-static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag, uint32_t lun,
+-                                     void *hba_private)
+-{
+-    SCSIRequest *req;
+-
+-    req = scsi_req_alloc(sizeof(SCSIGenericReq), d, tag, lun, hba_private);
+-    return req;
+-}
+-
+ static void scsi_free_request(SCSIRequest *req)
+ {
+     SCSIGenericReq *r = DO_UPCAST(SCSIGenericReq, req, req);
+@@ -497,6 +488,19 @@ static int scsi_generic_initfn(SCSIDevice *dev)
+     return 0;
+ }
+ 
++static SCSIReqOps scsi_generic_req_ops = {
++    .size         = sizeof(SCSIGenericReq),
++};
++
++static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag, uint32_t lun,
++                                     void *hba_private)
++{
++    SCSIRequest *req;
++
++    req = scsi_req_alloc(&scsi_generic_req_ops, d, tag, lun, hba_private);
++    return req;
++}
++
+ static SCSIDeviceInfo scsi_generic_info = {
+     .qdev.name    = "scsi-generic",
+     .qdev.desc    = "pass through generic scsi device (/dev/sg*)",
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 94a2eab..01f0e55 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -14,6 +14,7 @@ typedef struct SCSIBusOps SCSIBusOps;
+ typedef struct SCSIDevice SCSIDevice;
+ typedef struct SCSIDeviceInfo SCSIDeviceInfo;
+ typedef struct SCSIRequest SCSIRequest;
++typedef struct SCSIReqOps SCSIReqOps;
+ 
+ enum SCSIXferMode {
+     SCSI_XFER_NONE,      /*  TEST_UNIT_READY, ...            */
+@@ -32,6 +33,7 @@ typedef struct SCSISense {
+ struct SCSIRequest {
+     SCSIBus           *bus;
+     SCSIDevice        *dev;
++    SCSIReqOps        *ops;
+     uint32_t          refcount;
+     uint32_t          tag;
+     uint32_t          lun;
+@@ -69,6 +71,10 @@ int cdrom_read_toc(int nb_sectors, uint8_t *buf, int msf, int start_track);
+ int cdrom_read_toc_raw(int nb_sectors, uint8_t *buf, int msf, int session_num);
+ 
+ /* scsi-bus.c */
++struct SCSIReqOps {
++    size_t size;
++};
++
+ typedef int (*scsi_qdev_initfn)(SCSIDevice *dev);
+ struct SCSIDeviceInfo {
+     DeviceInfo qdev;
+@@ -148,7 +154,7 @@ extern const struct SCSISense sense_code_LUN_FAILURE;
+ 
+ int scsi_sense_valid(SCSISense sense);
+ 
+-SCSIRequest *scsi_req_alloc(size_t size, SCSIDevice *d, uint32_t tag,
++SCSIRequest *scsi_req_alloc(SCSIReqOps *reqops, SCSIDevice *d, uint32_t tag,
+                             uint32_t lun, void *hba_private);
+ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
+                           void *hba_private);
+-- 
+1.7.7.6
+

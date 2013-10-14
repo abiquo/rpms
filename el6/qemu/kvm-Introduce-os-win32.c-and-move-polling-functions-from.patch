@@ -1,0 +1,253 @@
+From 855da2fdd9834791946e61fd06d5bc1ab277089c Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@redhat.com>
+Date: Wed, 7 Mar 2012 11:35:38 -0500
+Subject: [PATCH 78/98] Introduce os-win32.c and move polling functions from
+ vl.c
+
+This introduces os-win32.c. It is meant to carry win32 specific
+functions thata are not relevant for all of QEMU as well as win32
+versions of various pieces like signal handling etc.
+
+Move win32 polling handler helper functions from vl.c to os-win32.c
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@redhat.com>
+Acked-by: Juan Quintela <quintela@redhat.com>
+Acked-by: Richard Henderson <rth@redhat.com>
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 19113504dea4504f69d414f72f8a18d3c1a941d5)
+
+Conflicts:
+
+	Makefile.objs
+	vl.c
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.objs |    1 +
+ os-win32.c    |  111 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ vl.c          |   79 ----------------------------------------
+ 3 files changed, 112 insertions(+), 79 deletions(-)
+ create mode 100644 os-win32.c
+
+diff --git a/Makefile.objs b/Makefile.objs
+index 60d083b..7f0d8e9 100644
+--- a/Makefile.objs
++++ b/Makefile.objs
+@@ -162,6 +162,7 @@ hw-obj-y += watchdog.o
+ hw-obj-y += usb-ehci.o
+ hw-obj-$(CONFIG_ECC) += ecc.o
+ hw-obj-$(CONFIG_NAND) += nand.o
++hw-obj-$(CONFIG_WIN32) += os-win32.o
+ 
+ hw-obj-$(CONFIG_M48T59) += m48t59.o
+ hw-obj-$(CONFIG_ESCC) += escc.o
+diff --git a/os-win32.c b/os-win32.c
+new file mode 100644
+index 0000000..5a464cc
+--- /dev/null
++++ b/os-win32.c
+@@ -0,0 +1,111 @@
++/*
++ * os-win32.c
++ *
++ * Copyright (c) 2003-2008 Fabrice Bellard
++ * Copyright (c) 2010 Red Hat, Inc.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++#include <windows.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <signal.h>
++#include <time.h>
++#include <errno.h>
++#include <sys/time.h>
++#include "config-host.h"
++#include "sysemu.h"
++
++/***********************************************************/
++/* Polling handling */
++
++typedef struct PollingEntry {
++    PollingFunc *func;
++    void *opaque;
++    struct PollingEntry *next;
++} PollingEntry;
++
++static PollingEntry *first_polling_entry;
++
++int qemu_add_polling_cb(PollingFunc *func, void *opaque)
++{
++    PollingEntry **ppe, *pe;
++    pe = qemu_mallocz(sizeof(PollingEntry));
++    pe->func = func;
++    pe->opaque = opaque;
++    for(ppe = &first_polling_entry; *ppe != NULL; ppe = &(*ppe)->next);
++    *ppe = pe;
++    return 0;
++}
++
++void qemu_del_polling_cb(PollingFunc *func, void *opaque)
++{
++    PollingEntry **ppe, *pe;
++    for(ppe = &first_polling_entry; *ppe != NULL; ppe = &(*ppe)->next) {
++        pe = *ppe;
++        if (pe->func == func && pe->opaque == opaque) {
++            *ppe = pe->next;
++            qemu_free(pe);
++            break;
++        }
++    }
++}
++
++/***********************************************************/
++/* Wait objects support */
++typedef struct WaitObjects {
++    int num;
++    HANDLE events[MAXIMUM_WAIT_OBJECTS + 1];
++    WaitObjectFunc *func[MAXIMUM_WAIT_OBJECTS + 1];
++    void *opaque[MAXIMUM_WAIT_OBJECTS + 1];
++} WaitObjects;
++
++static WaitObjects wait_objects = {0};
++
++int qemu_add_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
++{
++    WaitObjects *w = &wait_objects;
++
++    if (w->num >= MAXIMUM_WAIT_OBJECTS)
++        return -1;
++    w->events[w->num] = handle;
++    w->func[w->num] = func;
++    w->opaque[w->num] = opaque;
++    w->num++;
++    return 0;
++}
++
++void qemu_del_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
++{
++    int i, found;
++    WaitObjects *w = &wait_objects;
++
++    found = 0;
++    for (i = 0; i < w->num; i++) {
++        if (w->events[i] == handle)
++            found = 1;
++        if (found) {
++            w->events[i] = w->events[i + 1];
++            w->func[i] = w->func[i + 1];
++            w->opaque[i] = w->opaque[i + 1];
++        }
++    }
++    if (found)
++        w->num--;
++}
+diff --git a/vl.c b/vl.c
+index 5206005..68ca4eb 100644
+--- a/vl.c
++++ b/vl.c
+@@ -2741,85 +2741,6 @@ int qemu_set_fd_handler(int fd,
+     return qemu_set_fd_handler2(fd, NULL, fd_read, fd_write, opaque);
+ }
+ 
+-#ifdef _WIN32
+-/***********************************************************/
+-/* Polling handling */
+-
+-typedef struct PollingEntry {
+-    PollingFunc *func;
+-    void *opaque;
+-    struct PollingEntry *next;
+-} PollingEntry;
+-
+-static PollingEntry *first_polling_entry;
+-
+-int qemu_add_polling_cb(PollingFunc *func, void *opaque)
+-{
+-    PollingEntry **ppe, *pe;
+-    pe = qemu_mallocz(sizeof(PollingEntry));
+-    pe->func = func;
+-    pe->opaque = opaque;
+-    for(ppe = &first_polling_entry; *ppe != NULL; ppe = &(*ppe)->next);
+-    *ppe = pe;
+-    return 0;
+-}
+-
+-void qemu_del_polling_cb(PollingFunc *func, void *opaque)
+-{
+-    PollingEntry **ppe, *pe;
+-    for(ppe = &first_polling_entry; *ppe != NULL; ppe = &(*ppe)->next) {
+-        pe = *ppe;
+-        if (pe->func == func && pe->opaque == opaque) {
+-            *ppe = pe->next;
+-            qemu_free(pe);
+-            break;
+-        }
+-    }
+-}
+-
+-/***********************************************************/
+-/* Wait objects support */
+-typedef struct WaitObjects {
+-    int num;
+-    HANDLE events[MAXIMUM_WAIT_OBJECTS + 1];
+-    WaitObjectFunc *func[MAXIMUM_WAIT_OBJECTS + 1];
+-    void *opaque[MAXIMUM_WAIT_OBJECTS + 1];
+-} WaitObjects;
+-
+-static WaitObjects wait_objects = {0};
+-
+-int qemu_add_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
+-{
+-    WaitObjects *w = &wait_objects;
+-
+-    if (w->num >= MAXIMUM_WAIT_OBJECTS)
+-        return -1;
+-    w->events[w->num] = handle;
+-    w->func[w->num] = func;
+-    w->opaque[w->num] = opaque;
+-    w->num++;
+-    return 0;
+-}
+-
+-void qemu_del_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
+-{
+-    int i, found;
+-    WaitObjects *w = &wait_objects;
+-
+-    found = 0;
+-    for (i = 0; i < w->num; i++) {
+-        if (w->events[i] == handle)
+-            found = 1;
+-        if (found) {
+-            w->events[i] = w->events[i + 1];
+-            w->func[i] = w->func[i + 1];
+-            w->opaque[i] = w->opaque[i + 1];
+-        }
+-    }
+-    if (found)
+-        w->num--;
+-}
+-#endif
+ 
+ /***********************************************************/
+ /* ram save/restore */
+-- 
+1.7.7.6
+

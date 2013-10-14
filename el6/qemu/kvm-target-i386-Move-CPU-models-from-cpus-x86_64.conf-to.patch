@@ -1,0 +1,489 @@
+From a3c3c2f5f5ef66e581c2c26d29f357f7ecad816e Mon Sep 17 00:00:00 2001
+Message-Id: <a3c3c2f5f5ef66e581c2c26d29f357f7ecad816e.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Fri, 28 Sep 2012 16:50:09 +0200
+Subject: [PATCH 05/34] target-i386: Move CPU models from cpus-x86_64.conf to
+ C
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1348851023-31907-5-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 42512
+O-Subject: [RHEL6 qemu-kvm PATCH 04/18] target-i386: Move CPU models from cpus-x86_64.conf to C
+Bugzilla: 833152
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 833152
+Upstream status: commit 3eca46420c9f727ea5c50086d50a610f939affe5
+
+Those models are maintained by QEMU and may require compatibility code
+to be added when making some changes. Keeping the data in the C source
+code should make it simpler to handle those details.
+
+Of course, the models add to C were regenerated from the RHEL6 config
+file, not taken from the upstream commit. The script I have used to
+convert the config file to C declarations is the same I used when I
+implemented the change upstream. The script can be seen at:
+  https://gist.github.com/3229602
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ sysconfigs/target/cpu-x86_64.conf | 156 +---------------------
+ target-i386/cpuid.c               | 270 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 271 insertions(+), 155 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ sysconfigs/target/cpu-x86_64.conf | 156 +---------------------
+ target-i386/cpuid.c               | 270 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 271 insertions(+), 155 deletions(-)
+
+diff --git a/sysconfigs/target/cpu-x86_64.conf b/sysconfigs/target/cpu-x86_64.conf
+index 123a1a2..3902189 100644
+--- a/sysconfigs/target/cpu-x86_64.conf
++++ b/sysconfigs/target/cpu-x86_64.conf
+@@ -1,155 +1 @@
+-# x86 CPU MODELS
+-
+-[cpudef]
+-   name = "cpu64-rhel6"
+-   level = "4"
+-   vendor = "AuthenticAMD"
+-   family = "6"
+-   model = "13"
+-   stepping = "3"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "cx16 sse3"
+-   extfeature_edx = "lm fxsr mmx nx pat cmov pge syscall apic cx8 mce pae msr tsc pse de fpu"
+-   extfeature_ecx = "sse4a abm svm lahf_lm"
+-   xlevel = "0x8000000A"
+-   model_id = "QEMU Virtual CPU version (cpu64-rhel6)"
+-
+-[cpudef]
+-   name = "cpu64-rhel5"
+-   level = "4"
+-   vendor = "AuthenticAMD"
+-   family = "6"
+-   model = "6"
+-   stepping = "3"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "sse3"
+-   extfeature_edx = "3dnow 3dnowext lm fxsr mmx nx pat cmov pge syscall apic cx8 mce pae msr tsc pse de fpu"
+-   extfeature_ecx = "svm"
+-   xlevel = "0x8000000A"
+-   model_id = "QEMU Virtual CPU version (cpu64-rhel5)"
+-
+-[cpudef]
+-   name = "Conroe"
+-   level = "2"
+-   vendor = "GenuineIntel"
+-   family = "6"
+-   model = "15"
+-   stepping = "3"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "x2apic ssse3 sse3"
+-   extfeature_edx = "i64 syscall xd"
+-   extfeature_ecx = "lahf_lm"
+-   xlevel = "0x8000000A"
+-   model_id = "Intel Celeron_4x0 (Conroe/Merom Class Core 2)"
+-
+-[cpudef]
+-   name = "Penryn"
+-   level = "2"
+-   vendor = "GenuineIntel"
+-   family = "6"
+-   model = "23"
+-   stepping = "3"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "x2apic sse4.1 cx16 ssse3 sse3"
+-   extfeature_edx = "i64 syscall xd"
+-   extfeature_ecx = "lahf_lm"
+-   xlevel = "0x8000000A"
+-   model_id = "Intel Core 2 Duo P9xxx (Penryn Class Core 2)"
+-
+-[cpudef]
+-   name = "Nehalem"
+-   level = "2"
+-   vendor = "GenuineIntel"
+-   family = "6"
+-   model = "26"
+-   stepping = "3"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "popcnt x2apic sse4.2 sse4.1 cx16 ssse3 sse3"
+-   extfeature_edx = "i64 syscall xd"
+-   extfeature_ecx = "lahf_lm"
+-   xlevel = "0x8000000A"
+-   model_id = "Intel Core i7 9xx (Nehalem Class Core i7)"
+-
+-[cpudef]
+-   name = "Westmere"
+-   level = "11"
+-   vendor = "GenuineIntel"
+-   family = "6"
+-   model = "44"
+-   stepping = "1"
+-   feature_edx = "sse2 sse fxsr mmx pat cmov pge sep apic cx8 mce pae msr tsc pse de fpu    mtrr clflush mca pse36"
+-   feature_ecx = "sse3 cx16 ssse3 sse4.1 sse4.2 x2apic popcnt aes"
+-   extfeature_edx = "fxsr mmx pat cmov pge apic cx8 mce pae msr tsc pse de fpu    lm syscall nx"
+-   extfeature_ecx = "lahf_lm"
+-   xlevel = "0x8000000A"
+-   model_id = "Westmere E56xx/L56xx/X56xx (Nehalem-C)"
+-
+-[cpudef]
+-   name = "SandyBridge"
+-   level = "0xd"
+-   vendor = "GenuineIntel"
+-   family = "6"
+-   model = "42"
+-   stepping = "1"
+-   feature_edx = " sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "avx xsave aes popcnt x2apic sse4.2 sse4.1 cx16 ssse3 pclmulqdq sse3"
+-   extfeature_edx = "i64 nx syscall "
+-   extfeature_ecx = "lahf_lm"
+-   xlevel = "0x8000000A"
+-   model_id = "Intel Xeon E312xx (Sandy Bridge)"
+-
+-[cpudef]
+-   name = "Opteron_G1"
+-   level = "5"
+-   vendor = "AuthenticAMD"
+-   family = "15"
+-   model = "6"
+-   stepping = "1"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "x2apic sse3"	# x2apic kvm emulated
+-   extfeature_edx = "lm fxsr mmx nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de fpu"
+-   extfeature_ecx = " "
+-   xlevel = "0x80000008"
+-   model_id = "AMD Opteron 240 (Gen 1 Class Opteron)"
+-
+-[cpudef]
+-   name = "Opteron_G2"
+-   level = "5"
+-   vendor = "AuthenticAMD"
+-   family = "15"
+-   model = "6"
+-   stepping = "1"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "x2apic cx16 sse3"	# x2apic kvm emulated
+-   extfeature_edx = "lm fxsr mmx nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de fpu"
+-   extfeature_ecx = "svm lahf_lm"
+-   xlevel = "0x80000008"
+-   model_id = "AMD Opteron 22xx (Gen 2 Class Opteron)"
+-
+-[cpudef]
+-   name = "Opteron_G3"
+-   level = "5"
+-   vendor = "AuthenticAMD"
+-   family = "15"
+-   model = "6"
+-   stepping = "1"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "popcnt x2apic cx16 monitor sse3"	# x2apic kvm emulated
+-   extfeature_edx = "lm fxsr mmx nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de fpu"
+-   extfeature_ecx = "misalignsse sse4a abm svm lahf_lm"
+-   xlevel = "0x80000008"
+-   model_id = "AMD Opteron 23xx (Gen 3 Class Opteron)"
+-
+-[cpudef]
+-   name = "Opteron_G4"
+-   level = "0xd"
+-   vendor = "AuthenticAMD"
+-   family = "21"
+-   model = "1"
+-   stepping = "2"
+-   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
+-   feature_ecx = "avx xsave aes popcnt sse4.2 sse4.1 cx16 ssse3 pclmulqdq sse3"
+-   extfeature_edx = "lm pdpe1gb fxsr mmx nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de fpu"
+-   extfeature_ecx = " fma4 xop 3dnowprefetch misalignsse sse4a abm svm lahf_lm"
+-   xlevel = "0x8000001A"
+-   model_id = "AMD Opteron 62xx class CPU"
++# The CPU models from this file are now built-in in the QEMU source code
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 6fbf4b3..359f631 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -413,6 +413,276 @@ static x86_def_t builtin_x86_defs[] = {
+         .xlevel = 0x8000000A,
+         .model_id = "Intel(R) Atom(TM) CPU N270   @ 1.60GHz",
+     },
++    {
++        .name = "cpu64-rhel6",
++        .level = 4,
++        .vendor1 = CPUID_VENDOR_AMD_1,
++        .vendor2 = CPUID_VENDOR_AMD_2,
++        .vendor3 = CPUID_VENDOR_AMD_3,
++        .family = 6,
++        .model = 13,
++        .stepping = 3,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_CX16 | CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_FXSR | CPUID_EXT2_MMX |
++             CPUID_EXT2_NX | CPUID_EXT2_PAT | CPUID_EXT2_CMOV | CPUID_EXT2_PGE |
++             CPUID_EXT2_SYSCALL | CPUID_EXT2_APIC | CPUID_EXT2_CX8 |
++             CPUID_EXT2_MCE | CPUID_EXT2_PAE | CPUID_EXT2_MSR | CPUID_EXT2_TSC |
++             CPUID_EXT2_PSE | CPUID_EXT2_DE | CPUID_EXT2_FPU,
++        .ext3_features = CPUID_EXT3_SSE4A | CPUID_EXT3_ABM | CPUID_EXT3_SVM |
++             CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x8000000A,
++        .model_id = "QEMU Virtual CPU version (cpu64-rhel6)",
++    },
++    {
++        .name = "cpu64-rhel5",
++        .level = 4,
++        .vendor1 = CPUID_VENDOR_AMD_1,
++        .vendor2 = CPUID_VENDOR_AMD_2,
++        .vendor3 = CPUID_VENDOR_AMD_3,
++        .family = 6,
++        .model = 6,
++        .stepping = 3,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_3DNOW | CPUID_EXT2_3DNOWEXT |
++             CPUID_EXT2_LM | CPUID_EXT2_FXSR | CPUID_EXT2_MMX | CPUID_EXT2_NX |
++             CPUID_EXT2_PAT | CPUID_EXT2_CMOV | CPUID_EXT2_PGE |
++             CPUID_EXT2_SYSCALL | CPUID_EXT2_APIC | CPUID_EXT2_CX8 |
++             CPUID_EXT2_MCE | CPUID_EXT2_PAE | CPUID_EXT2_MSR | CPUID_EXT2_TSC |
++             CPUID_EXT2_PSE | CPUID_EXT2_DE | CPUID_EXT2_FPU,
++        .ext3_features = CPUID_EXT3_SVM,
++        .xlevel = 0x8000000A,
++        .model_id = "QEMU Virtual CPU version (cpu64-rhel5)",
++    },
++    {
++        .name = "Conroe",
++        .level = 2,
++        .vendor1 = CPUID_VENDOR_INTEL_1,
++        .vendor2 = CPUID_VENDOR_INTEL_2,
++        .vendor3 = CPUID_VENDOR_INTEL_3,
++        .family = 6,
++        .model = 15,
++        .stepping = 3,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_X2APIC | CPUID_EXT_SSSE3 | CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_SYSCALL | CPUID_EXT2_NX,
++        .ext3_features = CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x8000000A,
++        .model_id = "Intel Celeron_4x0 (Conroe/Merom Class Core 2)",
++    },
++    {
++        .name = "Penryn",
++        .level = 2,
++        .vendor1 = CPUID_VENDOR_INTEL_1,
++        .vendor2 = CPUID_VENDOR_INTEL_2,
++        .vendor3 = CPUID_VENDOR_INTEL_3,
++        .family = 6,
++        .model = 23,
++        .stepping = 3,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_X2APIC | CPUID_EXT_SSE41 | CPUID_EXT_CX16 |
++             CPUID_EXT_SSSE3 | CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_SYSCALL | CPUID_EXT2_NX,
++        .ext3_features = CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x8000000A,
++        .model_id = "Intel Core 2 Duo P9xxx (Penryn Class Core 2)",
++    },
++    {
++        .name = "Nehalem",
++        .level = 2,
++        .vendor1 = CPUID_VENDOR_INTEL_1,
++        .vendor2 = CPUID_VENDOR_INTEL_2,
++        .vendor3 = CPUID_VENDOR_INTEL_3,
++        .family = 6,
++        .model = 26,
++        .stepping = 3,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_POPCNT | CPUID_EXT_X2APIC | CPUID_EXT_SSE42 |
++             CPUID_EXT_SSE41 | CPUID_EXT_CX16 | CPUID_EXT_SSSE3 |
++             CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_SYSCALL | CPUID_EXT2_NX,
++        .ext3_features = CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x8000000A,
++        .model_id = "Intel Core i7 9xx (Nehalem Class Core i7)",
++    },
++    {
++        .name = "Westmere",
++        .level = 11,
++        .vendor1 = CPUID_VENDOR_INTEL_1,
++        .vendor2 = CPUID_VENDOR_INTEL_2,
++        .vendor3 = CPUID_VENDOR_INTEL_3,
++        .family = 6,
++        .model = 44,
++        .stepping = 1,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_PAT | CPUID_CMOV | CPUID_PGE | CPUID_SEP | CPUID_APIC |
++             CPUID_CX8 | CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC |
++             CPUID_PSE | CPUID_DE | CPUID_FP87 | CPUID_MTRR | CPUID_CLFLUSH |
++             CPUID_MCA | CPUID_PSE36,
++        .ext_features = CPUID_EXT_SSE3 | CPUID_EXT_CX16 | CPUID_EXT_SSSE3 |
++             CPUID_EXT_SSE41 | CPUID_EXT_SSE42 | CPUID_EXT_X2APIC |
++             CPUID_EXT_POPCNT | CPUID_EXT_AES,
++        .ext2_features = CPUID_EXT2_FXSR | CPUID_EXT2_MMX | CPUID_EXT2_PAT |
++             CPUID_EXT2_CMOV | CPUID_EXT2_PGE | CPUID_EXT2_APIC |
++             CPUID_EXT2_CX8 | CPUID_EXT2_MCE | CPUID_EXT2_PAE | CPUID_EXT2_MSR |
++             CPUID_EXT2_TSC | CPUID_EXT2_PSE | CPUID_EXT2_DE | CPUID_EXT2_FPU |
++             CPUID_EXT2_LM | CPUID_EXT2_SYSCALL | CPUID_EXT2_NX,
++        .ext3_features = CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x8000000A,
++        .model_id = "Westmere E56xx/L56xx/X56xx (Nehalem-C)",
++    },
++    {
++        .name = "SandyBridge",
++        .level = 0xd,
++        .vendor1 = CPUID_VENDOR_INTEL_1,
++        .vendor2 = CPUID_VENDOR_INTEL_2,
++        .vendor3 = CPUID_VENDOR_INTEL_3,
++        .family = 6,
++        .model = 42,
++        .stepping = 1,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_AVX | CPUID_EXT_XSAVE | CPUID_EXT_AES |
++             CPUID_EXT_POPCNT | CPUID_EXT_X2APIC | CPUID_EXT_SSE42 |
++             CPUID_EXT_SSE41 | CPUID_EXT_CX16 | CPUID_EXT_SSSE3 |
++             CPUID_EXT_PCLMULQDQ | CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_NX | CPUID_EXT2_SYSCALL,
++        .ext3_features = CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x8000000A,
++        .model_id = "Intel Xeon E312xx (Sandy Bridge)",
++    },
++    {
++        .name = "Opteron_G1",
++        .level = 5,
++        .vendor1 = CPUID_VENDOR_AMD_1,
++        .vendor2 = CPUID_VENDOR_AMD_2,
++        .vendor3 = CPUID_VENDOR_AMD_3,
++        .family = 15,
++        .model = 6,
++        .stepping = 1,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_X2APIC | CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_FXSR | CPUID_EXT2_MMX |
++             CPUID_EXT2_NX | CPUID_EXT2_PSE36 | CPUID_EXT2_PAT |
++             CPUID_EXT2_CMOV | CPUID_EXT2_MCA | CPUID_EXT2_PGE |
++             CPUID_EXT2_MTRR | CPUID_EXT2_SYSCALL | CPUID_EXT2_APIC |
++             CPUID_EXT2_CX8 | CPUID_EXT2_MCE | CPUID_EXT2_PAE | CPUID_EXT2_MSR |
++             CPUID_EXT2_TSC | CPUID_EXT2_PSE | CPUID_EXT2_DE | CPUID_EXT2_FPU,
++        .xlevel = 0x80000008,
++        .model_id = "AMD Opteron 240 (Gen 1 Class Opteron)",
++    },
++    {
++        .name = "Opteron_G2",
++        .level = 5,
++        .vendor1 = CPUID_VENDOR_AMD_1,
++        .vendor2 = CPUID_VENDOR_AMD_2,
++        .vendor3 = CPUID_VENDOR_AMD_3,
++        .family = 15,
++        .model = 6,
++        .stepping = 1,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_X2APIC | CPUID_EXT_CX16 | CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_FXSR | CPUID_EXT2_MMX |
++             CPUID_EXT2_NX | CPUID_EXT2_PSE36 | CPUID_EXT2_PAT |
++             CPUID_EXT2_CMOV | CPUID_EXT2_MCA | CPUID_EXT2_PGE |
++             CPUID_EXT2_MTRR | CPUID_EXT2_SYSCALL | CPUID_EXT2_APIC |
++             CPUID_EXT2_CX8 | CPUID_EXT2_MCE | CPUID_EXT2_PAE | CPUID_EXT2_MSR |
++             CPUID_EXT2_TSC | CPUID_EXT2_PSE | CPUID_EXT2_DE | CPUID_EXT2_FPU,
++        .ext3_features = CPUID_EXT3_SVM | CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x80000008,
++        .model_id = "AMD Opteron 22xx (Gen 2 Class Opteron)",
++    },
++    {
++        .name = "Opteron_G3",
++        .level = 5,
++        .vendor1 = CPUID_VENDOR_AMD_1,
++        .vendor2 = CPUID_VENDOR_AMD_2,
++        .vendor3 = CPUID_VENDOR_AMD_3,
++        .family = 15,
++        .model = 6,
++        .stepping = 1,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_POPCNT | CPUID_EXT_X2APIC | CPUID_EXT_CX16 |
++             CPUID_EXT_MONITOR | CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_FXSR | CPUID_EXT2_MMX |
++             CPUID_EXT2_NX | CPUID_EXT2_PSE36 | CPUID_EXT2_PAT |
++             CPUID_EXT2_CMOV | CPUID_EXT2_MCA | CPUID_EXT2_PGE |
++             CPUID_EXT2_MTRR | CPUID_EXT2_SYSCALL | CPUID_EXT2_APIC |
++             CPUID_EXT2_CX8 | CPUID_EXT2_MCE | CPUID_EXT2_PAE | CPUID_EXT2_MSR |
++             CPUID_EXT2_TSC | CPUID_EXT2_PSE | CPUID_EXT2_DE | CPUID_EXT2_FPU,
++        .ext3_features = CPUID_EXT3_MISALIGNSSE | CPUID_EXT3_SSE4A |
++             CPUID_EXT3_ABM | CPUID_EXT3_SVM | CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x80000008,
++        .model_id = "AMD Opteron 23xx (Gen 3 Class Opteron)",
++    },
++    {
++        .name = "Opteron_G4",
++        .level = 0xd,
++        .vendor1 = CPUID_VENDOR_AMD_1,
++        .vendor2 = CPUID_VENDOR_AMD_2,
++        .vendor3 = CPUID_VENDOR_AMD_3,
++        .family = 21,
++        .model = 1,
++        .stepping = 2,
++        .features = CPUID_SSE2 | CPUID_SSE | CPUID_FXSR | CPUID_MMX |
++             CPUID_CLFLUSH | CPUID_PSE36 | CPUID_PAT | CPUID_CMOV | CPUID_MCA |
++             CPUID_PGE | CPUID_MTRR | CPUID_SEP | CPUID_APIC | CPUID_CX8 |
++             CPUID_MCE | CPUID_PAE | CPUID_MSR | CPUID_TSC | CPUID_PSE |
++             CPUID_DE | CPUID_FP87,
++        .ext_features = CPUID_EXT_AVX | CPUID_EXT_XSAVE | CPUID_EXT_AES |
++             CPUID_EXT_POPCNT | CPUID_EXT_SSE42 | CPUID_EXT_SSE41 |
++             CPUID_EXT_CX16 | CPUID_EXT_SSSE3 | CPUID_EXT_PCLMULQDQ |
++             CPUID_EXT_SSE3,
++        .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_PDPE1GB | CPUID_EXT2_FXSR |
++             CPUID_EXT2_MMX | CPUID_EXT2_NX | CPUID_EXT2_PSE36 |
++             CPUID_EXT2_PAT | CPUID_EXT2_CMOV | CPUID_EXT2_MCA |
++             CPUID_EXT2_PGE | CPUID_EXT2_MTRR | CPUID_EXT2_SYSCALL |
++             CPUID_EXT2_APIC | CPUID_EXT2_CX8 | CPUID_EXT2_MCE |
++             CPUID_EXT2_PAE | CPUID_EXT2_MSR | CPUID_EXT2_TSC | CPUID_EXT2_PSE |
++             CPUID_EXT2_DE | CPUID_EXT2_FPU,
++        .ext3_features = CPUID_EXT3_FMA4 | CPUID_EXT3_XOP |
++             CPUID_EXT3_3DNOWPREFETCH | CPUID_EXT3_MISALIGNSSE |
++             CPUID_EXT3_SSE4A | CPUID_EXT3_ABM | CPUID_EXT3_SVM |
++             CPUID_EXT3_LAHF_LM,
++        .xlevel = 0x8000001A,
++        .model_id = "AMD Opteron 62xx class CPU",
++    },
+ };
+ 
+ static int cpu_x86_fill_model_id(char *str)
+-- 
+1.7.11.4
+

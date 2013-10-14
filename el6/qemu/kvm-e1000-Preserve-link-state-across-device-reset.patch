@@ -1,0 +1,52 @@
+From bdb547a126b7bb4f57fb19f8ef2bda18a60812e2 Mon Sep 17 00:00:00 2001
+From: Xiao Wang <jasowang@redhat.com>
+Date: Fri, 10 Aug 2012 09:03:45 -0300
+Subject: [RHEL6 qemu-kvm PATCH 5/9] e1000: Preserve link state across device
+ reset
+
+RH-Author: Xiao Wang <jasowang@redhat.com>
+Message-id: <1344589429-3229-6-git-send-email-jasowang@redhat.com>
+Patchwork-id: 40684
+O-Subject: [RHEL6.4 qemu-kvm 5/9] e1000: Preserve link state across device reset
+Bugzilla: 607510 819915
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Vlad Yasevich <vyasevic@redhat.com>
+
+From: Jan Kiszka <jan.kiszka@siemens.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=607510
+
+A device reset does not affect the link state, only set_link does.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit b1927cf1ae6161942dcca115f20a3e6e7b0a6cc3)
+---
+ hw/e1000.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/e1000.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/hw/e1000.c b/hw/e1000.c
+index ff92298..e405210 100644
+--- a/hw/e1000.c
++++ b/hw/e1000.c
+@@ -1126,6 +1126,11 @@ static void e1000_reset(void *opaque)
+     memmove(d->mac_reg, mac_reg_init, sizeof mac_reg_init);
+     d->rxbuf_min_shift = 1;
+     memset(&d->tx, 0, sizeof d->tx);
++
++    if (d->nic->nc.link_down) {
++        d->mac_reg[STATUS] &= ~E1000_STATUS_LU;
++        d->phy_reg[PHY_STATUS] &= ~MII_SR_LINK_STATUS;
++    }
+ }
+ 
+ static NetClientInfo net_e1000_info = {
+-- 
+1.7.11.2
+

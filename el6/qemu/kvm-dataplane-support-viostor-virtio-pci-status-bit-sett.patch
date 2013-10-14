@@ -1,0 +1,62 @@
+From 173bf5b834373c53ffbe3d157b4b35f08f213f62 Mon Sep 17 00:00:00 2001
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Mon, 21 Jan 2013 17:16:53 +0100
+Subject: [PATCH 3/5] dataplane: support viostor virtio-pci status bit setting
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1358788613-25421-3-git-send-email-stefanha@redhat.com>
+Patchwork-id: 47611
+O-Subject: [PATCH RHEL6.4 qemu-kvm 2/2] dataplane: support viostor virtio-pci status bit setting
+Bugzilla: 894995
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+The viostor virtio-blk driver for Windows does not use the
+VIRTIO_CONFIG_S_DRIVER bit.  It only sets the VIRTIO_CONFIG_S_DRIVER_OK
+bit.
+
+The viostor driver refreshes the virtio-pci status byte sometimes while
+the guest is running.  We misinterpret 0x4 (VIRTIO_CONFIG_S_DRIVER_OK)
+as an indication that virtio-blk-data-plane should be stopped since 0x2
+(VIRTIO_CONFIG_S_DRIVER) is missing.  The result is that the device
+becomes unresponsive.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+(cherry picked from commit cf139388ad5b39228793f34eea99e0ea9a2924aa)
+
+Conflicts:
+
+  hw/virtio-blk.c
+  The entire virtio_blk_set_status() function is #ifdef'd out on RHEL
+  but not upstream.  There is difference in the patched lines but it
+  doesn't apply automatically.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ hw/virtio-blk.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Signed-off-by: Miroslav Rezanina <mrezanin@redhat.com>
+---
+ hw/virtio-blk.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/hw/virtio-blk.c b/hw/virtio-blk.c
+index 5ea0ddb..6f7a9dc 100644
+--- a/hw/virtio-blk.c
++++ b/hw/virtio-blk.c
+@@ -556,7 +556,8 @@ static void virtio_blk_set_status(VirtIODevice *vdev, uint8_t status)
+ {
+     VirtIOBlock *s = to_virtio_blk(vdev);
+ 
+-    if (s->dataplane && !(status & VIRTIO_CONFIG_S_DRIVER)) {
++    if (s->dataplane && !(status & (VIRTIO_CONFIG_S_DRIVER |
++                                    VIRTIO_CONFIG_S_DRIVER_OK))) {
+         virtio_blk_data_plane_stop(s->dataplane);
+     }
+ }
+-- 
+1.7.1
+

@@ -1,0 +1,27 @@
+From b478ff02df8b915666de5893a7a1e4d38e1f1fd6 Mon Sep 17 00:00:00 2001
+Message-Id: <b478ff02df8b915666de5893a7a1e4d38e1f1fd6.1355144892.git.minovotn@redhat.com>
+In-Reply-To: <d4500c7a1a860e434e77839b25bc358a432f270a.1355144892.git.minovotn@redhat.com>
+References: <d4500c7a1a860e434e77839b25bc358a432f270a.1355144892.git.minovotn@redhat.com>
+From: Laszlo Ersek <lersek@redhat.com>
+Date: Thu, 6 Dec 2012 13:25:58 +0100
+Subject: [PATCH 3/3] Add TAGS and *~ to .gitignore
+
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ .gitignore | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index 6bd7e9d..4c7f3b6 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -61,3 +61,5 @@ pc-bios/optionrom/extboot.bin
+ .stgit-*
+ cscope.*
+ tags
++TAGS
++*~
+-- 
+1.7.11.7
+

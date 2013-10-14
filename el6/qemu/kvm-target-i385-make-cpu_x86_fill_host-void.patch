@@ -1,0 +1,58 @@
+From 755c3347d752de2fd42f9773a4842aa0532bf52d Mon Sep 17 00:00:00 2001
+Message-Id: <755c3347d752de2fd42f9773a4842aa0532bf52d.1351793582.git.minovotn@redhat.com>
+In-Reply-To: <e74f21f4030b33aaac45cab138ecabe18aac615b.1351793582.git.minovotn@redhat.com>
+References: <e74f21f4030b33aaac45cab138ecabe18aac615b.1351793582.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Thu, 25 Oct 2012 19:28:19 +0200
+Subject: [PATCH 6/8] target-i385: make cpu_x86_fill_host() void
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351193301-31675-7-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43653
+O-Subject: [RHEL6.4 qemu-kvm PATCH 6/8] target-i385: make cpu_x86_fill_host() void
+Bugzilla: 691638
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 691638
+Upstream status: equivalent patch submitted
+ Message-Id: <1351115047-27828-2-git-send-email-ehabkost@redhat.com>
+
+The return value of that function is always 0, and is always ignored.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 5a4fcc6..9c051c8 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -744,7 +744,7 @@ static int cpu_x86_fill_model_id(char *str)
+     return 0;
+ }
+ 
+-static int cpu_x86_fill_host(x86_def_t *x86_cpu_def)
++static void cpu_x86_fill_host(x86_def_t *x86_cpu_def)
+ {
+     uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
+ 
+@@ -777,8 +777,6 @@ static int cpu_x86_fill_host(x86_def_t *x86_cpu_def)
+     cpu_x86_fill_model_id(x86_cpu_def->model_id);
+     x86_cpu_def->vendor_override = 0;
+     x86_cpu_def->pmu_passthrough = true;
+-
+-    return 0;
+ }
+ 
+ static int unavailable_host_feature(struct model_features_t *f, uint32_t mask)
+-- 
+1.7.11.7
+

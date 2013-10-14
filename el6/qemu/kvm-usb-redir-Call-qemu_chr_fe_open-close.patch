@@ -1,0 +1,58 @@
+From 34e99b5488b1614c550b05019964925bb9c0f8a1 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 29 Feb 2012 12:39:27 +0100
+Subject: [PATCH 12/35] usb-redir: Call qemu_chr_fe_open/close
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1330519171-24231-13-git-send-email-kraxel@redhat.com>
+Patchwork-id: 37769
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 12/16] usb-redir: Call qemu_chr_fe_open/close
+Bugzilla: 758104
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+From: Hans de Goede <hdegoede@redhat.com>
+
+To let the chardev now we're ready start receiving data. This is necessary
+with the spicevmc chardev to get it registered with the spice-server.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 65f9d98673cb04436257628958177516416456fa)
+
+Conflicts:
+	usb-redir.c
+---
+ usb-redir.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ usb-redir.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index ea258f5..434499e 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -893,6 +893,8 @@ static int usbredir_initfn(USBDevice *udev)
+     /* We'll do the attach once we receive the speed from the usb-host */
+     udev->auto_attach = 0;
+ 
++    /* Let the backend know we are ready */
++    qemu_chr_guest_open(dev->cs);
+     qemu_chr_add_handlers(dev->cs, &usbredir_handlers, dev);
+ 
+     return 0;
+@@ -915,6 +917,7 @@ static void usbredir_handle_destroy(USBDevice *udev)
+ {
+     USBRedirDevice *dev = DO_UPCAST(USBRedirDevice, dev, udev);
+ 
++    qemu_chr_guest_close(dev->cs);
+     qemu_chr_close(dev->cs);
+     /* Note must be done after qemu_chr_close, as that causes a close event */
+     qemu_bh_delete(dev->open_close_bh);
+-- 
+1.7.7.6
+

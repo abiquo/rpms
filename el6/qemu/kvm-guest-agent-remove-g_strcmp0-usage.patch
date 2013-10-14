@@ -1,0 +1,34 @@
+From d81769e09f0efcca9ecfddf842ef4b51d655227f Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:10 -0500
+Subject: [PATCH 43/98] guest agent: remove g_strcmp0 usage
+
+g_strcmp0 isn't in all version of glib 2.0, so don't use it to avoid
+build breakage on older distros.
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 8f4774789947bc4bc4c8d026a289fe980d3d2ee1)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-ga.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 869ee37..e6ccc21 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -146,7 +146,7 @@ static void ga_log(const gchar *domain, GLogLevelFlags level,
+     }
+ 
+     level &= G_LOG_LEVEL_MASK;
+-    if (g_strcmp0(domain, "syslog") == 0) {
++    if (domain && strcmp(domain, "syslog") == 0) {
+         syslog(LOG_INFO, "%s: %s", level_str, msg);
+     } else if (level & s->log_level) {
+         g_get_current_time(&time);
+-- 
+1.7.7.6
+

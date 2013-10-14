@@ -1,0 +1,62 @@
+From f31700baf06041d551f4e5852d3cf389dcf6963b Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:38 -0300
+Subject: [RHEL6 qemu-kvm PATCH 18/21] QError: Introduce QERR_IO_ERROR
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <f984e0147ba2f5f1a440da1b3fdaa9b43d0bbfc0.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38645
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 18/21] QError: Introduce QERR_IO_ERROR
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 588988736634ad2aa356dafac78f88d1ea68b1a4)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ qerror.c |    4 ++++
+ qerror.h |    3 +++
+ 2 files changed, 7 insertions(+), 0 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ qerror.c |    4 ++++
+ qerror.h |    3 +++
+ 2 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/qerror.c b/qerror.c
+index a1a1669..5261552 100644
+--- a/qerror.c
++++ b/qerror.c
+@@ -145,6 +145,10 @@ static const QErrorStringTable qerror_table[] = {
+         .desc      = "Password incorrect",
+     },
+     {
++        .error_fmt = QERR_IO_ERROR,
++        .desc      = "An IO error has occurred",
++    },
++    {
+         .error_fmt = QERR_JSON_PARSING,
+         .desc      = "Invalid JSON syntax",
+     },
+diff --git a/qerror.h b/qerror.h
+index f5a5fd8..bff2b8e 100644
+--- a/qerror.h
++++ b/qerror.h
+@@ -128,6 +128,9 @@ QError *qobject_to_qerror(const QObject *obj);
+ #define QERR_INVALID_PASSWORD \
+     "{ 'class': 'InvalidPassword', 'data': {} }"
+ 
++#define QERR_IO_ERROR \
++    "{ 'class': 'IOError', 'data': {} }"
++
+ #define QERR_JSON_PARSING \
+     "{ 'class': 'JSONParsing', 'data': {} }"
+ 
+-- 
+1.7.3.2
+

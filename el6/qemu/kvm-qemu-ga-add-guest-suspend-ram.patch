@@ -1,0 +1,79 @@
+From 8030666bff991a7bb30bdfb441ad75709c19c26e Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 12:56:58 -0500
+Subject: [PATCH 95/98] qemu-ga: add guest-suspend-ram
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+
+RHEL6 Note:
+
+Although this is not yet accepted upstream, here is the submitted patch
+upstream that was used:
+http://lists.nongnu.org/archive/html/qemu-devel/2012-02/msg03907.html
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |   28 ++++++++++++++++++++++++++++
+ qga/commands-posix.c   |   10 ++++++++++
+ 2 files changed, 38 insertions(+), 0 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 266a414..18e554e 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -319,3 +319,31 @@
+ # Since: 1.1
+ ##
+ { 'command': 'guest-suspend-disk' }
++
++##
++# @guest-suspend-ram
++#
++# Suspend guest to ram.
++#
++# This command tries to execute the scripts provided by the pm-utils package.
++# If it's not available, the suspend operation will be performed by manually
++# writing to a sysfs file.
++#
++# For the best results it's strongly recommended to have the pm-utils
++# package installed in the guest.
++#
++# IMPORTANT: guest-suspend-ram requires QEMU to support the 'system_wakeup'
++# command.  Thus, it's *required* to query QEMU for the presence of the
++# 'system_wakeup' command before issuing guest-suspend-ram.
++#
++# Returns: nothing on success
++#          If suspend to ram is not supported, Unsupported
++#
++# Notes: o This is an asynchronous request. There's no guarantee a response
++#          will be sent
++#        o It's strongly recommended to issue the guest-sync command before
++#          sending commands when the guest resumes
++#
++# Since: 1.1
++##
++{ 'command': 'guest-suspend-ram' }
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index 41d2d55..f140a5d 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -705,6 +705,16 @@ void qmp_guest_suspend_disk(Error **err)
+     guest_suspend("pm-hibernate", "disk", err);
+ }
+ 
++void qmp_guest_suspend_ram(Error **err)
++{
++    bios_supports_mode("pm-is-supported", "--suspend", "mem", err);
++    if (error_is_set(err)) {
++        return;
++    }
++
++    guest_suspend("pm-suspend", "mem", err);
++}
++
+ /* register init/cleanup routines for stateful command groups */
+ void ga_command_state_init(GAState *s, GACommandState *cs)
+ {
+-- 
+1.7.7.6
+

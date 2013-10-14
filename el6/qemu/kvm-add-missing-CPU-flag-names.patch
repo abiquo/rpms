@@ -1,0 +1,111 @@
+From b46cbefe1bc0ec3704dbb72657c9c58274169e19 Mon Sep 17 00:00:00 2001
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Thu, 16 Feb 2012 11:50:10 +0100
+Subject: [PATCH] add missing CPU flag names
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1329393010-15994-1-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 37393
+O-Subject: [RHEL6 qemu-kvm PATCH] add missing CPU flag names
+Bugzilla: 785271
+RH-Acked-by: Avi Kivity <avi@redhat.com>
+RH-Acked-by: Amos Kong <akong@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=785271
+Scratch build: https://brewweb.devel.redhat.com/taskinfo?taskID=3982132
+               http://file.rdu.redhat.com/~ehabkost/cpuid-packages/v1/
+Testing: this was tested together with the Bulldozer and Sandy
+         Bridge CPU models work-in-progress
+
+This is a backport of _parts_ of the following upstream commit:
+
+commit e117f7725af8416a0c6e416fe18549d1625f7498
+Author: Andre Przywara <andre.przywara@amd.com>
+Date:   Thu Mar 11 14:38:59 2010 +0100
+
+    x86/cpuid: add missing CPUID feature flag names
+
+    Some CPUID feature flags had no string value, so they could not be
+    switched on or off from the command line.
+    Add names for the missing ones mentioned in the current public CPUID
+    specification from both Intel and AMD. Those only mentioned in the
+    Linux kernel source I put as comments.
+
+    Signed-off-by: Andre Przywara <andre.przywara@amd.com>
+    Signed-off-by: Aurelien Jarno <aurelien@aurel32.net>
+
+The above commit adds the following flags: aes, xsave, osxsave,
+pclmuldq, dtes64, smx, fma, pdcm, movbe, avx, ibs, xop, fma4, cvt16,
+nodeid_msr.
+
+However, this patch only adds:
+
+- pclmuldq, avx, xop, fma4: already supported by the RHEL6 kernel, and
+  affects only XMM and YMM registers, whose necessary state
+  loading/saving/migration is done by the XSAVE support (that is already
+  present in our qemu-kvm tree).
+
+  Note: fma4 is being added in the kernel by the patch for bz#784856,
+  but they won't be used by qemu-kvm if the KVM module doesn't report it
+  as supported, so it's safe to add the flag definition before the
+  kernel patch gets in.
+
+- movbe: supported by the RHEL6 kernel and doesn't introduce additional
+  state, so I kept it.
+
+This patch doesn't add:
+
+- aes, xsave, osxsave: already present in our qemu-kvm tree.
+
+- dtes64, smx, fma, pdcm, ibs, cvt16, nodeid_msr: not supported by the
+  RHEL-6 kernel and I didn't check if they introduce new CPU state, so I
+  am not adding them.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index d3f877e..77da1db 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -42,14 +42,14 @@ static const char *feature_name[] = {
+     "ht" /* Intel htt */, "tm", "ia64", "pbe",
+ };
+ static const char *ext_feature_name[] = {
+-    "pni|sse3" /* Intel,AMD sse3 */, NULL, NULL, "monitor",
++    "pni|sse3" /* Intel,AMD sse3 */, "pclmuldq", NULL, "monitor",
+     "ds_cpl", "vmx", NULL /* Linux smx */, "est",
+     "tm2", "ssse3", "cid", NULL,
+     NULL, "cx16", "xtpr", NULL,
+     NULL, NULL, "dca", "sse4.1|sse4_1",
+-    "sse4.2|sse4_2", "x2apic", NULL, "popcnt",
++    "sse4.2|sse4_2", "x2apic", "movbe", "popcnt",
+     NULL, "aes", "xsave", "osxsave",
+-    NULL, NULL, NULL, "hypervisor",
++    "avx", NULL, NULL, "hypervisor",
+ };
+ static const char *ext2_feature_name[] = {
+     "fpu", "vme", "de", "pse",
+@@ -64,9 +64,9 @@ static const char *ext2_feature_name[] = {
+ static const char *ext3_feature_name[] = {
+     "lahf_lm" /* AMD LahfSahf */, "cmp_legacy", "svm", "extapic" /* AMD ExtApicSpace */,
+     "cr8legacy" /* AMD AltMovCr8 */, "abm", "sse4a", "misalignsse",
+-    "3dnowprefetch", "osvw", NULL /* Linux ibs */, NULL,
++    "3dnowprefetch", "osvw", NULL, "xop",
+     "skinit", "wdt", NULL, NULL,
+-    NULL, NULL, NULL, NULL,
++    "fma4", NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL,
+-- 
+1.7.7.6
+

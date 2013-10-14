@@ -1,0 +1,59 @@
+From 7e1e0960cce1de21bdff014c5b5533e344cac995 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Fri, 28 Oct 2011 11:04:33 +0200
+Subject: [PATCH 03/11] usb-hub: don't trigger assert on packet completion.
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1319799873-12796-1-git-send-email-kraxel@redhat.com>
+Patchwork-id: 34727
+O-Subject: [RHEL-6.3 qemu-kvm PATCH] usb-hub: don't trigger assert on packet completion.
+Bugzilla: 740707
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+Calling usb_packet_complete() recursively when passing up the completion
+event up the chain for devices connected via usb hub will trigger an
+assert.  So don't do that, make the usb hub emulation call the upstream
+completion callback directly instead.
+
+Based on a patch from Stefan Hajnoczi <stefanha@gmail.com>
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+
+bugzilla: 740707 - pass-through usb stick under usb 1.1 controller
+                   causes QEMU to abort with an assertion failure
+upstream: 80cf7cf74f29a219e02b50f27c12b1c792ebf99b
+---
+ hw/usb-hub.c |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-hub.c |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/hw/usb-hub.c b/hw/usb-hub.c
+index 08733bd..277f656 100644
+--- a/hw/usb-hub.c
++++ b/hw/usb-hub.c
+@@ -208,10 +208,14 @@ static void usb_hub_complete(USBPort *port, USBPacket *packet)
+     /*
+      * Just pass it along upstream for now.
+      *
+-     * If we ever inplement usb 2.0 split transactions this will
++     * If we ever implement usb 2.0 split transactions this will
+      * become a little more complicated ...
++     *
++     * Can't use usb_packet_complete() here because packet->owner is
++     * cleared already, go call the ->complete() callback directly
++     * instead.
+      */
+-    usb_packet_complete(&s->dev, packet);
++    s->dev.port->ops->complete(s->dev.port, packet);
+ }
+ 
+ static void usb_hub_handle_reset(USBDevice *dev)
+-- 
+1.7.7.3
+

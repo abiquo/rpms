@@ -1,0 +1,41 @@
+From 1a09319e4c55c42f8e82fbbbb3daa3ae2a60e2e9 Mon Sep 17 00:00:00 2001
+From: Anthony Liguori <aliguori@us.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:26 -0500
+Subject: [PATCH 59/98] qapi: allow a 'gen' key to suppress code generation
+
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 5dbee474f352401efb404ff8dfb90a3ca90ce3d1)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ scripts/qapi-commands.py |    1 +
+ scripts/qapi-types.py    |    1 +
+ 2 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/scripts/qapi-commands.py b/scripts/qapi-commands.py
+index f7def16..54d1f5d 100644
+--- a/scripts/qapi-commands.py
++++ b/scripts/qapi-commands.py
+@@ -405,6 +405,7 @@ except os.error, e:
+ 
+ exprs = parse_schema(sys.stdin)
+ commands = filter(lambda expr: expr.has_key('command'), exprs)
++commands = filter(lambda expr: not expr.has_key('gen'), commands)
+ 
+ if dispatch_type == "sync":
+     fdecl = open(h_file, 'w')
+diff --git a/scripts/qapi-types.py b/scripts/qapi-types.py
+index f64d84c..267cb49 100644
+--- a/scripts/qapi-types.py
++++ b/scripts/qapi-types.py
+@@ -238,6 +238,7 @@ fdecl.write(mcgen('''
+                   guard=guardname(h_file)))
+ 
+ exprs = parse_schema(sys.stdin)
++exprs = filter(lambda expr: not expr.has_key('gen'), exprs)
+ 
+ for expr in exprs:
+     ret = "\n"
+-- 
+1.7.7.6
+

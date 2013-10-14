@@ -1,0 +1,82 @@
+From 379d80f89a94869df2e936e9b40d4fa3f9970d40 Mon Sep 17 00:00:00 2001
+Message-Id: <379d80f89a94869df2e936e9b40d4fa3f9970d40.1346668737.git.minovotn@redhat.com>
+In-Reply-To: <d22fc35d1e14760dba012d88bdf0162dd7d0f3c6.1346668737.git.minovotn@redhat.com>
+References: <d22fc35d1e14760dba012d88bdf0162dd7d0f3c6.1346668737.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 27 Aug 2012 13:42:06 +0200
+Subject: [PATCH 03/10] scsi: make code more homogeneous in AIO callback
+ functions
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1346074931-12083-3-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 41327
+O-Subject: [RHEL 6.4 qemu-kvm PATCH 2/7] scsi: make code more homogeneous in AIO callback functions
+Bugzilla: 814084
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 814084
+
+First scsi_flush_complete, like scsi_dma_complete, is always called with
+an active AIOCB.
+
+Second, always test for "ret < 0" to check for errors.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit 80624c938d2d9d2b2cca56326876f213c31e1202)
+---
+ hw/scsi-disk.c | 11 ++++-------
+ 1 file modificato, 4 inserzioni(+), 7 rimozioni(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c | 11 ++++-------
+ 1 file changed, 4 insertions(+), 7 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index e25830b..f33f359 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -157,7 +157,7 @@ static void scsi_dma_complete(void * opaque, int ret)
+ 
+     bdrv_acct_done(s->qdev.conf.bs, &r->acct);
+ 
+-    if (ret) {
++    if (ret < 0) {
+         if (scsi_handle_rw_error(r, -ret)) {
+             goto done;
+         }
+@@ -184,7 +184,7 @@ static void scsi_read_complete(void * opaque, int ret)
+         bdrv_acct_done(s->qdev.conf.bs, &r->acct);
+     }
+ 
+-    if (ret) {
++    if (ret < 0) {
+         if (scsi_handle_rw_error(r, -ret)) {
+             goto done;
+         }
+@@ -208,10 +208,7 @@ static void scsi_flush_complete(void * opaque, int ret)
+     SCSIDiskReq *r = (SCSIDiskReq *)opaque;
+     SCSIDiskState *s = DO_UPCAST(SCSIDiskState, qdev, r->req.dev);
+ 
+-    if (r->req.aiocb != NULL) {
+-        r->req.aiocb = NULL;
+-        bdrv_acct_done(s->qdev.conf.bs, &r->acct);
+-    }
++    bdrv_acct_done(s->qdev.conf.bs, &r->acct);
+ 
+     if (ret < 0) {
+         if (scsi_handle_rw_error(r, -ret)) {
+@@ -335,7 +332,7 @@ static void scsi_write_complete(void * opaque, int ret)
+         bdrv_acct_done(s->qdev.conf.bs, &r->acct);
+     }
+ 
+-    if (ret) {
++    if (ret < 0) {
+         if (scsi_handle_rw_error(r, -ret)) {
+             goto done;
+         }
+-- 
+1.7.11.4
+

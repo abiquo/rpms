@@ -1,0 +1,141 @@
+From 471d95c1dfa52d73583d521900ea30ec817d7982 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:57 +0100
+Subject: [PATCH 30/55] block: core copy-on-read logic
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <68a482d7db871d24025473fa0be0ba922dfc71f1.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38880
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 30/54] block: core copy-on-read logic
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit ab1859218a95977dc6881fcccce328d8146a6bdb)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c      |   72 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ trace-events |    1 +
+ 2 files changed, 73 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c      |   72 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ trace-events |    1 +
+ 2 files changed, 73 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index 9aefe51..de69a5d 100644
+--- a/block.c
++++ b/block.c
+@@ -1468,6 +1468,61 @@ int bdrv_pwrite_sync(BlockDriverState *bs, int64_t offset,
+     return 0;
+ }
+ 
++static int coroutine_fn bdrv_co_copy_on_readv(BlockDriverState *bs,
++        int64_t sector_num, int nb_sectors, QEMUIOVector *qiov)
++{
++    /* Perform I/O through a temporary buffer so that users who scribble over
++     * their read buffer while the operation is in progress do not end up
++     * modifying the image file.  This is critical for zero-copy guest I/O
++     * where anything might happen inside guest memory.
++     */
++    void *bounce_buffer;
++
++    struct iovec iov;
++    QEMUIOVector bounce_qiov;
++    int64_t cluster_sector_num;
++    int cluster_nb_sectors;
++    size_t skip_bytes;
++    int ret;
++
++    /* Cover entire cluster so no additional backing file I/O is required when
++     * allocating cluster in the image file.
++     */
++    round_to_clusters(bs, sector_num, nb_sectors,
++                      &cluster_sector_num, &cluster_nb_sectors);
++
++    trace_bdrv_co_copy_on_readv(bs, sector_num, nb_sectors,
++                                cluster_sector_num, cluster_nb_sectors);
++
++    iov.iov_len = cluster_nb_sectors * BDRV_SECTOR_SIZE;
++    iov.iov_base = bounce_buffer = qemu_blockalign(bs, iov.iov_len);
++    qemu_iovec_init_external(&bounce_qiov, &iov, 1);
++
++    ret = bs->drv->bdrv_co_readv(bs, cluster_sector_num, cluster_nb_sectors,
++                                 &bounce_qiov);
++    if (ret < 0) {
++        goto err;
++    }
++
++    ret = bs->drv->bdrv_co_writev(bs, cluster_sector_num, cluster_nb_sectors,
++                                  &bounce_qiov);
++    if (ret < 0) {
++        /* It might be okay to ignore write errors for guest requests.  If this
++         * is a deliberate copy-on-read then we don't want to ignore the error.
++         * Simply report it in all cases.
++         */
++        goto err;
++    }
++
++    skip_bytes = (sector_num - cluster_sector_num) * BDRV_SECTOR_SIZE;
++    qemu_iovec_from_buffer(qiov, bounce_buffer + skip_bytes,
++                           nb_sectors * BDRV_SECTOR_SIZE);
++
++err:
++    qemu_vfree(bounce_buffer);
++    return ret;
++}
++
+ /*
+  * Handle a read request in coroutine context
+  */
+@@ -1490,7 +1545,24 @@ static int coroutine_fn bdrv_co_do_readv(BlockDriverState *bs,
+     }
+ 
+     tracked_request_begin(&req, bs, sector_num, nb_sectors, false);
++
++    if (bs->copy_on_read) {
++        int pnum;
++
++        ret = bdrv_co_is_allocated(bs, sector_num, nb_sectors, &pnum);
++        if (ret < 0) {
++            goto out;
++        }
++
++        if (!ret || pnum != nb_sectors) {
++            ret = bdrv_co_copy_on_readv(bs, sector_num, nb_sectors, qiov);
++            goto out;
++        }
++    }
++
+     ret = drv->bdrv_co_readv(bs, sector_num, nb_sectors, qiov);
++
++out:
+     tracked_request_end(&req);
+     return ret;
+ }
+diff --git a/trace-events b/trace-events
+index 2bf2d16..3903905 100644
+--- a/trace-events
++++ b/trace-events
+@@ -59,6 +59,7 @@ disable bdrv_lock_medium(void *bs, int locked) "bs %p locked %d"
+ disable bdrv_co_readv(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
+ disable bdrv_co_writev(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
+ disable bdrv_co_io_em(void *bs, int64_t sector_num, int nb_sectors, int is_write, void *acb) "bs %p sector_num %"PRId64" nb_sectors %d is_write %d acb %p"
++disable bdrv_co_copy_on_readv(void *bs, int64_t sector_num, int nb_sectors, int64_t cluster_sector_num, int cluster_nb_sectors) "bs %p sector_num %"PRId64" nb_sectors %d cluster_sector_num %"PRId64" cluster_nb_sectors %d"
+ 
+ # hw/virtio-blk.c
+ disable virtio_blk_req_complete(void *req, int status) "req %p status %d"
+-- 
+1.7.7.6
+

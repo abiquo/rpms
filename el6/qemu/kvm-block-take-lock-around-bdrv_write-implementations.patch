@@ -1,0 +1,211 @@
+From 9c1d4e2e3d143a208949f4198087c41f162b5930 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:58 +0100
+Subject: [PATCH 93/99] block: take lock around bdrv_write implementations
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-94-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37285
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 93/96] block: take lock around bdrv_write implementations
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Bugzilla: 783950
+
+This does the first part of the conversion to coroutines, by
+wrapping bdrv_write implementations to take the mutex.
+
+Drivers that implement bdrv_write rather than bdrv_co_writev can
+then benefit from asynchronous operation (at least if the underlying
+protocol supports it, which is not the case for raw-win32), even
+though they still operate with a bounce buffer.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit e183ef75cc28d31addbb937a4680090495786944)
+
+Conflicts:
+
+	block/vmdk.c
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ block/cow.c   |   13 ++++++++++++-
+ block/nbd.c   |   13 ++++++++++++-
+ block/vmdk.c  |   14 +++++++++++++-
+ block/vpc.c   |   13 ++++++++++++-
+ block/vvfat.c |   13 ++++++++++++-
+ 5 files changed, 61 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/cow.c   |   13 ++++++++++++-
+ block/nbd.c   |   13 ++++++++++++-
+ block/vmdk.c  |   14 +++++++++++++-
+ block/vpc.c   |   13 ++++++++++++-
+ block/vvfat.c |   13 ++++++++++++-
+ 5 files changed, 61 insertions(+), 5 deletions(-)
+
+diff --git a/block/cow.c b/block/cow.c
+index 0d1167d..70d0eb2 100644
+--- a/block/cow.c
++++ b/block/cow.c
+@@ -224,6 +224,17 @@ static int cow_write(BlockDriverState *bs, int64_t sector_num,
+     return cow_update_bitmap(bs, sector_num, nb_sectors);
+ }
+ 
++static coroutine_fn int cow_co_write(BlockDriverState *bs, int64_t sector_num,
++                                     const uint8_t *buf, int nb_sectors)
++{
++    int ret;
++    BDRVCowState *s = bs->opaque;
++    qemu_co_mutex_lock(&s->lock);
++    ret = cow_write(bs, sector_num, buf, nb_sectors);
++    qemu_co_mutex_unlock(&s->lock);
++    return ret;
++}
++
+ static void cow_close(BlockDriverState *bs)
+ {
+ }
+@@ -318,7 +329,7 @@ static BlockDriver bdrv_cow = {
+     .bdrv_probe		= cow_probe,
+     .bdrv_open		= cow_open,
+     .bdrv_read          = cow_co_read,
+-    .bdrv_write		= cow_write,
++    .bdrv_write         = cow_co_write,
+     .bdrv_close		= cow_close,
+     .bdrv_create	= cow_create,
+     .bdrv_flush		= cow_flush,
+diff --git a/block/nbd.c b/block/nbd.c
+index c1ef5ad..965a7ab 100644
+--- a/block/nbd.c
++++ b/block/nbd.c
+@@ -170,6 +170,17 @@ static coroutine_fn int nbd_co_read(BlockDriverState *bs, int64_t sector_num,
+     return ret;
+ }
+ 
++static coroutine_fn int nbd_co_write(BlockDriverState *bs, int64_t sector_num,
++                                     const uint8_t *buf, int nb_sectors)
++{
++    int ret;
++    BDRVNBDState *s = bs->opaque;
++    qemu_co_mutex_lock(&s->lock);
++    ret = nbd_write(bs, sector_num, buf, nb_sectors);
++    qemu_co_mutex_unlock(&s->lock);
++    return ret;
++}
++
+ static void nbd_close(BlockDriverState *bs)
+ {
+     BDRVNBDState *s = bs->opaque;
+@@ -196,7 +207,7 @@ static BlockDriver bdrv_nbd = {
+     .instance_size	= sizeof(BDRVNBDState),
+     .bdrv_file_open	= nbd_open,
+     .bdrv_read          = nbd_co_read,
+-    .bdrv_write		= nbd_write,
++    .bdrv_write         = nbd_co_write,
+     .bdrv_close		= nbd_close,
+     .bdrv_getlength	= nbd_getlength,
+     .protocol_name	= "nbd",
+diff --git a/block/vmdk.c b/block/vmdk.c
+index 36c4de7..be6916c 100644
+--- a/block/vmdk.c
++++ b/block/vmdk.c
+@@ -678,6 +678,18 @@ static int vmdk_write(BlockDriverState *bs, int64_t sector_num,
+     return 0;
+ }
+ 
++static coroutine_fn int vmdk_co_write(BlockDriverState *bs, int64_t sector_num,
++                                      const uint8_t *buf, int nb_sectors)
++{
++    int ret;
++    BDRVVmdkState *s = bs->opaque;
++    qemu_co_mutex_lock(&s->lock);
++    ret = vmdk_write(bs, sector_num, buf, nb_sectors);
++    qemu_co_mutex_unlock(&s->lock);
++    return ret;
++}
++
++
+ static int vmdk_create(const char *filename, QEMUOptionParameter *options)
+ {
+     int fd, i;
+@@ -868,7 +880,7 @@ static BlockDriver bdrv_vmdk = {
+     .bdrv_probe		= vmdk_probe,
+     .bdrv_open      = vmdk_open,
+     .bdrv_read      = vmdk_co_read,
+-    .bdrv_write		= vmdk_write,
++    .bdrv_write     = vmdk_co_write,
+     .bdrv_close		= vmdk_close,
+     .bdrv_create	= vmdk_create,
+     .bdrv_flush		= vmdk_flush,
+diff --git a/block/vpc.c b/block/vpc.c
+index 14c1398..2bb7d6e 100644
+--- a/block/vpc.c
++++ b/block/vpc.c
+@@ -430,6 +430,17 @@ static int vpc_write(BlockDriverState *bs, int64_t sector_num,
+     return 0;
+ }
+ 
++static coroutine_fn int vpc_co_write(BlockDriverState *bs, int64_t sector_num,
++                                     const uint8_t *buf, int nb_sectors)
++{
++    int ret;
++    BDRVVPCState *s = bs->opaque;
++    qemu_co_mutex_lock(&s->lock);
++    ret = vpc_write(bs, sector_num, buf, nb_sectors);
++    qemu_co_mutex_unlock(&s->lock);
++    return ret;
++}
++
+ static int vpc_flush(BlockDriverState *bs)
+ {
+     return bdrv_flush(bs->file);
+@@ -615,7 +626,7 @@ static BlockDriver bdrv_vpc = {
+     .bdrv_probe     = vpc_probe,
+     .bdrv_open      = vpc_open,
+     .bdrv_read      = vpc_co_read,
+-    .bdrv_write     = vpc_write,
++    .bdrv_write     = vpc_co_write,
+     .bdrv_flush     = vpc_flush,
+     .bdrv_close     = vpc_close,
+     .bdrv_create    = vpc_create,
+diff --git a/block/vvfat.c b/block/vvfat.c
+index 1e4bb34..baa0e92 100644
+--- a/block/vvfat.c
++++ b/block/vvfat.c
+@@ -2755,6 +2755,17 @@ DLOG(checkpoint());
+     return 0;
+ }
+ 
++static coroutine_fn int vvfat_co_write(BlockDriverState *bs, int64_t sector_num,
++                                       const uint8_t *buf, int nb_sectors)
++{
++    int ret;
++    BDRVVVFATState *s = bs->opaque;
++    qemu_co_mutex_lock(&s->lock);
++    ret = vvfat_write(bs, sector_num, buf, nb_sectors);
++    qemu_co_mutex_unlock(&s->lock);
++    return ret;
++}
++
+ static int vvfat_is_allocated(BlockDriverState *bs,
+ 	int64_t sector_num, int nb_sectors, int* n)
+ {
+@@ -2839,7 +2850,7 @@ static BlockDriver bdrv_vvfat = {
+     .instance_size	= sizeof(BDRVVVFATState),
+     .bdrv_file_open	= vvfat_open,
+     .bdrv_read          = vvfat_co_read,
+-    .bdrv_write		= vvfat_write,
++    .bdrv_write         = vvfat_co_write,
+     .bdrv_close		= vvfat_close,
+     .bdrv_is_allocated	= vvfat_is_allocated,
+     .protocol_name	= "fat",
+-- 
+1.7.7.5
+

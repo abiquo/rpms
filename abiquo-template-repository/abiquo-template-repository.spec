@@ -2,7 +2,7 @@
 
 Name:     abiquo-template-repository
 Version:  0.2.0
-Release:  2%{?dist}%{?buildstamp}
+Release:  3%{?dist}%{?buildstamp}
 Summary:  Abiquo Template Repository Application
 Group:    Development/System 
 License:  Multiple 
@@ -36,6 +36,9 @@ rm -rf $RPM_BUILD_ROOT
 /opt/template_repository
 
 %changelog
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 0.2.0-3
+- Bumped version to 2.6.0
+
 * Wed Oct 17 2012 Abel Boldú <abel.boldu@abiquo.com> - 0.2.0-2
 - bumped release
 

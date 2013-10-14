@@ -1,16 +1,15 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-pocsetup
-Version:  2.4.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  2.6.0
+Release:  3%{?dist}%{?buildstamp}
 Summary:  Abiquo POC Setup Metapackage
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 Source0:  README 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: dhcp nfs-utils samba abiquo-server abiquo-remote-services abiquo-v2v abiquo-api 
-Obsoletes: abiquo-16-pocsetup
+Requires: dhcp nfs-utils samba abiquo-server abiquo-remote-services abiquo-v2v abiquo-api abiquo-m 
 BuildArch: noarch
 
 %description
@@ -89,6 +88,12 @@ EOF
 %doc %{_docdir}/%{name}/README
 
 %changelog
+* Thu May 30 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-3
+- Added metering package
+
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
+- Bumped version to 2.6.0
+
 * Wed Nov 21 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
 - Bumped version to 2.4
 

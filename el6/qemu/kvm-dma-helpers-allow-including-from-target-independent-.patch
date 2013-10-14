@@ -1,0 +1,61 @@
+From 3e16dcde8f1af6f13f0ec072b1bdced77bd18412 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:41 +0100
+Subject: [PATCH 085/109] dma-helpers: allow including from target-independent
+ code
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-85-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37566
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 084/102] dma-helpers: allow including from target-independent code
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Target-independent code cannot construct sglists, but it can take
+them from the outside as a black box.  Allow this.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 10dc8aef419b4ce77670fb080ffe995bf9d7b0a1)
+---
+ dma.h |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ dma.h |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/dma.h b/dma.h
+index f3bb275..94b7f1d 100644
+--- a/dma.h
++++ b/dma.h
+@@ -15,10 +15,13 @@
+ #include "hw/hw.h"
+ #include "block.h"
+ 
+-typedef struct {
++typedef struct ScatterGatherEntry ScatterGatherEntry;
++
++#if defined(TARGET_PHYS_ADDR_BITS)
++struct ScatterGatherEntry {
+     target_phys_addr_t base;
+     target_phys_addr_t len;
+-} ScatterGatherEntry;
++};
+ 
+ typedef struct {
+     ScatterGatherEntry *sg;
+@@ -31,6 +34,7 @@ void qemu_sglist_init(QEMUSGList *qsg, int alloc_hint);
+ void qemu_sglist_add(QEMUSGList *qsg, target_phys_addr_t base,
+                      target_phys_addr_t len);
+ void qemu_sglist_destroy(QEMUSGList *qsg);
++#endif
+ 
+ BlockDriverAIOCB *dma_bdrv_read(BlockDriverState *bs,
+                                 QEMUSGList *sg, uint64_t sector,
+-- 
+1.7.7.6
+

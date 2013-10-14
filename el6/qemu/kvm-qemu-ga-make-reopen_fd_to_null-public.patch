@@ -1,0 +1,111 @@
+From 7b3f1dd6fd21aed5f98b59107bf7c0cd6d5a8778 Mon Sep 17 00:00:00 2001
+Message-Id: <7b3f1dd6fd21aed5f98b59107bf7c0cd6d5a8778.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:41 +0200
+Subject: [PATCH 32/41] qemu-ga: make reopen_fd_to_null() public
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-27-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39923
+O-Subject: [PATCH RHEL6.4 qemu-kvm 26/36] qemu-ga: make reopen_fd_to_null() public
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+The next commit wants to use it.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Eric Blake <eblake@redhat.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+(cherry picked from commit 04b4e75f33ae0775d70b8e33080f46d66275cdcc)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qemu-ga.c              | 17 +++++++++++++++++
+ qga/commands-posix.c   | 19 -------------------
+ qga/guest-agent-core.h |  4 ++++
+ 3 files changed, 21 insertions(+), 19 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-ga.c              |   17 +++++++++++++++++
+ qga/commands-posix.c   |   19 -------------------
+ qga/guest-agent-core.h |    4 ++++
+ 3 files changed, 21 insertions(+), 19 deletions(-)
+
+diff --git a/qemu-ga.c b/qemu-ga.c
+index cf61cb9..8d53e04 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -140,6 +140,23 @@ static gboolean register_signal_handlers(void)
+ 
+     return true;
+ }
++
++/* TODO: use this in place of all post-fork() fclose(std*) callers */
++void reopen_fd_to_null(int fd)
++{
++    int nullfd;
++
++    nullfd = open("/dev/null", O_RDWR);
++    if (nullfd < 0) {
++        return;
++    }
++
++    dup2(nullfd, fd);
++
++    if (nullfd != fd) {
++        close(nullfd);
++    }
++}
+ #endif
+ 
+ static void usage(const char *cmd)
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index 947b9c8..56b2c11 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -39,25 +39,6 @@
+  * To enable, set to '1' */
+ #define QGA_FILE_OPS 0
+ 
+-#if defined(__linux__)
+-/* TODO: use this in place of all post-fork() fclose(std*) callers */
+-static void reopen_fd_to_null(int fd)
+-{
+-    int nullfd;
+-
+-    nullfd = open("/dev/null", O_RDWR);
+-    if (nullfd < 0) {
+-        return;
+-    }
+-
+-    dup2(nullfd, fd);
+-
+-    if (nullfd != fd) {
+-        close(nullfd);
+-    }
+-}
+-#endif /* defined(__linux__) */
+-
+ void qmp_guest_shutdown(bool has_mode, const char *mode, Error **err)
+ {
+     int ret;
+diff --git a/qga/guest-agent-core.h b/qga/guest-agent-core.h
+index bbb8b9b..6dba104 100644
+--- a/qga/guest-agent-core.h
++++ b/qga/guest-agent-core.h
+@@ -35,3 +35,7 @@ void ga_set_response_delimited(GAState *s);
+ bool ga_is_frozen(GAState *s);
+ void ga_set_frozen(GAState *s);
+ void ga_unset_frozen(GAState *s);
++
++#ifndef _WIN32
++void reopen_fd_to_null(int fd);
++#endif
+-- 
+1.7.10.4
+

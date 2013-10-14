@@ -1,0 +1,102 @@
+From 1011472ed1268a98da40c077254ea352c60bdd43 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:58 +0100
+Subject: [PATCH 33/99] win32: pair qemu_memalign() with qemu_vfree()
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-34-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37221
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 33/96] win32: pair qemu_memalign() with qemu_vfree()
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Herve Poussineau <hpoussin@reactos.org>
+
+Bugzilla: 783950
+
+Win32 suffers from a very big memory leak when dealing with SCSI devices.
+Each read/write request allocates memory with qemu_memalign (ie
+VirtualAlloc) but frees it with qemu_free (ie free).
+Pair all qemu_memalign() calls with qemu_vfree() to prevent such leaks.
+
+Signed-off-by: Herve Poussineau <hpoussin@reactos.org>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit f8a83245d9ec685bc6aa6173d6765fe03e20688f)
+
+Conflicts:
+
+	hw/scsi-disk.c
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ block.c           |    2 +-
+ block/raw-posix.c |    2 +-
+ exec.c            |    2 +-
+ qemu-nbd.c        |    2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c           |    2 +-
+ block/raw-posix.c |    2 +-
+ exec.c            |    2 +-
+ qemu-nbd.c        |    2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/block.c b/block.c
+index 3be1ca5..ab67d74 100644
+--- a/block.c
++++ b/block.c
+@@ -2184,7 +2184,7 @@ static void multiwrite_user_cb(MultiwriteCB *mcb)
+             qemu_iovec_destroy(mcb->callbacks[i].free_qiov);
+         }
+         qemu_free(mcb->callbacks[i].free_qiov);
+-        qemu_free(mcb->callbacks[i].free_buf);
++        qemu_vfree(mcb->callbacks[i].free_buf);
+     }
+ }
+ 
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 566ffb8..8ee859f 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -637,7 +637,7 @@ static void raw_close(BlockDriverState *bs)
+         close(s->fd);
+         s->fd = -1;
+         if (s->aligned_buf != NULL)
+-            qemu_free(s->aligned_buf);
++            qemu_vfree(s->aligned_buf);
+     }
+ }
+ 
+diff --git a/exec.c b/exec.c
+index 4762bbe..7e139b7 100644
+--- a/exec.c
++++ b/exec.c
+@@ -3761,7 +3761,7 @@ void cpu_physical_memory_unmap(void *buffer, target_phys_addr_t len,
+     if (is_write) {
+         cpu_physical_memory_write(bounce.addr, bounce.buffer, access_len);
+     }
+-    qemu_free(bounce.buffer);
++    qemu_vfree(bounce.buffer);
+     bounce.buffer = NULL;
+     cpu_notify_map_clients();
+ }
+diff --git a/qemu-nbd.c b/qemu-nbd.c
+index 5a22fe9..b4f7e5d 100644
+--- a/qemu-nbd.c
++++ b/qemu-nbd.c
+@@ -468,7 +468,7 @@ int main(int argc, char **argv)
+             }
+         }
+     } while (persistent || nb_fds > 1);
+-    qemu_free(data);
++    qemu_vfree(data);
+ 
+     close(sharing_fds[0]);
+     bdrv_close(bs);
+-- 
+1.7.7.5
+

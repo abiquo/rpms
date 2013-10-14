@@ -1,0 +1,39 @@
+From c3583786290e1f7d3e4808708cd2acddd81a1fe4 Mon Sep 17 00:00:00 2001
+From: Alexandre Raymond <cerbere@gmail.com>
+Date: Mon, 5 Mar 2012 17:44:41 -0500
+Subject: [PATCH 74/98] .gitignore: ignore qemu-ga and qapi-generated
+
+Add a new binary and generation directory to the gitignore file
+
+Signed-off-by: Alexandre Raymond <cerbere@gmail.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 5bda29da18eb5104718cad9810b625a0105cb0d2)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ .gitignore |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index b318335..dd17cb0 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -15,6 +15,7 @@ i386
+ libhw32
+ libhw64
+ libuser
++qapi-generated
+ qemu-doc.html
+ qemu-tech.html
+ qemu-doc.info
+@@ -31,6 +32,7 @@ qemu-options.texi
+ qemu-img-cmds.texi
+ qemu-img-cmds.h
+ qemu-io
++qemu-ga
+ qemu-monitor.texi
+ .gdbinit
+ *.a
+-- 
+1.7.7.6
+

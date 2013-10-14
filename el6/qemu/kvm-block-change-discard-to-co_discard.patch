@@ -1,0 +1,129 @@
+From 8a2ce332449c31492fcb93eba6e866774619417d Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:15:00 +0100
+Subject: [PATCH 95/99] block: change discard to co_discard
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-96-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37282
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 95/96] block: change discard to co_discard
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Bugzilla: 783950
+
+Since coroutine operation is now mandatory, convert both bdrv_discard
+implementations to coroutines.  For qcow2, this means taking the lock
+around the operation.  raw-posix remains synchronous.
+
+The bdrv_discard callback is then unused and can be eliminated.
+
+Reviewed-by: Kevin Wolf <kwolf@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 6db39ae2e250f15da17462444ea18a9fcef41e05)
+---
+ block.c           |    2 --
+ block/qcow2.c     |   14 ++++++++++----
+ block/raw-posix.c |    5 +++--
+ block_int.h       |    2 --
+ 4 files changed, 13 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c           |    2 --
+ block/qcow2.c     |   14 ++++++++++----
+ block/raw-posix.c |    5 +++--
+ block_int.h       |    2 --
+ 4 files changed, 13 insertions(+), 10 deletions(-)
+
+diff --git a/block.c b/block.c
+index 220543b..bd10941 100644
+--- a/block.c
++++ b/block.c
+@@ -2816,8 +2816,6 @@ int coroutine_fn bdrv_co_discard(BlockDriverState *bs, int64_t sector_num,
+             qemu_coroutine_yield();
+             return co.ret;
+         }
+-    } else if (bs->drv->bdrv_discard) {
+-        return bs->drv->bdrv_discard(bs, sector_num, nb_sectors);
+     } else {
+         return 0;
+     }
+diff --git a/block/qcow2.c b/block/qcow2.c
+index e9af848..1bc9e94 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -1143,11 +1143,17 @@ static int qcow2_make_empty(BlockDriverState *bs)
+     return 0;
+ }
+ 
+-static int qcow2_discard(BlockDriverState *bs, int64_t sector_num,
+-    int nb_sectors)
++static coroutine_fn int qcow2_co_discard(BlockDriverState *bs,
++    int64_t sector_num, int nb_sectors)
+ {
+-    return qcow2_discard_clusters(bs, sector_num << BDRV_SECTOR_BITS,
++    int ret;
++    BDRVQcowState *s = bs->opaque;
++
++    qemu_co_mutex_lock(&s->lock);
++    ret = qcow2_discard_clusters(bs, sector_num << BDRV_SECTOR_BITS,
+         nb_sectors);
++    qemu_co_mutex_unlock(&s->lock);
++    return ret;
+ }
+ 
+ /* XXX: put compressed sectors first, then all the cluster aligned
+@@ -1360,7 +1366,7 @@ static BlockDriver bdrv_qcow2 = {
+     .bdrv_co_writev     = qcow2_co_writev,
+     .bdrv_co_flush      = qcow2_co_flush,
+ 
+-    .bdrv_discard           = qcow2_discard,
++    .bdrv_co_discard        = qcow2_co_discard,
+     .bdrv_truncate          = qcow2_truncate,
+     .bdrv_write_compressed  = qcow2_write_compressed,
+ 
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 9e7d092..1a6d191 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -542,7 +542,8 @@ static int xfs_discard(BDRVRawState *s, int64_t sector_num, int nb_sectors)
+ }
+ #endif
+ 
+-static int raw_discard(BlockDriverState *bs, int64_t sector_num, int nb_sectors)
++static coroutine_fn int raw_co_discard(BlockDriverState *bs,
++    int64_t sector_num, int nb_sectors)
+ {
+ #ifdef CONFIG_XFS
+     BDRVRawState *s = bs->opaque;
+@@ -572,7 +573,7 @@ static BlockDriver bdrv_file = {
+     .bdrv_file_open = raw_open,
+     .bdrv_close = raw_close,
+     .bdrv_create = raw_create,
+-    .bdrv_discard = raw_discard,
++    .bdrv_co_discard = raw_co_discard,
+ 
+     .bdrv_aio_readv = raw_aio_readv,
+     .bdrv_aio_writev = raw_aio_writev,
+diff --git a/block_int.h b/block_int.h
+index 9c0bff5..11e2d90 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -61,8 +61,6 @@ struct BlockDriver {
+                       const uint8_t *buf, int nb_sectors);
+     void (*bdrv_close)(BlockDriverState *bs);
+     int (*bdrv_create)(const char *filename, QEMUOptionParameter *options);
+-    int (*bdrv_discard)(BlockDriverState *bs, int64_t sector_num,
+-                        int nb_sectors);
+     int (*bdrv_is_allocated)(BlockDriverState *bs, int64_t sector_num,
+                              int nb_sectors, int *pnum);
+     int (*bdrv_set_key)(BlockDriverState *bs, const char *key);
+-- 
+1.7.7.5
+

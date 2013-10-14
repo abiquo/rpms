@@ -1,0 +1,93 @@
+From c453ee7be0ea682f1b20bc2b9e90cc17f678e987 Mon Sep 17 00:00:00 2001
+Message-Id: <c453ee7be0ea682f1b20bc2b9e90cc17f678e987.1351863520.git.minovotn@redhat.com>
+From: Andre Przywara <andre.przywara@amd.com>
+Date: Fri, 19 Oct 2012 17:01:57 -0300
+Subject: [PATCH 1/2] i386/cpu: name new CPUID bits
+
+Upstream status: submitted
+
+Update QEMU's knowledge of CPUID bit names. This allows to
+enable/disable those new features on QEMU's command line when
+using KVM and prepares future feature enablement in QEMU.
+
+This adds F16C, RDRAND, LWP, TBM, TopoExt, PerfCtr_Core, PerfCtr_NB,
+FSGSBASE, BMI1, AVX2, BMI2, ERMS, InvPCID, RTM, RDSeed and ADX.
+
+Sources where the AMD BKDG for Family 15h/Model 10h and the Linux kernel
+for the leaf 7 bits.
+
+Signed-off-by: Andre Przywara <andre.przywara@amd.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpu.h   | 10 ++++++++++
+ target-i386/cpuid.c | 12 ++++++------
+ 2 files changed, 16 insertions(+), 6 deletions(-)
+
+diff --git a/target-i386/cpu.h b/target-i386/cpu.h
+index a0673d5..264b6bc 100644
+--- a/target-i386/cpu.h
++++ b/target-i386/cpu.h
+@@ -403,6 +403,8 @@
+ #define CPUID_EXT_XSAVE    (1 << 26)
+ #define CPUID_EXT_OSXSAVE  (1 << 27)
+ #define CPUID_EXT_AVX      (1 << 28)
++#define CPUID_EXT_F16C     (1 << 29)
++#define CPUID_EXT_RDRAND   (1 << 30)
+ #define CPUID_EXT_HYPERVISOR  (1 << 31)
+ 
+ #define CPUID_EXT2_FPU     (1 << 0)
+@@ -446,7 +448,15 @@
+ #define CPUID_EXT3_IBS     (1 << 10)
+ #define CPUID_EXT3_XOP     (1 << 11)
+ #define CPUID_EXT3_SKINIT  (1 << 12)
++#define CPUID_EXT3_WDT     (1 << 13)
++#define CPUID_EXT3_LWP     (1 << 15)
+ #define CPUID_EXT3_FMA4    (1 << 16)
++#define CPUID_EXT3_TCE     (1 << 17)
++#define CPUID_EXT3_NODEID  (1 << 19)
++#define CPUID_EXT3_TBM     (1 << 21)
++#define CPUID_EXT3_TOPOEXT (1 << 22)
++#define CPUID_EXT3_PERFCORE (1 << 23)
++#define CPUID_EXT3_PERFNB  (1 << 24)
+ 
+ 
+ #define CPUID_7_0_EBX_FSGSBASE (1 << 0)
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 4828df7..9ca4a1d 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -50,7 +50,7 @@ static const char *ext_feature_name[] = {
+     NULL, NULL, "dca", "sse4.1|sse4_1",
+     "sse4.2|sse4_2", "x2apic", "movbe", "popcnt",
+     "tsc-deadline", "aes", "xsave", "osxsave",
+-    "avx", NULL, NULL, "hypervisor",
++    "avx", "f16c", "rdrand", "hypervisor",
+ };
+ static const char *ext2_feature_name[] = {
+     "fpu", "vme", "de", "pse",
+@@ -66,17 +66,17 @@ static const char *ext3_feature_name[] = {
+     "lahf_lm" /* AMD LahfSahf */, "cmp_legacy", "svm", "extapic" /* AMD ExtApicSpace */,
+     "cr8legacy" /* AMD AltMovCr8 */, "abm", "sse4a", "misalignsse",
+     "3dnowprefetch", "osvw", "ibs", "xop",
+-    "skinit", "wdt", NULL, NULL,
+-    "fma4", NULL, "cvt16", "nodeid_msr",
+-    NULL, NULL, NULL, NULL,
+-    NULL, NULL, NULL, NULL,
++    "skinit", "wdt", NULL, "lwp",
++    "fma4", "tce", NULL, "nodeid_msr",
++    NULL, "tbm", "topoext", "perfctr_core",
++    "perfctr_nb", NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL,
+ };
+ 
+ static const char *cpuid_7_0_ebx_feature_name[] = {
+     "fsgsbase", NULL, NULL, "bmi1", "hle", "avx2", NULL, "smep",
+     "bmi2", "erms", "invpcid", "rtm", NULL, NULL, NULL, NULL,
+-    NULL, NULL, NULL, NULL, "smap", NULL, NULL, NULL,
++    NULL, NULL, "rdseed", "adx", "smap", NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+ };
+ 
+-- 
+1.7.11.7
+

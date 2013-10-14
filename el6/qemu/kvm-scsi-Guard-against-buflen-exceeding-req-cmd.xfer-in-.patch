@@ -1,0 +1,85 @@
+From 8de7f1d69c9f65fa183c08131cef4e4cb8c62a72 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:08 +0100
+Subject: [PATCH 052/109] scsi: Guard against buflen exceeding req->cmd.xfer
+ in scsi_disk_emulate_command
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-52-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37532
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 051/102] scsi: Guard against buflen exceeding req->cmd.xfer in scsi_disk_emulate_command
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+From: Thomas Higdon <thigdon@akamai.com>
+
+Limit the return value (corresponding to the length of the buffer to be
+DMAed back to the intiator) to the value in req->cmd.xfer, which is the
+amount of data that the initiator expects. Eliminate now-duplicate code
+that does this guarding in the functions for individual commands.
+
+Without this, the SCRIPTS code in the emulated LSI device eventually
+raises a DMA interrupt for a data overrun when an INQUIRY command whose
+buflen exceeds req->cmd.xfer is processed. It's the responsibility of
+the client to provide a request buffer and allocation length that are
+large enough for the result of the command.
+
+Signed-off-by: Thomas Higdon <thigdon@akamai.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from e2f0c49ffae8d3a00272c3cbc68850cc5aafbffa)
+---
+ hw/scsi-disk.c |   10 +---------
+ 1 files changed, 1 insertions(+), 9 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c |   10 +---------
+ 1 files changed, 1 insertions(+), 9 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index fcb49f3..2f4f000 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -459,9 +459,6 @@ static int scsi_disk_emulate_inquiry(SCSIRequest *req, uint8_t *outbuf)
+             }
+ 
+             l = strlen(s->serial);
+-            if (l > req->cmd.xfer) {
+-                l = req->cmd.xfer;
+-            }
+             if (l > 20) {
+                 l = 20;
+             }
+@@ -1075,9 +1072,6 @@ static int scsi_disk_emulate_mode_sense(SCSIDiskReq *r, uint8_t *outbuf)
+         outbuf[0] = ((buflen - 2) >> 8) & 0xff;
+         outbuf[1] = (buflen - 2) & 0xff;
+     }
+-    if (buflen > r->req.cmd.xfer) {
+-        buflen = r->req.cmd.xfer;
+-    }
+     return buflen;
+ }
+ 
+@@ -1111,9 +1105,6 @@ static int scsi_disk_emulate_read_toc(SCSIRequest *req, uint8_t *outbuf)
+     default:
+         return -1;
+     }
+-    if (toclen > req->cmd.xfer) {
+-        toclen = req->cmd.xfer;
+-    }
+     return toclen;
+ }
+ 
+@@ -1313,6 +1304,7 @@ static int scsi_disk_emulate_command(SCSIDiskReq *r)
+         scsi_check_condition(r, SENSE_CODE(INVALID_OPCODE));
+         return -1;
+     }
++    buflen = MIN(buflen, req->cmd.xfer);
+     return buflen;
+ 
+ not_ready:
+-- 
+1.7.7.6
+

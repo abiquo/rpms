@@ -1,0 +1,47 @@
+From 975dd918bf2e556ceff25d2082167edde4dac31b Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:33 +0100
+Subject: [PATCH 39/52] x86/cpuid: Fix crash on -cpu ""
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-40-git-send-email-armbru@redhat.com>
+Patchwork-id: 36621
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 39/52] x86/cpuid: Fix crash on -cpu ""
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+Spotted by Coverity.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 04c5b17a74c9d6c309181079f8949665b43b0164)
+---
+ target-i386/cpuid.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 82408d2..d3f877e 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -545,9 +545,9 @@ static int cpu_x86_find_by_name(x86_def_t *x86_cpu_def, const char *cpu_model)
+     uint32_t numvalue;
+ 
+     for (def = x86_defs; def; def = def->next)
+-        if (!strcmp(name, def->name))
++        if (name && !strcmp(name, def->name))
+             break;
+-    if (kvm_enabled() && strcmp(name, "host") == 0) {
++    if (kvm_enabled() && name && strcmp(name, "host") == 0) {
+         cpu_x86_fill_host(x86_cpu_def);
+     } else if (!def) {
+         fprintf(stderr, "Unknown cpu model: %s\n", name);
+-- 
+1.7.7.5
+

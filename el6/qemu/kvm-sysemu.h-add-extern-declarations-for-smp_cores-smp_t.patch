@@ -1,0 +1,52 @@
+From 8b000c50d73331ab4e37b562018d470f257a3de0 Mon Sep 17 00:00:00 2001
+Message-Id: <8b000c50d73331ab4e37b562018d470f257a3de0.1351776104.git.minovotn@redhat.com>
+In-Reply-To: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+References: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Mon, 29 Oct 2012 18:52:35 +0100
+Subject: [PATCH 09/11] sysemu.h: add extern declarations for smp_cores &
+ smp_threads
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351536756-16475-10-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43754
+O-Subject: [RHEL6.4 qemu-kvm PATCH 09/10] sysemu.h: add extern declarations for smp_cores & smp_threads
+Bugzilla: 733720
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Bugzilla: 733720
+Related TestOnly BZs: 816804, 815958, 782648
+Upstream status: not applicable
+
+On upstream QEMU, those variables are declared on cpus.h, but we don't
+have a cpus.h header. So, add the variables to the same place where
+smp_cpus is declared.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ sysemu.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ sysemu.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/sysemu.h b/sysemu.h
+index 8223113..e9dda5d 100644
+--- a/sysemu.h
++++ b/sysemu.h
+@@ -163,6 +163,8 @@ extern int alt_grab;
+ extern int ctrl_grab;
+ extern int usb_enabled;
+ extern int smp_cpus;
++extern int smp_cores;
++extern int smp_threads;
+ extern int max_cpus;
+ extern int cursor_hide;
+ extern int graphic_rotate;
+-- 
+1.7.11.7
+

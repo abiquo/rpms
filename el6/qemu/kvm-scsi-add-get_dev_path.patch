@@ -1,0 +1,84 @@
+From 442750b5d000def84d3b63878fa153a99a919793 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 21 Mar 2012 09:28:34 -0300
+Subject: [RHEL6 qemu-kvm PATCH 3/6] scsi: add get_dev_path
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1332322116-12270-4-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 38772
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 3/5] scsi: add get_dev_path
+Bugzilla: 800710
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Bugzilla: 800710
+
+After fixing the registration, we still need to add a get_dev_path
+callback for migration to work reliably in the presence of hot-plug
+and hot-unplug.  I do not have a testcase.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry-picked from commit baa1bd8992c22095fa5a483f4b6415eb15180665)
+---
+ hw/scsi-bus.c |   25 +++++++++++++++++++++++++
+ 1 files changed, 25 insertions(+), 0 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/scsi-bus.c |   25 +++++++++++++++++++++++++
+ 1 files changed, 25 insertions(+), 0 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 6010ce6..326b1f6 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -7,6 +7,7 @@
+ #include "trace.h"
+ #include "dma.h"
+ 
++static char *scsibus_get_dev_path(DeviceState *dev);
+ static char *scsibus_get_fw_dev_path(DeviceState *dev);
+ static int scsi_req_parse(SCSICommand *cmd, SCSIDevice *dev, uint8_t *buf);
+ static void scsi_req_dequeue(SCSIRequest *req);
+@@ -14,6 +15,7 @@ static void scsi_req_dequeue(SCSIRequest *req);
+ static struct BusInfo scsi_bus_info = {
+     .name  = "SCSI",
+     .size  = sizeof(SCSIBus),
++    .get_dev_path = scsibus_get_dev_path,
+     .get_fw_dev_path = scsibus_get_fw_dev_path,
+     .props = (Property[]) {
+         DEFINE_PROP_UINT32("channel", SCSIDevice, channel, 0),
+@@ -1418,6 +1420,29 @@ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense)
+     sdev->unit_attention = sense;
+ }
+ 
++static char *scsibus_get_dev_path(DeviceState *dev)
++{
++    SCSIDevice *d = DO_UPCAST(SCSIDevice, qdev, dev);
++    DeviceState *hba = dev->parent_bus->parent;
++    char *id = NULL;
++    char *path;
++
++    if (hba && hba->parent_bus && hba->parent_bus->info->get_dev_path) {
++        id = hba->parent_bus->info->get_dev_path(hba);
++    }
++    if (id) {
++        if (asprintf(&path, "%s/%d:%d:%d", id, d->channel, d->id, d->lun) < 0) {
++            abort();
++        }
++    } else {
++        if (asprintf(&path, "%d:%d:%d", d->channel, d->id, d->lun) < 0) {
++            abort();
++        }
++    }
++
++    return path;
++}
++
+ static char *scsibus_get_fw_dev_path(DeviceState *dev)
+ {
+     SCSIDevice *d = DO_UPCAST(SCSIDevice, qdev, dev);
+-- 
+1.7.3.2
+

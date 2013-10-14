@@ -1,0 +1,108 @@
+From f29165da031ee2978b73994579ea33de3f41c260 Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:38 -0500
+Subject: [PATCH 71/98] json-lexer: make lexer error-recovery more
+ deterministic
+
+Currently when we reach an error state we effectively flush everything
+fed to the lexer, which can put us in a state where we keep feeding
+tokens into the parser at arbitrary offsets in the stream. This makes it
+difficult for the lexer/tokenizer/parser to get back in sync when bad
+input is made by the client.
+
+With these changes we emit an error state/token up to the tokenizer as
+soon as we reach an error state, and continue processing any data passed
+in rather than bailing out. The reset token will be used to reset the
+tokenizer and parser, such that they'll recover state as soon as the
+lexer begins generating valid token sequences again.
+
+We also map chr(192,193,245-255) to an error state here, since they are
+invalid UTF-8 characters. QMP guest proxy/agent will use chr(255) to
+force a flush/reset of previous input for reliable delivery of certain
+events, so also we document that thoroughly here.
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit b011f61931f0113b29b7cd7e921dd022e0b04834)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ json-lexer.c |   25 +++++++++++++++++++++----
+ json-lexer.h |    1 +
+ 2 files changed, 22 insertions(+), 4 deletions(-)
+
+diff --git a/json-lexer.c b/json-lexer.c
+index 6b49047..c21338f 100644
+--- a/json-lexer.c
++++ b/json-lexer.c
+@@ -105,7 +105,8 @@ static const uint8_t json_lexer[][256] =  {
+         ['u'] = IN_DQ_UCODE0,
+     },
+     [IN_DQ_STRING] = {
+-        [1 ... 0xFF] = IN_DQ_STRING,
++        [1 ... 0xBF] = IN_DQ_STRING,
++        [0xC2 ... 0xF4] = IN_DQ_STRING,
+         ['\\'] = IN_DQ_STRING_ESCAPE,
+         ['"'] = JSON_STRING,
+     },
+@@ -144,7 +145,8 @@ static const uint8_t json_lexer[][256] =  {
+         ['u'] = IN_SQ_UCODE0,
+     },
+     [IN_SQ_STRING] = {
+-        [1 ... 0xFF] = IN_SQ_STRING,
++        [1 ... 0xBF] = IN_SQ_STRING,
++        [0xC2 ... 0xF4] = IN_SQ_STRING,
+         ['\\'] = IN_SQ_STRING_ESCAPE,
+         ['\''] = JSON_STRING,
+     },
+@@ -305,10 +307,25 @@ static int json_lexer_feed_char(JSONLexer *lexer, char ch, bool flush)
+             new_state = IN_START;
+             break;
+         case IN_ERROR:
++            /* XXX: To avoid having previous bad input leaving the parser in an
++             * unresponsive state where we consume unpredictable amounts of
++             * subsequent "good" input, percolate this error state up to the
++             * tokenizer/parser by forcing a NULL object to be emitted, then
++             * reset state.
++             *
++             * Also note that this handling is required for reliable channel
++             * negotiation between QMP and the guest agent, since chr(0xFF)
++             * is placed at the beginning of certain events to ensure proper
++             * delivery when the channel is in an unknown state. chr(0xFF) is
++             * never a valid ASCII/UTF-8 sequence, so this should reliably
++             * induce an error/flush state.
++             */
++            lexer->emit(lexer, lexer->token, JSON_ERROR, lexer->x, lexer->y);
+             QDECREF(lexer->token);
+             lexer->token = qstring_new();
+             new_state = IN_START;
+-            return -EINVAL;
++            lexer->state = new_state;
++            return 0;
+         default:
+             break;
+         }
+@@ -346,7 +363,7 @@ int json_lexer_feed(JSONLexer *lexer, const char *buffer, size_t size)
+ 
+ int json_lexer_flush(JSONLexer *lexer)
+ {
+-    return lexer->state == IN_START ? 0 : json_lexer_feed_char(lexer, 0);
++    return lexer->state == IN_START ? 0 : json_lexer_feed_char(lexer, 0, true);
+ }
+ 
+ void json_lexer_destroy(JSONLexer *lexer)
+diff --git a/json-lexer.h b/json-lexer.h
+index 3b50c46..10bc0a7 100644
+--- a/json-lexer.h
++++ b/json-lexer.h
+@@ -25,6 +25,7 @@ typedef enum json_token_type {
+     JSON_STRING,
+     JSON_ESCAPE,
+     JSON_SKIP,
++    JSON_ERROR,
+ } JSONTokenType;
+ 
+ typedef struct JSONLexer JSONLexer;
+-- 
+1.7.7.6
+

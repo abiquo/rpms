@@ -1,0 +1,280 @@
+From 61a1c8fa600c1b609e6253066509d11800e97290 Mon Sep 17 00:00:00 2001
+From: Jeff Cody <jcody@redhat.com>
+Date: Mon, 5 Mar 2012 12:57:01 -0500
+Subject: [PATCH 98/98] qemu-ga: make guest-suspend-* posix-only
+
+The Windows guest agent does not currently have suspend (s3/s4)
+support, however the qapi-schema-guest.json file had commands
+for the suspend commands, which causes linking to fail for a
+Windows guest agent build.
+
+Move those suspend commands to a separate JSON file, and modify
+the Makefile to only parse that JSON file if CONFIG_POSIX is
+set to 'y'.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+
+RHEL6 Note:
+
+This has not yet been submitted upstream.
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile                       |   20 ++++++++--
+ Makefile.objs                  |    3 +-
+ qapi-schema-guest-suspend.json |   76 ++++++++++++++++++++++++++++++++++++++++
+ qapi-schema-guest.json         |   75 ---------------------------------------
+ qga/commands-posix.c           |    1 +
+ 5 files changed, 95 insertions(+), 80 deletions(-)
+ create mode 100644 qapi-schema-guest-suspend.json
+
+diff --git a/Makefile b/Makefile
+index cf1c0e8..2a25e40 100644
+--- a/Makefile
++++ b/Makefile
+@@ -5,6 +5,7 @@ ifeq ($(TRACE_BACKEND),dtrace)
+ GENERATED_HEADERS += trace-dtrace.h
+ endif
+ 
++
+ ifneq ($(wildcard config-host.mak),)
+ # Put the all: rule here so that config-host.mak can contain dependencies.
+ all: build-all
+@@ -195,6 +196,8 @@ qemu-ga$(EXESUF): LIBS = $(LIBS_QGA)
+ 
+ gen-out-type = $(subst .,-,$@)
+ 
++qga-suspend-dep-$(CONFIG_POSIX) = $(qga-nested-api-y .o=.c) qga-suspend-qapi-types.h qga-suspend-qmp-commands.h
++
+ $(qapi-dir)/test-qapi-types.c $(qapi-dir)/test-qapi-types.h :\
+ $(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-types.py
+ 	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-types.py $(gen-out-type) -o "$(qapi-dir)" -p "test-" < $<, "  GEN   $@")
+@@ -215,18 +218,27 @@ $(qapi-dir)/qga-qmp-commands.h $(qapi-dir)/qga-qmp-marshal.c :\
+ $(SRC_PATH)/qapi-schema-guest.json $(SRC_PATH)/scripts/qapi-commands.py
+ 	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-commands.py $(gen-out-type) -o "$(qapi-dir)" -p "qga-" < $<, "  GEN   $@")
+ 
++$(qapi-dir)/qga-suspend-qapi-types.c $(qapi-dir)/qga-suspend-qapi-types.h :\
++$(SRC_PATH)/qapi-schema-guest-suspend.json $(SRC_PATH)/scripts/qapi-types.py
++	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-types.py $(gen-out-type) -o "$(qapi-dir)" -p "qga-suspend-" < $<, "  GEN   $@")
++$(qapi-dir)/qga-suspend-qapi-visit.c $(qapi-dir)/qga-suspend-qapi-visit.h :\
++$(SRC_PATH)/qapi-schema-guest-suspend.json $(SRC_PATH)/scripts/qapi-visit.py
++	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-visit.py $(gen-out-type) -o "$(qapi-dir)" -p "qga-suspend-" < $<, "  GEN   $@")
++$(qapi-dir)/qga-suspend-qmp-commands.h $(qapi-dir)/qga-suspend-qmp-marshal.c :\
++$(SRC_PATH)/qapi-schema-guest-suspend.json $(SRC_PATH)/scripts/qapi-commands.py
++	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-commands.py $(gen-out-type) -o "$(qapi-dir)" -p "qga-suspend-" < $<, "  GEN   $@")
++
+ test-visitor.o: $(addprefix $(qapi-dir)/, test-qapi-types.c test-qapi-types.h test-qapi-visit.c test-qapi-visit.h) $(qapi-obj-y)
+ test-visitor: test-visitor.o qfloat.o qint.o qdict.o qstring.o qlist.o qbool.o $(qapi-obj-y) error.o osdep.o qemu-malloc.o $(oslib-obj-y) qjson.o json-streamer.o json-lexer.o json-parser.o qerror.o qemu-error.o qemu-tool.o $(qapi-dir)/test-qapi-visit.o $(qapi-dir)/test-qapi-types.o
+ 
+ test-qmp-commands.o: $(addprefix $(qapi-dir)/, test-qapi-types.c test-qapi-types.h test-qapi-visit.c test-qapi-visit.h test-qmp-marshal.c test-qmp-commands.h) $(qapi-obj-y)
+ test-qmp-commands: test-qmp-commands.o qfloat.o qint.o qdict.o qstring.o qlist.o qbool.o $(qapi-obj-y) error.o osdep.o qemu-malloc.o $(oslib-obj-y) qjson.o json-streamer.o json-lexer.o json-parser.o qerror.o qemu-error.o qemu-tool.o $(qapi-dir)/test-qapi-visit.o $(qapi-dir)/test-qapi-types.o $(qapi-dir)/test-qmp-marshal.o module.o
+ 
+-QGALIB_GEN=$(addprefix $(qapi-dir)/, qga-qapi-types.c qga-qapi-types.h qga-qapi-visit.c qga-qmp-marshal.c)
++QGALIB_GEN=$(addprefix $(qapi-dir)/, qga-qapi-types.c qga-qapi-types.h qga-qapi-visit.c qga-qmp-marshal.c $(qga-suspend-dep-y))
+ $(QGALIB_GEN): $(GENERATED_HEADERS)
+-$(QGALIB) qemu-ga.o: $(QGALIB_GEN) $(qapi-obj-y)
+-
++qemu-ga.o: $(QGALIB_GEN) $(qapi-obj-y)
+ 
+-qemu-ga$(EXESUF): qemu-ga.o $(qga-obj-y) $(qapi-obj-y) $(trace-obj-y) $(qobject-obj-y) $(version-obj-y) $(addprefix $(qapi-dir)/, qga-qapi-visit.o qga-qapi-types.o qga-qmp-marshal.o)
++qemu-ga$(EXESUF): qemu-ga.o $(qga-obj-y) $(qapi-obj-y) $(trace-obj-y) $(qobject-obj-y) $(version-obj-y) $(addprefix $(qapi-dir)/, qga-qapi-visit.o qga-qapi-types.o qga-qmp-marshal.o $(qga-suspend-y)) 
+ 
+ QEMULIBS=libhw32 libhw64 libuser
+ 
+diff --git a/Makefile.objs b/Makefile.objs
+index 7aa8661..a40bc38 100644
+--- a/Makefile.objs
++++ b/Makefile.objs
+@@ -199,11 +199,12 @@ qapi-obj-y = $(addprefix qapi/, $(qapi-nested-y))
+ 
+ qga-nested-y = commands.o guest-agent-command-state.o
+ qga-nested-$(CONFIG_POSIX) += commands-posix.o channel-posix.o
++qga-nested-qapi-$(CONFIG_POSIX) = $(addprefix $(qapi-dir)/, qga-suspend-qapi-visit.o qga-suspend-qapi-types.o qga-suspend-qmp-marshal.o)
+ qga-nested-$(CONFIG_WIN32) += commands-win32.o channel-win32.o service-win32.o
+ qga-obj-y = $(addprefix qga/, $(qga-nested-y))
+ qga-obj-y += qemu-ga.o qemu-tool.o qemu-error.o module.o cutils.o osdep.o
+ qga-obj-$(CONFIG_WIN32) += qemu-malloc.o
+-qga-obj-$(CONFIG_POSIX) += qemu-malloc.o qemu-sockets.o qemu-option.o
++qga-obj-$(CONFIG_POSIX) += qemu-malloc.o qemu-sockets.o qemu-option.o $(qga-nested-qapi-y)
+ 
+ vl.o: QEMU_CFLAGS+=$(GPROF_CFLAGS)
+ 
+diff --git a/qapi-schema-guest-suspend.json b/qapi-schema-guest-suspend.json
+new file mode 100644
+index 0000000..638b4a7
+--- /dev/null
++++ b/qapi-schema-guest-suspend.json
+@@ -0,0 +1,76 @@
++# *-*- Mode: Python -*-*
++
++##
++# @guest-suspend-disk
++#
++# Suspend guest to disk.
++#
++# This command tries to execute the scripts provided by the pm-utils package.
++# If it's not available, the suspend operation will be performed by manually
++# writing to a sysfs file.
++#
++# For the best results it's strongly recommended to have the pm-utils
++# package installed in the guest.
++#
++# Returns: nothing on success
++#          If suspend to disk is not supported, Unsupported
++#
++# Notes: o This is an asynchronous request. There's no guarantee a response
++#          will be sent
++#        o It's strongly recommended to issue the guest-sync command before
++#          sending commands when the guest resumes
++#
++# Since: 1.1
++##
++{ 'command': 'guest-suspend-disk' }
++
++##
++# @guest-suspend-ram
++#
++# Suspend guest to ram.
++#
++# This command tries to execute the scripts provided by the pm-utils package.
++# If it's not available, the suspend operation will be performed by manually
++# writing to a sysfs file.
++#
++# For the best results it's strongly recommended to have the pm-utils
++# package installed in the guest.
++#
++# IMPORTANT: guest-suspend-ram requires QEMU to support the 'system_wakeup'
++# command.  Thus, it's *required* to query QEMU for the presence of the
++# 'system_wakeup' command before issuing guest-suspend-ram.
++#
++# Returns: nothing on success
++#          If suspend to ram is not supported, Unsupported
++#
++# Notes: o This is an asynchronous request. There's no guarantee a response
++#          will be sent
++#        o It's strongly recommended to issue the guest-sync command before
++#          sending commands when the guest resumes
++#
++# Since: 1.1
++##
++{ 'command': 'guest-suspend-ram' }
++
++##
++# @guest-suspend-hybrid
++#
++# Save guest state to disk and suspend to ram.
++#
++# This command requires the pm-utils package to be installed in the guest.
++#
++# IMPORTANT: guest-suspend-hybrid requires QEMU to support the 'system_wakeup'
++# command.  Thus, it's *required* to query QEMU for the presence of the
++# 'system_wakeup' command before issuing guest-suspend-hybrid.
++#
++# Returns: nothing on success
++#          If hybrid suspend is not supported, Unsupported
++#
++# Notes: o This is an asynchronous request. There's no guarantee a response
++#          will be sent
++#        o It's strongly recommended to issue the guest-sync command before
++#          sending commands when the guest resumes
++#
++# Since: 1.1
++##
++{ 'command': 'guest-suspend-hybrid' }
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 59bb538..80f1635 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -295,78 +295,3 @@
+ ##
+ { 'command': 'guest-fsfreeze-thaw',
+   'returns': 'int' }
+-
+-##
+-# @guest-suspend-disk
+-#
+-# Suspend guest to disk.
+-#
+-# This command tries to execute the scripts provided by the pm-utils package.
+-# If it's not available, the suspend operation will be performed by manually
+-# writing to a sysfs file.
+-#
+-# For the best results it's strongly recommended to have the pm-utils
+-# package installed in the guest.
+-#
+-# Returns: nothing on success
+-#          If suspend to disk is not supported, Unsupported
+-#
+-# Notes: o This is an asynchronous request. There's no guarantee a response
+-#          will be sent
+-#        o It's strongly recommended to issue the guest-sync command before
+-#          sending commands when the guest resumes
+-#
+-# Since: 1.1
+-##
+-{ 'command': 'guest-suspend-disk' }
+-
+-##
+-# @guest-suspend-ram
+-#
+-# Suspend guest to ram.
+-#
+-# This command tries to execute the scripts provided by the pm-utils package.
+-# If it's not available, the suspend operation will be performed by manually
+-# writing to a sysfs file.
+-#
+-# For the best results it's strongly recommended to have the pm-utils
+-# package installed in the guest.
+-#
+-# IMPORTANT: guest-suspend-ram requires QEMU to support the 'system_wakeup'
+-# command.  Thus, it's *required* to query QEMU for the presence of the
+-# 'system_wakeup' command before issuing guest-suspend-ram.
+-#
+-# Returns: nothing on success
+-#          If suspend to ram is not supported, Unsupported
+-#
+-# Notes: o This is an asynchronous request. There's no guarantee a response
+-#          will be sent
+-#        o It's strongly recommended to issue the guest-sync command before
+-#          sending commands when the guest resumes
+-#
+-# Since: 1.1
+-##
+-{ 'command': 'guest-suspend-ram' }
+-
+-##
+-# @guest-suspend-hybrid
+-#
+-# Save guest state to disk and suspend to ram.
+-#
+-# This command requires the pm-utils package to be installed in the guest.
+-#
+-# IMPORTANT: guest-suspend-hybrid requires QEMU to support the 'system_wakeup'
+-# command.  Thus, it's *required* to query QEMU for the presence of the
+-# 'system_wakeup' command before issuing guest-suspend-hybrid.
+-#
+-# Returns: nothing on success
+-#          If hybrid suspend is not supported, Unsupported
+-#
+-# Notes: o This is an asynchronous request. There's no guarantee a response
+-#          will be sent
+-#        o It's strongly recommended to issue the guest-sync command before
+-#          sending commands when the guest resumes
+-#
+-# Since: 1.1
+-##
+-{ 'command': 'guest-suspend-hybrid' }
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index 9d68fc3..ccbcdc4 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -26,6 +26,7 @@
+ #include <sys/wait.h>
+ #include "qga/guest-agent-core.h"
+ #include "qga-qmp-commands.h"
++#include "qga-suspend-qmp-commands.h"
+ #include "qerror.h"
+ #include "qemu-queue.h"
+ 
+-- 
+1.7.7.6
+

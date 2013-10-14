@@ -1,0 +1,124 @@
+From 0c740d356f8d30310bcff2b06cfefad0e72769e2 Mon Sep 17 00:00:00 2001
+Message-Id: <0c740d356f8d30310bcff2b06cfefad0e72769e2.1344844502.git.minovotn@redhat.com>
+From: Alex Williamson <alex.williamson@redhat.com>
+Date: Tue, 7 Aug 2012 19:41:15 +0200
+Subject: [PATCH 1/5] acpi_piix4: Disallow write to up/down PCI hotplug
+ registers
+
+RH-Author: Alex Williamson <alex.williamson@redhat.com>
+Message-id: <20120807194114.6021.43643.stgit@bling.home>
+Patchwork-id: 40605
+O-Subject: [RHEL6.4 qemu-kvm PATCH 1/5] acpi_piix4: Disallow write to up/down PCI hotplug registers
+Bugzilla: 807391
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Don Dutile <ddutile@redhat.com>
+
+Bugzilla: 807391
+Upstream commit: ba737541edddf9d0026460eb7b1d1c599b4c8ae9
+
+The write side of these registers is never used and actually can't be
+used as defined because any read/modify/write sequence from the guest
+potentially races with qemu.  Drop the write support and define these
+as read-only registers.
+
+Signed-off-by: Alex Williamson <alex.williamson@redhat.com>
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+---
+
+ hw/acpi.c |   42 +++++++++++++-----------------------------
+ 1 file changed, 13 insertions(+), 29 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/acpi.c | 42 +++++++++++++-----------------------------
+ 1 file changed, 13 insertions(+), 29 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index 2ccc0d1..31f4a61 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -36,7 +36,8 @@
+ 
+ #define GPE_BASE 0xafe0
+ #define PROC_BASE 0xaf00
+-#define PCI_BASE 0xae00
++#define PCI_UP_BASE 0xae00
++#define PCI_DOWN_BASE 0xae04
+ #define PCI_EJ_BASE 0xae08
+ #define PCI_RMV_BASE 0xae0c
+ 
+@@ -794,42 +795,26 @@ static void gpe_writeb(void *opaque, uint32_t addr, uint32_t val)
+ #endif
+ }
+ 
+-static uint32_t pcihotplug_read(void *opaque, uint32_t addr)
++static uint32_t pci_up_read(void *opaque, uint32_t addr)
+ {
+-    uint32_t val = 0;
+-    struct pci_status *g = opaque;
+-    switch (addr) {
+-        case PCI_BASE:
+-            val = g->up;
+-            break;
+-        case PCI_BASE + 4:
+-            val = g->down;
+-            break;
+-        default:
+-            break;
+-    }
++    PIIX4PMState *s = opaque;
++    uint32_t val = s->pci0_status.up;
+ 
+ #if defined(DEBUG)
+-    printf("pcihotplug read %x == %x\n", addr, val);
++    printf("pci_up_read %x\n", val);
+ #endif
+     return val;
+ }
+ 
+-static void pcihotplug_write(void *opaque, uint32_t addr, uint32_t val)
++static uint32_t pci_down_read(void *opaque, uint32_t addr)
+ {
+-    struct pci_status *g = opaque;
+-    switch (addr) {
+-        case PCI_BASE:
+-            g->up = val;
+-            break;
+-        case PCI_BASE + 4:
+-            g->down = val;
+-            break;
+-   }
++    PIIX4PMState *s = opaque;
++    uint32_t val = s->pci0_status.down;
+ 
+ #if defined(DEBUG)
+-    printf("pcihotplug write %x <== %d\n", addr, val);
++    printf("pci_down_read %x\n", val);
+ #endif
++    return val;
+ }
+ 
+ static uint32_t pciej_read(void *opaque, uint32_t addr)
+@@ -882,7 +867,6 @@ void piix4_acpi_system_hot_add_init(PCIBus *bus, const char *cpu_model)
+ {
+     int i = 0, cpus = smp_cpus;
+     struct gpe_regs *gpe = &pm_state->gpe;
+-    struct pci_status *pci0_status = &pm_state->pci0_status;
+ 
+     while (cpus > 0) {
+         gpe->cpus_sts[i++] = (cpus < 8) ? (1 << cpus) - 1 : 0xff;
+@@ -894,8 +878,8 @@ void piix4_acpi_system_hot_add_init(PCIBus *bus, const char *cpu_model)
+     register_ioport_write(PROC_BASE, 32, 1, gpe_writeb, gpe);
+     register_ioport_read(PROC_BASE, 32, 1,  gpe_readb, gpe);
+ 
+-    register_ioport_write(PCI_BASE, 8, 4, pcihotplug_write, pci0_status);
+-    register_ioport_read(PCI_BASE, 8, 4,  pcihotplug_read, pci0_status);
++    register_ioport_read(PCI_UP_BASE, 4, 4, pci_up_read, pm_state);
++    register_ioport_read(PCI_DOWN_BASE, 4, 4, pci_down_read, pm_state);
+ 
+     register_ioport_write(PCI_EJ_BASE, 4, 4, pciej_write, bus);
+     register_ioport_read(PCI_EJ_BASE, 4, 4,  pciej_read, bus);
+-- 
+1.7.11.2
+

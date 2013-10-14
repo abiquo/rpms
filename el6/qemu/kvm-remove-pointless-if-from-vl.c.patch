@@ -1,0 +1,54 @@
+From 5d299d7249092b41718cf8702aea80c2ffd3def8 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:02 +0100
+Subject: [PATCH 08/52] remove pointless if from vl.c
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-9-git-send-email-armbru@redhat.com>
+Patchwork-id: 36573
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 08/52] remove pointless if from vl.c
+Bugzilla: 758194
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Joel Schopp <jschopp@austin.ibm.com>
+
+We already set sockets to nonzero in the code above.
+So this if statement always evaluates true.  Remove it.
+
+Signed-off-by: Joel Schopp <jschopp@austin.ibm.com>
+Signed-off-by: Aurelien Jarno <aurelien@aurel32.net>
+(cherry picked from commit dca98169b8781a3e302a2c46682f2b63e560b05f)
+
+Conflicts:
+
+	vl.c
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ vl.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vl.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/vl.c b/vl.c
+index 05e68a6..176fb6c 100644
+--- a/vl.c
++++ b/vl.c
+@@ -2438,9 +2438,7 @@ static void smp_parse(const char *optarg)
+             threads = threads > 0 ? threads : 1;
+             cores = smp / (sockets * threads);
+         } else {
+-            if (sockets) {
+-                threads = smp / (cores * sockets);
+-            }
++            threads = smp / (cores * sockets);
+         }
+     }
+     smp_cpus = smp;
+-- 
+1.7.7.5
+

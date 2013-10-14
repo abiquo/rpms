@@ -1,0 +1,63 @@
+From dd7997e6bd179fb97ae890660bda2e29c3e306aa Mon Sep 17 00:00:00 2001
+Message-Id: <dd7997e6bd179fb97ae890660bda2e29c3e306aa.1343041017.git.minovotn@redhat.com>
+In-Reply-To: <1265c14a6676be3cbc003c219326a60813dc29d5.1343041017.git.minovotn@redhat.com>
+References: <1265c14a6676be3cbc003c219326a60813dc29d5.1343041017.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Mon, 16 Jul 2012 19:41:43 +0200
+Subject: [PATCH 9/9] vnc: add a more descriptive error message
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1342467703-20605-1-git-send-email-akong@redhat.com>
+Patchwork-id: 40350
+O-Subject: [RHEL-6.4 qemu-kvm PATCH] vnc: add a more descriptive error message
+Bugzilla: 796043
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+RH-Acked-by: Xiao Wang <jasowang@redhat.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=796043
+Brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4608053
+Tested: tested in localhost
+
+Currently qemu outputs some low-level error in qemu-sockets.c
+when failed to start vnc server.
+eg. 'getaddrinfo(127.0.0.1,5902): Name or service not known'
+
+Some libvirt users could not know what's happened with this
+unclear error message. This patch added a more descriptive
+error message.
+
+(cherry picked from upstream commit 94b204ca4eb03ae01e5c05509a40903c779ea83c)
+
+Signed-off-by: Amos Kong <akong@redhat.com>
+Reviewed-by: Michael Tokarev <mjt@tls.msk.ru>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+---
+ vl.c |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vl.c |    5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/vl.c b/vl.c
+index 043dad3..0526a06 100644
+--- a/vl.c
++++ b/vl.c
+@@ -6290,8 +6290,11 @@ int main(int argc, char **argv, char **envp)
+     /* init remote displays */
+     if (vnc_display) {
+         vnc_display_init(ds);
+-        if (vnc_display_open(ds, vnc_display) < 0)
++        if (vnc_display_open(ds, vnc_display) < 0) {
++            fprintf(stderr, "Failed to start VNC server on `%s'\n",
++                    vnc_display);
+             exit(1);
++        }
+ 
+         if (show_vnc_port) {
+             printf("VNC server running on `%s'\n", vnc_display_local_addr(ds));
+-- 
+1.7.10.4
+

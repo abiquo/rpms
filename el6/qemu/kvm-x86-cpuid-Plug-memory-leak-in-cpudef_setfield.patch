@@ -1,0 +1,44 @@
+From af5205ce0658a7e2fa2f0781489e4e470f6384b5 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:32 +0100
+Subject: [PATCH 38/52] x86/cpuid: Plug memory leak in cpudef_setfield()
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-39-git-send-email-armbru@redhat.com>
+Patchwork-id: 36598
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 38/52] x86/cpuid: Plug memory leak in cpudef_setfield()
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+To reproduce the leak, put two name options into the same [cpudef]
+section of target-x86_64.conf.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 99e1dec06f343cefecae9baeec0aae2f99f552d5)
+---
+ target-i386/cpuid.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 61f609e..82408d2 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -864,6 +864,7 @@ static int cpudef_setfield(const char *name, const char *str, void *opaque)
+     int err = 0;
+ 
+     if (!strcmp(name, "name")) {
++        g_free((void *)def->name);
+         def->name = g_strdup(str);
+     } else if (!strcmp(name, "model_id")) {
+         strncpy(def->model_id, str, sizeof (def->model_id));
+-- 
+1.7.7.5
+

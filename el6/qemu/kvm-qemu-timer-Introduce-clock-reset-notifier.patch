@@ -1,0 +1,133 @@
+From 449a6a98df99d79a1cf43813da937e9d8992bbd9 Mon Sep 17 00:00:00 2001
+From: Gleb Natapov <gleb@redhat.com>
+Date: Wed, 22 Feb 2012 10:28:17 +0100
+Subject: [PATCH 2/3] qemu-timer: Introduce clock reset notifier
+
+RH-Author: Gleb Natapov <gleb@redhat.com>
+Message-id: <1329906498-3472-3-git-send-email-gleb@redhat.com>
+Patchwork-id: 37478
+O-Subject: [PATCH qemu-kvm RHEL6.3 2/3] qemu-timer: Introduce clock reset notifier
+Bugzilla: 734426
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+QEMU_CLOCK_HOST is based on the system time which may jump backward in
+case the admin or NTP adjusts it. RTC emulations and other device models
+can suffer in this case as timers will stall for the period the clock
+was tuned back.
+
+This adds a detection mechanism that checks on every host clock readout
+if the new time is before the last result. If that is the case a
+notifier list is informed. Device models interested in this event can
+register a notifier with the clock.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+
+Upstream commit: 691a0c9c9b71360271220c12f20a7238bc302503
+Signed-off-by: Gleb Natapov <gleb@redhat.com>
+---
+ qemu-timer.h |    6 ++++++
+ vl.c         |   29 ++++++++++++++++++++++++++++-
+ 2 files changed, 34 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-timer.h |    6 ++++++
+ vl.c         |   29 ++++++++++++++++++++++++++++-
+ 2 files changed, 34 insertions(+), 1 deletions(-)
+
+diff --git a/qemu-timer.h b/qemu-timer.h
+index 04062b3..5e5942e 100644
+--- a/qemu-timer.h
++++ b/qemu-timer.h
+@@ -1,6 +1,8 @@
+ #ifndef QEMU_TIMER_H
+ #define QEMU_TIMER_H
+ 
++#include "notify.h"
++
+ /* timers */
+ 
+ typedef struct QEMUClock QEMUClock;
+@@ -26,6 +28,10 @@ extern QEMUClock *host_clock;
+ 
+ int64_t qemu_get_clock(QEMUClock *clock);
+ 
++void qemu_register_clock_reset_notifier(QEMUClock *clock, Notifier *notifier);
++void qemu_unregister_clock_reset_notifier(QEMUClock *clock,
++                                          Notifier *notifier);
++
+ QEMUTimer *qemu_new_timer(QEMUClock *clock, QEMUTimerCB *cb, void *opaque);
+ void qemu_free_timer(QEMUTimer *ts);
+ void qemu_del_timer(QEMUTimer *ts);
+diff --git a/vl.c b/vl.c
+index 38fb0a5..1244885 100644
+--- a/vl.c
++++ b/vl.c
+@@ -972,6 +972,9 @@ void cpu_disable_ticks(void)
+ struct QEMUClock {
+     int type;
+     /* XXX: add frequency */
++
++    NotifierList reset_notifiers;
++    int64_t last;
+ };
+ 
+ struct QEMUTimer {
+@@ -1205,8 +1208,14 @@ static QEMUTimer *active_timers[QEMU_NUM_CLOCKS];
+ static QEMUClock *qemu_new_clock(int type)
+ {
+     QEMUClock *clock;
++
+     clock = qemu_mallocz(sizeof(QEMUClock));
+     clock->type = type;
++    notifier_list_init(&clock->reset_notifiers);
++    /* required to detect & report backward jumps */
++    if (type == QEMU_CLOCK_HOST) {
++        clock->last = get_clock_realtime();
++    }
+     return clock;
+ }
+ 
+@@ -1317,6 +1326,8 @@ static void qemu_run_timers(QEMUTimer **ptimer_head, int64_t current_time)
+ 
+ int64_t qemu_get_clock(QEMUClock *clock)
+ {
++    int64_t now, last;
++
+     switch(clock->type) {
+     case QEMU_CLOCK_REALTIME:
+         return get_clock() / 1000000;
+@@ -1328,10 +1339,26 @@ int64_t qemu_get_clock(QEMUClock *clock)
+             return cpu_get_clock();
+         }
+     case QEMU_CLOCK_HOST:
+-        return get_clock_realtime();
++        now = get_clock_realtime();
++        last = clock->last;
++        clock->last = now;
++        if (now < last) {
++            notifier_list_notify(&clock->reset_notifiers, &now);
++        }
++        return now;
+     }
+ }
+ 
++void qemu_register_clock_reset_notifier(QEMUClock *clock, Notifier *notifier)
++{
++    notifier_list_add(&clock->reset_notifiers, notifier);
++}
++
++void qemu_unregister_clock_reset_notifier(QEMUClock *clock, Notifier *notifier)
++{
++    notifier_list_remove(&clock->reset_notifiers, notifier);
++}
++
+ static void init_clocks(void)
+ {
+     init_get_clock();
+-- 
+1.7.7.6
+

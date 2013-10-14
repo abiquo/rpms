@@ -1,0 +1,128 @@
+From fd35ccfe924e1a280c6d05e0f5eb97085356c37a Mon Sep 17 00:00:00 2001
+Message-Id: <fd35ccfe924e1a280c6d05e0f5eb97085356c37a.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:47 +0200
+Subject: [PATCH 34/35] block: make bdrv_find_backing_image compare canonical
+ filenames
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <9385ca70c09db11694401a8a3d42ba30a08f9be4.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43292
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 34/35] block: make bdrv_find_backing_image compare canonical filenames
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Currently, bdrv_find_backing_image compares bs->backing_file with
+what is passed in as a backing_file name.  Mismatches may occur,
+however, when bs->backing_file and backing_file are not both
+absolute or relative.
+
+Use path_combine() to make sure any relative backing filenames are
+relative to the current image filename being searched, and then use
+realpath() to make all comparisons based on absolute filenames.
+
+If either backing_file or bs->backing_file is determine to be a
+protocol, then no filename normalization is performed.
+
+This also changes bdrv_find_backing_image to no longer be recursive,
+but iterative.
+
+Submitted and reviewed upstream, but not accepted yet.
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c | 60 ++++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 54 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c | 60 ++++++++++++++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 54 insertions(+), 6 deletions(-)
+
+diff --git a/block.c b/block.c
+index dfdf078..10525c4 100644
+--- a/block.c
++++ b/block.c
+@@ -2950,22 +2950,70 @@ int bdrv_snapshot_list(BlockDriverState *bs,
+     return drv->bdrv_snapshot_list(bs, psn_info);
+ }
+ 
++/* backing_file can either be relative, or absolute, or a protocol.  If it is
++ * relative, it must be relative to the chain.  So, passing in bs->filename
++ * from a BDS as backing_file should not be done, as that may be relative to
++ * the CWD rather than the chain. */
+ BlockDriverState *bdrv_find_backing_image(BlockDriverState *bs,
+         const char *backing_file)
+ {
+-    if (!bs->drv) {
++    char *filename_full = NULL;
++    char *backing_file_full = NULL;
++    char *filename_tmp = NULL;
++    int is_protocol = 0;
++    BlockDriverState *curr_bs = NULL;
++    BlockDriverState *retval = NULL;
++
++    if (!bs || !bs->drv || !backing_file) {
+         return NULL;
+     }
+ 
+-    if (bs->backing_hd) {
+-        if (strcmp(bs->backing_file, backing_file) == 0) {
+-            return bs->backing_hd;
++    filename_full     = g_malloc(PATH_MAX);
++    backing_file_full = g_malloc(PATH_MAX);
++    filename_tmp      = g_malloc(PATH_MAX);
++
++    is_protocol = path_has_protocol(backing_file);
++
++    for (curr_bs = bs; curr_bs->backing_hd; curr_bs = curr_bs->backing_hd) {
++
++        /* If either of the filename paths is actually a protocol, then
++         * compare unmodified paths; otherwise make paths relative */
++        if (is_protocol || path_has_protocol(curr_bs->backing_file)) {
++            if (strcmp(backing_file, curr_bs->backing_file) == 0) {
++                retval = curr_bs->backing_hd;
++                break;
++            }
+         } else {
+-            return bdrv_find_backing_image(bs->backing_hd, backing_file);
++            /* If not an absolute filename path, make it relative to the current
++             * image's filename path */
++            path_combine(filename_tmp, PATH_MAX, curr_bs->filename,
++                         backing_file);
++
++            /* We are going to compare absolute pathnames */
++            if (!realpath(filename_tmp, filename_full)) {
++                continue;
++            }
++
++            /* We need to make sure the backing filename we are comparing against
++             * is relative to the current image filename (or absolute) */
++            path_combine(filename_tmp, PATH_MAX, curr_bs->filename,
++                         curr_bs->backing_file);
++
++            if (!realpath(filename_tmp, backing_file_full)) {
++                continue;
++            }
++
++            if (strcmp(backing_file_full, filename_full) == 0) {
++                retval = curr_bs->backing_hd;
++                break;
++            }
+         }
+     }
+ 
+-    return NULL;
++    g_free(filename_full);
++    g_free(backing_file_full);
++    g_free(filename_tmp);
++    return retval;
+ }
+ 
+ BlockDriverState *bdrv_find_base(BlockDriverState *bs)
+-- 
+1.7.11.7
+

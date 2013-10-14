@@ -1,0 +1,49 @@
+From 623efbbe04440b94c216255985a556a3edff1f1e Mon Sep 17 00:00:00 2001
+Message-Id: <623efbbe04440b94c216255985a556a3edff1f1e.1334837238.git.minovotn@redhat.com>
+In-Reply-To: <79df69022f0dd9fd4f051adb900412b509731978.1334837238.git.minovotn@redhat.com>
+References: <79df69022f0dd9fd4f051adb900412b509731978.1334837238.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 17 Apr 2012 15:58:42 +0200
+Subject: [PATCH 2/3] block: another bdrv_append fix
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334678322-15574-3-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39272
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 2/2] block: another bdrv_append fix
+Bugzilla: 812948
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Asias He <asias@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Upstream status: submitted for 1.1
+
+bdrv_append must also copy open_flags to the top, because the snapshot
+has BDRV_O_NO_BACKING set.  This causes interesting results if you
+later use drive-reopen (not upstream) to reopen the image, and lose
+the backing file in the process.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ block.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index bd42f0f..2e64595 100644
+--- a/block.c
++++ b/block.c
+@@ -773,6 +773,7 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
+     tmp = *bs_new;
+ 
+     /* there are some fields that need to stay on the top layer: */
++    tmp.open_flags        = bs_top->open_flags;
+ 
+     /* dev info */
+     tmp.dev_ops           = bs_top->dev_ops;
+-- 
+1.7.7.6
+

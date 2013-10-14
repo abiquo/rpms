@@ -1,0 +1,99 @@
+From e74f21f4030b33aaac45cab138ecabe18aac615b Mon Sep 17 00:00:00 2001
+Message-Id: <e74f21f4030b33aaac45cab138ecabe18aac615b.1351793582.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Thu, 25 Oct 2012 19:28:14 +0200
+Subject: [PATCH 1/8] i386: kvm: kvm_arch_get_supported_cpuid: move R_EDX hack
+ outside of for loop
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351193301-31675-2-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43650
+O-Subject: [RHEL6.4 qemu-kvm PATCH 1/8] i386: kvm: kvm_arch_get_supported_cpuid: move R_EDX hack outside of for loop
+Bugzilla: 691638
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 691638
+Upstream status: equivalent patch submitted
+ Message-Id: <1349383747-19383-2-git-send-email-ehabkost@redhat.com>
+
+The for loop will become a separate function, so clean it up so it can
+become independent from the bit hacking for R_EDX.
+
+No behavior change[1], just code movement.
+
+[1] Well, only if the kernel returned CPUID leafs 1 or 0x80000001 as
+    unsupported, but there's no kernel version that does that.
+
+[RHEL note: differently from upstream, the changes are on
+ qemu-kvm-x86.c, at kvm_get_supported_cpuid()]
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ qemu-kvm-x86.c | 39 ++++++++++++++++++++++-----------------
+ 1 file changed, 22 insertions(+), 17 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-kvm-x86.c | 39 ++++++++++++++++++++++-----------------
+ 1 file changed, 22 insertions(+), 17 deletions(-)
+
+diff --git a/qemu-kvm-x86.c b/qemu-kvm-x86.c
+index b09f427..d3b5ace 100644
+--- a/qemu-kvm-x86.c
++++ b/qemu-kvm-x86.c
+@@ -738,28 +738,33 @@ uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+ 				break;
+ 			case R_EDX:
+ 				ret = cpuid->entries[i].edx;
+-                                if (function == 1) {
+-                                    /* kvm misreports the following features
+-                                     */
+-                                    ret |= 1 << 12; /* MTRR */
+-                                    ret |= 1 << 16; /* PAT */
+-                                    ret |= 1 << 7;  /* MCE */
+-                                    ret |= 1 << 14; /* MCA */
+-                                }
+-
+-				/* On Intel, kvm returns cpuid according to
+-				 * the Intel spec, so add missing bits
+-				 * according to the AMD spec:
+-				 */
+-				if (function == 0x80000001) {
+-					cpuid_1_edx = kvm_get_supported_cpuid(kvm, 1, 0, R_EDX);
+-					ret |= cpuid_1_edx & 0x183f7ff;
+-				}
+ 				break;
+ 			}
+ 		}
+ 	}
+ 
++	/* Fixups for the data returned by KVM, below */
++
++	if (reg == R_EDX) {
++		if (function == 1) {
++			/* kvm misreports the following features
++			 */
++			ret |= 1 << 12; /* MTRR */
++			ret |= 1 << 16; /* PAT */
++			ret |= 1 << 7;  /* MCE */
++			ret |= 1 << 14; /* MCA */
++		}
++
++		/* On Intel, kvm returns cpuid according to
++		 * the Intel spec, so add missing bits
++		 * according to the AMD spec:
++		 */
++		if (function == 0x80000001) {
++			cpuid_1_edx = kvm_get_supported_cpuid(kvm, 1, 0, R_EDX);
++			ret |= cpuid_1_edx & 0x183f7ff;
++		}
++	}
++
+ 	free(cpuid);
+ #endif
+ 	/* fallback for older kernels */
+-- 
+1.7.11.7
+

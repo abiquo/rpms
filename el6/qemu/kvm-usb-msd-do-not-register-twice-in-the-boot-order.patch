@@ -1,0 +1,123 @@
+From 312c2671fcf5087813e3783aadba44caffc4b6c9 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:35 +0100
+Subject: [PATCH 079/109] usb-msd: do not register twice in the boot order
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-79-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37562
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 078/102] usb-msd: do not register twice in the boot order
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+USB mass storage devices are registered twice in the boot order.
+To avoid having to keep the two paths in sync, pass the bootindex
+property down to the scsi-disk device and let it register itself.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from ce4e7e4661af433674f349ccdd5709b4b7a8b2fd)
+
+Conflicts:
+	hw/pci-hotplug.c (trivial)
+---
+ hw/pci-hotplug.c |    3 ++-
+ hw/scsi-bus.c    |    7 +++++--
+ hw/scsi.h        |    2 +-
+ hw/usb-msd.c     |    4 ++--
+ 4 files changed, 10 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/pci-hotplug.c |    3 ++-
+ hw/scsi-bus.c    |    7 +++++--
+ hw/scsi.h        |    2 +-
+ hw/usb-msd.c     |    4 ++--
+ 4 files changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/hw/pci-hotplug.c b/hw/pci-hotplug.c
+index b100f45..06a4442 100644
+--- a/hw/pci-hotplug.c
++++ b/hw/pci-hotplug.c
+@@ -90,7 +90,8 @@ static int scsi_hot_add(Monitor *mon, DeviceState *adapter,
+      * specified).
+      */
+     dinfo->unit = qemu_opt_get_number(dinfo->opts, "unit", -1);
+-    scsidev = scsi_bus_legacy_add_drive(scsibus, dinfo->bdrv, dinfo->unit);
++    scsidev = scsi_bus_legacy_add_drive(scsibus, dinfo->bdrv, dinfo->unit,
++                                        false, -1);
+     dinfo->unit = scsidev->id;
+ 
+     if (printinfo)
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 80e5bbe..f6ba28c 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -162,7 +162,7 @@ void scsi_qdev_register(SCSIDeviceInfo *info)
+ 
+ /* handle legacy '-drive if=scsi,...' cmd line args */
+ SCSIDevice *scsi_bus_legacy_add_drive(SCSIBus *bus, BlockDriverState *bdrv,
+-                                      int unit, bool removable)
++                                      int unit, bool removable, int bootindex)
+ {
+     const char *driver;
+     DeviceState *dev;
+@@ -170,6 +170,9 @@ SCSIDevice *scsi_bus_legacy_add_drive(SCSIBus *bus, BlockDriverState *bdrv,
+     driver = bdrv_is_sg(bdrv) ? "scsi-generic" : "scsi-disk";
+     dev = qdev_create(&bus->qbus, driver);
+     qdev_prop_set_uint32(dev, "scsi-id", unit);
++    if (bootindex >= 0) {
++        qdev_prop_set_int32(dev, "bootindex", bootindex);
++    }
+     if (qdev_prop_exists(dev, "removable")) {
+         qdev_prop_set_bit(dev, "removable", removable);
+     }
+@@ -195,7 +198,7 @@ int scsi_bus_legacy_handle_cmdline(SCSIBus *bus)
+             continue;
+         }
+         qemu_opts_loc_restore(dinfo->opts);
+-        if (!scsi_bus_legacy_add_drive(bus, dinfo->bdrv, unit, false)) {
++        if (!scsi_bus_legacy_add_drive(bus, dinfo->bdrv, unit, false, -1)) {
+             res = -1;
+             break;
+         }
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 2a7a7e4..81570d5 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -129,7 +129,7 @@ static inline SCSIBus *scsi_bus_from_device(SCSIDevice *d)
+ }
+ 
+ SCSIDevice *scsi_bus_legacy_add_drive(SCSIBus *bus, BlockDriverState *bdrv,
+-                                      int unit, bool removable);
++                                      int unit, bool removable, int bootindex);
+ int scsi_bus_legacy_handle_cmdline(SCSIBus *bus);
+ 
+ /*
+diff --git a/hw/usb-msd.c b/hw/usb-msd.c
+index 43013f0..1232ab4 100644
+--- a/hw/usb-msd.c
++++ b/hw/usb-msd.c
+@@ -564,7 +564,8 @@ static int usb_msd_initfn(USBDevice *dev)
+ 
+     usb_desc_init(dev);
+     scsi_bus_new(&s->bus, &s->dev.qdev, &usb_msd_scsi_info);
+-    s->scsi_dev = scsi_bus_legacy_add_drive(&s->bus, bs, 0, !!s->removable);
++    s->scsi_dev = scsi_bus_legacy_add_drive(&s->bus, bs, 0, !!s->removable,
++                                            s->conf.bootindex);
+     if (!s->scsi_dev) {
+         return -1;
+     }
+@@ -580,7 +581,6 @@ static int usb_msd_initfn(USBDevice *dev)
+         }
+     }
+ 
+-    add_boot_device_path(s->conf.bootindex, &dev->qdev, "/disk@0,0");
+     return 0;
+ }
+ 
+-- 
+1.7.7.6
+

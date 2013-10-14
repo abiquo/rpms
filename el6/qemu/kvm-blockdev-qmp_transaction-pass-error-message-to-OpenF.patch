@@ -1,0 +1,55 @@
+From b4da780e67410df7cc1dccad99abd89317ab5c10 Mon Sep 17 00:00:00 2001
+Message-Id: <b4da780e67410df7cc1dccad99abd89317ab5c10.1350045285.git.minovotn@redhat.com>
+In-Reply-To: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+References: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Thu, 11 Oct 2012 18:24:23 +0200
+Subject: [PATCH 11/12] blockdev: qmp_transaction(): pass error message to
+ OpenFileFailed error
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349979864-509-6-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42995
+O-Subject: [RHEL6.4 qemu-kvm PATCH 5/6] blockdev: qmp_transaction(): pass error message to OpenFileFailed error
+Bugzilla: 806775
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ blockdev.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ blockdev.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 052a962..4fc76f5 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -992,7 +992,8 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+         }
+ 
+         if (ret) {
+-            error_set(errp, QERR_OPEN_FILE_FAILED, new_image_file, "");
++            error_set(errp, QERR_OPEN_FILE_FAILED, new_image_file,
++                      strerror(-ret));
+             goto delete_and_fail;
+         }
+ 
+@@ -1022,7 +1023,8 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+         }
+ 
+         if (ret != 0) {
+-            error_set(errp, QERR_OPEN_FILE_FAILED, new_image_file, "");
++            error_set(errp, QERR_OPEN_FILE_FAILED, new_image_file,
++                      strerror(-ret));
+             goto delete_and_fail;
+         }
+     }
+-- 
+1.7.11.7
+

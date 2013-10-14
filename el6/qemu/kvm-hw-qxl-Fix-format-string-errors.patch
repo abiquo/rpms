@@ -1,0 +1,90 @@
+From c6f119027d3bfe44943134f0ceccb5b0b8586a5f Mon Sep 17 00:00:00 2001
+Message-Id: <c6f119027d3bfe44943134f0ceccb5b0b8586a5f.1349887753.git.minovotn@redhat.com>
+In-Reply-To: <8366ff5a206b0f75edd17a4a78f7c389ebb81d49.1349887753.git.minovotn@redhat.com>
+References: <8366ff5a206b0f75edd17a4a78f7c389ebb81d49.1349887753.git.minovotn@redhat.com>
+From: Alon Levy <alevy@redhat.com>
+Date: Sun, 7 Oct 2012 14:26:46 +0200
+Subject: [PATCH 08/11] hw/qxl: Fix format string errors
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1349620009-26192-5-git-send-email-alevy@redhat.com>
+Patchwork-id: 42772
+O-Subject: [PATCH RHEL-6.4 v2 4/7] hw/qxl: Fix format string errors
+Bugzilla: 820136
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+
+From: Peter Maydell <peter.maydell@linaro.org>
+
+Fix format string errors causing compile failure on 32 bit hosts
+when spice is enabled.
+
+Signed-off-by: Peter Maydell <peter.maydell@linaro.org>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Upstream: a680f7e7cbe8bebd15de2d974989d4e58810837d
+
+Changes:
+ s/qemu_clock_get_ns/qemu_clock_get/, used only for debug prints,
+ resolution not critical.
+---
+ hw/qxl-logger.c | 2 +-
+ hw/qxl.c        | 8 ++++----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl-logger.c | 2 +-
+ hw/qxl.c        | 8 ++++----
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/hw/qxl-logger.c b/hw/qxl-logger.c
+index 95bf38b..fab060a 100644
+--- a/hw/qxl-logger.c
++++ b/hw/qxl-logger.c
+@@ -224,7 +224,7 @@ void qxl_log_command(PCIQXLDevice *qxl, const char *ring, QXLCommandExt *ext)
+     if (!qxl->cmdlog) {
+         return;
+     }
+-    fprintf(stderr, "%ld qxl-%d/%s:", qemu_get_clock(vm_clock),
++    fprintf(stderr, "%" PRId64 " qxl-%d/%s:", qemu_get_clock(vm_clock),
+             qxl->id, ring);
+     fprintf(stderr, " cmd @ 0x%" PRIx64 " %s%s", ext->cmd.data,
+             qxl_name(qxl_type, ext->cmd.type),
+diff --git a/hw/qxl.c b/hw/qxl.c
+index ab941b1..94c7312 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -1046,7 +1046,7 @@ static void qxl_add_memslot(PCIQXLDevice *d, uint32_t slot_id, uint64_t delta,
+     memslot.generation = d->rom->slot_generation = 0;
+     qxl_rom_set_dirty(d);
+ 
+-    dprint(d, 1, "%s: slot %d: host virt 0x%" PRIx64 " - 0x%" PRIx64 "\n",
++    dprint(d, 1, "%s: slot %d: host virt 0x%lx - 0x%lx\n",
+            __FUNCTION__, memslot.slot_id,
+            memslot.virt_start, memslot.virt_end);
+ 
+@@ -1176,8 +1176,8 @@ static void qxl_set_mode(PCIQXLDevice *d, int modenr, int loadvm)
+         .mem        = devmem + d->shadow_rom.draw_area_offset,
+     };
+ 
+-    dprint(d, 1, "%s: mode %d  [ %d x %d @ %d bpp devmem 0x%lx ]\n", __FUNCTION__,
+-           modenr, mode->x_res, mode->y_res, mode->bits, devmem);
++    dprint(d, 1, "%s: mode %d  [ %d x %d @ %d bpp devmem 0x%" PRIx64 " ]\n",
++           __func__, modenr, mode->x_res, mode->y_res, mode->bits, devmem);
+     if (!loadvm) {
+         qxl_hard_reset(d, 0);
+     }
+@@ -1314,7 +1314,7 @@ async_common:
+         break;
+     case QXL_IO_LOG:
+         if (d->guestdebug) {
+-            fprintf(stderr, "qxl/guest-%d: %ld: %s", d->id,
++            fprintf(stderr, "qxl/guest-%d: %" PRId64 ": %s", d->id,
+                     qemu_get_clock(vm_clock), d->ram->log_buf);
+         }
+         break;
+-- 
+1.7.11.4
+

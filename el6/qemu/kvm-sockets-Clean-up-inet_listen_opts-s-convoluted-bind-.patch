@@ -1,0 +1,75 @@
+From 91486643afff689e1168ee3abe79ae91d99606dd Mon Sep 17 00:00:00 2001
+Message-Id: <91486643afff689e1168ee3abe79ae91d99606dd.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Mon, 1 Oct 2012 14:12:35 +0200
+Subject: [PATCH 22/34] sockets: Clean up inet_listen_opts()'s convoluted
+ bind() loop
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1349100767-9066-3-git-send-email-akong@redhat.com>
+Patchwork-id: 42561
+O-Subject: [RHEL-6.4 qemu-kvm PATCH v7 02/14] sockets: Clean up inet_listen_opts()'s convoluted bind() loop
+Bugzilla: 680356
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+From: Markus Armbruster <armbru@redhat.com>
+
+(Cherry-picked from commit 877691f96f4ffba2dba45ba5556eacd53b77237b)
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+---
+ qemu-sockets.c |   14 ++++++--------
+ 1 files changed, 6 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-sockets.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/qemu-sockets.c b/qemu-sockets.c
+index 12c97fb..ad7465c 100644
+--- a/qemu-sockets.c
++++ b/qemu-sockets.c
+@@ -107,7 +107,7 @@ int inet_listen_opts(QemuOpts *opts, int port_offset)
+     char port[33];
+     char uaddr[INET6_ADDRSTRLEN+1];
+     char uport[33];
+-    int slisten,rc,to,try_next;
++    int slisten, rc, to, port_min, port_max, p;
+ 
+     memset(&ai,0, sizeof(ai));
+     ai.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
+@@ -159,20 +159,18 @@ int inet_listen_opts(QemuOpts *opts, int port_offset)
+         }
+ #endif
+ 
+-        for (;;) {
++        port_min = inet_getport(e);
++        port_max = to ? to + port_offset : port_min;
++        for (p = port_min; p <= port_max; p++) {
++            inet_setport(e, p);
+             if (bind(slisten, e->ai_addr, e->ai_addrlen) == 0) {
+                 goto listen;
+             }
+-            try_next = to && (inet_getport(e) <= to + port_offset);
+-            if (!try_next)
++            if (p == port_max) {
+                 fprintf(stderr,"%s: bind(%s,%s,%d): %s\n", __FUNCTION__,
+                         inet_strfamily(e->ai_family), uaddr, inet_getport(e),
+                         strerror(errno));
+-            if (try_next) {
+-                inet_setport(e, inet_getport(e) + 1);
+-                continue;
+             }
+-            break;
+         }
+         closesocket(slisten);
+     }
+-- 
+1.7.11.4
+

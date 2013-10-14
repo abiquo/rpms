@@ -1,0 +1,49 @@
+From 80bac00350fbe39306345806909f2e05c7a83768 Mon Sep 17 00:00:00 2001
+Message-Id: <80bac00350fbe39306345806909f2e05c7a83768.1349887753.git.minovotn@redhat.com>
+In-Reply-To: <8366ff5a206b0f75edd17a4a78f7c389ebb81d49.1349887753.git.minovotn@redhat.com>
+References: <8366ff5a206b0f75edd17a4a78f7c389ebb81d49.1349887753.git.minovotn@redhat.com>
+From: Alon Levy <alevy@redhat.com>
+Date: Sun, 7 Oct 2012 14:26:44 +0200
+Subject: [PATCH 06/11] qxl: add dev id to guest prints
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1349620009-26192-3-git-send-email-alevy@redhat.com>
+Patchwork-id: 42770
+O-Subject: [PATCH RHEL-6.4 v2 2/7] qxl: add dev id to guest prints
+Bugzilla: 820136
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream: 6ebebb551ad1a5c4e24d3fccd246c5111450c1b3
+
+Changes:
+ no qemu_clock_get_ns, replaced with qemu_clock_get. (only used
+ for printing, resolution not critical).
+---
+ hw/qxl.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/hw/qxl.c b/hw/qxl.c
+index 07231e2..ab941b1 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -1314,7 +1314,8 @@ async_common:
+         break;
+     case QXL_IO_LOG:
+         if (d->guestdebug) {
+-            fprintf(stderr, "qxl/guest: %s", d->ram->log_buf);
++            fprintf(stderr, "qxl/guest-%d: %ld: %s", d->id,
++                    qemu_get_clock(vm_clock), d->ram->log_buf);
+         }
+         break;
+     case QXL_IO_RESET:
+-- 
+1.7.11.4
+

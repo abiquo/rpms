@@ -1,0 +1,76 @@
+From 287b4d4a189c0108ef926539f9b6325734a79b1d Mon Sep 17 00:00:00 2001
+Message-Id: <287b4d4a189c0108ef926539f9b6325734a79b1d.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:17 +0200
+Subject: [PATCH 09/18] block: fix allocation size for dirty bitmap
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-8-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39220
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 07/16] block: fix allocation size for dirty bitmap
+Bugzilla: 806432
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 806432
+
+Upstream status: submitted for inclusion in 1.1
+
+Also reuse elsewhere the new constant for sizeof(unsigned long) * 8.
+
+The dirty bitmap is allocated in bits but declared as unsigned long.
+Thus, its memory block is accessed beyond its end unless the image
+is a multiple of 64 chunks (i.e. a multiple of 64 MB).
+---
+ block.c |   12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   12 +++++++-----
+ 1 files changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/block.c b/block.c
+index 5ad176a..d6d2b57 100644
+--- a/block.c
++++ b/block.c
+@@ -1369,6 +1369,8 @@ int bdrv_read(BlockDriverState *bs, int64_t sector_num,
+     return bdrv_rw_co(bs, sector_num, buf, nb_sectors, false);
+ }
+ 
++#define BITS_PER_LONG  (sizeof(unsigned long) * 8)
++
+ static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
+                              int nb_sectors, int dirty)
+ {
+@@ -1379,8 +1381,8 @@ static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
+     end = (sector_num + nb_sectors - 1) / BDRV_SECTORS_PER_DIRTY_CHUNK;
+ 
+     for (; start <= end; start++) {
+-        idx = start / (sizeof(unsigned long) * 8);
+-        bit = start % (sizeof(unsigned long) * 8);
++        idx = start / BITS_PER_LONG;
++        bit = start % BITS_PER_LONG;
+         val = bs->dirty_bitmap[idx];
+         if (dirty) {
+             if (!(val & (1UL << bit))) {
+@@ -3422,10 +3424,10 @@ void bdrv_set_dirty_tracking(BlockDriverState *bs, int enable)
+     if (enable) {
+         if (!bs->dirty_bitmap) {
+             bitmap_size = (bdrv_getlength(bs) >> BDRV_SECTOR_BITS) +
+-                    BDRV_SECTORS_PER_DIRTY_CHUNK * 8 - 1;
+-            bitmap_size /= BDRV_SECTORS_PER_DIRTY_CHUNK * 8;
++                    BDRV_SECTORS_PER_DIRTY_CHUNK * BITS_PER_LONG - 1;
++            bitmap_size /= BDRV_SECTORS_PER_DIRTY_CHUNK * BITS_PER_LONG;
+ 
+-            bs->dirty_bitmap = g_malloc0(bitmap_size);
++            bs->dirty_bitmap = g_new0(unsigned long, bitmap_size);
+         }
+     } else {
+         if (bs->dirty_bitmap) {
+-- 
+1.7.7.6
+

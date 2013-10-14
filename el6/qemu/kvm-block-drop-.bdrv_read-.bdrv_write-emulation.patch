@@ -1,0 +1,142 @@
+From e3fad4502ab64c64a0f3ff12b90d4c9107b175fc Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:49 +0100
+Subject: [PATCH 84/99] block: drop .bdrv_read()/.bdrv_write() emulation
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-85-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37277
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 84/96] block: drop .bdrv_read()/.bdrv_write() emulation
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Bugzilla: 783950
+
+There is no need to emulate .bdrv_read()/.bdrv_write() since these
+interfaces are only called if aio and coroutine interfaces are not
+present.  All valid BlockDrivers must implement either sync, aio, or
+coroutine interfaces.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit f8c35c1d59c9fecf79f6d5a02cd09f472a6f411d)
+---
+ block.c |   75 ++------------------------------------------------------------
+ 1 files changed, 3 insertions(+), 72 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   75 ++------------------------------------------------------------
+ 1 files changed, 3 insertions(+), 72 deletions(-)
+
+diff --git a/block.c b/block.c
+index 2a55bde..b4173e4 100644
+--- a/block.c
++++ b/block.c
+@@ -57,10 +57,6 @@ static BlockDriverAIOCB *bdrv_aio_flush_em(BlockDriverState *bs,
+         BlockDriverCompletionFunc *cb, void *opaque);
+ static BlockDriverAIOCB *bdrv_aio_noop_em(BlockDriverState *bs,
+         BlockDriverCompletionFunc *cb, void *opaque);
+-static int bdrv_read_em(BlockDriverState *bs, int64_t sector_num,
+-                        uint8_t *buf, int nb_sectors);
+-static int bdrv_write_em(BlockDriverState *bs, int64_t sector_num,
+-                         const uint8_t *buf, int nb_sectors);
+ static int coroutine_fn bdrv_co_readv_em(BlockDriverState *bs,
+                                          int64_t sector_num, int nb_sectors,
+                                          QEMUIOVector *iov);
+@@ -164,14 +160,13 @@ void bdrv_register(BlockDriver *bdrv)
+         bdrv->bdrv_co_readv = bdrv_co_readv_em;
+         bdrv->bdrv_co_writev = bdrv_co_writev_em;
+ 
++        /* bdrv_co_readv_em()/brdv_co_writev_em() work in terms of aio, so if
++         * the block driver lacks aio we need to emulate that too.
++         */
+         if (!bdrv->bdrv_aio_readv) {
+             /* add AIO emulation layer */
+             bdrv->bdrv_aio_readv = bdrv_aio_readv_em;
+             bdrv->bdrv_aio_writev = bdrv_aio_writev_em;
+-        } else if (!bdrv->bdrv_read) {
+-            /* add synchronous IO emulation layer */
+-            bdrv->bdrv_read = bdrv_read_em;
+-            bdrv->bdrv_write = bdrv_write_em;
+         }
+     }
+ 
+@@ -2688,70 +2683,6 @@ static BlockDriverAIOCB *bdrv_aio_noop_em(BlockDriverState *bs,
+     return &acb->common;
+ }
+ 
+-/**************************************************************/
+-/* sync block device emulation */
+-
+-static void bdrv_rw_em_cb(void *opaque, int ret)
+-{
+-    *(int *)opaque = ret;
+-}
+-
+-static int bdrv_read_em(BlockDriverState *bs, int64_t sector_num,
+-                        uint8_t *buf, int nb_sectors)
+-{
+-    int async_ret;
+-    BlockDriverAIOCB *acb;
+-    struct iovec iov;
+-    QEMUIOVector qiov;
+-
+-    async_ret = NOT_DONE;
+-    iov.iov_base = (void *)buf;
+-    iov.iov_len = nb_sectors * BDRV_SECTOR_SIZE;
+-    qemu_iovec_init_external(&qiov, &iov, 1);
+-
+-    acb = bs->drv->bdrv_aio_readv(bs, sector_num, &qiov, nb_sectors,
+-                                  bdrv_rw_em_cb, &async_ret);
+-    if (acb == NULL) {
+-        async_ret = -1;
+-        goto fail;
+-    }
+-
+-    while (async_ret == NOT_DONE) {
+-        qemu_aio_wait();
+-    }
+-
+-
+-fail:
+-    return async_ret;
+-}
+-
+-static int bdrv_write_em(BlockDriverState *bs, int64_t sector_num,
+-                         const uint8_t *buf, int nb_sectors)
+-{
+-    int async_ret;
+-    BlockDriverAIOCB *acb;
+-    struct iovec iov;
+-    QEMUIOVector qiov;
+-
+-    async_ret = NOT_DONE;
+-    iov.iov_base = (void *)buf;
+-    iov.iov_len = nb_sectors * BDRV_SECTOR_SIZE;
+-    qemu_iovec_init_external(&qiov, &iov, 1);
+-
+-    acb = bs->drv->bdrv_aio_writev(bs, sector_num, &qiov, nb_sectors,
+-                                   bdrv_rw_em_cb, &async_ret);
+-    if (acb == NULL) {
+-        async_ret = -1;
+-        goto fail;
+-    }
+-    while (async_ret == NOT_DONE) {
+-        qemu_aio_wait();
+-    }
+-
+-fail:
+-    return async_ret;
+-}
+-
+ void bdrv_init(void)
+ {
+     module_call_init(MODULE_INIT_BLOCK);
+-- 
+1.7.7.5
+

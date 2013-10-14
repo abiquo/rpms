@@ -1,0 +1,94 @@
+From c85140ce9c4cc74d717eff39b93fa06cc0243d6e Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:51 +0100
+Subject: [PATCH 24/55] coroutine: add qemu_co_queue_restart_all()
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <e23036bf9e9aba11c4a602fa74ab82cc8be7aa3d.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38874
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 24/54] coroutine: add qemu_co_queue_restart_all()
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+It's common to wake up all waiting coroutines.  Introduce the
+qemu_co_queue_restart_all() function to do this instead of looping over
+qemu_co_queue_next() in every caller.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit e8ee5e4c476d5b0654d8f1271a2b7c065acc486e)
+
+Note this patch includes a change to qemu_co_rwlock_unlock() upstream.
+Since CoRwlock is not present in RHEL that hunk has been dropped.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/qcow2.c         |    2 +-
+ qemu-coroutine-lock.c |    7 +++++++
+ qemu-coroutine.h      |    5 +++++
+ 3 files changed, 13 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2.c         |    2 +-
+ qemu-coroutine-lock.c |    7 +++++++
+ qemu-coroutine.h      |    5 +++++
+ 3 files changed, 13 insertions(+), 1 deletions(-)
+
+diff --git a/block/qcow2.c b/block/qcow2.c
+index 433cd36..bea9ba2 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -512,7 +512,7 @@ static void run_dependent_requests(BDRVQcowState *s, QCowL2Meta *m)
+     /* Restart all dependent requests */
+     if (!qemu_co_queue_empty(&m->dependent_requests)) {
+         qemu_co_mutex_unlock(&s->lock);
+-        while(qemu_co_queue_next(&m->dependent_requests));
++        qemu_co_queue_restart_all(&m->dependent_requests);
+         qemu_co_mutex_lock(&s->lock);
+     }
+ }
+diff --git a/qemu-coroutine-lock.c b/qemu-coroutine-lock.c
+index a80f437..107478b 100644
+--- a/qemu-coroutine-lock.c
++++ b/qemu-coroutine-lock.c
+@@ -75,6 +75,13 @@ bool qemu_co_queue_next(CoQueue *queue)
+     return (next != NULL);
+ }
+ 
++void qemu_co_queue_restart_all(CoQueue *queue)
++{
++    while (qemu_co_queue_next(queue)) {
++        /* Do nothing */
++    }
++}
++
+ bool qemu_co_queue_empty(CoQueue *queue)
+ {
+     return (QTAILQ_FIRST(&queue->entries) == NULL);
+diff --git a/qemu-coroutine.h b/qemu-coroutine.h
+index 2f2fd95..b4fa51e 100644
+--- a/qemu-coroutine.h
++++ b/qemu-coroutine.h
+@@ -125,6 +125,11 @@ void coroutine_fn qemu_co_queue_wait(CoQueue *queue);
+ bool qemu_co_queue_next(CoQueue *queue);
+ 
+ /**
++ * Restarts all coroutines in the CoQueue and leaves the queue empty.
++ */
++void qemu_co_queue_restart_all(CoQueue *queue);
++
++/**
+  * Checks if the CoQueue is empty.
+  */
+ bool qemu_co_queue_empty(CoQueue *queue);
+-- 
+1.7.7.6
+

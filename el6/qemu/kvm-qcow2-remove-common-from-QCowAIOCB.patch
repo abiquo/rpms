@@ -1,0 +1,73 @@
+From c8475ef2680a406af68d8c932866ba42eed02c26 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:32 +0100
+Subject: [PATCH 67/99] qcow2: remove common from QCowAIOCB
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-68-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37260
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 67/96] qcow2: remove common from QCowAIOCB
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Frediano Ziglio <freddy77@gmail.com>
+
+Bugzilla: 783950
+
+Signed-off-by: Frediano Ziglio <freddy77@gmail.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit e78c69b89c3c40f938e41b2917e86eeaebc4adc2)
+---
+ block/qcow2.c |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2.c |    8 ++++----
+ 1 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/block/qcow2.c b/block/qcow2.c
+index f09009c..884ff8d 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -375,7 +375,7 @@ int qcow2_backing_read1(BlockDriverState *bs, QEMUIOVector *qiov,
+ }
+ 
+ typedef struct QCowAIOCB {
+-    BlockDriverAIOCB common;
++    BlockDriverState *bs;
+     int64_t sector_num;
+     QEMUIOVector *qiov;
+     int remaining_sectors;
+@@ -390,7 +390,7 @@ typedef struct QCowAIOCB {
+  */
+ static int qcow2_aio_read_cb(QCowAIOCB *acb)
+ {
+-    BlockDriverState *bs = acb->common.bs;
++    BlockDriverState *bs = acb->bs;
+     BDRVQcowState *s = bs->opaque;
+     int index_in_cluster, n1;
+     int ret;
+@@ -506,7 +506,7 @@ static QCowAIOCB *qcow2_aio_setup(BlockDriverState *bs, int64_t sector_num,
+                                   void *opaque, QCowAIOCB *acb)
+ {
+     memset(acb, 0, sizeof(*acb));
+-    acb->common.bs = bs;
++    acb->bs = bs;
+     acb->sector_num = sector_num;
+     acb->qiov = qiov;
+ 
+@@ -558,7 +558,7 @@ static void run_dependent_requests(BDRVQcowState *s, QCowL2Meta *m)
+  */
+ static int qcow2_aio_write_cb(QCowAIOCB *acb)
+ {
+-    BlockDriverState *bs = acb->common.bs;
++    BlockDriverState *bs = acb->bs;
+     BDRVQcowState *s = bs->opaque;
+     int index_in_cluster;
+     int n_end;
+-- 
+1.7.7.5
+

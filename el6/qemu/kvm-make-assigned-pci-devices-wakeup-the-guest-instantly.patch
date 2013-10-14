@@ -1,0 +1,92 @@
+From 1711e4f6684a8f5615de721ea878bf4a7c02fbb2 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 7 Mar 2012 08:00:25 +0100
+Subject: [PATCH 11/12] make assigned pci devices wakeup the guest instantly
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1331107226-21901-12-git-send-email-kraxel@redhat.com>
+Patchwork-id: 38360
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v3 11/12] make assigned pci devices wakeup the guest instantly
+Bugzilla: 766303
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+Dont stay in s3 when the guest has a pci device assigned,
+so the guest keeps handling the device (serve irqs etc.).
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ hw/device-assignment.c |   23 +++++++++++++++++++++++
+ 1 files changed, 23 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/device-assignment.c |   23 +++++++++++++++++++++++
+ 1 files changed, 23 insertions(+), 0 deletions(-)
+
+diff --git a/hw/device-assignment.c b/hw/device-assignment.c
+index e0fb27d..3cdce01 100644
+--- a/hw/device-assignment.c
++++ b/hw/device-assignment.c
+@@ -826,6 +826,8 @@ again:
+ }
+ 
+ static QLIST_HEAD(, AssignedDevice) devs = QLIST_HEAD_INITIALIZER(devs);
++static Notifier suspend_notifier;
++static QEMUBH *suspend_bh;
+ 
+ #ifdef KVM_CAP_IRQ_ROUTING
+ static void free_dev_irq_entries(AssignedDevice *dev)
+@@ -1742,6 +1744,16 @@ static void reset_assigned_device(DeviceState *dev)
+     assigned_dev_pci_write_config(pci_dev, PCI_COMMAND, 0, 2);
+ }
+ 
++static void assigned_suspend_notify(Notifier *notifier, void *data)
++{
++    qemu_bh_schedule(suspend_bh);
++}
++
++static void assigned_suspend_bh(void *opaque)
++{
++    qemu_system_wakeup_request(QEMU_WAKEUP_REASON_OTHER);
++}
++
+ static int assigned_initfn(struct PCIDevice *pci_dev)
+ {
+     AssignedDevice *dev = DO_UPCAST(AssignedDevice, dev, pci_dev);
+@@ -1813,6 +1825,12 @@ static int assigned_initfn(struct PCIDevice *pci_dev)
+             goto assigned_out;
+ 
+     assigned_dev_load_option_rom(dev);
++
++    if (QLIST_EMPTY(&devs)) {
++        suspend_notifier.notify = assigned_suspend_notify;
++        qemu_register_suspend_notifier(&suspend_notifier);
++        suspend_bh = qemu_bh_new(assigned_suspend_bh, dev);
++    }
+     QLIST_INSERT_HEAD(&devs, dev, next);
+ 
+     add_boot_device_path(dev->bootindex, &pci_dev->qdev, NULL);
+@@ -1822,6 +1840,7 @@ static int assigned_initfn(struct PCIDevice *pci_dev)
+     register_device_unmigratable(&dev->dev.qdev,
+                                  vmstate_assigned_device.name, dev);
+ 
++
+     return 0;
+ 
+ assigned_out:
+@@ -1837,6 +1856,10 @@ static int assigned_exitfn(struct PCIDevice *pci_dev)
+ 
+     vmstate_unregister(&dev->dev.qdev, &vmstate_assigned_device, dev);
+     QLIST_REMOVE(dev, next);
++    if (QLIST_EMPTY(&devs)) {
++        qemu_bh_delete(suspend_bh);
++        qemu_unregister_suspend_notifier(&suspend_notifier);
++    }
+     deassign_device(dev);
+     free_assigned_device(dev);
+     return 0;
+-- 
+1.7.7.6
+

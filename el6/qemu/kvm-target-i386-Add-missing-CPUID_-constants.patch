@@ -1,0 +1,106 @@
+From 05020c67760396235ca03f68fe6f9d0cfdaa1015 Mon Sep 17 00:00:00 2001
+Message-Id: <05020c67760396235ca03f68fe6f9d0cfdaa1015.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Fri, 28 Sep 2012 16:50:08 +0200
+Subject: [PATCH 04/34] target-i386: Add missing CPUID_* constants
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1348851023-31907-4-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 42507
+O-Subject: [RHEL6 qemu-kvm PATCH 03/18] target-i386: Add missing CPUID_* constants
+Bugzilla: 833152
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 833152
+
+Those constants will be used by new CPU model definitions.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+Reviewed-by: Igor Mammedov <imammedo@redhat.com>
+Signed-off-by: Andreas Färber <afaerber@suse.de>
+(cherry picked from commit a75b081846176b020e5f39b37a0ae197172b7838)
+
+Conflicts:
+	target-i386/cpu.h
+
+(Trivial conflicts because of existing #defines that were already on the
+RHEl6 tree)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpu.h | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpu.h | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/target-i386/cpu.h b/target-i386/cpu.h
+index 91e1961..71fbbd0 100644
+--- a/target-i386/cpu.h
++++ b/target-i386/cpu.h
+@@ -376,6 +376,7 @@
+ #define CPUID_PBE (1 << 31)
+ 
+ #define CPUID_EXT_SSE3     (1 << 0)
++#define CPUID_EXT_PCLMULQDQ (1 << 1)
+ #define CPUID_EXT_DTES64   (1 << 2)
+ #define CPUID_EXT_MONITOR  (1 << 3)
+ #define CPUID_EXT_DSCPL    (1 << 4)
+@@ -394,14 +395,34 @@
+ #define CPUID_EXT_X2APIC   (1 << 21)
+ #define CPUID_EXT_MOVBE    (1 << 22)
+ #define CPUID_EXT_POPCNT   (1 << 23)
++#define CPUID_EXT_TSC_DEADLINE_TIMER (1 << 24)
++#define CPUID_EXT_AES      (1 << 25)
+ #define CPUID_EXT_XSAVE    (1 << 26)
+ #define CPUID_EXT_OSXSAVE  (1 << 27)
++#define CPUID_EXT_AVX      (1 << 28)
+ #define CPUID_EXT_HYPERVISOR  (1 << 31)
+ 
++#define CPUID_EXT2_FPU     (1 << 0)
++#define CPUID_EXT2_DE      (1 << 2)
++#define CPUID_EXT2_PSE     (1 << 3)
++#define CPUID_EXT2_TSC     (1 << 4)
++#define CPUID_EXT2_MSR     (1 << 5)
++#define CPUID_EXT2_PAE     (1 << 6)
++#define CPUID_EXT2_MCE     (1 << 7)
++#define CPUID_EXT2_CX8     (1 << 8)
++#define CPUID_EXT2_APIC    (1 << 9)
+ #define CPUID_EXT2_SYSCALL (1 << 11)
++#define CPUID_EXT2_MTRR    (1 << 12)
++#define CPUID_EXT2_PGE     (1 << 13)
++#define CPUID_EXT2_MCA     (1 << 14)
++#define CPUID_EXT2_CMOV    (1 << 15)
++#define CPUID_EXT2_PAT     (1 << 16)
++#define CPUID_EXT2_PSE36   (1 << 17)
+ #define CPUID_EXT2_MP      (1 << 19)
+ #define CPUID_EXT2_NX      (1 << 20)
+ #define CPUID_EXT2_MMXEXT  (1 << 22)
++#define CPUID_EXT2_MMX     (1 << 23)
++#define CPUID_EXT2_FXSR    (1 << 24)
+ #define CPUID_EXT2_FFXSR   (1 << 25)
+ #define CPUID_EXT2_PDPE1GB (1 << 26)
+ #define CPUID_EXT2_RDTSCP  (1 << 27)
+@@ -420,7 +441,9 @@
+ #define CPUID_EXT3_3DNOWPREFETCH (1 << 8)
+ #define CPUID_EXT3_OSVW    (1 << 9)
+ #define CPUID_EXT3_IBS     (1 << 10)
++#define CPUID_EXT3_XOP     (1 << 11)
+ #define CPUID_EXT3_SKINIT  (1 << 12)
++#define CPUID_EXT3_FMA4    (1 << 16)
+ 
+ #define CPUID_VENDOR_INTEL_1 0x756e6547 /* "Genu" */
+ #define CPUID_VENDOR_INTEL_2 0x49656e69 /* "ineI" */
+-- 
+1.7.11.4
+

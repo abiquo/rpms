@@ -1,0 +1,169 @@
+From 80d660fb4cee24cf3fce7bf8447cbd13e174b4e6 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Fri, 9 Mar 2012 22:07:22 +0100
+Subject: [PATCH] Fix qapi code generation fix
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <a8b8667ad7d97110505eb5c1e29a6c7e1fd55840.1331330144.git.jcody@redhat.com>
+Patchwork-id: 38450
+O-Subject: [RHEL6.3 qemu-kvm PATCH] Fix qapi code generation fix
+Bugzilla: 761439
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+
+From: Avi Kivity <avi@redhat.com>
+
+The fixes to qapi code generation had multiple bugs:
+- the Null class used to drop output was missing some methods
+- in some scripts it was never instantiated, leading to a None return,
+  which is missing even more methods
+- the --source and --header options were swapped
+
+Luckily, all those bugs were hidden by a makefile bug which caused the
+old behaviour (with the race) to be invoked.
+
+Signed-off-by: Avi Kivity <avi@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 19bf7c87081835449d5683ecb0858255bf5a0546)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+
+RHEL6 Note: qga-suspend-qapi-visit.h was added to the end of the
+            ga-suspend-dep-$(CONFIG_POSIX) Makefile variable,
+            because the lack of the 'suffix' in the gen-out-type
+            was masking the fact that it was missing.
+---
+ Makefile                 |    4 ++--
+ scripts/qapi-commands.py |   12 ++++--------
+ scripts/qapi-types.py    |   12 +++++-------
+ scripts/qapi-visit.py    |   12 +++++-------
+ 4 files changed, 16 insertions(+), 24 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile                 |    4 ++--
+ scripts/qapi-commands.py |   12 ++++--------
+ scripts/qapi-types.py    |   12 +++++-------
+ scripts/qapi-visit.py    |   12 +++++-------
+ 4 files changed, 16 insertions(+), 24 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index a128447..d664a55 100644
+--- a/Makefile
++++ b/Makefile
+@@ -211,9 +211,9 @@ $(qga-obj-y): $(qapi-dir)/qga-qapi-types.h $(qapi-dir)/qga-qapi-visit.h $(qapi-d
+ test-visitor.o test-qmp-commands.o qemu-ga$(EXESUF): QEMU_CFLAGS += -I $(qapi-dir)
+ qemu-ga$(EXESUF): LIBS = $(LIBS_QGA)
+ 
+-gen-out-type = $(subst .,-,$@)
++gen-out-type = $(subst .,-,$(suffix $@))
+ 
+-qga-suspend-dep-$(CONFIG_POSIX) = $(qga-nested-api-y .o=.c) qga-suspend-qapi-types.h qga-suspend-qmp-commands.h
++qga-suspend-dep-$(CONFIG_POSIX) = $(qga-nested-api-y .o=.c) qga-suspend-qapi-types.h qga-suspend-qmp-commands.h qga-suspend-qapi-visit.h 
+ 
+ $(qapi-dir)/test-qapi-types.c $(qapi-dir)/test-qapi-types.h :\
+ $(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-types.py
+diff --git a/scripts/qapi-commands.py b/scripts/qapi-commands.py
+index bd7b207..3aabf61 100644
+--- a/scripts/qapi-commands.py
++++ b/scripts/qapi-commands.py
+@@ -399,9 +399,9 @@ for o, a in opts:
+     elif o in ("-m", "--middle"):
+         middle_mode = True
+     elif o in ("-c", "--source"):
+-        do_h = True
+-    elif o in ("-h", "--header"):
+         do_c = True
++    elif o in ("-h", "--header"):
++        do_h = True
+ 
+ if not do_c and not do_h:
+     do_c = True
+@@ -411,15 +411,11 @@ c_file = output_dir + prefix + c_file
+ h_file = output_dir + prefix + h_file
+ 
+ def maybe_open(really, name, opt):
+-    class Null(object):
+-        def write(self, str):
+-            pass
+-        def read(self):
+-            return ''
+     if really:
+         return open(name, opt)
+     else:
+-        return Null()
++        import StringIO
++        return StringIO.StringIO()
+ 
+ try:
+     os.makedirs(output_dir)
+diff --git a/scripts/qapi-types.py b/scripts/qapi-types.py
+index ae644bc..b56225b 100644
+--- a/scripts/qapi-types.py
++++ b/scripts/qapi-types.py
+@@ -183,9 +183,9 @@ for o, a in opts:
+     elif o in ("-o", "--output-dir"):
+         output_dir = a + "/"
+     elif o in ("-c", "--source"):
+-        do_h = True
+-    elif o in ("-h", "--header"):
+         do_c = True
++    elif o in ("-h", "--header"):
++        do_h = True
+ 
+ if not do_c and not do_h:
+     do_c = True
+@@ -201,13 +201,11 @@ except os.error, e:
+         raise
+ 
+ def maybe_open(really, name, opt):
+-    class Null(object):
+-        def write(self, str):
+-            pass
+-        def read(self):
+-            return ''
+     if really:
+         return open(name, opt)
++    else:
++        import StringIO
++        return StringIO.StringIO()
+ 
+ fdef = maybe_open(do_c, c_file, 'w')
+ fdecl = maybe_open(do_h, h_file, 'w')
+diff --git a/scripts/qapi-visit.py b/scripts/qapi-visit.py
+index e9d0584..5160d83 100644
+--- a/scripts/qapi-visit.py
++++ b/scripts/qapi-visit.py
+@@ -159,9 +159,9 @@ for o, a in opts:
+     elif o in ("-o", "--output-dir"):
+         output_dir = a + "/"
+     elif o in ("-c", "--source"):
+-        do_h = True
+-    elif o in ("-h", "--header"):
+         do_c = True
++    elif o in ("-h", "--header"):
++        do_h = True
+ 
+ if not do_c and not do_h:
+     do_c = True
+@@ -177,13 +177,11 @@ except os.error, e:
+         raise
+ 
+ def maybe_open(really, name, opt):
+-    class Null(object):
+-        def write(self, str):
+-            pass
+-        def read(self):
+-            return ''
+     if really:
+         return open(name, opt)
++    else:
++        import StringIO
++        return StringIO.StringIO()
+ 
+ fdef = maybe_open(do_c, c_file, 'w')
+ fdecl = maybe_open(do_h, h_file, 'w')
+-- 
+1.7.7.6
+

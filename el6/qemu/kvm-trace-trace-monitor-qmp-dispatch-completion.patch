@@ -1,0 +1,91 @@
+From 748a7553b8d89097c2a3bb6edcabb6694e320069 Mon Sep 17 00:00:00 2001
+Message-Id: <748a7553b8d89097c2a3bb6edcabb6694e320069.1355253494.git.minovotn@redhat.com>
+In-Reply-To: <e1113518ec4b649620a785870b1e37dd352f8b90.1355253494.git.minovotn@redhat.com>
+References: <e1113518ec4b649620a785870b1e37dd352f8b90.1355253494.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 11 Dec 2012 15:26:24 +0100
+Subject: [PATCH 2/5] trace: trace monitor qmp dispatch/completion
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1355239587-12473-2-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 44909
+O-Subject: [RHEL6.4 qemu-kvm PATCH 1/4] trace: trace monitor qmp dispatch/completion
+Bugzilla: 881732
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Add trace events for handle_qmp_command(), which dispatches qmp
+commands, and monitor_protocol_emitter(), which produces the reply to a
+qmp command.
+
+Also remove duplicate #include "trace/control.h".
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 89bd820acb477b2c41f13977a3ceb4538fadcd02)
+
+Conflicts:
+	monitor.c
+	trace-events
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ monitor.c    | 4 ++++
+ trace-events | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ monitor.c    | 4 ++++
+ trace-events | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/monitor.c b/monitor.c
+index e3c2e6b..a2836bc 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -61,6 +61,7 @@
+ #include "osdep.h"
+ #include "exec-all.h"
+ #include "qemu-kvm.h"
++#include "trace.h"
+ #include "ui/qemu-spice.h"
+ #include "qmp-commands.h"
+ #include "hmp.h"
+@@ -380,6 +381,8 @@ static void monitor_protocol_emitter(Monitor *mon, QObject *data)
+ {
+     QDict *qmp;
+ 
++    trace_monitor_protocol_emitter(mon);
++
+     qmp = qdict_new();
+ 
+     if (!monitor_has_error(mon)) {
+@@ -4781,6 +4784,7 @@ static void handle_qmp_command(JSONMessageParser *parser, QList *tokens)
+     qobject_incref(mon->mc->id);
+ 
+     cmd_name = qdict_get_str(input, "execute");
++    trace_handle_qmp_command(mon, cmd_name);
+     if (invalid_qmp_mode(mon, cmd_name)) {
+         qerror_report(QERR_COMMAND_NOT_FOUND, cmd_name);
+         goto err_out;
+diff --git a/trace-events b/trace-events
+index 3628144..b51d13b 100644
+--- a/trace-events
++++ b/trace-events
+@@ -274,6 +274,10 @@ disable qxl_render_blit(int32_t stride, int32_t left, int32_t right, int32_t top
+ disable qxl_render_guest_primary_resized(int32_t width, int32_t height, int32_t stride, int32_t bytes_pp, int32_t bits_pp) "%dx%d, stride %d, bpp %d, depth %d"
+ disable qxl_render_update_area_done(void *cookie) "%p"
+ 
++# monitor.c
++disable handle_qmp_command(void *mon, const char *cmd_name) "mon %p cmd_name \"%s\""
++disable monitor_protocol_emitter(void *mon) "mon %p"
++
+ # hbitmap.c
+ disable hbitmap_iter_skip_words(const void *hb, void *hbi, uint64_t pos, unsigned long cur) "hb %p hbi %p pos %"PRId64" cur 0x%lx" 
+ disable hbitmap_reset(void *hb, uint64_t start, uint64_t count, uint64_t sbit, uint64_t ebit) "hb %p items %"PRIu64",%"PRIu64" bits %"PRIu64"..%"PRIu64
+-- 
+1.7.11.7
+

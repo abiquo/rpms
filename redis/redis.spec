@@ -1,7 +1,7 @@
-Summary: redis
+Summary: Redis key-value database.
 Name: redis
-Version: 2.0.4
-Release: 2%{?dist}
+Version: 2.6.11
+Release: 1%{?dist}
 License: BSD
 Group: Applications/Multimedia
 URL: http://code.google.com/p/redis/
@@ -44,16 +44,22 @@ and so on. Redis is free software released under the very liberal BSD license.
 %install
 %{__rm} -rf %{buildroot}
 mkdir -p %{buildroot}%{_bindir}
-%{__install} -Dp -m 0755 redis-server %{buildroot}%{_sbindir}/redis-server
-%{__install} -Dp -m 0755 redis-benchmark %{buildroot}%{_bindir}/redis-benchmark
-%{__install} -Dp -m 0755 redis-cli %{buildroot}%{_bindir}/redis-cli
+make install PREFIX=%{buildroot}%{_prefix}
 
 %{__install} -Dp -m 0755 %{SOURCE2} %{buildroot}%{_sysconfdir}/logrotate.d/redis
 %{__install} -Dp -m 0755 %{SOURCE3} %{buildroot}%{_initrddir}/redis
 %{__install} -Dp -m 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/redis.conf
 %{__install} -p -d -m 0755 %{buildroot}%{_localstatedir}/lib/redis
 %{__install} -p -d -m 0755 %{buildroot}%{_localstatedir}/log/redis
-%{__install} -p -d -m 0755 %{buildroot}%{_localstatedir}/run
+%{__install} -p -d -m 0755 %{buildroot}%{_localstatedir}/run/redis
+
+# Fix non-standard-executable-perm error
+chmod 755 %{buildroot}%{_bindir}/%{name}-*
+
+# Ensure redis-server location doesn't change
+mkdir -p %{buildroot}%{_sbindir}
+mv %{buildroot}%{_bindir}/%{name}-server %{buildroot}%{_sbindir}/%{name}-server
+
 
 %pre
 /usr/sbin/useradd -c 'Redis' -u 499 -s /bin/false -r -d %{_localstatedir}/lib/redis redis 2> /dev/null || :
@@ -83,17 +89,21 @@ fi
 
 %files
 %defattr(-, root, root, 0755)
-%doc doc/*.html
-%{_sbindir}/redis-server
-%{_bindir}/redis-benchmark
-%{_bindir}/redis-cli
+%{_sbindir}/redis-*
+%{_bindir}/redis-*
 %{_initrddir}/redis
-%config(noreplace) %{_sysconfdir}/redis.conf
+%config %{_sysconfdir}/redis.conf
 %{_sysconfdir}/logrotate.d/redis
 %dir %attr(0770,redis,redis) %{_localstatedir}/lib/redis
 %dir %attr(0755,redis,redis) %{_localstatedir}/log/redis
 
 %changelog
+* Tue Mar 26 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.11-1
+- Bumped version to 2.6.11, new config
+
+* Wed Jan 09 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.7-1
+- Bumped version to 2.6.7
+
 * Wed Mar 14 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.0.4-2
 - Fixed pidfile bug
 

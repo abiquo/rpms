@@ -1,0 +1,63 @@
+From 15aade70c8523bb8fbd50e4b2e164b2ac4fd08c2 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Fri, 21 Sep 2012 18:57:26 -0300
+Subject: [RHEL6 qemu-kvm PATCH 05/23] ehci: fix reset
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1348253864-3050-5-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 42182
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 04/22] ehci: fix reset
+Bugzilla: 805172
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+RH-Acked-by: Arnon Gilboa <agilboa@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+From: Gerd Hoffmann <kraxel@redhat.com>
+
+Check for the reset bit first when processing USBCMD register writes.
+Also break out of the switch, there is no need to check the other bits.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream commit: 7046530c36fa3a3f87692bdb54556f5d891a9c03
+Conflicts: hw/usb-ehci.c
+---
+ hw/usb-ehci.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/usb-ehci.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index 0c26839..dac899f 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -1046,6 +1046,12 @@ static void ehci_mem_writel(void *ptr, target_phys_addr_t addr, uint32_t val)
+     /* Do any register specific pre-write processing here.  */
+     switch(addr) {
+     case USBCMD:
++        if (val & USBCMD_HCRESET) {
++            ehci_reset(s);
++            val = s->usbcmd;
++            break;
++        }
++
+         if ((val & USBCMD_RUNSTOP) && !(s->usbcmd & USBCMD_RUNSTOP)) {
+             qemu_mod_timer(s->frame_timer, qemu_get_clock(vm_clock));
+             SET_LAST_RUN_CLOCK(s);
+@@ -1060,11 +1066,6 @@ static void ehci_mem_writel(void *ptr, target_phys_addr_t addr, uint32_t val)
+             ehci_set_usbsts(s, USBSTS_HALT);
+         }
+ 
+-        if (val & USBCMD_HCRESET) {
+-            ehci_reset(s);
+-            val = s->usbcmd;
+-        }
+-
+         /* not supporting dynamic frame list size at the moment */
+         if ((val & USBCMD_FLS) && !(s->usbcmd & USBCMD_FLS)) {
+             fprintf(stderr, "attempt to set frame list size -- value %d\n",
+-- 
+1.7.11.4
+

@@ -1,0 +1,226 @@
+From 291330982cc01f13fcfb5c27fb96d7979bc6c84e Mon Sep 17 00:00:00 2001
+Message-Id: <291330982cc01f13fcfb5c27fb96d7979bc6c84e.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Mon, 1 Oct 2012 14:12:37 +0200
+Subject: [PATCH 24/34] sockets: change inet_connect() to support nonblock
+ socket
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1349100767-9066-5-git-send-email-akong@redhat.com>
+Patchwork-id: 42563
+O-Subject: [RHEL-6.4 qemu-kvm PATCH v7 04/14] sockets: change inet_connect() to support nonblock socket
+Bugzilla: 680356
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Add a bool argument to inet_connect() to assign if set socket
+to block/nonblock, and delete original argument 'socktype'
+that is unused.
+Add a new argument to inet_connect()/inet_connect_opts(),
+to pass back connect error by error class.
+
+Retry to connect when -EINTR is got. Connect's successful
+for nonblock socket when following errors are got, user
+should wait for connecting by select():
+  -EINPROGRESS
+  -EWOULDBLOCK (win32)
+  -WSAEALREADY (win32)
+
+Change nbd, vnc to use new interface.
+
+(Cherry-picked from commit a6ba35b3be9d3d2874cd00930c954347e6be764c)
+
+Conflicts:
+    nbd.c (internal ndb.c doesn't use inet_connect(), nothing needs to
+           change)
+    ui/vnc.c (internal didn't rename 'vnc.c' to 'ui/vnc.c')
+
+Signed-off-by: Amos Kong <akong@redhat.com>
+Reviewed-by: Orit Wasserman <owasserm@redhat.com>
+Reviewed-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+---
+ qemu-char.c    |    2 +-
+ qemu-sockets.c |   43 +++++++++++++++++++++++++++++++++++++------
+ qemu_socket.h  |    6 ++++--
+ vnc.c          |    2 +-
+ 4 files changed, 43 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-char.c    |  2 +-
+ qemu-sockets.c | 43 +++++++++++++++++++++++++++++++++++++------
+ qemu_socket.h  |  6 ++++--
+ vnc.c          |  2 +-
+ 4 files changed, 43 insertions(+), 10 deletions(-)
+
+diff --git a/qemu-char.c b/qemu-char.c
+index b338579..d3ba118 100644
+--- a/qemu-char.c
++++ b/qemu-char.c
+@@ -2350,7 +2350,7 @@ static CharDriverState *qemu_chr_open_socket(QemuOpts *opts)
+         if (is_listen) {
+             fd = inet_listen_opts(opts, 0);
+         } else {
+-            fd = inet_connect_opts(opts);
++            fd = inet_connect_opts(opts, NULL);
+         }
+     }
+     if (fd < 0)
+diff --git a/qemu-sockets.c b/qemu-sockets.c
+index ad7465c..8fdf59c 100644
+--- a/qemu-sockets.c
++++ b/qemu-sockets.c
+@@ -51,6 +51,9 @@ static QemuOptsList dummy_opts = {
+         },{
+             .name = "ipv6",
+             .type = QEMU_OPT_BOOL,
++        },{
++            .name = "block",
++            .type = QEMU_OPT_BOOL,
+         },
+         { /* end if list */ }
+     },
+@@ -194,7 +197,7 @@ listen:
+     return slisten;
+ }
+ 
+-int inet_connect_opts(QemuOpts *opts)
++int inet_connect_opts(QemuOpts *opts, Error **errp)
+ {
+     struct addrinfo ai,*res,*e;
+     const char *addr;
+@@ -202,6 +205,7 @@ int inet_connect_opts(QemuOpts *opts)
+     char uaddr[INET6_ADDRSTRLEN+1];
+     char uport[33];
+     int sock,rc;
++    bool block;
+ 
+     memset(&ai,0, sizeof(ai));
+     ai.ai_flags = AI_CANONNAME | AI_ADDRCONFIG;
+@@ -210,8 +214,10 @@ int inet_connect_opts(QemuOpts *opts)
+ 
+     addr = qemu_opt_get(opts, "host");
+     port = qemu_opt_get(opts, "port");
++    block = qemu_opt_get_bool(opts, "block", 0);
+     if (addr == NULL || port == NULL) {
+         fprintf(stderr, "inet_connect: host and/or port not specified\n");
++        error_set(errp, QERR_SOCKET_CREATE_FAILED);
+         return -1;
+     }
+ 
+@@ -224,6 +230,7 @@ int inet_connect_opts(QemuOpts *opts)
+     if (0 != (rc = getaddrinfo(addr, port, &ai, &res))) {
+         fprintf(stderr,"getaddrinfo(%s,%s): %s\n", addr, port,
+                 gai_strerror(rc));
++        error_set(errp, QERR_SOCKET_CREATE_FAILED);
+ 	return -1;
+     }
+ 
+@@ -241,19 +248,37 @@ int inet_connect_opts(QemuOpts *opts)
+             continue;
+         }
+         setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,(void*)&on,sizeof(on));
+-
++        if (!block) {
++            socket_set_nonblock(sock);
++        }
+         /* connect to peer */
+-        if (connect(sock,e->ai_addr,e->ai_addrlen) < 0) {
++        do {
++            rc = 0;
++            if (connect(sock, e->ai_addr, e->ai_addrlen) < 0) {
++                rc = -socket_error();
++            }
++        } while (rc == -EINTR);
++
++  #ifdef _WIN32
++        if (!block && (rc == -EINPROGRESS || rc == -EWOULDBLOCK
++                       || rc == -WSAEALREADY)) {
++  #else
++        if (!block && (rc == -EINPROGRESS)) {
++  #endif
++            error_set(errp, QERR_SOCKET_CONNECT_IN_PROGRESS);
++        } else if (rc < 0) {
+             if (NULL == e->ai_next)
+                 fprintf(stderr, "%s: connect(%s,%s,%s,%s): %s\n", __FUNCTION__,
+                         inet_strfamily(e->ai_family),
+                         e->ai_canonname, uaddr, uport, strerror(errno));
+             closesocket(sock);
++            sock = -1;
+             continue;
+         }
+         freeaddrinfo(res);
+         return sock;
+     }
++    error_set(errp, QERR_SOCKET_CONNECT_FAILED);
+     freeaddrinfo(res);
+     return -1;
+ }
+@@ -449,14 +474,20 @@ int inet_listen(const char *str, char *ostr, int olen,
+     return sock;
+ }
+ 
+-int inet_connect(const char *str, int socktype)
++int inet_connect(const char *str, bool block, Error **errp)
+ {
+     QemuOpts *opts;
+     int sock = -1;
+ 
+     opts = qemu_opts_create(&dummy_opts, NULL, 0);
+-    if (inet_parse(opts, str) == 0)
+-        sock = inet_connect_opts(opts);
++    if (inet_parse(opts, str) == 0) {
++        if (block) {
++            qemu_opt_set(opts, "block", "on");
++        }
++        sock = inet_connect_opts(opts, errp);
++    } else {
++        error_set(errp, QERR_SOCKET_CREATE_FAILED);
++    }
+     qemu_opts_del(opts);
+     return sock;
+ }
+diff --git a/qemu_socket.h b/qemu_socket.h
+index 85168ea..d1794d1 100644
+--- a/qemu_socket.h
++++ b/qemu_socket.h
+@@ -30,6 +30,8 @@ int inet_aton(const char *cp, struct in_addr *ia);
+ #endif /* !_WIN32 */
+ 
+ #include "qemu-option.h"
++#include "error.h"
++#include "qerror.h"
+ 
+ /* misc helpers */
+ int qemu_socket(int domain, int type, int protocol);
+@@ -41,8 +43,8 @@ int send_all(CharDriverState *chr, int fd, const void *buf, int len1);
+ int inet_listen_opts(QemuOpts *opts, int port_offset);
+ int inet_listen(const char *str, char *ostr, int olen,
+                 int socktype, int port_offset);
+-int inet_connect_opts(QemuOpts *opts);
+-int inet_connect(const char *str, int socktype);
++int inet_connect_opts(QemuOpts *opts, Error **errp);
++int inet_connect(const char *str, bool block, Error **errp);
+ int inet_dgram_opts(QemuOpts *opts);
+ const char *inet_strfamily(int family);
+ 
+diff --git a/vnc.c b/vnc.c
+index 15cb39c..113c5f4 100644
+--- a/vnc.c
++++ b/vnc.c
+@@ -2844,7 +2844,7 @@ int vnc_display_open(DisplayState *ds, const char *display)
+         if (strncmp(display, "unix:", 5) == 0)
+             vs->lsock = unix_connect(display+5);
+         else
+-            vs->lsock = inet_connect(display, SOCK_STREAM);
++            vs->lsock = inet_connect(display, true, NULL);
+         if (-1 == vs->lsock) {
+             free(vs->display);
+             vs->display = NULL;
+-- 
+1.7.11.4
+

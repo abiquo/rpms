@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-v2v
-Version:  2.4.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  2.6.0
+Release:  2%{?dist}%{?buildstamp}
 Summary:  Abiquo V2V Conversion Component 
 Group:    Development/System 
 License:  Multiple 
@@ -84,6 +84,9 @@ EOF
 
 
 %changelog
+* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
+- Bumped version to 2.6.0
+
 * Wed Dec 05 2012 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-1
 - Bumped version to 2.4.0
 

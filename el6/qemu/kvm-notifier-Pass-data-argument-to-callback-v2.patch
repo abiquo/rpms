@@ -1,0 +1,289 @@
+From 943cef98f6ebfbb76a77a479c29c83fab023623a Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 7 Mar 2012 08:00:15 +0100
+Subject: [PATCH 01/12] notifier: Pass data argument to callback
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1331107226-21901-2-git-send-email-kraxel@redhat.com>
+Patchwork-id: 38352
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v3 01/12] notifier: Pass data argument to callback
+Bugzilla: 766303
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+This allows to pass additional information to the notifier callback
+which is useful if sender and receiver do not share any other distinct
+data structure.
+
+Will be used first for the clock reset notifier.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 9e8dd45164af05a5dab00324dd10b037f5bd1e2a)
+
+Conflicts:
+
+	hw/acpi_piix4.c
+	input.c
+	migration.c
+	vl.c
+	xen-all.c
+---
+ hw/acpi.c        |    2 +-
+ hw/fw_cfg.c      |    2 +-
+ migration.c      |   10 +++++-----
+ notify.c         |    4 ++--
+ notify.h         |    4 ++--
+ sdl.c            |    2 +-
+ ui/spice-core.c  |    2 +-
+ ui/spice-input.c |    4 ++--
+ usb-linux.c      |    2 +-
+ vl.c             |    6 +++---
+ vnc.c            |    4 ++--
+ 11 files changed, 21 insertions(+), 21 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/acpi.c        |    2 +-
+ hw/fw_cfg.c      |    2 +-
+ migration.c      |   10 +++++-----
+ notify.c         |    4 ++--
+ notify.h         |    4 ++--
+ sdl.c            |    2 +-
+ ui/spice-core.c  |    2 +-
+ ui/spice-input.c |    4 ++--
+ usb-linux.c      |    2 +-
+ vl.c             |    6 +++---
+ vnc.c            |    4 ++--
+ 11 files changed, 21 insertions(+), 21 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index 2e5e228..ee128c7 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -572,7 +572,7 @@ static void piix4_powerdown(void *opaque, int irq, int power_failing)
+ #endif
+ }
+ 
+-static void piix4_pm_machine_ready(struct Notifier* n)
++static void piix4_pm_machine_ready(struct Notifier* n, void *data)
+ {
+     PIIX4PMState *s = container_of(n, PIIX4PMState, machine_ready);
+     uint8_t *pci_conf;
+diff --git a/hw/fw_cfg.c b/hw/fw_cfg.c
+index d0519e8..89e4beb 100644
+--- a/hw/fw_cfg.c
++++ b/hw/fw_cfg.c
+@@ -313,7 +313,7 @@ int fw_cfg_add_file(FWCfgState *s,  const char *filename, uint8_t *data,
+     return 1;
+ }
+ 
+-static void fw_cfg_machine_ready(struct Notifier* n)
++static void fw_cfg_machine_ready(struct Notifier *n, void *data)
+ {
+     uint32_t len;
+     FWCfgState *s = container_of(n, FWCfgState, machine_ready);
+diff --git a/migration.c b/migration.c
+index 0f73a68..fc17c57 100644
+--- a/migration.c
++++ b/migration.c
+@@ -140,7 +140,7 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
+     }
+ 
+     current_migration = s;
+-    notifier_list_notify(&migration_state_notifiers);
++    notifier_list_notify(&migration_state_notifiers, NULL);
+     return 0;
+ }
+ 
+@@ -294,7 +294,7 @@ void migrate_fd_error(FdMigrationState *s)
+     DPRINTF("setting error state\n");
+     s->state = MIG_STATE_ERROR;
+     migrate_fd_cleanup(s);
+-    notifier_list_notify(&migration_state_notifiers);
++    notifier_list_notify(&migration_state_notifiers, NULL);
+ }
+ 
+ int migrate_fd_cleanup(FdMigrationState *s)
+@@ -422,7 +422,7 @@ void migrate_fd_put_ready(void *opaque)
+             s->state = MIG_STATE_COMPLETED;
+             runstate_set(RUN_STATE_POSTMIGRATE);
+         }
+-        notifier_list_notify(&migration_state_notifiers);
++        notifier_list_notify(&migration_state_notifiers, NULL);
+     }
+ }
+ 
+@@ -444,7 +444,7 @@ void migrate_fd_cancel(MigrationState *mig_state)
+     s->state = MIG_STATE_CANCELLED;
+     qemu_savevm_state_cancel(s->mon, s->file);
+     migrate_fd_cleanup(s);
+-    notifier_list_notify(&migration_state_notifiers);
++    notifier_list_notify(&migration_state_notifiers, NULL);
+ }
+ 
+ void migrate_fd_release(MigrationState *mig_state)
+@@ -456,7 +456,7 @@ void migrate_fd_release(MigrationState *mig_state)
+     if (s->state == MIG_STATE_ACTIVE) {
+         s->state = MIG_STATE_CANCELLED;
+         migrate_fd_cleanup(s);
+-        notifier_list_notify(&migration_state_notifiers);
++        notifier_list_notify(&migration_state_notifiers, NULL);
+     }
+     free(s);
+ }
+diff --git a/notify.c b/notify.c
+index bcd3fc5..a6bac1f 100644
+--- a/notify.c
++++ b/notify.c
+@@ -29,11 +29,11 @@ void notifier_list_remove(NotifierList *list, Notifier *notifier)
+     QTAILQ_REMOVE(&list->notifiers, notifier, node);
+ }
+ 
+-void notifier_list_notify(NotifierList *list)
++void notifier_list_notify(NotifierList *list, void *data)
+ {
+     Notifier *notifier, *next;
+ 
+     QTAILQ_FOREACH_SAFE(notifier, &list->notifiers, node, next) {
+-        notifier->notify(notifier);
++        notifier->notify(notifier, data);
+     }
+ }
+diff --git a/notify.h b/notify.h
+index b40522f..54fc57c 100644
+--- a/notify.h
++++ b/notify.h
+@@ -20,7 +20,7 @@ typedef struct Notifier Notifier;
+ 
+ struct Notifier
+ {
+-    void (*notify)(Notifier *notifier);
++    void (*notify)(Notifier *notifier, void *data);
+     QTAILQ_ENTRY(Notifier) node;
+ };
+ 
+@@ -38,6 +38,6 @@ void notifier_list_add(NotifierList *list, Notifier *notifier);
+ 
+ void notifier_list_remove(NotifierList *list, Notifier *notifier);
+ 
+-void notifier_list_notify(NotifierList *list);
++void notifier_list_notify(NotifierList *list, void *data);
+ 
+ #endif
+diff --git a/sdl.c b/sdl.c
+index ca114e7..ff4655c 100644
+--- a/sdl.c
++++ b/sdl.c
+@@ -486,7 +486,7 @@ static void sdl_grab_end(void)
+     sdl_update_caption();
+ }
+ 
+-static void sdl_mouse_mode_change(Notifier *notify)
++static void sdl_mouse_mode_change(Notifier *notify, void *data)
+ {
+     if (kbd_mouse_is_absolute()) {
+         if (!absolute_enabled) {
+diff --git a/ui/spice-core.c b/ui/spice-core.c
+index a880bf1..6a91762 100644
+--- a/ui/spice-core.c
++++ b/ui/spice-core.c
+@@ -530,7 +530,7 @@ void do_info_spice(Monitor *mon, QObject **ret_data)
+     *ret_data = QOBJECT(server);
+ }
+ 
+-static void migration_state_notifier(Notifier *notifier)
++static void migration_state_notifier(Notifier *notifier, void *data)
+ {
+     int state = get_migration_state();
+     if (state == MIG_STATE_ACTIVE) {
+diff --git a/ui/spice-input.c b/ui/spice-input.c
+index 37c8578..75abf5f 100644
+--- a/ui/spice-input.c
++++ b/ui/spice-input.c
+@@ -178,7 +178,7 @@ static const SpiceTabletInterface tablet_interface = {
+     .buttons            = tablet_buttons,
+ };
+ 
+-static void mouse_mode_notifier(Notifier *notifier)
++static void mouse_mode_notifier(Notifier *notifier, void *data)
+ {
+     QemuSpicePointer *pointer = container_of(notifier, QemuSpicePointer, mouse_mode);
+     bool is_absolute  = kbd_mouse_is_absolute();
+@@ -213,5 +213,5 @@ void qemu_spice_input_init(void)
+     pointer->absolute = false;
+     pointer->mouse_mode.notify = mouse_mode_notifier;
+     qemu_add_mouse_mode_change_notifier(&pointer->mouse_mode);
+-    mouse_mode_notifier(&pointer->mouse_mode);
++    mouse_mode_notifier(&pointer->mouse_mode, NULL);
+ }
+diff --git a/usb-linux.c b/usb-linux.c
+index f198d2d..8494df9 100644
+--- a/usb-linux.c
++++ b/usb-linux.c
+@@ -1377,7 +1377,7 @@ static int usb_host_close(USBHostDevice *dev)
+     return 0;
+ }
+ 
+-static void usb_host_exit_notifier(struct Notifier* n)
++static void usb_host_exit_notifier(struct Notifier *n, void *data)
+ {
+     USBHostDevice *s = container_of(n, USBHostDevice, exit);
+ 
+diff --git a/vl.c b/vl.c
+index ff5ea9b..38fb0a5 100644
+--- a/vl.c
++++ b/vl.c
+@@ -552,7 +552,7 @@ static void check_mode_change(void)
+ 
+     if (is_absolute != current_is_absolute ||
+         has_absolute != current_has_absolute) {
+-        notifier_list_notify(&mouse_mode_notifiers);
++        notifier_list_notify(&mouse_mode_notifiers, NULL);
+     }
+ 
+     current_is_absolute = is_absolute;
+@@ -4971,7 +4971,7 @@ void qemu_add_machine_init_done_notifier(Notifier *notify)
+ 
+ static void qemu_run_machine_init_done_notifiers(void)
+ {
+-    notifier_list_notify(&machine_init_done_notifiers);
++    notifier_list_notify(&machine_init_done_notifiers, NULL);
+ }
+ 
+ void qemu_add_exit_notifier(Notifier *notify)
+@@ -4986,7 +4986,7 @@ void qemu_remove_exit_notifier(Notifier *notify)
+ 
+ static void qemu_run_exit_notifiers(void)
+ {
+-    notifier_list_notify(&exit_notifiers);
++    notifier_list_notify(&exit_notifiers, NULL);
+ }
+ 
+ static const QEMUOption *lookup_opt(int argc, char **argv,
+diff --git a/vnc.c b/vnc.c
+index daeffe8..0d0b4a1 100644
+--- a/vnc.c
++++ b/vnc.c
+@@ -1435,7 +1435,7 @@ static void client_cut_text(VncState *vs, size_t len, uint8_t *text)
+ {
+ }
+ 
+-static void check_pointer_type_change(Notifier *notifier)
++static void check_pointer_type_change(Notifier *notifier, void *data)
+ {
+     VncState *vs = container_of(notifier, VncState, mouse_mode_notifier);
+     int absolute = kbd_mouse_is_absolute();
+@@ -1822,7 +1822,7 @@ static void set_encodings(VncState *vs, int32_t *encodings, size_t n_encodings)
+     }
+ 
+     vnc_desktop_resize(vs);
+-    check_pointer_type_change(&vs->mouse_mode_notifier);
++    check_pointer_type_change(&vs->mouse_mode_notifier, NULL);
+ }
+ 
+ static void set_pixel_conversion(VncState *vs)
+-- 
+1.7.7.6
+
