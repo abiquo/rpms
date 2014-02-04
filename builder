@@ -57,8 +57,8 @@ def main(selected=nil)
     abiquo-server
     abiquo-remote-services
     abiquo-dhcp-relay
-    abiquo-pocsetup
     abiquo-nodecollector
+    abiquo-monolithic
     abiquo-lvmiscsi
     abiquo-core
     abiquo-cloud-node
@@ -71,8 +71,6 @@ def main(selected=nil)
     abiquo-release-ee
     abiquo-release-notes-ee
     abiquo-vsm
-    rubygem-abiquo-etk
-    abiquo-logos-ee
   }
 
   build_host = 'vbuilder' 

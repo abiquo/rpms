@@ -32,7 +32,7 @@ stop()
   /etc/init.d/libvirtd stop
   PIDS=`pidof abiquo-aim | wc -l`
   if [ "$PIDS" -ne 0 ]; then
-      kill -15 `pidof abiquo-aim`
+      kill -9 `pidof abiquo-aim`
   fi
   success
 }

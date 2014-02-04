@@ -1,8 +1,11 @@
+%define git_release 2.2.1
+%define abiquo_version 3.0
+
 Name:           abiquo-aim
 BuildRequires:  hiredis gcc-c++ thrift-cpp-devel boost-devel curl-devel libvirt-devel 
 Requires:	libvirt hiredis boost bridge-utils
-Version:        2.6rel2.0.0
-Release:        1%{?dist}
+Version:        %{abiquo_version}rel%{git_release}
+Release:        2%{?dist}
 Url:            http://www.abiquo.com/
 License:        BSD(or similar)
 Group:          System/Management
@@ -61,6 +64,31 @@ if ! [ -d /opt/vm_repository ]; then
 fi
 
 %changelog
+* Tue Jan 07 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0rel2.2.1-2
+- Removed monitor from config.
+
+* Tue Jan 07 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0rel2.2.1-1
+- New upstream version.
+
+* Tue Oct 22 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6rel2.1.6-1
+- Bumped version to 2.1.6
+
+* Fri Sep 20 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6rel2.1.4-1
+- ABICLOUDPREMIUM-4864
+
+* Fri Aug 30 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6rel2.1.3-1
+- ABICLOUDPREMIUM-5990
+
+* Tue Aug 13 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6rel2.1.2-1
+- Check primary disk existence on domain listing
+- Added pugixml as XPath library
+
+* Fri Aug 02 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6rel2.1.1-1
+- List ISCSI pools
+
+* Thu Jul 25 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6rel2.1.0-1
+- Upstream version.
+
 * Thu Jul 04 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6rel2.0.0-1
 - Changed version to 2.0.0
 
