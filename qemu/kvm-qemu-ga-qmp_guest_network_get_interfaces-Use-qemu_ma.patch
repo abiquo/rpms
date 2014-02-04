@@ -1,0 +1,72 @@
+From eb7718b6ec5227ab253206ec70ac687d66430610 Mon Sep 17 00:00:00 2001
+Message-Id: <eb7718b6ec5227ab253206ec70ac687d66430610.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:23 +0200
+Subject: [PATCH 14/41] qemu-ga: qmp_guest_network_get_interfaces(): Use
+ qemu_mallocz()
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-9-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39905
+O-Subject: [PATCH RHEL6.4 qemu-kvm 08/36] qemu-ga: qmp_guest_network_get_interfaces(): Use qemu_mallocz()
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Because the QAPI will use qemu_free() to free the returned data.
+
+This is a RHEL-only commit.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qga/commands-posix.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qga/commands-posix.c |   12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index 3eb5b32..01b7faf 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -809,8 +809,8 @@ GuestNetworkInterfaceList *qmp_guest_network_get_interfaces(Error **errp)
+         info = guest_find_interface(head, ifa->ifa_name);
+ 
+         if (!info) {
+-            info = g_malloc0(sizeof(*info));
+-            info->value = g_malloc0(sizeof(*info->value));
++            info = qemu_mallocz(sizeof(*info));
++            info->value = qemu_mallocz(sizeof(*info->value));
+             info->value->name = g_strdup(ifa->ifa_name);
+ 
+             if (!cur_item) {
+@@ -863,8 +863,8 @@ GuestNetworkInterfaceList *qmp_guest_network_get_interfaces(Error **errp)
+         if (ifa->ifa_addr &&
+             ifa->ifa_addr->sa_family == AF_INET) {
+             /* interface with IPv4 address */
+-            address_item = g_malloc0(sizeof(*address_item));
+-            address_item->value = g_malloc0(sizeof(*address_item->value));
++            address_item = qemu_mallocz(sizeof(*address_item));
++            address_item->value = qemu_mallocz(sizeof(*address_item->value));
+             p = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+             if (!inet_ntop(AF_INET, p, addr4, sizeof(addr4))) {
+                 snprintf(err_msg, sizeof(err_msg),
+@@ -885,8 +885,8 @@ GuestNetworkInterfaceList *qmp_guest_network_get_interfaces(Error **errp)
+         } else if (ifa->ifa_addr &&
+                    ifa->ifa_addr->sa_family == AF_INET6) {
+             /* interface with IPv6 address */
+-            address_item = g_malloc0(sizeof(*address_item));
+-            address_item->value = g_malloc0(sizeof(*address_item->value));
++            address_item = qemu_mallocz(sizeof(*address_item));
++            address_item->value = qemu_mallocz(sizeof(*address_item->value));
+             p = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+             if (!inet_ntop(AF_INET6, p, addr6, sizeof(addr6))) {
+                 snprintf(err_msg, sizeof(err_msg),
+-- 
+1.7.10.4
+

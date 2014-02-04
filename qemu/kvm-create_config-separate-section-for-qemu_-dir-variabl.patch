@@ -1,0 +1,70 @@
+From 8d140e6fe679a73fd193609be44d508f17f7892b Mon Sep 17 00:00:00 2001
+Message-Id: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 9 Oct 2012 14:34:27 +0200
+Subject: [PATCH 01/12] create_config: separate section for qemu_*dir
+ variables (v2)
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349793271-23645-2-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42851
+O-Subject: [RHEL6.4 qemu-kvm PATCH 1/5] create_config: separate section for qemu_*dir variables (v2)
+Bugzilla: 856422
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+
+From: Eduardo Habkost <ehabkost@redhat.com>
+
+The generic *dir section will eventually go away and be replaced with
+qemu_* section. By now, both sections will be kept, while the variables
+get renamed on config-host.mak.
+
+With this patch, a XXXdir variable will become a CONFIG_QEMU_XXXDIR
+define, and a qemu_XXXdir variable will become CONFIG_QEMU_XXXDIR as
+well (instead of becoming a CONFIG_QEMU_QEMU_XXXDIR define).
+
+Changes v1 -> v2:
+ - Rebase on top of newer qemu.git changes, that changed
+   "tr '[:lower:]' '[:upper:]'" to "LC_ALL=C tr '[a-z]' '[A-Z]'".
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit eb72952b81f254e39c21f892b6109f09a762c313)
+
+Conflicts:
+	create_config
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ create_config | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ create_config | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/create_config b/create_config
+index 2f052ae..27e1bd4 100755
+--- a/create_config
++++ b/create_config
+@@ -13,6 +13,15 @@ case $line in
+     pkgversion=${line#*=}
+     echo "#define QEMU_PKGVERSION \"$pkgversion\""
+     ;;
++ qemu_*dir=*) # qemu-specific directory configuration
++    name=${line%=*}
++    value=${line#*=}
++    define_name=`echo $name | LC_ALL=C tr '[a-z]' '[A-Z]'`
++    eval "define_value=\"$value\""
++    echo "#define CONFIG_$define_name \"$define_value\""
++    # save for the next definitions
++    eval "$name=\$define_value"
++    ;;
+  ARCH=*) # configuration
+     arch=${line#*=}
+     arch_name=`echo $arch | tr '[:lower:]' '[:upper:]'`
+-- 
+1.7.11.7
+

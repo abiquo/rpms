@@ -1,0 +1,80 @@
+From b43e5db350fa245d1ba3b45b01936b3730c702f7 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:58 +0100
+Subject: [PATCH 102/109] scsi: fix searching for an empty id
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-102-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37577
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 101/102] scsi: fix searching for an empty id
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/scsi-bus.c |   15 ++++++++++-----
+ 1 files changed, 10 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |   15 ++++++++++-----
+ 1 files changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 83fcda5..6010ce6 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -97,6 +97,10 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+         error_report("bad scsi device id: %d", dev->id);
+         goto err;
+     }
++    if (dev->lun != -1 && dev->lun > bus->info->max_lun) {
++        error_report("bad scsi device lun: %d", dev->lun);
++        goto err;
++    }
+ 
+     if (dev->id == -1) {
+         int id = -1;
+@@ -105,8 +109,8 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+         }
+         do {
+             d = scsi_device_find(bus, dev->channel, ++id, dev->lun);
+-        } while (d && d->lun == dev->lun && id <= bus->info->max_target);
+-        if (id > bus->info->max_target) {
++        } while (d && d->lun == dev->lun && id < bus->info->max_target);
++        if (d && d->lun == dev->lun) {
+             error_report("no free target");
+             goto err;
+         }
+@@ -116,14 +120,15 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+         do {
+             d = scsi_device_find(bus, dev->channel, dev->id, ++lun);
+         } while (d && d->lun == lun && lun < bus->info->max_lun);
+-        if (lun > bus->info->max_lun) {
++        if (d && d->lun == lun) {
+             error_report("no free lun");
+             goto err;
+         }
+         dev->lun = lun;
+     } else {
+         d = scsi_device_find(bus, dev->channel, dev->id, dev->lun);
+-        if (dev->lun == d->lun && dev != d) {
++        assert(d);
++        if (d->lun == dev->lun && dev != d) {
+             qdev_free(&d->qdev);
+         }
+     }
+@@ -194,7 +199,7 @@ int scsi_bus_legacy_handle_cmdline(SCSIBus *bus)
+     int res = 0, unit;
+ 
+     loc_push_none(&loc);
+-    for (unit = 0; unit < bus->info->max_target; unit++) {
++    for (unit = 0; unit <= bus->info->max_target; unit++) {
+         dinfo = drive_get(IF_SCSI, bus->busnr, unit);
+         if (dinfo == NULL) {
+             continue;
+-- 
+1.7.7.6
+

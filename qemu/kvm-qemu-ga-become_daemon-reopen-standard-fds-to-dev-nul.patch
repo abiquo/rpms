@@ -1,0 +1,92 @@
+From 91a30b70cedef704962ad428112da61a3f3b024d Mon Sep 17 00:00:00 2001
+Message-Id: <91a30b70cedef704962ad428112da61a3f3b024d.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:42 +0200
+Subject: [PATCH 33/41] qemu-ga: become_daemon(): reopen standard fds to
+ /dev/null
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-28-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39925
+O-Subject: [PATCH RHEL6.4 qemu-kvm 27/36] qemu-ga: become_daemon(): reopen standard fds to /dev/null
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+This fixes a bug where qemu-ga doesn't suspend the guest because it
+fails to detect suspend support even when the guest does support
+suspend. This happens because of the way qemu-ga fds are managed in
+daemon mode.
+
+When starting qemu-ga with --daemon, become_daemon() will close all
+standard fds. This will cause qemu-ga to end up with the following
+fds (if started with 'qemu-ga --daemon'):
+
+    0 -> /dev/vport0p1
+    3 -> /run/qemu-ga.pid
+
+Then a guest-suspend-* function is issued. They call bios_supports_mode(),
+which will call pipe(), and qemu-ga's fd will be:
+
+    0 -> /dev/vport0p1
+    1 -> pipe:[16247]
+    2 -> pipe:[16247]
+    3 -> /run/qemu-ga.pid
+
+bios_supports_mode() forks off a child and blocks waiting for the child
+to write something to the pipe. The child, however, closes its reading
+end of the pipe _and_ reopen all standard fds to /dev/null. This will
+cause the child's fds to be:
+
+    0 -> /dev/null
+    1 -> /dev/null
+    2 -> /dev/null
+    3 -> /run/qemu-ga.pid
+
+In other words, the child's writing end of the pipe is now /dev/null.
+It writes there and exits. The parent process (blocked on read()) will
+get an EOF and interpret this as "something unexpected happened in
+the child, let's assume the guest doesn't support suspend". And suspend
+will fail.
+
+To solve this problem we have to reopen standard fds to /dev/null
+in become_daemon(), instead of closing them.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Eric Blake <eblake@redhat.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+(cherry picked from commit 226a48949cf74006a94b5931e50352b2af801ac7)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qemu-ga.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-ga.c |    6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 8d53e04..6e7caed 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -445,9 +445,9 @@ static void become_daemon(const char *pidfile)
+         goto fail;
+     }
+ 
+-    close(STDIN_FILENO);
+-    close(STDOUT_FILENO);
+-    close(STDERR_FILENO);
++    reopen_fd_to_null(STDIN_FILENO);
++    reopen_fd_to_null(STDOUT_FILENO);
++    reopen_fd_to_null(STDERR_FILENO);
+     return;
+ 
+ fail:
+-- 
+1.7.10.4
+

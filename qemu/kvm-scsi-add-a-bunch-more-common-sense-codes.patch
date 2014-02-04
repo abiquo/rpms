@@ -1,0 +1,113 @@
+From d5755e2ff5157d68d7d261fd7cbfefd0b755f0f1 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:32 +0100
+Subject: [PATCH 016/109] scsi: add a bunch more common sense codes
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-16-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37493
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 015/102] scsi: add a bunch more common sense codes
+Bugzilla: 782029
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from a872a3049a7b9439879a496cf7cc147af8feb3ef)
+
+Conflicts:
+	hw/scsi-bus.c
+	hw/scsi.h
+---
+ hw/scsi-bus.c |   30 ++++++++++++++++++++++++++++++
+ hw/scsi.h     |   12 ++++++++++++
+ 2 files changed, 42 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |   30 ++++++++++++++++++++++++++++++
+ hw/scsi.h     |   12 ++++++++++++
+ 2 files changed, 42 insertions(+), 0 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index d053b58..257e0a3 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -703,6 +703,16 @@ const struct SCSISense sense_code_LUN_NOT_SUPPORTED = {
+     .key = ILLEGAL_REQUEST, .asc = 0x25, .ascq = 0x00
+ };
+ 
++/* Illegal request, Saving parameters not supported */
++const struct SCSISense sense_code_SAVING_PARAMS_NOT_SUPPORTED = {
++    .key = ILLEGAL_REQUEST, .asc = 0x39, .ascq = 0x00
++};
++
++/* Illegal request, Incompatible medium installed */
++const struct SCSISense sense_code_INCOMPATIBLE_MEDIUM = {
++    .key = ILLEGAL_REQUEST, .asc = 0x30, .ascq = 0x00
++};
++
+ /* Illegal request, medium removal prevented */
+ const struct SCSISense sense_code_ILLEGAL_REQ_REMOVAL_PREVENTED = {
+     .key = ILLEGAL_REQUEST, .asc = 0x53, .ascq = 0x00
+@@ -723,6 +733,26 @@ const struct SCSISense sense_code_LUN_FAILURE = {
+     .key = ABORTED_COMMAND, .asc = 0x3e, .ascq = 0x01
+ };
+ 
++/* Unit attention, Power on, reset or bus device reset occurred */
++const struct SCSISense sense_code_RESET = {
++    .key = UNIT_ATTENTION, .asc = 0x29, .ascq = 0x00
++};
++
++/* Unit attention, Medium may have changed */
++const struct SCSISense sense_code_MEDIUM_CHANGED = {
++    .key = UNIT_ATTENTION, .asc = 0x28, .ascq = 0x00
++};
++
++/* Unit attention, Reported LUNs data has changed */
++const struct SCSISense sense_code_REPORTED_LUNS_CHANGED = {
++    .key = UNIT_ATTENTION, .asc = 0x3f, .ascq = 0x0e
++};
++
++/* Unit attention, Device internal reset */
++const struct SCSISense sense_code_DEVICE_INTERNAL_RESET = {
++    .key = UNIT_ATTENTION, .asc = 0x29, .ascq = 0x04
++};
++
+ /*
+  * scsi_build_sense
+  *
+diff --git a/hw/scsi.h b/hw/scsi.h
+index db2d1f8..e38c171 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -146,6 +146,10 @@ extern const struct SCSISense sense_code_LBA_OUT_OF_RANGE;
+ extern const struct SCSISense sense_code_INVALID_FIELD;
+ /* Illegal request, LUN not supported */
+ extern const struct SCSISense sense_code_LUN_NOT_SUPPORTED;
++/* Illegal request, Saving parameters not supported */
++extern const struct SCSISense sense_code_SAVING_PARAMS_NOT_SUPPORTED;
++/* Illegal request, Incompatible format */
++extern const struct SCSISense sense_code_INCOMPATIBLE_FORMAT;
+ /* Illegal request, medium removal prevented */
+ extern const struct SCSISense sense_code_ILLEGAL_REQ_REMOVAL_PREVENTED;
+ /* Command aborted, I/O process terminated */
+@@ -154,6 +158,14 @@ extern const struct SCSISense sense_code_IO_ERROR;
+ extern const struct SCSISense sense_code_I_T_NEXUS_LOSS;
+ /* Command aborted, Logical Unit failure */
+ extern const struct SCSISense sense_code_LUN_FAILURE;
++/* Unit attention, Power on, reset or bus device reset occurred */
++extern const struct SCSISense sense_code_RESET;
++/* Unit attention, Medium may have changed*/
++extern const struct SCSISense sense_code_MEDIUM_CHANGED;
++/* Unit attention, Reported LUNs data has changed */
++extern const struct SCSISense sense_code_REPORTED_LUNS_CHANGED;
++/* Unit attention, Device internal reset */
++extern const struct SCSISense sense_code_DEVICE_INTERNAL_RESET;
+ 
+ #define SENSE_CODE(x) sense_code_ ## x
+ 
+-- 
+1.7.7.6
+

@@ -1,0 +1,188 @@
+From 248110b5a4a0d28af07fede411e8a45d403e9e42 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:22 -0300
+Subject: [RHEL6 qemu-kvm PATCH 02/21] Monitor: handle optional '-' arg as a bool
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <aa5d52dc07abf397d2b3d3b3e993d4da45f5fe30.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38627
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 02/21] Monitor: handle optional '-' arg as a bool
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+Historically, user monitor arguments beginning with '-' (eg. '-f')
+were passed as integers down to handlers.
+
+I've maintained this behavior in the new monitor because we didn't
+have a boolean type at the very beginning of QMP. Today we have it
+and this behavior is causing trouble to QMP's argument checker.
+
+This commit fixes the problem by doing the following changes:
+
+1. User Monitor
+
+   Before: the optional arg was represented as a QInt, we'd pass 1
+           down to handlers if the user specified the argument or
+           0 otherwise
+
+   This commit: the optional arg is represented as a QBool, we pass
+                true down to handlers if the user specified the
+                argument, otherwise _nothing_ is passed
+
+2. QMP
+
+   Before: the client was required to pass the arg as QBool, but we'd
+           convert it to QInt internally. If the argument wasn't passed,
+           we'd pass 0 down
+
+   This commit: still require a QBool, but doesn't do any conversion and
+                doesn't pass any default value
+
+3. Convert existing handlers (do_eject()/do_migrate()) to the new way
+
+   Before: Both handlers would expect a QInt value, either 0 or 1
+
+   This commit: Change the handlers to accept a QBool, they handle the
+                following cases:
+
+                   A) true is passed: the option is enabled
+                   B) false is passed: the option is disabled
+                   C) nothing is passed: option not specified, use
+                                         default behavior
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit eb159d13ee36a9ef2a83e3ab66f1b2ae1cc2d9f1)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ blockdev.c  |    2 +-
+ migration.c |   16 +++++++---------
+ monitor.c   |   17 +++--------------
+ 3 files changed, 11 insertions(+), 24 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ blockdev.c  |    2 +-
+ migration.c |   16 +++++++---------
+ monitor.c   |   17 +++--------------
+ 3 files changed, 11 insertions(+), 24 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index c3a8159..bf7d9af 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -1010,7 +1010,7 @@ static int eject_device(Monitor *mon, BlockDriverState *bs, int force)
+ int do_eject(Monitor *mon, const QDict *qdict, QObject **ret_data)
+ {
+     BlockDriverState *bs;
+-    int force = qdict_get_int(qdict, "force");
++    int force = qdict_get_try_bool(qdict, "force", 0);
+     const char *filename = qdict_get_str(qdict, "device");
+ 
+     bs = bdrv_find(filename);
+diff --git a/migration.c b/migration.c
+index fcaf7bc..5a8059b 100644
+--- a/migration.c
++++ b/migration.c
+@@ -93,7 +93,9 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
+ {
+     MigrationState *s = NULL;
+     const char *p;
+-    int detach = qdict_get_int(qdict, "detach");
++    int detach = qdict_get_try_bool(qdict, "detach", 0);
++    int blk = qdict_get_try_bool(qdict, "blk", 0);
++    int inc = qdict_get_try_bool(qdict, "inc", 0);
+     const char *uri = qdict_get_str(qdict, "uri");
+ 
+     if (current_migration &&
+@@ -109,21 +111,17 @@ int do_migrate(Monitor *mon, const QDict *qdict, QObject **ret_data)
+     START_MIGRATION_CLOCK();
+     if (strstart(uri, "tcp:", &p)) {
+         s = tcp_start_outgoing_migration(mon, p, max_throttle, detach,
+-                                         (int)qdict_get_int(qdict, "blk"), 
+-                                         (int)qdict_get_int(qdict, "inc"));
++                                         blk, inc);
+ #if !defined(WIN32)
+     } else if (strstart(uri, "exec:", &p)) {
+         s = exec_start_outgoing_migration(mon, p, max_throttle, detach,
+-                                          (int)qdict_get_int(qdict, "blk"), 
+-                                          (int)qdict_get_int(qdict, "inc"));
++                                          blk, inc);
+     } else if (strstart(uri, "unix:", &p)) {
+         s = unix_start_outgoing_migration(mon, p, max_throttle, detach,
+-					  (int)qdict_get_int(qdict, "blk"), 
+-                                          (int)qdict_get_int(qdict, "inc"));
++                                          blk, inc);
+     } else if (strstart(uri, "fd:", &p)) {
+         s = fd_start_outgoing_migration(mon, p, max_throttle, detach, 
+-                                        (int)qdict_get_int(qdict, "blk"), 
+-                                        (int)qdict_get_int(qdict, "inc"));
++                                        blk, inc);
+ #endif
+     } else {
+         monitor_printf(mon, "unknown migration protocol: %s\n", uri);
+diff --git a/monitor.c b/monitor.c
+index 5489234..5b9deb8 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -4009,7 +4009,7 @@ static const mon_cmd_t *monitor_parse_command(Monitor *mon,
+         case '-':
+             {
+                 const char *tmp = p;
+-                int has_option, skip_key = 0;
++                int skip_key = 0;
+                 /* option */
+ 
+                 c = *typestr++;
+@@ -4017,7 +4017,6 @@ static const mon_cmd_t *monitor_parse_command(Monitor *mon,
+                     goto bad_type;
+                 while (qemu_isspace(*p))
+                     p++;
+-                has_option = 0;
+                 if (*p == '-') {
+                     p++;
+                     if(c != *p) {
+@@ -4033,11 +4032,11 @@ static const mon_cmd_t *monitor_parse_command(Monitor *mon,
+                     if(skip_key) {
+                         p = tmp;
+                     } else {
++                        /* has option */
+                         p++;
+-                        has_option = 1;
++                        qdict_put(qdict, key, qbool_from_int(1));
+                     }
+                 }
+-                qdict_put(qdict, key, qint_from_int(has_option));
+             }
+             break;
+         default:
+@@ -4422,11 +4421,6 @@ static int check_opt(const CmdArgs *cmd_args, const char *name, QDict *args)
+         return -1;
+     }
+ 
+-    if (cmd_args->type == '-') {
+-        /* handlers expect a value, they need to be changed */
+-        qdict_put(args, name, qint_from_int(0));
+-    }
+-
+     return 0;
+ }
+ 
+@@ -4500,11 +4494,6 @@ static int check_arg(const CmdArgs *cmd_args, QDict *args)
+                 qerror_report(QERR_INVALID_PARAMETER_TYPE, name, "bool");
+                 return -1;
+             }
+-            if (qobject_type(value) == QTYPE_QBOOL) {
+-                /* handlers expect a QInt, they need to be changed */
+-                qdict_put(args, name,
+-                         qint_from_int(qbool_get_int(qobject_to_qbool(value))));
+-            }
+             break;
+         case 'O':
+         default:
+-- 
+1.7.3.2
+

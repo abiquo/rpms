@@ -1,0 +1,47 @@
+From 5e203ad8ac00677a9181b5928a8681cd1fb7938f Mon Sep 17 00:00:00 2001
+Message-Id: <5e203ad8ac00677a9181b5928a8681cd1fb7938f.1346940159.git.minovotn@redhat.com>
+In-Reply-To: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+References: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Thu, 16 Aug 2012 11:39:06 +0200
+Subject: [PATCH 04/18] ehci: kick async schedule on wakeup
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1345117160-21046-5-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40918
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 04/18] ehci: kick async schedule on wakeup
+Bugzilla: 805172
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Kick async schedule when we get a wakeup
+notification from a usb device.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 0f588df8b3688b00e77aabaa32e26ece5f19bd39)
+---
+ hw/usb-ehci.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-ehci.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index 039a6dc..f9c5371 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -802,6 +802,8 @@ static void ehci_wakeup(USBPort *port)
+         USBPort *companion = s->companion_ports[port->index];
+         if (companion->ops->wakeup) {
+             companion->ops->wakeup(companion);
++        } else {
++            qemu_bh_schedule(s->async_bh);
+         }
+     }
+ }
+-- 
+1.7.11.4
+

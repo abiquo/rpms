@@ -1,0 +1,65 @@
+From f449cba0ed6e07943a64a42c5a30cb7358509467 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:42 +0100
+Subject: [PATCH 48/52] slirp: Clean up net_slirp_hostfwd_remove()'s use of
+ get_str_sep()
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-49-git-send-email-armbru@redhat.com>
+Patchwork-id: 36613
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 48/52] slirp: Clean up net_slirp_hostfwd_remove()'s use of get_str_sep()
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+get_str_sep() can fail, but net_slirp_hostfwd_remove() doesn't check.
+Works, because it initializes buf[] to "", which get_str_sep() doesn't
+touch when it fails.  Coverity doesn't like it, and neither do I.
+
+Change it to work exactly like slirp_hostfwd().
+
+Acked-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit e30e5eb6136aa3311dad4ca90f6546e05ae98f92)
+---
+ net/slirp.c |    9 ++++-----
+ 1 files changed, 4 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ net/slirp.c |    9 ++++-----
+ 1 files changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/net/slirp.c b/net/slirp.c
+index dbc29c8..e818f2e 100644
+--- a/net/slirp.c
++++ b/net/slirp.c
+@@ -302,7 +302,7 @@ void net_slirp_hostfwd_remove(Monitor *mon, const QDict *qdict)
+ {
+     struct in_addr host_addr = { .s_addr = INADDR_ANY };
+     int host_port;
+-    char buf[256] = "";
++    char buf[256];
+     const char *src_str, *p;
+     SlirpState *s;
+     int is_udp = 0;
+@@ -322,11 +322,10 @@ void net_slirp_hostfwd_remove(Monitor *mon, const QDict *qdict)
+         return;
+     }
+ 
+-    if (!src_str || !src_str[0])
+-        goto fail_syntax;
+-
+     p = src_str;
+-    get_str_sep(buf, sizeof(buf), &p, ':');
++    if (!p || get_str_sep(buf, sizeof(buf), &p, ':') < 0) {
++        goto fail_syntax;
++    }
+ 
+     if (!strcmp(buf, "tcp") || buf[0] == '\0') {
+         is_udp = 0;
+-- 
+1.7.7.5
+

@@ -1,0 +1,222 @@
+From eead8cbe7de3b6fceb28c8843dfa7e966c3afce9 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:30 +0100
+Subject: [PATCH 03/55] Revert "qmp: add block_job_set_speed command"
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <7bc4f1cd6cdcb810c98a68a856be67be9ac60768.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38853
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 03/54] Revert "qmp: add block_job_set_speed command"
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+This reverts commit c95a07ad1cd2db64c1b25c385e253e98a6b97ac5.
+
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ blockdev.c      |   63 ++----------------------------------------------------
+ blockdev.h      |    2 -
+ qemu-monitor.hx |   41 -----------------------------------
+ 3 files changed, 3 insertions(+), 103 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ blockdev.c      |   63 ++----------------------------------------------------
+ blockdev.h      |    2 -
+ qemu-monitor.hx |   41 -----------------------------------
+ 3 files changed, 3 insertions(+), 103 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 7ef9473..3f7feb0 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -52,20 +52,12 @@ static const int if_max_devs[IF_COUNT] = {
+     [IF_SCSI] = 7,
+ };
+ 
+-enum {
+-    SLICE_TIME_MS = 100,  /* 100 ms rate-limiting slice time */
+-};
+-
+ typedef struct StreamState {
+     MonitorCompletion *cancel_cb;
+     void *cancel_opaque;
+     int64_t offset;             /* current position in block device */
+     BlockDriverState *bs;
+     QEMUTimer *timer;
+-    int64_t bytes_per_sec;      /* rate limit */
+-    int64_t bytes_per_slice;    /* rate limit scaled to slice */
+-    int64_t slice_end_time;     /* when this slice finishes */
+-    int64_t slice_start_offset; /* offset when slice started */
+     QLIST_ENTRY(StreamState) list;
+ } StreamState;
+ 
+@@ -80,7 +72,7 @@ static QObject *stream_get_qobject(StreamState *s)
+     return qobject_from_jsonf("{ 'device': %s, 'type': 'stream', "
+                               "'offset': %" PRId64 ", 'len': %" PRId64 ", "
+                               "'speed': %" PRId64 " }",
+-                              name, s->offset, len, s->bytes_per_sec);
++                              name, s->offset, len, (int64_t)0);
+ }
+ 
+ static void stream_mon_event(StreamState *s, int ret)
+@@ -117,27 +109,6 @@ static void stream_complete(StreamState *s, int ret)
+     stream_free(s);
+ }
+ 
+-static void stream_schedule_next_iteration(StreamState *s)
+-{
+-    int64_t next = qemu_get_clock(rt_clock);
+-
+-    /* New slice */
+-    if (next >= s->slice_end_time) {
+-        s->slice_end_time = next + SLICE_TIME_MS;
+-        s->slice_start_offset = s->offset;
+-    }
+-
+-    /* Throttle */
+-    if (s->bytes_per_slice &&
+-        s->offset - s->slice_start_offset >= s->bytes_per_slice) {
+-        next = s->slice_end_time;
+-        s->slice_end_time = next + SLICE_TIME_MS;
+-        s->slice_start_offset += s->bytes_per_slice;
+-    }
+-
+-    qemu_mod_timer(s->timer, next);
+-}
+-
+ static void stream_cb(void *opaque, int nb_sectors)
+ {
+     StreamState *s = opaque;
+@@ -155,7 +126,7 @@ static void stream_cb(void *opaque, int nb_sectors)
+     } else if (s->cancel_cb) {
+         stream_free(s);
+     } else {
+-        stream_schedule_next_iteration(s);
++        qemu_mod_timer(s->timer, qemu_get_clock(rt_clock));
+     }
+ }
+ 
+@@ -238,20 +209,6 @@ static int stream_stop(const char *device, MonitorCompletion *cb, void *opaque)
+     return 0;
+ }
+ 
+-static int stream_set_speed(const char *device, int64_t bytes_per_sec)
+-{
+-    StreamState *s = stream_find(device);
+-
+-    if (!s) {
+-        qerror_report(QERR_DEVICE_NOT_ACTIVE, device);
+-        return -1;
+-    }
+-
+-    s->bytes_per_sec = bytes_per_sec;
+-    s->bytes_per_slice = bytes_per_sec * SLICE_TIME_MS / 1000LL;
+-    return 0;
+-}
+-
+ /*
+  * We automatically delete the drive when a device using it gets
+  * unplugged.  Questionable feature, but we can't just drop it.
+@@ -1048,7 +1005,7 @@ static void monitor_print_block_stream(Monitor *mon, const QObject *data)
+                    qdict_get_str(stream, "device"),
+                    qdict_get_int(stream, "offset"),
+                    qdict_get_int(stream, "len"),
+-                   qdict_get_int(stream, "speed"));
++                   (int64_t)0);
+ }
+ 
+ static void monitor_print_block_job(QObject *obj, void *opaque)
+@@ -1099,20 +1056,6 @@ int do_block_job_cancel(Monitor *mon, const QDict *params,
+     return stream_stop(device, cb, opaque);
+ }
+ 
+-int do_block_job_set_speed(Monitor *mon, const QDict *params,
+-                           QObject **ret_data)
+-{
+-    const char *device = qdict_get_str(params, "device");
+-    int64_t value;
+-
+-    value = qdict_get_int(params, "value");
+-    if (value < 0) {
+-        value = 0;
+-    }
+-
+-    return stream_set_speed(device, value);
+-}
+-
+ static int eject_device(Monitor *mon, BlockDriverState *bs, int force)
+ {
+     if (!bdrv_dev_has_removable_media(bs)) {
+diff --git a/blockdev.h b/blockdev.h
+index 11cde50..82531c4 100644
+--- a/blockdev.h
++++ b/blockdev.h
+@@ -77,7 +77,5 @@ void do_info_block_jobs(Monitor *mon, QObject **ret_data);
+ int do_block_stream(Monitor *mon, const QDict *params, QObject **ret_data);
+ int do_block_job_cancel(Monitor *mon, const QDict *params,
+                         MonitorCompletion cb, void *opaque);
+-int do_block_job_set_speed(Monitor *mon, const QDict *params,
+-                           QObject **ret_data);
+ 
+ #endif
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 24bcdd3..e88006f 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -215,47 +215,6 @@ Examples:
+ EQMP
+ 
+     {
+-        .name       = "block_job_set_speed",
+-        .args_type  = "device:B,value:o",
+-        .params     = "device value",
+-        .help       = "Set the maximum speed for a background block operation",
+-        .user_print = monitor_user_noop,
+-        .mhandler.cmd_new = do_block_job_set_speed,
+-    },
+-
+-STEXI
+-@item block_job_set_speed @var{device} @var{value}
+-@findex block_job_set_speed
+-Set the maximum speed for a background block operation.
+-ETEXI
+-SQMP
+-block_job_set_speed
+--------------------
+-
+-Set maximum speed for a background block operation.
+-
+-This is a per-block device command that can only be issued
+-when there is an active block job.
+-
+-Throttling can be disabled by setting the speed to 0.
+-
+-Arguments:
+-
+-- device: device name (json-string)
+-- value:  maximum speed, in bytes per second (json-int)
+-
+-Errors:
+-DeviceNotActive: streaming is not active on this device
+-NotSupported:    job type does not support speed setting
+-
+-Example:
+-
+--> { "execute": "block_job_set_speed",
+-    "arguments": { "device": "virtio0", "value": 1024 } }
+-
+-EQMP
+-
+-    {
+         .name       = "q|quit",
+         .args_type  = "",
+         .params     = "",
+-- 
+1.7.7.6
+

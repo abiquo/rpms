@@ -1,0 +1,61 @@
+From b1772501a678c21c1dcb9c7c76924ab7f1e2fca9 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 27 Mar 2012 13:12:50 +0200
+Subject: [PATCH] Live block copy: Fix mirroring
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1332853970-9115-1-git-send-email-kwolf@redhat.com>
+Patchwork-id: 39004
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2] Live block copy: Fix mirroring
+Bugzilla: 802284
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+Bugzilla: 802284
+Upstream: n/a (mirroring is downstream only)
+
+So surprisingly we messed up and mirroring doesn't work at all yet. This
+fixes the following problems:
+
+* blkmirror must be in the block driver whitelist
+* qapi-schema.json and qemu-monitor must use the same parameter name
+* .user_print seems to be required to make the command work in HMP
+
+Shaolong Hu from QE gaves this some initial testing and reported that at
+the first sight it seems to work now and the commands are accepted by
+qemu at least.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+v2:
+- Renamed 'new-image-file' to 'destination-image-file'
+
+ qemu-monitor.hx               |    4 +++-
+ redhat/qemu-kvm.spec.template |    2 +-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <mignov@gmail.com>
+---
+ qemu-monitor.hx               |    4 +++-
+ redhat/qemu-kvm.spec.template |    2 +-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 0770b7c..5b1eeb9 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1592,7 +1592,9 @@ EQMP
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+     {
+         .name       = "__com.redhat_drive-mirror",
+-        .args_type  = "device:B,snapshot-file:s,mode:s?,format:s?",
++        .args_type  = "device:B,target:s,mode:s?,format:s?",
++        .params     = "device destination-image-file [mode] [format]",
++        .user_print = monitor_user_noop,
+         .mhandler.cmd_new = qmp_marshal_input___com_redhat_drive_mirror,
+     },
+ #endif
+-- 
+1.7.7.6
+

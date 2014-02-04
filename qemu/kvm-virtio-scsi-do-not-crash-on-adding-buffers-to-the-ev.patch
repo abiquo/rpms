@@ -1,0 +1,66 @@
+From 444861c869f7d66b8737f5516a2dc741ca7fa832 Mon Sep 17 00:00:00 2001
+Message-Id: <444861c869f7d66b8737f5516a2dc741ca7fa832.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 12 Oct 2012 16:22:42 +0200
+Subject: [PATCH 10/17] virtio-scsi: do not crash on adding buffers to the
+ event queue
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1350058967-27351-6-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 43060
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v2 05/10] virtio-scsi: do not crash on adding buffers to the event queue
+Bugzilla: 808660
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+The event queue is not supported yet and the handler does not
+have to do much anyway when buffers are added.  However, the
+handler is called unconditionally by the virtio layer, and this
+results in a crash as soon as buffers are added to the event
+queue because we pass NULL.
+
+Reported-by: Bryan Venteicher <bryanv@daemoninthecloset.org>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry-picked from commit 619d7ae952bb61ec27ec21fe4a383a8d4dd4cd70)
+
+Conflicts:
+	hw/virtio-scsi.c
+---
+ hw/virtio-scsi.c | 6 +++++-
+ 1 file modificato, 5 inserzioni(+). 1 rimozione(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-scsi.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/hw/virtio-scsi.c b/hw/virtio-scsi.c
+index 3dc9912..713b962 100644
+--- a/hw/virtio-scsi.c
++++ b/hw/virtio-scsi.c
+@@ -411,6 +411,10 @@ static void virtio_scsi_handle_ctrl(VirtIODevice *vdev, VirtQueue *vq)
+     }
+ }
+ 
++static void virtio_scsi_handle_event(VirtIODevice *vdev, VirtQueue *vq)
++{
++}
++
+ static void virtio_scsi_command_complete(SCSIRequest *r, uint32_t status,
+                                          int32_t resid)
+ {
+@@ -613,7 +617,7 @@ VirtIODevice *virtio_scsi_init(DeviceState *dev, VirtIOSCSIConf *proxyconf)
+     s->ctrl_vq = virtio_add_queue(&s->vdev, VIRTIO_SCSI_VQ_SIZE,
+                                    virtio_scsi_handle_ctrl);
+     s->event_vq = virtio_add_queue(&s->vdev, VIRTIO_SCSI_VQ_SIZE,
+-                                   NULL);
++                                   virtio_scsi_handle_event);
+     s->cmd_vq = virtio_add_queue(&s->vdev, VIRTIO_SCSI_VQ_SIZE,
+                                    virtio_scsi_handle_cmd);
+ 
+-- 
+1.7.11.7
+

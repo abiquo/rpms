@@ -1,0 +1,52 @@
+From 69dd37ff9ae96583df742b748f8f78e87f35287d Mon Sep 17 00:00:00 2001
+Message-Id: <69dd37ff9ae96583df742b748f8f78e87f35287d.1357660440.git.minovotn@redhat.com>
+In-Reply-To: <ffc7768db990f0587b84e08e06095ed26f095fde.1357660440.git.minovotn@redhat.com>
+References: <ffc7768db990f0587b84e08e06095ed26f095fde.1357660440.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Sun, 6 Jan 2013 06:07:45 +0100
+Subject: [PATCH 2/4] e1000: no need auto-negotiation if link was down
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1357452466-14103-2-git-send-email-akong@redhat.com>
+Patchwork-id: 45595
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 1/2] e1000: no need auto-negotiation if link was down
+Bugzilla: 890288
+RH-Acked-by: Xiao Wang <jasowang@redhat.com>
+RH-Acked-by: Stefan Hajnoczi <stefanha@redhat.com>
+RH-Acked-by: Vlad Yasevich <vyasevic@redhat.com>
+
+Commit b9d03e352cb6b31a66545763f6a1e20c9abf0c2c added link
+auto-negotiation emulation, it would always set link up by
+callback function. Problem exists if original link status
+was down, link status should not be changed in auto-negotiation.
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+Signed-off-by: Amos Kong <akong@redhat.com>
+---
+ hw/e1000.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/e1000.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/hw/e1000.c b/hw/e1000.c
+index 016aae1..0c57899 100644
+--- a/hw/e1000.c
++++ b/hw/e1000.c
+@@ -162,6 +162,11 @@ static void
+ set_phy_ctrl(E1000State *s, int index, uint16_t val)
+ {
+     if ((val & MII_CR_AUTO_NEG_EN) && (val & MII_CR_RESTART_AUTO_NEG)) {
++        /* no need auto-negotiation if link was down */
++        if (s->nic->nc.link_down) {
++            s->phy_reg[PHY_STATUS] |= MII_SR_AUTONEG_COMPLETE;
++            return;
++        }
+         s->nic->nc.link_down = true;
+         e1000_link_down(s);
+         s->phy_reg[PHY_STATUS] &= ~MII_SR_AUTONEG_COMPLETE;
+-- 
+1.7.11.7
+

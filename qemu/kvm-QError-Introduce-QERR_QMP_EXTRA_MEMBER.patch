@@ -1,0 +1,51 @@
+From 5aee847dabaf137be7ac4f4b50e276b46f0ef50b Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:43:35 -0500
+Subject: [PATCH 08/98] QError: Introduce QERR_QMP_EXTRA_MEMBER
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 60d76d7b073f6f25c9dbe4d68df7d012f73db27f)
+
+Conflicts:
+
+	qerror.c
+	qerror.h
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qerror.c |    4 ++++
+ qerror.h |    3 +++
+ 2 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/qerror.c b/qerror.c
+index 9487454..c811c85 100644
+--- a/qerror.c
++++ b/qerror.c
+@@ -193,6 +193,10 @@ static const QErrorStringTable qerror_table[] = {
+         .desc      = "QMP input object member '%(member)' expects '%(expected)'",
+     },
+     {
++        .error_fmt = QERR_QMP_EXTRA_MEMBER,
++        .desc      = "QMP input object member '%(member)' is unexpected",
++    },
++    {
+         .error_fmt = QERR_RESET_REQUIRED,
+         .desc      = "Resetting the Virtual Machine is required",
+     },
+diff --git a/qerror.h b/qerror.h
+index a49f0b5..349ef1f 100644
+--- a/qerror.h
++++ b/qerror.h
+@@ -161,6 +161,9 @@ QError *qobject_to_qerror(const QObject *obj);
+ #define QERR_QMP_BAD_INPUT_OBJECT_MEMBER \
+     "{ 'class': 'QMPBadInputObjectMember', 'data': { 'member': %s, 'expected': %s } }"
+ 
++#define QERR_QMP_EXTRA_MEMBER \
++    "{ 'class': 'QMPExtraInputObjectMember', 'data': { 'member': %s } }"
++
+ #define QERR_RESET_REQUIRED \
+     "{ 'class': 'ResetRequired', 'data': {} }"
+ 
+-- 
+1.7.7.6
+

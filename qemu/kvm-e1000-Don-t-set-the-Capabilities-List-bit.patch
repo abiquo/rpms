@@ -1,0 +1,107 @@
+From da08eca42dd981807bfeefef0d5cbee93bbba740 Mon Sep 17 00:00:00 2001
+Message-Id: <da08eca42dd981807bfeefef0d5cbee93bbba740.1350899902.git.minovotn@redhat.com>
+In-Reply-To: <3e77d4faf00d4821ff5c0d16f18f5abfc222f3e0.1350899902.git.minovotn@redhat.com>
+References: <3e77d4faf00d4821ff5c0d16f18f5abfc222f3e0.1350899902.git.minovotn@redhat.com>
+From: "Michael S. Tsirkin" <mst@redhat.com>
+Date: Thu, 18 Oct 2012 15:17:44 +0200
+Subject: [PATCH 3/4] e1000: Don't set the Capabilities List bit
+
+RH-Author: Michael S. Tsirkin <mst@redhat.com>
+Message-id: <d0a70cca9ae928b03ecddff930d54b37c8dd2993.1350572959.git.mst@redhat.com>
+Patchwork-id: 43359
+O-Subject: [PATCHv2 RHEL6.4 qemu-kvm 3/3] e1000: Don't set the Capabilities List bit
+Bugzilla: 866736
+RH-Acked-by: Jason Baron <jbaron@redhat.com>
+RH-Acked-by: Xiao Wang <jasowang@redhat.com>
+RH-Acked-by: Stefan Hajnoczi <stefanha@redhat.com>
+
+The commit below (appeared in qemu 1.0) removes the capabilities bit,
+for spec compliance. We can't remove it unconditionally to avoid
+breaking migration, so add a compat flag and keep it on for
+machine types 6.3.0 and older.
+
+Author: dann frazier <dann.frazier@canonical.com>
+
+[Originally sent to qemu-kvm list, but I was redirected here]
+
+The Capabilities Pointer is NULL, so this bit shouldn't be set. The state of
+this bit doesn't appear to change any behavior on Linux/Windows versions we've
+tested, but it does cause Windows' PCI/PCI Express Compliance Test to balk.
+
+I happen to have a physical 82540EM controller, and it also sets the
+Capabilities Bit, but it actually has items on the capabilities list to go
+with it :)
+
+Signed-off-by: dann frazier <dann.frazier@canonical.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry-picked from commit dd8e93799f13ef82d83c185b8e71e049452f7d40)
+---
+ hw/e1000.c | 16 ++++++++++++++--
+ hw/pc.c    |  4 ++++
+ 2 files changed, 18 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/e1000.c | 16 ++++++++++++++--
+ hw/pc.c    |  4 ++++
+ 2 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/hw/e1000.c b/hw/e1000.c
+index d104762..016aae1 100644
+--- a/hw/e1000.c
++++ b/hw/e1000.c
+@@ -122,6 +122,11 @@ typedef struct E1000State_st {
+     } eecd_state;
+ 
+     QEMUTimer *autoneg_timer;
++
++/* Enabled compatibility for migration to/from rhel6.3.0 and older */
++#define E1000_FLAG_RHEL630_BIT 0
++#define E1000_FLAG_RHEL630 (1 << E1000_FLAG_RHEL630_BIT)
++    uint32_t compat_flags;
+ } E1000State;
+ 
+ #define	defreg(x)	x = (E1000_##x>>2)
+@@ -1220,8 +1225,13 @@ static int pci_e1000_init(PCIDevice *pci_dev)
+ 
+     pci_config_set_vendor_id(pci_conf, PCI_VENDOR_ID_INTEL);
+     pci_config_set_device_id(pci_conf, E1000_DEVID);
+-    /* TODO: we have no capabilities, so why is this bit set? */
+-    pci_set_word(pci_conf + PCI_STATUS, PCI_STATUS_CAP_LIST);
++    if (d->compat_flags & E1000_FLAG_RHEL630) {
++        /*
++         * We have no capabilities, so capability list bit should normally be 0.
++         * Keep it on for compat machine types to avoid breaking migration.
++         */
++        pci_set_word(pci_conf + PCI_STATUS, PCI_STATUS_CAP_LIST);
++    }
+     pci_conf[PCI_REVISION_ID] = 0x03;
+     pci_config_set_class(pci_conf, PCI_CLASS_NETWORK_ETHERNET);
+     /* TODO: RST# value should be 0, PCI spec 6.2.4 */
+@@ -1278,6 +1288,8 @@ static PCIDeviceInfo e1000_info = {
+     .romfile    = "pxe-e1000.bin",
+     .qdev.props = (Property[]) {
+         DEFINE_NIC_PROPERTIES(E1000State, conf),
++        DEFINE_PROP_BIT("x-__com_redhat_rhel630_compat", E1000State,
++                        compat_flags, E1000_FLAG_RHEL630_BIT, false),
+         DEFINE_PROP_END_OF_LIST(),
+     }
+ };
+diff --git a/hw/pc.c b/hw/pc.c
+index 0868e35..279f525 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -1586,6 +1586,10 @@ static void rhel_common_init(const char *type1_version,
+             .driver   = "isa-fdc",\
+             .property = "migrate_dir",\
+             .value    = "0",\
++        },{\
++            .driver   = "e1000",\
++            .property = "x-__com_redhat_rhel630_compat",\
++            .value    = "on",\
+         }
+ 
+ #define PC_RHEL6_2_COMPAT \
+-- 
+1.7.11.7
+

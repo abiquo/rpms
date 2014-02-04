@@ -1,0 +1,50 @@
+From 0047393cee316ae8e956c3247b2a60978ea688c1 Mon Sep 17 00:00:00 2001
+Message-Id: <0047393cee316ae8e956c3247b2a60978ea688c1.1346761472.git.minovotn@redhat.com>
+In-Reply-To: <66350080c56dd39cd894591e70182434d5d2de75.1346761472.git.minovotn@redhat.com>
+References: <66350080c56dd39cd894591e70182434d5d2de75.1346761472.git.minovotn@redhat.com>
+From: "Michael S. Tsirkin" <mst@redhat.com>
+Date: Thu, 23 Aug 2012 15:19:17 +0200
+Subject: [PATCH 03/10] kvm_pv_eoi: add flag support
+
+RH-Author: Michael S. Tsirkin <mst@redhat.com>
+Message-id: <655f9014f44fc0e827d9f8bbca263539ddfd9794.1345733688.git.mst@redhat.com>
+Patchwork-id: 41177
+O-Subject: [PATCHv2 RHEL6.4 3/3] kvm_pv_eoi: add flag support
+Bugzilla: 835101
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Support the new PV EOI flag in kvm - it recently got merged
+into kvm.git. Set by default with -cpu kvm.
+Set for -cpu qemu by adding +kvm_pv_eoi.
+Clear by adding -kvm_pv_eoi to -cpu option.
+
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+(cherry-picked from commit bfee7546df51c08e395dc8a7676a5c7f20186fee)
+---
+ target-i386/cpuid.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 6e69659..f780886 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -154,7 +154,7 @@ static bool lookup_feature(uint32_t *pval, const char *s, const char *e,
+ }
+ 
+ static const char *kvm_feature_name[] = {
+-    "kvmclock", "kvm_nopiodelay", "kvm_mmu", "kvmclock", NULL, NULL, NULL, NULL,
++    "kvmclock", "kvm_nopiodelay", "kvm_mmu", "kvmclock", NULL, NULL, "kvm_pv_eoi", NULL,
+     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+-- 
+1.7.11.4
+

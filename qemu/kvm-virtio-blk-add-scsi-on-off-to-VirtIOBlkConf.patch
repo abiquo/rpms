@@ -1,0 +1,66 @@
+From 8ab0403ca28f8bdbae870c89b91bcb74b8fa94a7 Mon Sep 17 00:00:00 2001
+Message-Id: <8ab0403ca28f8bdbae870c89b91bcb74b8fa94a7.1357726992.git.minovotn@redhat.com>
+In-Reply-To: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+References: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Wed, 2 Jan 2013 15:02:36 +0100
+Subject: [PATCH 13/16] virtio-blk: add scsi=on|off to VirtIOBlkConf
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1357138959-1918-14-git-send-email-stefanha@redhat.com>
+Patchwork-id: 45526
+O-Subject: [RHEL6.4 qemu-kvm PATCH v5 13/16] virtio-blk: add scsi=on|off to VirtIOBlkConf
+Bugzilla: 877836
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+Expose the scsi=on|off option in VirtIOBlkConf so that
+virtio-blk-data-plane will be able to detect and warn about this
+incompatible feature.
+
+This differs from upstream where scsi=on|off is implemented differently
+in commit a6c5c84ae25bc68f22725f77d6d77c98af5c4f9e.  This patch leaves
+the RHEL solution in place but propagates scsi=on|off so that
+virtio-blk-data-plane can check it.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ hw/virtio-blk.h | 1 +
+ hw/virtio-pci.c | 2 ++
+ 2 files changed, 3 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-blk.h | 1 +
+ hw/virtio-pci.c | 2 ++
+ 2 files changed, 3 insertions(+)
+
+diff --git a/hw/virtio-blk.h b/hw/virtio-blk.h
+index 5eea647..1d95666 100644
+--- a/hw/virtio-blk.h
++++ b/hw/virtio-blk.h
+@@ -101,6 +101,7 @@ struct VirtIOBlkConf
+ {
+     BlockConf conf;
+     char *serial;
++    uint32_t scsi;
+ };
+ 
+ #ifdef __linux__
+diff --git a/hw/virtio-pci.c b/hw/virtio-pci.c
+index 01a1e45..cdcc14d 100644
+--- a/hw/virtio-pci.c
++++ b/hw/virtio-pci.c
+@@ -826,6 +826,8 @@ static int virtio_blk_init_pci(PCIDevice *pci_dev)
+         proxy->class_code != PCI_CLASS_STORAGE_OTHER)
+         proxy->class_code = PCI_CLASS_STORAGE_SCSI;
+ 
++    proxy->blk.scsi = !!(proxy->host_features & (1 << VIRTIO_BLK_F_SCSI));
++
+     vdev = virtio_blk_init(&pci_dev->qdev, &proxy->blk);
+     if (!vdev) {
+         return -1;
+-- 
+1.7.11.7
+

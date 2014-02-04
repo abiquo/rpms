@@ -1,0 +1,55 @@
+From 21a851a84abf6cbe3fc7ac32e1a1271c06c56942 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 27 Feb 2012 20:31:06 +0100
+Subject: [PATCH 107/109] scsi: Support I/O status
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1330374668-8838-5-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 37644
+O-Subject: [PATCH RHEL6.3 qemu-kvm 4/6] scsi: Support I/O status
+Bugzilla: 797186
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 9fb118e6b3d1744c6093588b3db613bc25d64e00)
+
+Conflicts:
+
+	hw/scsi-disk.c
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ hw/scsi-disk.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 789f49f..1b969bc 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -303,6 +303,7 @@ static int scsi_handle_rw_error(SCSIDiskReq *r, int error)
+ 
+         bdrv_mon_event(s->qdev.conf.bs, BDRV_ACTION_STOP, error, is_read);
+         vm_stop(RUN_STATE_IO_ERROR);
++        bdrv_iostatus_set_err(s->qdev.conf.bs, error);
+         scsi_req_retry(&r->req);
+     } else {
+         switch (error) {
+@@ -1622,6 +1623,7 @@ static int scsi_initfn(SCSIDevice *dev)
+     }
+     s->qdev.conf.bs->buffer_alignment = s->qdev.blocksize;
+ 
++    bdrv_iostatus_enable(s->qdev.conf.bs);
+     add_boot_device_path(s->qdev.conf.bootindex, &dev->qdev, ",0");
+     return 0;
+ }
+-- 
+1.7.7.6

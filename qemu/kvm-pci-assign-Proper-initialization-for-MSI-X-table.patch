@@ -1,0 +1,75 @@
+From 0074ae2c45df88b5456151cc4bb322d41fd14095 Mon Sep 17 00:00:00 2001
+Message-Id: <0074ae2c45df88b5456151cc4bb322d41fd14095.1343746747.git.minovotn@redhat.com>
+In-Reply-To: <a05f97bf1253f4585f1a6c3f03925d7d24a064f4.1343746747.git.minovotn@redhat.com>
+References: <a05f97bf1253f4585f1a6c3f03925d7d24a064f4.1343746747.git.minovotn@redhat.com>
+From: Alex Williamson <alex.williamson@redhat.com>
+Date: Fri, 27 Jul 2012 19:47:22 +0200
+Subject: [PATCH 4/6] pci-assign: Proper initialization for MSI-X table
+
+RH-Author: Alex Williamson <alex.williamson@redhat.com>
+Message-id: <20120727194722.6928.83136.stgit@bling.home>
+Patchwork-id: 40443
+O-Subject: [RHEL6.4 qemu-kvm PATCH 3/5] pci-assign: Proper initialization for MSI-X table
+Bugzilla: 784496
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Don Dutile <ddutile@redhat.com>
+RH-Acked-by: Jason Baron <jbaron@redhat.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=784496
+Upstream commit 83e8e9b60a0c100b454bec450848f82a3e9761c0
+
+Per the PCI spec, all vectors should be masked at handoff.
+
+Signed-off-by: Alex Williamson <alex.williamson@redhat.com>
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+---
+
+ hw/device-assignment.c |   20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/device-assignment.c |   20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/hw/device-assignment.c b/hw/device-assignment.c
+index a619db7..46bbdec 100644
+--- a/hw/device-assignment.c
++++ b/hw/device-assignment.c
+@@ -1667,6 +1667,22 @@ static CPUReadMemoryFunc *msix_mmio_read[] = {
+     msix_mmio_readb,	msix_mmio_readw,	msix_mmio_readl
+ };
+ 
++static void msix_reset(AssignedDevice *dev)
++{
++    MSIXTableEntry *entry;
++    int i;
++
++    if (!dev->msix_table) {
++        return;
++    }
++
++    memset(dev->msix_table, 0, 0x1000);
++
++    for (i = 0, entry = dev->msix_table; i < dev->msix_max; i++, entry++) {
++        entry->ctrl = cpu_to_le32(0x1); /* Masked */
++    }
++}
++
+ static int assigned_dev_register_msix_mmio(AssignedDevice *dev)
+ {
+     dev->msix_table = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE,
+@@ -1675,7 +1691,9 @@ static int assigned_dev_register_msix_mmio(AssignedDevice *dev)
+         fprintf(stderr, "fail allocate msix_table! %s\n", strerror(errno));
+         return -EFAULT;
+     }
+-    memset(dev->msix_table, 0, 0x1000);
++
++    msix_reset(dev);
++
+     dev->mmio_index = cpu_register_io_memory(
+                         msix_mmio_read, msix_mmio_write, dev);
+     return 0;
+-- 
+1.7.10.4
+

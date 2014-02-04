@@ -1,0 +1,80 @@
+From 1db13e969ac48302e4b16abc1127cef4cd0d8698 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Sun, 4 Mar 2012 11:57:45 +0100
+Subject: [PATCH 23/35] usb-ehci: Never follow table entries with the T-bit
+ set
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1330862278-22314-9-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 37926
+O-Subject: [PATCH 08/21] usb-ehci: Never follow table entries with the T-bit set
+Bugzilla: 758104
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+Before this patch the T-bit was not checked in 2 places, while it should be.
+
+Once we properly check the T-bit everywhere we no longer need the weird
+entry < 0x1000 and entry > 0x1000 checks, so this patch removes them.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+
+Upstream commit: 2a5ff735dc1074171a0cbb1dc228d6d6e907f571
+Upstream: http://patchwork.ozlabs.org/patch/144332/
+(waiting for next usb pull request)
+---
+ hw/usb-ehci.c |   10 ++++------
+ 1 files changed, 4 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-ehci.c |   10 ++++------
+ 1 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index 64967d7..c3a1dff 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -1586,8 +1586,7 @@ static int ehci_state_fetchentry(EHCIState *ehci, int async)
+     int again = 0;
+     uint32_t entry = ehci_get_fetch_addr(ehci, async);
+ 
+-    if (entry < 0x1000) {
+-        DPRINTF("fetchentry: entry invalid (0x%08x)\n", entry);
++    if (NLPTR_TBIT(entry)) {
+         ehci_set_state(ehci, async, EST_ACTIVE);
+         goto out;
+     }
+@@ -1689,7 +1688,8 @@ static EHCIQueue *ehci_state_fetchqh(EHCIState *ehci, int async)
+     if (q->qh.token & QTD_TOKEN_HALT) {
+         ehci_set_state(ehci, async, EST_HORIZONTALQH);
+ 
+-    } else if ((q->qh.token & QTD_TOKEN_ACTIVE) && (q->qh.current_qtd > 0x1000)) {
++    } else if ((q->qh.token & QTD_TOKEN_ACTIVE) &&
++               (NLPTR_TBIT(q->qh.current_qtd) == 0)) {
+         q->qtdaddr = q->qh.current_qtd;
+         ehci_set_state(ehci, async, EST_FETCHQTD);
+ 
+@@ -1744,7 +1744,6 @@ static int ehci_state_advqueue(EHCIQueue *q, int async)
+      * want data and alt-next qTD is valid
+      */
+     if (((q->qh.token & QTD_TOKEN_TBYTES_MASK) != 0) &&
+-        (q->qh.altnext_qtd > 0x1000) &&
+         (NLPTR_TBIT(q->qh.altnext_qtd) == 0)) {
+         q->qtdaddr = q->qh.altnext_qtd;
+         ehci_set_state(q->ehci, async, EST_FETCHQTD);
+@@ -1752,8 +1751,7 @@ static int ehci_state_advqueue(EHCIQueue *q, int async)
+     /*
+      *  next qTD is valid
+      */
+-    } else if ((q->qh.next_qtd > 0x1000) &&
+-               (NLPTR_TBIT(q->qh.next_qtd) == 0)) {
++    } else if (NLPTR_TBIT(q->qh.next_qtd) == 0) {
+         q->qtdaddr = q->qh.next_qtd;
+         ehci_set_state(q->ehci, async, EST_FETCHQTD);
+ 
+-- 
+1.7.7.6
+

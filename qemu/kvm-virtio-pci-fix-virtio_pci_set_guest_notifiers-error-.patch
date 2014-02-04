@@ -1,0 +1,63 @@
+From f22c693d10dec0acb2f03cb6c04718b531d19915 Mon Sep 17 00:00:00 2001
+Message-Id: <f22c693d10dec0acb2f03cb6c04718b531d19915.1357726992.git.minovotn@redhat.com>
+In-Reply-To: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+References: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Wed, 2 Jan 2013 15:02:39 +0100
+Subject: [PATCH 16/16] virtio-pci: fix virtio_pci_set_guest_notifiers() error
+ handling again
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1357138959-1918-17-git-send-email-stefanha@redhat.com>
+Patchwork-id: 45529
+O-Subject: [RHEL6.4 qemu-kvm PATCH v5 16/16] virtio-pci: fix virtio_pci_set_guest_notifiers() error handling again
+Bugzilla: 877836
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Asias He <asias@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+Commit 0cfe8fd1139a9614ca03bc3fc51f0237cd028724 ("virtio-pci: mask
+notifier error handling fixups") tried to undo mask notifier changes
+when the function returns an error.
+
+The msix mask notifier has not been set when guest notifier setup fails.
+Therefore we should not attempt to unset it.
+
+This fixes the following assertion failure when opening file descriptors
+fails due to RLIMIT_NOFILE exhaustion:
+
+  msix_unset_mask_notifier: Assertion `dev->msix_mask_notifier' failed.
+
+Note this is RHEL-specific.  Upstream has different notifier setup code
+and is unaffected.
+
+Reported-by: Sibiao Luo <sluo@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ hw/virtio-pci.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-pci.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/hw/virtio-pci.c b/hw/virtio-pci.c
+index 28c48c7..d298804 100644
+--- a/hw/virtio-pci.c
++++ b/hw/virtio-pci.c
+@@ -701,10 +701,6 @@ static int virtio_pci_set_guest_notifiers(void *opaque, bool assign)
+ 
+ assign_error:
+     /* We get here on assignment failure. Recover by undoing for VQs 0 .. n. */
+-    if (assign) {
+-        msix_unset_mask_notifier(&proxy->pci_dev);
+-    }
+-
+     while (--n >= 0) {
+         virtio_pci_set_guest_notifier(opaque, n, !assign);
+     }
+-- 
+1.7.11.7
+

@@ -1,0 +1,50 @@
+From ebb53aa3388ac86d93ffb1ae32b2bddb0bca5200 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:05 +0100
+Subject: [PATCH 11/52] loader: fix a file descriptor leak
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-12-git-send-email-armbru@redhat.com>
+Patchwork-id: 36581
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 11/52] loader: fix a file descriptor leak
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Blue Swirl <blauwirbel@gmail.com>
+
+Fix a file descriptor leak, reported by cppcheck:
+[/src/qemu/hw/loader.c:311]: (error) Resource leak: fd
+
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit cedf9a6f4549900f857954059284a96814e4c7a3)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ hw/loader.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/loader.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/hw/loader.c b/hw/loader.c
+index 379928d..7dcf5ad 100644
+--- a/hw/loader.c
++++ b/hw/loader.c
+@@ -307,8 +307,9 @@ int load_elf(const char *filename, int64_t address_offset,
+         target_data_order = ELFDATA2LSB;
+     }
+ 
+-    if (target_data_order != e_ident[EI_DATA])
+-        return -1;
++    if (target_data_order != e_ident[EI_DATA]) {
++        goto fail;
++    }
+ 
+     lseek(fd, 0, SEEK_SET);
+     if (e_ident[EI_CLASS] == ELFCLASS64) {
+-- 
+1.7.7.5
+

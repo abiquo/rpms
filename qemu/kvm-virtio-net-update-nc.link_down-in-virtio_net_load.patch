@@ -1,0 +1,54 @@
+From 36297c6d6221055732d7d72449a92678ad6f4b44 Mon Sep 17 00:00:00 2001
+Message-Id: <36297c6d6221055732d7d72449a92678ad6f4b44.1350312451.git.minovotn@redhat.com>
+In-Reply-To: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+References: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Mon, 15 Oct 2012 12:06:01 +0200
+Subject: [PATCH 27/27] virtio-net: update nc.link_down in virtio_net_load()
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1350302761-15231-4-git-send-email-akong@redhat.com>
+Patchwork-id: 43161
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 3/3] virtio-net: update nc.link_down in virtio_net_load()
+Bugzilla: 852965
+RH-Acked-by: Xiao Wang <jasowang@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Stefan Hajnoczi <stefanha@redhat.com>
+
+nc.link_down could not be migrated, this patch updates link_down in
+virtio_post_load() to keep it coincident with real link status.
+
+Conflicts:
+    hw/virtio-net.c
+
+Signed-off-by: Amos Kong <akong@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@gmail.com>
+(cherry picked from commit 9899148110627da388f82c02997bca6d678d1aa1)
+---
+ hw/virtio-net.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-net.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/hw/virtio-net.c b/hw/virtio-net.c
+index 6bf2b52..abea7c2 100644
+--- a/hw/virtio-net.c
++++ b/hw/virtio-net.c
+@@ -944,6 +944,11 @@ static int virtio_net_load(QEMUFile *f, void *opaque, int version_id)
+             qemu_bh_schedule(n->tx_bh);
+         }
+     }
++
++    /* nc.link_down can't be migrated, so infer link_down according
++     * to link status bit in n->status */
++    n->nic->nc.link_down = (n->status & VIRTIO_NET_S_LINK_UP) == 0;
++
+     return 0;
+ }
+ 
+-- 
+1.7.11.7
+

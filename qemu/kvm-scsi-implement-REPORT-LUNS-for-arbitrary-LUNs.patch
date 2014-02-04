@@ -1,0 +1,110 @@
+From 58f81d07cba9bd1388de344267e894b239f45648 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:38 +0100
+Subject: [PATCH 022/109] scsi: implement REPORT LUNS for arbitrary LUNs
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-22-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37502
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 021/102] scsi: implement REPORT LUNS for arbitrary LUNs
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Upstream used st*_be_p functions, which are not available to
+common code in RHEL6 qemu.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from ba74307c5a3c2ff87d4596a10828faf7560d4552)
+---
+ hw/scsi-bus.c |   52 ++++++++++++++++++++++++++++++++++++++++++----------
+ 1 files changed, 42 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |   52 ++++++++++++++++++++++++++++++++++++++++++----------
+ 1 files changed, 42 insertions(+), 10 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 2785274..ff5c8f3 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -170,7 +170,7 @@ typedef struct SCSITargetReq SCSITargetReq;
+ struct SCSITargetReq {
+     SCSIRequest req;
+     int len;
+-    uint8_t buf[64];
++    uint8_t buf[2056];
+ };
+ 
+ static void store_lun(uint8_t *outbuf, int lun)
+@@ -185,23 +185,55 @@ static void store_lun(uint8_t *outbuf, int lun)
+ 
+ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
+ {
+-    int len;
++    DeviceState *qdev;
++    int i, len, n;
++    int id;
++    bool found_lun0;
++
+     if (r->req.cmd.xfer < 16) {
+         return false;
+     }
+     if (r->req.cmd.buf[2] > 2) {
+         return false;
+     }
+-    len = MIN(sizeof r->buf, r->req.cmd.xfer);
++    id = r->req.dev->id;
++    found_lun0 = false;
++    n = 0;
++    QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
++        SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
++
++        if (dev->id == id) {
++            if (dev->lun == 0) {
++                found_lun0 = true;
++            }
++            n += 8;
++        }
++    }
++    if (!found_lun0) {
++        n += 8;
++    }
++    len = MIN(n + 8, r->req.cmd.xfer & ~7);
++    if (len > sizeof(r->buf)) {
++        /* TODO: > 256 LUNs? */
++        return false;
++    }
++
+     memset(r->buf, 0, len);
+-    if (r->req.dev->lun != 0) {
+-        r->buf[3] = 16;
+-        r->len = 24;
+-        store_lun(&r->buf[16], r->req.dev->lun);
+-    } else {
+-        r->buf[3] = 8;
+-        r->len = 16;
++    r->buf[0] = n >> 24;
++    r->buf[1] = n >> 16;
++    r->buf[2] = n >> 8;
++    r->buf[3] = n;
++    i = found_lun0 ? 8 : 16;
++    QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
++        SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
++
++        if (dev->id == id) {
++            store_lun(&r->buf[i], dev->lun);
++            i += 8;
++        }
+     }
++    assert(i == n + 8);
++    r->len = len;
+     return true;
+ }
+ 
+-- 
+1.7.7.6
+

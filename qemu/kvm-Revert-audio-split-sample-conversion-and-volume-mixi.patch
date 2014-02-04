@@ -1,0 +1,375 @@
+From d2e0feafa4b8d9f27431fd13f4929f3388cd1c7d Mon Sep 17 00:00:00 2001
+Message-Id: <d2e0feafa4b8d9f27431fd13f4929f3388cd1c7d.1358959439.git.minovotn@redhat.com>
+In-Reply-To: <4b2df53c087cd9df02d66686da40ae4f600f3904.1358959439.git.minovotn@redhat.com>
+References: <4b2df53c087cd9df02d66686da40ae4f600f3904.1358959439.git.minovotn@redhat.com>
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 23 Jan 2013 15:52:33 +0100
+Subject: [PATCH 7/7] Revert "audio: split sample conversion and volume
+ mixing"
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1358956353-15195-8-git-send-email-armbru@redhat.com>
+Patchwork-id: 47668
+O-Subject: [RHEL-6.4 PATCH qemu-kvm 7/7] Revert "audio: split sample conversion and volume mixing"
+Bugzilla: 884253
+RH-Acked-by: Ademar de Souza Reis Jr. <areis@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+This reverts commit c84ca7c67b7bd6e4a00428c1d3f9ccf0026d184d.
+
+This revert concludes the revert of a series that caused a regression
+(Bug 896012, CLOSED/DUPLICATE of the bug 884253 the series attempted
+to fix).  Cause is we missed the need for configure flag
+--enable-mixemu.  The obvious patch to add it ran into trouble on
+review: it seems to expose different, more capable hardware to the
+guest, and we wonder whether that needs to be versioned.  Without a
+definitive answer to that, the conservative option is to back out the
+fix, and try again later.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ audio/alsaaudio.c       |  2 +-
+ audio/audio.c           | 11 +++++------
+ audio/audio_int.h       |  2 +-
+ audio/dsoundaudio.c     |  4 ++--
+ audio/esdaudio.c        |  3 ++-
+ audio/fmodaudio.c       |  4 ++--
+ audio/mixeng.c          | 25 -------------------------
+ audio/mixeng.h          |  4 ++--
+ audio/mixeng_template.h | 39 ++++++++++++++++++++++++++++++++-------
+ audio/ossaudio.c        |  3 ++-
+ audio/paaudio.c         |  2 +-
+ audio/spiceaudio.c      |  5 +++--
+ audio/winwaveaudio.c    |  3 ++-
+ 13 files changed, 55 insertions(+), 52 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ audio/alsaaudio.c       |  2 +-
+ audio/audio.c           | 11 +++++------
+ audio/audio_int.h       |  2 +-
+ audio/dsoundaudio.c     |  4 ++--
+ audio/esdaudio.c        |  3 ++-
+ audio/fmodaudio.c       |  4 ++--
+ audio/mixeng.c          | 25 -------------------------
+ audio/mixeng.h          |  4 ++--
+ audio/mixeng_template.h | 39 ++++++++++++++++++++++++++++++++-------
+ audio/ossaudio.c        |  3 ++-
+ audio/paaudio.c         |  2 +-
+ audio/spiceaudio.c      |  5 +++--
+ audio/winwaveaudio.c    |  3 ++-
+ 13 files changed, 55 insertions(+), 52 deletions(-)
+
+diff --git a/audio/alsaaudio.c b/audio/alsaaudio.c
+index 896d9a3..399d6df 100644
+--- a/audio/alsaaudio.c
++++ b/audio/alsaaudio.c
+@@ -1058,7 +1058,7 @@ static int alsa_run_in (HWVoiceIn *hw)
+                 }
+             }
+ 
+-            hw->conv (dst, src, nread);
++            hw->conv (dst, src, nread, &nominal_volume);
+ 
+             src = advance (src, nread << hwshift);
+             dst += nread;
+diff --git a/audio/audio.c b/audio/audio.c
+index 89e618f..49d76bb 100644
+--- a/audio/audio.c
++++ b/audio/audio.c
+@@ -104,7 +104,7 @@ static struct {
+ 
+ static AudioState glob_audio_state;
+ 
+-const struct mixeng_volume nominal_volume = {
++struct mixeng_volume nominal_volume = {
+     .mute = 0,
+ #ifdef FLOAT_MIXENG
+     .r = 1.0,
+@@ -693,11 +693,13 @@ void audio_pcm_info_clear_buf (struct audio_pcm_info *info, void *buf, int len)
+ /*
+  * Capture
+  */
+-static void noop_conv (struct st_sample *dst, const void *src, int samples)
++static void noop_conv (struct st_sample *dst, const void *src,
++                       int samples, struct mixeng_volume *vol)
+ {
+     (void) src;
+     (void) dst;
+     (void) samples;
++    (void) vol;
+ }
+ 
+ static CaptureVoiceOut *audio_pcm_capture_find_specific (
+@@ -945,8 +947,6 @@ int audio_pcm_sw_read (SWVoiceIn *sw, void *buf, int size)
+         total += isamp;
+     }
+ 
+-    mixeng_volume (sw->buf, ret, &sw->vol);
+-
+     sw->clip (buf, sw->buf, ret);
+     sw->total_hw_samples_acquired += total;
+     return ret << sw->info.shift;
+@@ -1028,8 +1028,7 @@ int audio_pcm_sw_write (SWVoiceOut *sw, void *buf, int size)
+     swlim = ((int64_t) dead << 32) / sw->ratio;
+     swlim = audio_MIN (swlim, samples);
+     if (swlim) {
+-        sw->conv (sw->buf, buf, swlim);
+-        mixeng_volume (sw->buf, swlim, &sw->vol);
++        sw->conv (sw->buf, buf, swlim, &sw->vol);
+     }
+ 
+     while (swlim) {
+diff --git a/audio/audio_int.h b/audio/audio_int.h
+index 2003f8b..d66f2c3 100644
+--- a/audio/audio_int.h
++++ b/audio/audio_int.h
+@@ -211,7 +211,7 @@ extern struct audio_driver esd_audio_driver;
+ extern struct audio_driver pa_audio_driver;
+ extern struct audio_driver spice_audio_driver;
+ extern struct audio_driver winwave_audio_driver;
+-extern const struct mixeng_volume nominal_volume;
++extern struct mixeng_volume nominal_volume;
+ 
+ void audio_pcm_init_info (struct audio_pcm_info *info, struct audsettings *as);
+ void audio_pcm_info_clear_buf (struct audio_pcm_info *info, void *buf, int len);
+diff --git a/audio/dsoundaudio.c b/audio/dsoundaudio.c
+index e2d89fd..e547955 100644
+--- a/audio/dsoundaudio.c
++++ b/audio/dsoundaudio.c
+@@ -831,11 +831,11 @@ static int dsound_run_in (HWVoiceIn *hw)
+     decr = len1 + len2;
+ 
+     if (p1 && len1) {
+-        hw->conv (hw->conv_buf + hw->wpos, p1, len1);
++        hw->conv (hw->conv_buf + hw->wpos, p1, len1, &nominal_volume);
+     }
+ 
+     if (p2 && len2) {
+-        hw->conv (hw->conv_buf, p2, len2);
++        hw->conv (hw->conv_buf, p2, len2, &nominal_volume);
+     }
+ 
+     dsound_unlock_in (dscb, p1, p2, blen1, blen2);
+diff --git a/audio/esdaudio.c b/audio/esdaudio.c
+index 2c57ba0..79142d1 100644
+--- a/audio/esdaudio.c
++++ b/audio/esdaudio.c
+@@ -369,7 +369,8 @@ static void *qesd_thread_in (void *arg)
+                 break;
+             }
+ 
+-            hw->conv (hw->conv_buf + wpos, buf, nread >> hw->info.shift);
++            hw->conv (hw->conv_buf + wpos, buf, nread >> hw->info.shift,
++                      &nominal_volume);
+             wpos = (wpos + chunk) % hw->samples;
+             to_grab -= chunk;
+         }
+diff --git a/audio/fmodaudio.c b/audio/fmodaudio.c
+index c34cf53..7f08e14 100644
+--- a/audio/fmodaudio.c
++++ b/audio/fmodaudio.c
+@@ -488,10 +488,10 @@ static int fmod_run_in (HWVoiceIn *hw)
+     decr = len1 + len2;
+ 
+     if (p1 && blen1) {
+-        hw->conv (hw->conv_buf + hw->wpos, p1, len1);
++        hw->conv (hw->conv_buf + hw->wpos, p1, len1, &nominal_volume);
+     }
+     if (p2 && len2) {
+-        hw->conv (hw->conv_buf, p2, len2);
++        hw->conv (hw->conv_buf, p2, len2, &nominal_volume);
+     }
+ 
+     fmod_unlock_sample (fmd->fmod_sample, p1, p2, blen1, blen2);
+diff --git a/audio/mixeng.c b/audio/mixeng.c
+index 42d531b..8ce942e 100644
+--- a/audio/mixeng.c
++++ b/audio/mixeng.c
+@@ -333,28 +333,3 @@ void mixeng_clear (struct st_sample *buf, int len)
+ {
+     memset (buf, 0, len * sizeof (struct st_sample));
+ }
+-
+-void mixeng_volume (struct st_sample *buf, int len, struct mixeng_volume *vol)
+-{
+-#ifdef CONFIG_MIXEMU
+-    if (vol->mute) {
+-        mixeng_clear (buf, len);
+-        return;
+-    }
+-
+-    while (len--) {
+-#ifdef FLOAT_MIXENG
+-        buf->l = buf->l * vol->l;
+-        buf->r = buf->r * vol->r;
+-#else
+-        buf->l = (buf->l * vol->l) >> 32;
+-        buf->r = (buf->r * vol->r) >> 32;
+-#endif
+-        buf += 1;
+-    }
+-#else
+-    (void) buf;
+-    (void) len;
+-    (void) vol;
+-#endif
+-}
+diff --git a/audio/mixeng.h b/audio/mixeng.h
+index 9de443b..4af1dd9 100644
+--- a/audio/mixeng.h
++++ b/audio/mixeng.h
+@@ -33,7 +33,8 @@ struct mixeng_volume { int mute; int64_t r; int64_t l; };
+ struct st_sample { int64_t l; int64_t r; };
+ #endif
+ 
+-typedef void (t_sample) (struct st_sample *dst, const void *src, int samples);
++typedef void (t_sample) (struct st_sample *dst, const void *src,
++                         int samples, struct mixeng_volume *vol);
+ typedef void (f_sample) (void *dst, const struct st_sample *src, int samples);
+ 
+ extern t_sample *mixeng_conv[2][2][2][3];
+@@ -46,6 +47,5 @@ void st_rate_flow_mix (void *opaque, struct st_sample *ibuf, struct st_sample *o
+                        int *isamp, int *osamp);
+ void st_rate_stop (void *opaque);
+ void mixeng_clear (struct st_sample *buf, int len);
+-void mixeng_volume (struct st_sample *buf, int len, struct mixeng_volume *vol);
+ 
+ #endif  /* mixeng.h */
+diff --git a/audio/mixeng_template.h b/audio/mixeng_template.h
+index a2d0ef8..5617705 100644
+--- a/audio/mixeng_template.h
++++ b/audio/mixeng_template.h
+@@ -31,6 +31,16 @@
+ #define HALF (IN_MAX >> 1)
+ #endif
+ 
++#ifdef CONFIG_MIXEMU
++#ifdef FLOAT_MIXENG
++#define VOL(a, b) ((a) * (b))
++#else
++#define VOL(a, b) ((a) * (b)) >> 32
++#endif
++#else
++#define VOL(a, b) a
++#endif
++
+ #define ET glue (ENDIAN_CONVERSION, glue (_, IN_T))
+ 
+ #ifdef FLOAT_MIXENG
+@@ -99,26 +109,40 @@ static inline IN_T glue (clip_, ET) (int64_t v)
+ #endif
+ 
+ static void glue (glue (conv_, ET), _to_stereo)
+-    (struct st_sample *dst, const void *src, int samples)
++    (struct st_sample *dst, const void *src, int samples, struct mixeng_volume *vol)
+ {
+     struct st_sample *out = dst;
+     IN_T *in = (IN_T *) src;
+-
++#ifdef CONFIG_MIXEMU
++    if (vol->mute) {
++        mixeng_clear (dst, samples);
++        return;
++    }
++#else
++    (void) vol;
++#endif
+     while (samples--) {
+-        out->l = glue (conv_, ET) (*in++);
+-        out->r = glue (conv_, ET) (*in++);
++        out->l = VOL (glue (conv_, ET) (*in++), vol->l);
++        out->r = VOL (glue (conv_, ET) (*in++), vol->r);
+         out += 1;
+     }
+ }
+ 
+ static void glue (glue (conv_, ET), _to_mono)
+-    (struct st_sample *dst, const void *src, int samples)
++    (struct st_sample *dst, const void *src, int samples, struct mixeng_volume *vol)
+ {
+     struct st_sample *out = dst;
+     IN_T *in = (IN_T *) src;
+-
++#ifdef CONFIG_MIXEMU
++    if (vol->mute) {
++        mixeng_clear (dst, samples);
++        return;
++    }
++#else
++    (void) vol;
++#endif
+     while (samples--) {
+-        out->l = glue (conv_, ET) (in[0]);
++        out->l = VOL (glue (conv_, ET) (in[0]), vol->l);
+         out->r = out->l;
+         out += 1;
+         in += 1;
+@@ -150,3 +174,4 @@ static void glue (glue (clip_, ET), _from_mono)
+ 
+ #undef ET
+ #undef HALF
++#undef VOL
+diff --git a/audio/ossaudio.c b/audio/ossaudio.c
+index 3466ea7..4002f14 100644
+--- a/audio/ossaudio.c
++++ b/audio/ossaudio.c
+@@ -746,7 +746,8 @@ static int oss_run_in (HWVoiceIn *hw)
+                            hw->info.align + 1);
+                 }
+                 read_samples += nread >> hwshift;
+-                hw->conv (hw->conv_buf + bufs[i].add, p, nread >> hwshift);
++                hw->conv (hw->conv_buf + bufs[i].add, p, nread >> hwshift,
++                          &nominal_volume);
+             }
+ 
+             if (bufs[i].len - nread) {
+diff --git a/audio/paaudio.c b/audio/paaudio.c
+index c9632d9..9118ece 100644
+--- a/audio/paaudio.c
++++ b/audio/paaudio.c
+@@ -195,7 +195,7 @@ static void *qpa_thread_in (void *arg)
+                 return NULL;
+             }
+ 
+-            hw->conv (hw->conv_buf + wpos, buf, chunk);
++            hw->conv (hw->conv_buf + wpos, buf, chunk, &nominal_volume);
+             wpos = (wpos + chunk) % hw->samples;
+             to_grab -= chunk;
+         }
+diff --git a/audio/spiceaudio.c b/audio/spiceaudio.c
+index a5c0d6b..373e4c4 100644
+--- a/audio/spiceaudio.c
++++ b/audio/spiceaudio.c
+@@ -268,10 +268,11 @@ static int line_in_run (HWVoiceIn *hw)
+         len[1] = 0;
+     }
+ 
+-    hw->conv (hw->conv_buf + hw->wpos, samples, len[0]);
++    hw->conv (hw->conv_buf + hw->wpos, samples, len[0], &nominal_volume);
+ 
+     if (len[1]) {
+-        hw->conv (hw->conv_buf, samples + len[0], len[1]);
++        hw->conv (hw->conv_buf, samples + len[0], len[1],
++                  &nominal_volume);
+     }
+ 
+     hw->wpos = (hw->wpos + num_samples) % hw->samples;
+diff --git a/audio/winwaveaudio.c b/audio/winwaveaudio.c
+index e5ad3c6..cdf483b 100644
+--- a/audio/winwaveaudio.c
++++ b/audio/winwaveaudio.c
+@@ -581,7 +581,8 @@ static int winwave_run_in (HWVoiceIn *hw)
+         int conv = audio_MIN (left, decr);
+         hw->conv (hw->conv_buf + hw->wpos,
+                   advance (wave->pcm_buf, wave->rpos << hw->info.shift),
+-                  conv);
++                  conv,
++                  &nominal_volume);
+ 
+         wave->rpos = (wave->rpos + conv) % hw->samples;
+         hw->wpos = (hw->wpos + conv) % hw->samples;
+-- 
+1.7.11.7
+

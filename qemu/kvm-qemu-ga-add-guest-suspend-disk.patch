@@ -1,0 +1,362 @@
+From 975aa0d5bd08684c9b24d1d55cdbfeac30f4a1ca Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 12:56:57 -0500
+Subject: [PATCH 94/98] qemu-ga: add guest-suspend-disk
+
+As the command name implies, this command suspends the guest to disk.
+
+The suspend operation is implemented by two functions: bios_supports_mode()
+and guest_suspend(). Both functions are generic enough to be used by
+other suspend modes (introduced by next commits).
+
+Both functions will try to use the scripts provided by the pm-utils
+package if it's available. If it's not available, a manual method,
+which consists of directly writing to '/sys/power/state', will be used.
+
+To reap terminated children, a new signal handler is installed in the
+parent to catch SIGCHLD signals and a non-blocking call to waitpid()
+is done to collect their exit statuses. The statuses, however, are
+discarded.
+
+The approach used to query the guest for suspend support deserves some
+explanation. It's implemented by bios_supports_mode() and shown below:
+
+  qemu-ga
+     |
+ create pipe
+     |
+   fork()
+     -----------------
+     |               |
+     |               |
+     |             fork()
+     |               --------------------------
+     |               |                        |
+     |               |                        |
+     |               |               exec('pm-is-supported')
+     |               |
+     |              wait()
+     |       write exit status to pipe
+     |              exit
+     |
+  read pipe
+
+This might look complex, but the resulting code is quite simple.
+The purpose of that approach is to allow qemu-ga to reap its children
+(semi-)automatically from its SIGCHLD handler.
+
+Implementing this the obvious way, that's, doing the exec() call from
+the first child process, would force us to introduce a more complex way
+to reap qemu-ga's children. Like registering PIDs to be reaped and
+having a way to wait for them when returning their exit status to
+qemu-ga is necessary. The approach explained above avoids that complexity.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+
+RHEL6 Note:
+
+Although this is not yet accepted upstream, here is the submitted patch
+upstream that was used:
+http://lists.nongnu.org/archive/html/qemu-devel/2012-02/msg03910.html
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |   24 ++++++
+ qemu-ga.c              |   19 +++++-
+ qga/commands-posix.c   |  188 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 230 insertions(+), 1 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 80f1635..266a414 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -295,3 +295,27 @@
+ ##
+ { 'command': 'guest-fsfreeze-thaw',
+   'returns': 'int' }
++
++##
++# @guest-suspend-disk
++#
++# Suspend guest to disk.
++#
++# This command tries to execute the scripts provided by the pm-utils package.
++# If it's not available, the suspend operation will be performed by manually
++# writing to a sysfs file.
++#
++# For the best results it's strongly recommended to have the pm-utils
++# package installed in the guest.
++#
++# Returns: nothing on success
++#          If suspend to disk is not supported, Unsupported
++#
++# Notes: o This is an asynchronous request. There's no guarantee a response
++#          will be sent
++#        o It's strongly recommended to issue the guest-sync command before
++#          sending commands when the guest resumes
++#
++# Since: 1.1
++##
++{ 'command': 'guest-suspend-disk' }
+diff --git a/qemu-ga.c b/qemu-ga.c
+index bc65bd6..b083cc6 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -17,6 +17,7 @@
+ #include <getopt.h>
+ #ifndef _WIN32
+ #include <syslog.h>
++#include <sys/wait.h>
+ #endif
+ #include "json-streamer.h"
+ #include "json-parser.h"
+@@ -73,9 +74,16 @@ static void quit_handler(int sig)
+ }
+ 
+ #ifndef _WIN32
++/* reap _all_ terminated children */
++static void child_handler(int sig)
++{
++    int status;
++    while (waitpid(-1, &status, WNOHANG) > 0) /* NOTHING */;
++}
++
+ static gboolean register_signal_handlers(void)
+ {
+-    struct sigaction sigact;
++    struct sigaction sigact, sigact_chld;
+     int ret;
+ 
+     memset(&sigact, 0, sizeof(struct sigaction));
+@@ -91,6 +99,15 @@ static gboolean register_signal_handlers(void)
+         g_error("error configuring signal handler: %s", strerror(errno));
+         return false;
+     }
++
++    memset(&sigact_chld, 0, sizeof(struct sigaction));
++    sigact_chld.sa_handler = child_handler;
++    sigact_chld.sa_flags = SA_NOCLDSTOP;
++    ret = sigaction(SIGCHLD, &sigact_chld, NULL);
++    if (ret == -1) {
++        g_error("error configuring signal handler: %s", strerror(errno));
++    }
++
+     return true;
+ }
+ #endif
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index 18e23f2..41d2d55 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -23,6 +23,7 @@
+ 
+ #include <sys/types.h>
+ #include <sys/ioctl.h>
++#include <sys/wait.h>
+ #include "qga/guest-agent-core.h"
+ #include "qga-qmp-commands.h"
+ #include "qerror.h"
+@@ -30,6 +31,22 @@
+ 
+ static GAState *ga_state;
+ 
++static void reopen_fd_to_null(int fd)
++{
++    int nullfd;
++
++    nullfd = open("/dev/null", O_RDWR);
++    if (nullfd < 0) {
++        return;
++    }
++
++    dup2(nullfd, fd);
++
++    if (nullfd != fd) {
++        close(nullfd);
++    }
++}
++
+ void qmp_guest_shutdown(bool has_mode, const char *mode, Error **err)
+ {
+     int ret;
+@@ -517,6 +534,177 @@ int64_t qmp_guest_fsfreeze_thaw(Error **err)
+ }
+ #endif
+ 
++#define LINUX_SYS_STATE_FILE "/sys/power/state"
++#define SUSPEND_SUPPORTED 0
++#define SUSPEND_NOT_SUPPORTED 1
++
++/**
++ * This function forks twice and the information about the mode support
++ * status is passed to the qemu-ga process via a pipe.
++ *
++ * This approach allows us to keep the way we reap terminated children
++ * in qemu-ga quite simple.
++ */
++static void bios_supports_mode(const char *pmutils_bin, const char *pmutils_arg,
++                               const char *sysfile_str, Error **err)
++{
++    pid_t pid;
++    ssize_t ret;
++    char *pmutils_path;
++    int status, pipefds[2];
++
++    if (pipe(pipefds) < 0) {
++        error_set(err, QERR_UNDEFINED_ERROR);
++        return;
++    }
++
++    pmutils_path = g_find_program_in_path(pmutils_bin);
++
++    pid = fork();
++    if (!pid) {
++        struct sigaction act;
++
++        memset(&act, 0, sizeof(act));
++        act.sa_handler = SIG_DFL;
++        sigaction(SIGCHLD, &act, NULL);
++
++        setsid();
++        close(pipefds[0]);
++        reopen_fd_to_null(0);
++        reopen_fd_to_null(1);
++        reopen_fd_to_null(2);
++
++        pid = fork();
++        if (!pid) {
++            int fd;
++            char buf[32]; /* hopefully big enough */
++
++            if (pmutils_path) {
++                execle(pmutils_path, pmutils_bin, pmutils_arg, NULL, environ);
++            }
++
++            /*
++             * If we get here either pm-utils is not installed or execle() has
++             * failed. Let's try the manual method if the caller wants it.
++             */
++
++            if (!sysfile_str) {
++                _exit(SUSPEND_NOT_SUPPORTED);
++            }
++
++            fd = open(LINUX_SYS_STATE_FILE, O_RDONLY);
++            if (fd < 0) {
++                _exit(SUSPEND_NOT_SUPPORTED);
++            }
++
++            ret = read(fd, buf, sizeof(buf)-1);
++            if (ret <= 0) {
++                _exit(SUSPEND_NOT_SUPPORTED);
++            }
++            buf[ret] = '\0';
++
++            if (strstr(buf, sysfile_str)) {
++                _exit(SUSPEND_SUPPORTED);
++            }
++
++            _exit(SUSPEND_NOT_SUPPORTED);
++        }
++
++        if (pid > 0) {
++            wait(&status);
++        } else {
++            status = SUSPEND_NOT_SUPPORTED;
++        }
++
++        ret = write(pipefds[1], &status, sizeof(status));
++        if (ret != sizeof(status)) {
++            _exit(EXIT_FAILURE);
++        }
++
++        _exit(EXIT_SUCCESS);
++    }
++
++    close(pipefds[1]);
++    g_free(pmutils_path);
++
++    if (pid < 0) {
++        error_set(err, QERR_UNDEFINED_ERROR);
++        goto out;
++    }
++
++    ret = read(pipefds[0], &status, sizeof(status));
++    if (ret == sizeof(status) && WIFEXITED(status) &&
++        WEXITSTATUS(status) == SUSPEND_SUPPORTED) {
++            goto out;
++    }
++
++    error_set(err, QERR_UNSUPPORTED);
++
++out:
++    close(pipefds[0]);
++}
++
++static void guest_suspend(const char *pmutils_bin, const char *sysfile_str,
++                          Error **err)
++{
++    pid_t pid;
++    char *pmutils_path;
++
++    pmutils_path = g_find_program_in_path(pmutils_bin);
++
++    pid = fork();
++    if (pid == 0) {
++        /* child */
++        int fd;
++
++        setsid();
++        reopen_fd_to_null(0);
++        reopen_fd_to_null(1);
++        reopen_fd_to_null(2);
++
++        if (pmutils_path) {
++            execle(pmutils_path, pmutils_bin, NULL, environ);
++        }
++
++        /*
++         * If we get here either pm-utils is not installed or execle() has
++         * failed. Let's try the manual method if the caller wants it.
++         */
++
++        if (!sysfile_str) {
++            _exit(EXIT_FAILURE);
++        }
++
++        fd = open(LINUX_SYS_STATE_FILE, O_WRONLY);
++        if (fd < 0) {
++            _exit(EXIT_FAILURE);
++        }
++
++        if (write(fd, sysfile_str, strlen(sysfile_str)) < 0) {
++            _exit(EXIT_FAILURE);
++        }
++
++        _exit(EXIT_SUCCESS);
++    }
++
++    g_free(pmutils_path);
++
++    if (pid < 0) {
++        error_set(err, QERR_UNDEFINED_ERROR);
++        return;
++    }
++}
++
++void qmp_guest_suspend_disk(Error **err)
++{
++    bios_supports_mode("pm-is-supported", "--hibernate", "disk", err);
++    if (error_is_set(err)) {
++        return;
++    }
++
++    guest_suspend("pm-hibernate", "disk", err);
++}
++
+ /* register init/cleanup routines for stateful command groups */
+ void ga_command_state_init(GAState *s, GACommandState *cs)
+ {
+-- 
+1.7.7.6
+

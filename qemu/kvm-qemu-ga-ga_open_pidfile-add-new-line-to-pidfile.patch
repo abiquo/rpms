@@ -1,0 +1,47 @@
+From 1a6f674444abf2479dd5740ea019a1b133d5aa88 Mon Sep 17 00:00:00 2001
+Message-Id: <1a6f674444abf2479dd5740ea019a1b133d5aa88.1350045285.git.minovotn@redhat.com>
+In-Reply-To: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+References: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 9 Oct 2012 14:34:30 +0200
+Subject: [PATCH 04/12] qemu-ga: ga_open_pidfile(): add new line to pidfile
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349793271-23645-5-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42854
+O-Subject: [RHEL6.4 qemu-kvm PATCH 4/5] qemu-ga: ga_open_pidfile(): add new line to pidfile
+Bugzilla: 856422
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+
+FHS requires that pid files should end with a new line. Also change to
+snprintf() while there.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+---
+ qemu-ga.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-ga.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 36051b9..22a656f 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -255,7 +255,7 @@ static bool ga_open_pidfile(const char *pidfile)
+         g_critical("Failed to truncate pid file");
+         goto fail;
+     }
+-    sprintf(pidstr, "%d", getpid());
++    snprintf(pidstr, sizeof(pidstr), "%d\n", getpid());
+     if (write(pidfd, pidstr, strlen(pidstr)) != strlen(pidstr)) {
+         g_critical("Failed to write pid file");
+         goto fail;
+-- 
+1.7.11.7
+

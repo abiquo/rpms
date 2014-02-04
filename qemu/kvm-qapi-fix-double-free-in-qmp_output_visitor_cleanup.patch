@@ -1,0 +1,77 @@
+From 62caf1b8cc3625fa208bddb35d3ae7bda6123440 Mon Sep 17 00:00:00 2001
+Message-Id: <62caf1b8cc3625fa208bddb35d3ae7bda6123440.1334225653.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 9 Apr 2012 19:31:24 +0200
+Subject: [PATCH] qapi: fix double free in qmp_output_visitor_cleanup()
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <20120409163124.07e70ca1@doriath.home>
+Patchwork-id: 39136
+O-Subject: [RHEL6.3 qemu-kvm PATCH] qapi: fix double free in qmp_output_visitor_cleanup()
+Bugzilla: 810983
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 810983
+Upstream-status: Merged
+
+Stack entries in QmpOutputVisitor are navigation links (weak references),
+except the bottom (ie. least recently added) entry, which owns the root
+QObject [1]. Make qmp_output_visitor_cleanup() drop the stack entries,
+then release the QObject tree by the root.
+
+Attempting to serialize an invalid enum inside a dictionary is an example
+for triggering the double free.
+
+[1] http://lists.nongnu.org/archive/html/qemu-devel/2012-03/msg03276.html
+
+Signed-off-by: Laszlo Ersek <lersek@redhat.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit f24582d6ad8a080e008974c000bf0ae635d036ac)
+
+Conflicts:
+
+	qapi/qmp-output-visitor.c
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+NOTE: I'm not backporting the test-case that was merged along with this
+      patch (upstream commit 9e9eace89e) because the qapi test suite we
+      have in 6.3 is outdated. Actually, it doesn't even build :(
+
+ qapi/qmp-output-visitor.c |    8 +++++---
+ 1 files changed, 5 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi/qmp-output-visitor.c |    8 +++++---
+ 1 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/qapi/qmp-output-visitor.c b/qapi/qmp-output-visitor.c
+index 4441511..9873bc9 100644
+--- a/qapi/qmp-output-visitor.c
++++ b/qapi/qmp-output-visitor.c
+@@ -217,14 +217,16 @@ void qmp_output_visitor_cleanup(QmpOutputVisitor *v)
+ {
+     QStackEntry *e, *tmp;
+ 
++    /* The bottom QStackEntry, if any, owns the root QObject. See the
++     * qmp_output_push_obj() invocations in qmp_output_add_obj(). */
++    QObject *root = QTAILQ_EMPTY(&v->stack) ? NULL : qmp_output_first(v);
++
+     QTAILQ_FOREACH_SAFE(e, &v->stack, node, tmp) {
+         QTAILQ_REMOVE(&v->stack, e, node);
+-        if (e->value) {
+-            qobject_decref(e->value);
+-        }
+         qemu_free(e);
+     }
+ 
++    qobject_decref(root);
+     qemu_free(v);
+ }
+ 
+-- 
+1.7.7.6
+

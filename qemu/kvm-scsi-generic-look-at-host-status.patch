@@ -1,0 +1,84 @@
+From de8a27dfc1dbbf834f62cb6d207a6ba8ae5b6a9b Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:17 +0100
+Subject: [PATCH 061/109] scsi-generic: look at host status
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-61-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37541
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 060/102] scsi-generic: look at host status
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Pass down the host status so that failing transport can be detected
+by the guest.  Similar treatment of host status could be done in
+virtio-blk, too.
+
+[ Fixing virtio-blk is bug 740504.  You're welcome to review that
+  one, too. ]
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from a3b16e71ab733f76104231b873dff48d43fb3890)
+---
+ hw/scsi-generic.c |   20 ++++++++++++++++----
+ 1 files changed, 16 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-generic.c |   20 ++++++++++++++++----
+ 1 files changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index c17b68b..9835f38 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -39,8 +39,13 @@ do { fprintf(stderr, "scsi-generic: " fmt , ## __VA_ARGS__); } while (0)
+ 
+ #define SCSI_SENSE_BUF_SIZE 96
+ 
+-#define SG_ERR_DRIVER_TIMEOUT 0x06
+-#define SG_ERR_DRIVER_SENSE 0x08
++#define SG_ERR_DRIVER_TIMEOUT  0x06
++#define SG_ERR_DRIVER_SENSE    0x08
++
++#define SG_ERR_DID_OK          0x00
++#define SG_ERR_DID_NO_CONNECT  0x01
++#define SG_ERR_DID_BUS_BUSY    0x02
++#define SG_ERR_DID_TIME_OUT    0x03
+ 
+ #ifndef MAX_UINT
+ #define MAX_UINT ((unsigned int)-1)
+@@ -68,8 +73,9 @@ static void scsi_command_complete(void *opaque, int ret)
+     SCSIGenericReq *r = (SCSIGenericReq *)opaque;
+ 
+     r->req.aiocb = NULL;
+-    if (r->io_header.driver_status & SG_ERR_DRIVER_SENSE)
++    if (r->io_header.driver_status & SG_ERR_DRIVER_SENSE) {
+         r->req.sense_len = r->io_header.sb_len_wr;
++    }
+ 
+     if (ret != 0) {
+         switch (ret) {
+@@ -86,9 +92,15 @@ static void scsi_command_complete(void *opaque, int ret)
+             break;
+         }
+     } else {
+-        if (r->io_header.driver_status & SG_ERR_DRIVER_TIMEOUT) {
++        if (r->io_header.host_status == SG_ERR_DID_NO_CONNECT ||
++            r->io_header.host_status == SG_ERR_DID_BUS_BUSY ||
++            r->io_header.host_status == SG_ERR_DID_TIME_OUT ||
++            (r->io_header.driver_status & SG_ERR_DRIVER_TIMEOUT)) {
+             status = BUSY;
+             BADF("Driver Timeout\n");
++        } else if (r->io_header.host_status) {
++            status = CHECK_CONDITION;
++            scsi_req_build_sense(&r->req, SENSE_CODE(I_T_NEXUS_LOSS));
+         } else if (r->io_header.status) {
+             status = r->io_header.status;
+         } else if (r->io_header.driver_status & SG_ERR_DRIVER_SENSE) {
+-- 
+1.7.7.6
+

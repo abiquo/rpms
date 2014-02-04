@@ -1,0 +1,50 @@
+From 55a1b7bd7e1abb7fd64ab7ce1cb0d42a43951963 Mon Sep 17 00:00:00 2001
+Message-Id: <55a1b7bd7e1abb7fd64ab7ce1cb0d42a43951963.1349774430.git.minovotn@redhat.com>
+In-Reply-To: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+References: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+From: Avi Kivity <avi@redhat.com>
+Date: Wed, 3 Oct 2012 16:45:19 +0200
+Subject: [PATCH 02/21] doc: correct default NIC to rtl8139
+
+RH-Author: Avi Kivity <avi@redhat.com>
+Message-id: <1349282719-25581-1-git-send-email-avi@redhat.com>
+Patchwork-id: 42682
+O-Subject: [PATCH qemu-kvm RHEL6.4] doc: correct default NIC to e1000
+Bugzilla: 833687
+RH-Acked-by: Amos Kong <akong@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+
+Bugzilla: 833687
+Upstream: N/A (qemu-kvm is being phased out; not applicable to qemu.git)
+
+The documentation states that the default NIC is e1000, while in reality
+we use rtl8139 (for backward compatibility reasons, and to support Windows XP
+out of the box).  Correct the documentation to match reality.
+
+Signed-off-by: Avi Kivity <avi@redhat.com>
+---
+ qemu-options.hx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-options.hx | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/qemu-options.hx b/qemu-options.hx
+index 3efbe5b..6c80eea 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -1038,7 +1038,7 @@ DEF("netdev", HAS_ARG, QEMU_OPTION_netdev,
+ STEXI
+ @item -net nic[,vlan=@var{n}][,macaddr=@var{mac}][,model=@var{type}][,name=@var{name}][,addr=@var{addr}][,vectors=@var{v}]
+ Create a new Network Interface Card and connect it to VLAN @var{n} (@var{n}
+-= 0 is the default). The NIC is an e1000 by default on the PC
++= 0 is the default). The NIC is an rtl8139 by default on the PC
+ target. Optionally, the MAC address can be changed to @var{mac}, the
+ device address set to @var{addr} (PCI cards only),
+ and a @var{name} can be assigned for use in monitor commands.
+-- 
+1.7.11.4
+

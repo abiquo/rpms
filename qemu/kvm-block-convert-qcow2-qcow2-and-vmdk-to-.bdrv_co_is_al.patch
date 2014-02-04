@@ -1,0 +1,147 @@
+From 53abb32e1400008c326c9773a2057e8839b19dcb Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:43 +0100
+Subject: [PATCH 16/55] block: convert qcow2, qcow2, and vmdk to
+ .bdrv_co_is_allocated()
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <d3e92f3f86f876c403833f77aeb19c88b66e099f.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38866
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 16/54] block: convert qcow2, qcow2, and vmdk to .bdrv_co_is_allocated()
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+The qcow2, qcow, and vmdk block drivers are based on coroutines.  They have a
+coroutine mutex which protects internal state.  We can convert the
+.bdrv_is_allocated() function to .bdrv_co_is_allocated() by holding the mutex
+around the cluster lookup operation.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from f8a2e5e3ca6146d4cc66a4750daf44a0cf043319)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/qcow.c  |    8 +++++---
+ block/qcow2.c |   13 ++++++++-----
+ block/vmdk.c  |    8 +++++---
+ 3 files changed, 18 insertions(+), 11 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow.c  |    8 +++++---
+ block/qcow2.c |   13 ++++++++-----
+ block/vmdk.c  |    8 +++++---
+ 3 files changed, 18 insertions(+), 11 deletions(-)
+
+diff --git a/block/qcow.c b/block/qcow.c
+index 938625a..c40c036 100644
+--- a/block/qcow.c
++++ b/block/qcow.c
+@@ -377,14 +377,16 @@ static uint64_t get_cluster_offset(BlockDriverState *bs,
+     return cluster_offset;
+ }
+ 
+-static int qcow_is_allocated(BlockDriverState *bs, int64_t sector_num,
+-                             int nb_sectors, int *pnum)
++static int coroutine_fn qcow_co_is_allocated(BlockDriverState *bs,
++        int64_t sector_num, int nb_sectors, int *pnum)
+ {
+     BDRVQcowState *s = bs->opaque;
+     int index_in_cluster, n;
+     uint64_t cluster_offset;
+ 
++    qemu_co_mutex_lock(&s->lock);
+     cluster_offset = get_cluster_offset(bs, sector_num << 9, 0, 0, 0, 0);
++    qemu_co_mutex_unlock(&s->lock);
+     index_in_cluster = sector_num & (s->cluster_sectors - 1);
+     n = s->cluster_sectors - index_in_cluster;
+     if (n > nb_sectors)
+@@ -934,7 +936,7 @@ static BlockDriver bdrv_qcow = {
+     .bdrv_open		= qcow_open,
+     .bdrv_close		= qcow_close,
+     .bdrv_create	= qcow_create,
+-    .bdrv_is_allocated	= qcow_is_allocated,
++    .bdrv_co_is_allocated = qcow_co_is_allocated,
+     .bdrv_set_key	= qcow_set_key,
+     .bdrv_make_empty	= qcow_make_empty,
+     .bdrv_co_readv      = qcow_co_readv,
+diff --git a/block/qcow2.c b/block/qcow2.c
+index 24a4080..433cd36 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -340,16 +340,19 @@ static int qcow2_set_key(BlockDriverState *bs, const char *key)
+     return 0;
+ }
+ 
+-static int qcow2_is_allocated(BlockDriverState *bs, int64_t sector_num,
+-                              int nb_sectors, int *pnum)
++static int coroutine_fn qcow2_co_is_allocated(BlockDriverState *bs,
++        int64_t sector_num, int nb_sectors, int *pnum)
+ {
++    BDRVQcowState *s = bs->opaque;
+     uint64_t cluster_offset;
+     int ret;
+ 
+     *pnum = nb_sectors;
+-    /* FIXME We can get errors here, but the bdrv_is_allocated interface can't
+-     * pass them on today */
++    /* FIXME We can get errors here, but the bdrv_co_is_allocated interface
++     * can't pass them on today */
++    qemu_co_mutex_lock(&s->lock);
+     ret = qcow2_get_cluster_offset(bs, sector_num << 9, pnum, &cluster_offset);
++    qemu_co_mutex_unlock(&s->lock);
+     if (ret < 0) {
+         *pnum = 0;
+     }
+@@ -1365,7 +1368,7 @@ static BlockDriver bdrv_qcow2 = {
+     .bdrv_open          = qcow2_open,
+     .bdrv_close         = qcow2_close,
+     .bdrv_create        = qcow2_create,
+-    .bdrv_is_allocated  = qcow2_is_allocated,
++    .bdrv_co_is_allocated = qcow2_co_is_allocated,
+     .bdrv_set_key       = qcow2_set_key,
+     .bdrv_make_empty    = qcow2_make_empty,
+ 
+diff --git a/block/vmdk.c b/block/vmdk.c
+index 19c4025..8c6e007 100644
+--- a/block/vmdk.c
++++ b/block/vmdk.c
+@@ -570,14 +570,16 @@ static uint64_t get_cluster_offset(BlockDriverState *bs, VmdkMetaData *m_data,
+     return cluster_offset;
+ }
+ 
+-static int vmdk_is_allocated(BlockDriverState *bs, int64_t sector_num,
+-                             int nb_sectors, int *pnum)
++static int coroutine_fn vmdk_co_is_allocated(BlockDriverState *bs,
++        int64_t sector_num, int nb_sectors, int *pnum)
+ {
+     BDRVVmdkState *s = bs->opaque;
+     int index_in_cluster, n;
+     uint64_t cluster_offset;
+ 
++    qemu_co_mutex_lock(&s->lock);
+     cluster_offset = get_cluster_offset(bs, NULL, sector_num << 9, 0);
++    qemu_co_mutex_unlock(&s->lock);
+     index_in_cluster = sector_num % s->cluster_sectors;
+     n = s->cluster_sectors - index_in_cluster;
+     if (n > nb_sectors)
+@@ -884,7 +886,7 @@ static BlockDriver bdrv_vmdk = {
+     .bdrv_close		= vmdk_close,
+     .bdrv_create	= vmdk_create,
+     .bdrv_co_flush  = vmdk_co_flush,
+-    .bdrv_is_allocated	= vmdk_is_allocated,
++    .bdrv_co_is_allocated   = vmdk_co_is_allocated,
+ 
+     .create_options = vmdk_create_options,
+ };
+-- 
+1.7.7.6
+

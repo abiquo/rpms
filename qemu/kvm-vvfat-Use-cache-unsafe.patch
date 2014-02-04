@@ -1,0 +1,56 @@
+From 4df40483f44b4ce2c09a64d03019598f64591340 Mon Sep 17 00:00:00 2001
+Message-Id: <4df40483f44b4ce2c09a64d03019598f64591340.1346668737.git.minovotn@redhat.com>
+In-Reply-To: <d22fc35d1e14760dba012d88bdf0162dd7d0f3c6.1346668737.git.minovotn@redhat.com>
+References: <d22fc35d1e14760dba012d88bdf0162dd7d0f3c6.1346668737.git.minovotn@redhat.com>
+From: Kevin Wolf <mail@kevin-wolf.de>
+Date: Wed, 22 Aug 2012 15:56:36 -0400
+Subject: [PATCH 09/10] vvfat: Use cache=unsafe
+
+The qcow file used for write support in vvfat is a temporary file,
+so we can use cache=unsafe there. Without this, write support is just
+too slow to be of any use.
+
+Signed-off-by: Kevin Wolf <mail@kevin-wolf.de>
+(cherry picked from commit a655211ac6d379c5b0813761e5d11415780f41fd)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/vvfat.c | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/block/vvfat.c b/block/vvfat.c
+index 6c0f6f3..cc83b1a 100644
+--- a/block/vvfat.c
++++ b/block/vvfat.c
+@@ -2802,6 +2802,7 @@ static int enable_write_target(BDRVVVFATState *s)
+ {
+     BlockDriver *bdrv_qcow;
+     QEMUOptionParameter *options;
++    int ret;
+     int size = sector2cluster(s, s->sector_count);
+     s->used_clusters = calloc(size, 1);
+ 
+@@ -2817,11 +2818,16 @@ static int enable_write_target(BDRVVVFATState *s)
+ 
+     if (bdrv_create(bdrv_qcow, s->qcow_filename, options) < 0)
+ 	return -1;
++
+     s->qcow = bdrv_new("");
+-    if (s->qcow == NULL ||
+-        bdrv_open(s->qcow, s->qcow_filename, BDRV_O_RDWR, bdrv_qcow) < 0)
+-    {
+-	return -1;
++    if (s->qcow == NULL) {
++        return -1;
++    }
++
++    ret = bdrv_open(s->qcow, s->qcow_filename,
++            BDRV_O_RDWR | BDRV_O_CACHE_WB | BDRV_O_NO_FLUSH, bdrv_qcow);
++    if (ret < 0) {
++	return ret;
+     }
+ 
+ #ifndef _WIN32
+-- 
+1.7.11.4
+

@@ -1,0 +1,121 @@
+From 1a6f3d4038c2989cf751f99dce9899cfd83c2cbb Mon Sep 17 00:00:00 2001
+Message-Id: <1a6f3d4038c2989cf751f99dce9899cfd83c2cbb.1351793582.git.minovotn@redhat.com>
+In-Reply-To: <e74f21f4030b33aaac45cab138ecabe18aac615b.1351793582.git.minovotn@redhat.com>
+References: <e74f21f4030b33aaac45cab138ecabe18aac615b.1351793582.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Thu, 25 Oct 2012 19:28:17 +0200
+Subject: [PATCH 4/8] i386: kvm: set CPUID_EXT_TSC_DEADLINE_TIMER on
+ kvm_arch_get_supported_cpuid()
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351193301-31675-5-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43655
+O-Subject: [RHEL6.4 qemu-kvm PATCH 4/8] i386: kvm: set CPUID_EXT_TSC_DEADLINE_TIMER on kvm_arch_get_supported_cpuid()
+Bugzilla: 691638
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 691638
+Upstream status: equivalent patch submitted
+ Message-Id: <1349383747-19383-10-git-send-email-ehabkost@redhat.com>
+
+This moves the CPUID_EXT_TSC_DEADLINE_TIMER CPUID flag hacking from
+kvm_arch_init_vcpu() to kvm_arch_get_supported_cpuid().
+
+Full git grep for get_supported_cpuid:
+
+   kvm/libkvm/libkvm-x86.c:uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+   kvm/libkvm/libkvm-x86.c:					cpuid_1_edx = kvm_get_supported_cpuid(kvm, 1, 0, R_EDX);
+   kvm/libkvm/libkvm-x86.c:uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+   kvm/libkvm/libkvm.h:uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+   qemu-kvm-x86.c:static struct kvm_cpuid2 *get_supported_cpuid(kvm_context_t kvm)
+   qemu-kvm-x86.c:uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+   qemu-kvm-x86.c:	cpuid = get_supported_cpuid(kvm);
+   qemu-kvm-x86.c:		cpuid_1_edx = kvm_get_supported_cpuid(kvm, 1, 0, R_EDX);
+   qemu-kvm-x86.c:    pv_ent->eax = cenv->cpuid_kvm_features & kvm_arch_get_supported_cpuid(cenv->kvm_state,
+   qemu-kvm-x86.c:                      kvm_arch_get_supported_cpuid(cenv->kvm_state, 1, 0, R_EDX));
+ * qemu-kvm-x86.c:                      kvm_arch_get_supported_cpuid(cenv->kvm_state, 1, 0, R_ECX));
+   qemu-kvm-x86.c:                      kvm_arch_get_supported_cpuid(cenv->kvm_state, 0x80000001, 0, R_EDX));
+   qemu-kvm-x86.c:                      kvm_arch_get_supported_cpuid(cenv->kvm_state, 0x80000001, 0, R_ECX));
+   qemu-kvm-x86.c:uint32_t kvm_arch_get_supported_cpuid(KVMState *env, uint32_t function,
+   qemu-kvm-x86.c:    return kvm_get_supported_cpuid(kvm_context, function, index, reg);
+   qemu-kvm.h:uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+   qemu-kvm.h:uint32_t kvm_arch_get_supported_cpuid(struct KVMState *env, uint32_t function,
+   target-i386/cpuid.c:        x86_cpu_def->cpuid_7_0_ebx_features = kvm_arch_get_supported_cpuid(kvm_state, 0x7, 0, R_EBX);
+** target-i386/cpuid.c:                    kvm_arch_get_supported_cpuid(env->kvm_state, p->cmd, 0, p->reg);
+   target-i386/cpuid.c:            *eax = kvm_arch_get_supported_cpuid(s, 0xA, count, R_EAX);
+   target-i386/cpuid.c:            *ebx = kvm_arch_get_supported_cpuid(s, 0xA, count, R_EBX);
+   target-i386/cpuid.c:            *ecx = kvm_arch_get_supported_cpuid(s, 0xA, count, R_ECX);
+   target-i386/cpuid.c:            *edx = kvm_arch_get_supported_cpuid(s, 0xA, count, R_EDX);
+   target-i386/cpuid.c:            *eax = kvm_arch_get_supported_cpuid(s, 0xd, count, R_EAX);
+   target-i386/cpuid.c:            *ebx = kvm_arch_get_supported_cpuid(s, 0xd, count, R_EBX);
+   target-i386/cpuid.c:            *ecx = kvm_arch_get_supported_cpuid(s, 0xd, count, R_ECX);
+   target-i386/cpuid.c:            *edx = kvm_arch_get_supported_cpuid(s, 0xd, count, R_EDX);
+
+Note that there is only one call for CPUID[1].ECX above (*), and it is
+the one that gets hacked to include CPUID_EXT_TSC_DEADLINE_TIMER, so we
+can simply make kvm_arch_get_supported_cpuid() set it, to let the rest
+of the code know the flag can be safely set by QEMU.
+
+Also, the -cpu check/enforce checks on summary_cpuid_features() &
+check_features_against_host() (**) will see the new bit set, but they
+won't be affected because summary_cpuid_features() is using
+kvm_arch_get_supported_cpuid() only for the CPUID_EXT_X2APIC bit and
+nothing else.
+
+One thing I was worrying about when doing this is that now
+kvm_get_supported_cpuid() depends on kvm_irqchip_in_kernel(). But as
+soon as the kvm_context global variable is set by kvm_init, the
+kvm_context->irqchip_in_kernel field should be initialized too (by
+kvm_create_irqchip(), called by kvm_create() by kvm_create_context(),
+called by kvm_init()). And kvm_get_supported_cpuid() can be called only
+after kvm_init() was called.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ qemu-kvm-x86.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-kvm-x86.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/qemu-kvm-x86.c b/qemu-kvm-x86.c
+index 3516480..f7f8428 100644
+--- a/qemu-kvm-x86.c
++++ b/qemu-kvm-x86.c
+@@ -764,6 +764,14 @@ uint32_t kvm_get_supported_cpuid(kvm_context_t kvm, uint32_t function,
+ 		 * GET_SUPPORTED_CPUID
+ 		 */
+ 		ret |= CPUID_EXT_HYPERVISOR;
++		/* tsc-deadline flag is not returned by GET_SUPPORTED_CPUID, but it
++		 * can be enabled if the kernel has KVM_CAP_TSC_DEADLINE_TIMER,
++		 * and the irqchip is in the kernel.
++		 */
++		if (kvm_irqchip_in_kernel() &&
++				kvm_check_extension(kvm_state, KVM_CAP_TSC_DEADLINE_TIMER)) {
++			ret |= CPUID_EXT_TSC_DEADLINE_TIMER;
++		}
+ 	}
+ 
+ 
+@@ -1434,14 +1442,8 @@ int kvm_arch_init_vcpu(CPUState *cenv)
+                       kvm_arch_get_supported_cpuid(cenv->kvm_state, 1, 0, R_EDX));
+ 
+     /* prevent the hypervisor bit from being cleared by the kernel */
+-    j = cenv->cpuid_ext_features & CPUID_EXT_TSC_DEADLINE_TIMER;
+     kvm_trim_features(&cenv->cpuid_ext_features,
+                       kvm_arch_get_supported_cpuid(cenv->kvm_state, 1, 0, R_ECX));
+-    if (j && kvm_irqchip_in_kernel() &&
+-        kvm_check_extension(cenv->kvm_state, KVM_CAP_TSC_DEADLINE_TIMER)) {
+-        cenv->cpuid_ext_features |= CPUID_EXT_TSC_DEADLINE_TIMER;
+-    }
+-
+     kvm_trim_features(&cenv->cpuid_ext2_features,
+                       kvm_arch_get_supported_cpuid(cenv->kvm_state, 0x80000001, 0, R_EDX));
+     kvm_trim_features(&cenv->cpuid_ext3_features,
+-- 
+1.7.11.7
+

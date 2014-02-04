@@ -1,0 +1,59 @@
+From 604c9875767f6fd06d5df27d22873bfe57c63755 Mon Sep 17 00:00:00 2001
+Message-Id: <604c9875767f6fd06d5df27d22873bfe57c63755.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:36 +0200
+Subject: [PATCH 23/35] block: vdi image file reopen
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <545835a43eecc7f44f1a48935e6abf526b2790d3.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43279
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 23/35] block: vdi image file reopen
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+There is currently nothing that needs to be done for VDI reopen.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit ecfe2bbabbc25e08b21ae57d66e484ef64c4aefa)
+---
+ block/vdi.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/vdi.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/block/vdi.c b/block/vdi.c
+index d507c7c..3450a2d 100644
+--- a/block/vdi.c
++++ b/block/vdi.c
+@@ -446,6 +446,12 @@ static int vdi_open(BlockDriverState *bs, int flags)
+     return -1;
+ }
+ 
++static int vdi_reopen_prepare(BDRVReopenState *state,
++                              BlockReopenQueue *queue, Error **errp)
++{
++    return 0;
++}
++
+ static int coroutine_fn vdi_co_is_allocated(BlockDriverState *bs,
+         int64_t sector_num, int nb_sectors, int *pnum)
+ {
+@@ -921,6 +927,7 @@ static BlockDriver bdrv_vdi = {
+     .bdrv_probe = vdi_probe,
+     .bdrv_open = vdi_open,
+     .bdrv_close = vdi_close,
++    .bdrv_reopen_prepare = vdi_reopen_prepare,
+     .bdrv_create = vdi_create,
+     .bdrv_co_flush = vdi_co_flush,
+     .bdrv_co_is_allocated = vdi_co_is_allocated,
+-- 
+1.7.11.7
+

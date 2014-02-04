@@ -1,0 +1,263 @@
+From a601dbbcda4cb0a458e725aa466c232686fc3642 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:55:20 +0100
+Subject: [PATCH 53/55] qed: add .bdrv_co_write_zeroes() support
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <8ec92e4a2a7580989275c4f40c6fb3fa0e4dfae0.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38903
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 53/54] qed: add .bdrv_co_write_zeroes() support
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Zero writes are a dedicated interface for writing regions of zeroes into
+the image file.  If clusters are not yet allocated it is possible to use
+an efficient metadata representation which keeps the image file compact
+and does not store individual zero bytes.
+
+Implementing this for the QED image format is fairly straightforward.
+The only issue is that when a zero write touches an existing cluster we
+have to allocate a bounce buffer and perform a regular write.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit 0e71be1932adfad27d564675f89a468fc8b92b1f)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/qed.c |  110 ++++++++++++++++++++++++++++++++++++++++++++++++++++++----
+ block/qed.h |    1 +
+ 2 files changed, 103 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qed.c |  110 ++++++++++++++++++++++++++++++++++++++++++++++++++++++----
+ block/qed.h |    1 +
+ 2 files changed, 103 insertions(+), 8 deletions(-)
+
+diff --git a/block/qed.c b/block/qed.c
+index 8220102..c111a7a 100644
+--- a/block/qed.c
++++ b/block/qed.c
+@@ -876,6 +876,12 @@ static void qed_aio_complete(QEDAIOCB *acb, int ret)
+     qemu_iovec_destroy(&acb->cur_qiov);
+     qed_unref_l2_cache_entry(acb->request.l2_table);
+ 
++    /* Free the buffer we may have allocated for zero writes */
++    if (acb->flags & QED_AIOCB_ZERO) {
++        qemu_vfree(acb->qiov->iov[0].iov_base);
++        acb->qiov->iov[0].iov_base = NULL;
++    }
++
+     /* Arrange for a bh to invoke the completion function */
+     acb->bh_ret = ret;
+     acb->bh = qemu_bh_new(qed_aio_complete_bh, acb);
+@@ -942,9 +948,8 @@ static void qed_aio_write_l1_update(void *opaque, int ret)
+ /**
+  * Update L2 table with new cluster offsets and write them out
+  */
+-static void qed_aio_write_l2_update(void *opaque, int ret)
++static void qed_aio_write_l2_update(QEDAIOCB *acb, int ret, uint64_t offset)
+ {
+-    QEDAIOCB *acb = opaque;
+     BDRVQEDState *s = acb_to_s(acb);
+     bool need_alloc = acb->find_cluster_ret == QED_CLUSTER_L1;
+     int index;
+@@ -960,7 +965,7 @@ static void qed_aio_write_l2_update(void *opaque, int ret)
+ 
+     index = qed_l2_index(s, acb->cur_pos);
+     qed_update_l2_table(s, acb->request.l2_table->table, index, acb->cur_nclusters,
+-                         acb->cur_cluster);
++                         offset);
+ 
+     if (need_alloc) {
+         /* Write out the whole new L2 table */
+@@ -977,6 +982,12 @@ err:
+     qed_aio_complete(acb, ret);
+ }
+ 
++static void qed_aio_write_l2_update_cb(void *opaque, int ret)
++{
++    QEDAIOCB *acb = opaque;
++    qed_aio_write_l2_update(acb, ret, acb->cur_cluster);
++}
++
+ /**
+  * Flush new data clusters before updating the L2 table
+  *
+@@ -991,7 +1002,7 @@ static void qed_aio_write_flush_before_l2_update(void *opaque, int ret)
+     QEDAIOCB *acb = opaque;
+     BDRVQEDState *s = acb_to_s(acb);
+ 
+-    if (!bdrv_aio_flush(s->bs->file, qed_aio_write_l2_update, opaque)) {
++    if (!bdrv_aio_flush(s->bs->file, qed_aio_write_l2_update_cb, opaque)) {
+         qed_aio_complete(acb, -EIO);
+     }
+ }
+@@ -1021,7 +1032,7 @@ static void qed_aio_write_main(void *opaque, int ret)
+         if (s->bs->backing_hd) {
+             next_fn = qed_aio_write_flush_before_l2_update;
+         } else {
+-            next_fn = qed_aio_write_l2_update;
++            next_fn = qed_aio_write_l2_update_cb;
+         }
+     }
+ 
+@@ -1087,6 +1098,18 @@ static bool qed_should_set_need_check(BDRVQEDState *s)
+     return !(s->header.features & QED_F_NEED_CHECK);
+ }
+ 
++static void qed_aio_write_zero_cluster(void *opaque, int ret)
++{
++    QEDAIOCB *acb = opaque;
++
++    if (ret) {
++        qed_aio_complete(acb, ret);
++        return;
++    }
++
++    qed_aio_write_l2_update(acb, 0, 1);
++}
++
+ /**
+  * Write new data cluster
+  *
+@@ -1098,6 +1121,7 @@ static bool qed_should_set_need_check(BDRVQEDState *s)
+ static void qed_aio_write_alloc(QEDAIOCB *acb, size_t len)
+ {
+     BDRVQEDState *s = acb_to_s(acb);
++    BlockDriverCompletionFunc *cb;
+ 
+     /* Cancel timer when the first allocating request comes in */
+     if (QSIMPLEQ_EMPTY(&s->allocating_write_reqs)) {
+@@ -1115,14 +1139,26 @@ static void qed_aio_write_alloc(QEDAIOCB *acb, size_t len)
+ 
+     acb->cur_nclusters = qed_bytes_to_clusters(s,
+             qed_offset_into_cluster(s, acb->cur_pos) + len);
+-    acb->cur_cluster = qed_alloc_clusters(s, acb->cur_nclusters);
+     qemu_iovec_copy(&acb->cur_qiov, acb->qiov, acb->qiov_offset, len);
+ 
++    if (acb->flags & QED_AIOCB_ZERO) {
++        /* Skip ahead if the clusters are already zero */
++        if (acb->find_cluster_ret == QED_CLUSTER_ZERO) {
++            qed_aio_next_io(acb, 0);
++            return;
++        }
++
++        cb = qed_aio_write_zero_cluster;
++    } else {
++        cb = qed_aio_write_prefill;
++        acb->cur_cluster = qed_alloc_clusters(s, acb->cur_nclusters);
++    }
++
+     if (qed_should_set_need_check(s)) {
+         s->header.features |= QED_F_NEED_CHECK;
+-        qed_write_header(s, qed_aio_write_prefill, acb);
++        qed_write_header(s, cb, acb);
+     } else {
+-        qed_aio_write_prefill(acb, 0);
++        cb(acb, 0);
+     }
+ }
+ 
+@@ -1137,6 +1173,16 @@ static void qed_aio_write_alloc(QEDAIOCB *acb, size_t len)
+  */
+ static void qed_aio_write_inplace(QEDAIOCB *acb, uint64_t offset, size_t len)
+ {
++    /* Allocate buffer for zero writes */
++    if (acb->flags & QED_AIOCB_ZERO) {
++        struct iovec *iov = acb->qiov->iov;
++
++        if (!iov->iov_base) {
++            iov->iov_base = qemu_blockalign(acb->common.bs, iov->iov_len);
++            memset(iov->iov_base, 0, iov->iov_len);
++        }
++    }
++
+     /* Calculate the I/O vector */
+     acb->cur_cluster = offset;
+     qemu_iovec_copy(&acb->cur_qiov, acb->qiov, acb->qiov_offset, len);
+@@ -1322,6 +1368,53 @@ static BlockDriverAIOCB *bdrv_qed_aio_flush(BlockDriverState *bs,
+     return bdrv_aio_flush(bs->file, cb, opaque);
+ }
+ 
++typedef struct {
++    Coroutine *co;
++    int ret;
++    bool done;
++} QEDWriteZeroesCB;
++
++static void coroutine_fn qed_co_write_zeroes_cb(void *opaque, int ret)
++{
++    QEDWriteZeroesCB *cb = opaque;
++
++    cb->done = true;
++    cb->ret = ret;
++    if (cb->co) {
++        qemu_coroutine_enter(cb->co, NULL);
++    }
++}
++
++static int coroutine_fn bdrv_qed_co_write_zeroes(BlockDriverState *bs,
++                                                 int64_t sector_num,
++                                                 int nb_sectors)
++{
++    BlockDriverAIOCB *blockacb;
++    QEDWriteZeroesCB cb = { .done = false };
++    QEMUIOVector qiov;
++    struct iovec iov;
++
++    /* Zero writes start without an I/O buffer.  If a buffer becomes necessary
++     * then it will be allocated during request processing.
++     */
++    iov.iov_base = NULL,
++    iov.iov_len  = nb_sectors * BDRV_SECTOR_SIZE,
++
++    qemu_iovec_init_external(&qiov, &iov, 1);
++    blockacb = qed_aio_setup(bs, sector_num, &qiov, nb_sectors,
++                             qed_co_write_zeroes_cb, &cb,
++                             QED_AIOCB_WRITE | QED_AIOCB_ZERO);
++    if (!blockacb) {
++        return -EIO;
++    }
++    if (!cb.done) {
++        cb.co = qemu_coroutine_self();
++        qemu_coroutine_yield();
++    }
++    assert(cb.done);
++    return cb.ret;
++}
++
+ static int bdrv_qed_truncate(BlockDriverState *bs, int64_t offset)
+ {
+     BDRVQEDState *s = bs->opaque;
+@@ -1478,6 +1571,7 @@ static BlockDriver bdrv_qed = {
+     .bdrv_aio_readv           = bdrv_qed_aio_readv,
+     .bdrv_aio_writev          = bdrv_qed_aio_writev,
+     .bdrv_aio_flush           = bdrv_qed_aio_flush,
++    .bdrv_co_write_zeroes     = bdrv_qed_co_write_zeroes,
+     .bdrv_truncate            = bdrv_qed_truncate,
+     .bdrv_getlength           = bdrv_qed_getlength,
+     .bdrv_get_info            = bdrv_qed_get_info,
+diff --git a/block/qed.h b/block/qed.h
+index dbc00be..c716772 100644
+--- a/block/qed.h
++++ b/block/qed.h
+@@ -125,6 +125,7 @@ typedef struct QEDRequest {
+ 
+ enum {
+     QED_AIOCB_WRITE = 0x0001,       /* read or write? */
++    QED_AIOCB_ZERO  = 0x0002,       /* zero write, used with QED_AIOCB_WRITE */
+ };
+ 
+ typedef struct QEDAIOCB {
+-- 
+1.7.7.6
+

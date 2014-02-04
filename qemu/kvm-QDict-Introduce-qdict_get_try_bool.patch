@@ -1,0 +1,58 @@
+From 99694a65e3929fd6aac3d8dff812a2c6f7fff63d Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:43:34 -0500
+Subject: [PATCH 07/98] QDict: Introduce qdict_get_try_bool()
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 35006ac856d6f0593c2185dd84ad004852053cf9)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qdict.c |   18 ++++++++++++++++++
+ qdict.h |    1 +
+ 2 files changed, 19 insertions(+), 0 deletions(-)
+
+diff --git a/qdict.c b/qdict.c
+index 46926d3..ae40b93 100644
+--- a/qdict.c
++++ b/qdict.c
+@@ -308,6 +308,24 @@ int64_t qdict_get_try_int(const QDict *qdict, const char *key,
+ }
+ 
+ /**
++ * qdict_get_try_bool(): Try to get a bool mapped by 'key'
++ *
++ * Return bool mapped by 'key', if it is not present in the
++ * dictionary or if the stored object is not of QBool type
++ * 'def_value' will be returned.
++ */
++int qdict_get_try_bool(const QDict *qdict, const char *key, int def_value)
++{
++    QObject *obj;
++
++    obj = qdict_get(qdict, key);
++    if (!obj || qobject_type(obj) != QTYPE_QBOOL)
++        return def_value;
++
++    return qbool_get_int(qobject_to_qbool(obj));
++}
++
++/**
+  * qdict_get_try_str(): Try to get a pointer to the stored string
+  * mapped by 'key'
+  *
+diff --git a/qdict.h b/qdict.h
+index 920a09d..f4c1791 100644
+--- a/qdict.h
++++ b/qdict.h
+@@ -49,6 +49,7 @@ QDict *qdict_get_qdict(const QDict *qdict, const char *key);
+ const char *qdict_get_str(const QDict *qdict, const char *key);
+ int64_t qdict_get_try_int(const QDict *qdict, const char *key,
+                           int64_t def_value);
++int qdict_get_try_bool(const QDict *qdict, const char *key, int def_value);
+ const char *qdict_get_try_str(const QDict *qdict, const char *key);
+ 
+ #endif /* QDICT_H */
+-- 
+1.7.7.6
+

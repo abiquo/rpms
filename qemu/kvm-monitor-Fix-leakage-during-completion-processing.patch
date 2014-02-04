@@ -1,0 +1,86 @@
+From 4b866b72ac3ff77ba5924a9fd4b6e1d88b4408b6 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 18 Sep 2012 17:29:45 -0300
+Subject: [RHEL6 qemu-kvm PATCH 1/5] monitor: Fix leakage during completion
+ processing
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <f85d7fc255ae5a4526fbac7cd2dec90c8f4d717d.1347988794.git.jcody@redhat.com>
+Patchwork-id: 42008
+O-Subject: [RHEL6.4 qemu-kvm PATCH 1/2] monitor: Fix leakage during completion processing
+Bugzilla: 807146
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+
+From: Jan Kiszka <jan.kiszka@siemens.com>
+
+Given too many arguments or an invalid command, we were leaking the
+duplicated argument strings.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 03a63484a6978f68caff087bbaabcd1d383563af)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ monitor.c | 23 +++++++++++++++--------
+ 1 file changed, 15 insertions(+), 8 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ monitor.c | 23 +++++++++++++++--------
+ 1 file changed, 15 insertions(+), 8 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index a836b94..725a606 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -4367,8 +4367,9 @@ static void monitor_find_completion(const char *cmdline)
+        next arg */
+     len = strlen(cmdline);
+     if (len > 0 && qemu_isspace(cmdline[len - 1])) {
+-        if (nb_args >= MAX_ARGS)
+-            return;
++        if (nb_args >= MAX_ARGS) {
++            goto cleanup;
++        }
+         args[nb_args++] = qemu_strdup("");
+     }
+     if (nb_args <= 1) {
+@@ -4383,12 +4384,15 @@ static void monitor_find_completion(const char *cmdline)
+         }
+     } else {
+         /* find the command */
+-        for(cmd = mon_cmds; cmd->name != NULL; cmd++) {
+-            if (compare_cmd(args[0], cmd->name))
+-                goto found;
++        for (cmd = mon_cmds; cmd->name != NULL; cmd++) {
++            if (compare_cmd(args[0], cmd->name)) {
++                break;
++            }
+         }
+-        return;
+-    found:
++        if (!cmd->name) {
++            goto cleanup;
++        }
++
+         ptype = next_arg_type(cmd->args_type);
+         for(i = 0; i < nb_args - 2; i++) {
+             if (*ptype != '\0') {
+@@ -4438,8 +4442,11 @@ static void monitor_find_completion(const char *cmdline)
+             break;
+         }
+     }
+-    for(i = 0; i < nb_args; i++)
++
++cleanup:
++    for (i = 0; i < nb_args; i++) {
+         qemu_free(args[i]);
++    }
+ }
+ 
+ static int monitor_can_read(void *opaque)
+-- 
+1.7.11.4
+

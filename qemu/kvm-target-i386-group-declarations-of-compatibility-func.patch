@@ -1,0 +1,69 @@
+From 936febb9b5be164dbb3da34be6f3c4996532ff42 Mon Sep 17 00:00:00 2001
+Message-Id: <936febb9b5be164dbb3da34be6f3c4996532ff42.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Fri, 28 Sep 2012 16:50:15 +0200
+Subject: [PATCH 11/34] target-i386: group declarations of compatibility
+ functions
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1348851023-31907-11-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 42511
+O-Subject: [RHEL6 qemu-kvm PATCH 10/18] target-i386: group declarations of compatibility functions
+Bugzilla: 833152
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 833152
+Upstream status: not applicable
+
+Instead of having the same comment repeated for every function, just
+group the function prototypes all at the same place.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index d61f329..9acf858 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -1387,23 +1387,20 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
+     }
+ }
+ 
++/* machine-type compatibility hacks below: */
++
+ /* Called from hw/pc.c but there is no header
+  * both files include to put this into.
+  * Put it here to silence compiler warning.
+  */
+ void disable_cpuid_leaf10(void);
++void disable_kvm_pv_eoi(void);
+ 
+ void disable_cpuid_leaf10(void)
+ {
+ 	cpuid_leaf10_disabled = true;
+ }
+ 
+-/* Called from hw/pc.c but there is no header
+- * both files include to put this into.
+- * Put it here to silence compiler warning.
+- */
+-void disable_kvm_pv_eoi(void);
+-
+ void disable_kvm_pv_eoi(void)
+ {
+ 	kvm_pv_eoi_disabled = true;
+-- 
+1.7.11.4
+

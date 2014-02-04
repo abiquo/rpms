@@ -1,0 +1,143 @@
+From 3f0c7c6b06cad83206cbfa1f0eabc19f3ec9a884 Mon Sep 17 00:00:00 2001
+From: Federico Simoncelli <fsimonce@redhat.com>
+Date: Fri, 23 Mar 2012 12:12:50 -0300
+Subject: [RHEL6 qemu-kvm PATCH 5/9] qapi: complete implementation of unions
+
+RH-Author: Federico Simoncelli <fsimonce@redhat.com>
+Message-id: <1332504778-17403-6-git-send-email-fsimonce@redhat.com>
+Patchwork-id: 38944
+O-Subject: [RHEL6.3 qemu-kvm PATCH v6 05/13] qapi: complete implementation of unions
+Bugzilla: 802284
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+BZ: 802284
+
+(cherry picked from commit dc8fb6df5a13f7231f88c78966f8a6c5306840b5)
+---
+ qapi-schema-test.json |   10 ++++++++++
+ scripts/qapi-types.py |    6 ++++++
+ scripts/qapi-visit.py |   31 ++++++++++++++++++++++++++++++-
+ 3 files changed, 46 insertions(+), 1 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ qapi-schema-test.json |   10 ++++++++++
+ scripts/qapi-types.py |    6 ++++++
+ scripts/qapi-visit.py |   31 ++++++++++++++++++++++++++++++-
+ 3 files changed, 46 insertions(+), 1 deletions(-)
+
+diff --git a/qapi-schema-test.json b/qapi-schema-test.json
+index 3acedad..f557758 100644
+--- a/qapi-schema-test.json
++++ b/qapi-schema-test.json
+@@ -16,6 +16,16 @@
+                       'dict': { 'userdef': 'UserDefOne', 'string': 'str' },
+                       '*dict2': { 'userdef': 'UserDefOne', 'string': 'str' } } } }
+ 
++# for testing unions
++{ 'type': 'UserDefA',
++  'data': { 'boolean': 'bool' } }
++
++{ 'type': 'UserDefB',
++  'data': { 'integer': 'int' } }
++
++{ 'union': 'UserDefUnion',
++  'data': { 'a' : 'UserDefA', 'b' : 'UserDefB' } }
++
+ # testing commands
+ { 'command': 'user_def_cmd', 'data': {} }
+ { 'command': 'user_def_cmd1', 'data': {'ud1a': 'UserDefOne'} }
+diff --git a/scripts/qapi-types.py b/scripts/qapi-types.py
+index b56225b..727fb77 100644
+--- a/scripts/qapi-types.py
++++ b/scripts/qapi-types.py
+@@ -117,6 +117,7 @@ struct %(name)s
+ {
+     %(name)sKind kind;
+     union {
++        void *data;
+ ''',
+                 name=name)
+ 
+@@ -269,6 +270,7 @@ for expr in exprs:
+     elif expr.has_key('union'):
+         ret += generate_fwd_struct(expr['union'], expr['data']) + "\n"
+         ret += generate_enum('%sKind' % expr['union'], expr['data'].keys())
++        fdef.write(generate_enum_lookup('%sKind' % expr['union'], expr['data'].keys()))
+     else:
+         continue
+     fdecl.write(ret)
+@@ -283,6 +285,10 @@ for expr in exprs:
+         fdef.write(generate_type_cleanup(expr['type']) + "\n")
+     elif expr.has_key('union'):
+         ret += generate_union(expr['union'], expr['data'])
++        ret += generate_type_cleanup_decl(expr['union'] + "List")
++        fdef.write(generate_type_cleanup(expr['union'] + "List") + "\n")
++        ret += generate_type_cleanup_decl(expr['union'])
++        fdef.write(generate_type_cleanup(expr['union']) + "\n")
+     else:
+         continue
+     fdecl.write(ret)
+diff --git a/scripts/qapi-visit.py b/scripts/qapi-visit.py
+index 5160d83..54117d4 100644
+--- a/scripts/qapi-visit.py
++++ b/scripts/qapi-visit.py
+@@ -110,10 +110,38 @@ def generate_visit_union(name, members):
+ 
+ void visit_type_%(name)s(Visitor *m, %(name)s ** obj, const char *name, Error **errp)
+ {
+-}
++    Error *err = NULL;
++
++    visit_start_struct(m, (void **)obj, "%(name)s", name, sizeof(%(name)s), &err);
++    visit_type_%(name)sKind(m, &(*obj)->kind, "type", &err);
++    if (err) {
++        error_propagate(errp, err);
++        goto end;
++    }
++    switch ((*obj)->kind) {
+ ''',
+                  name=name)
+ 
++    for key in members:
++        ret += mcgen('''
++    case %(abbrev)s_KIND_%(enum)s:
++        visit_type_%(c_type)s(m, &(*obj)->%(c_name)s, "data", errp);
++        break;
++''',
++                abbrev = de_camel_case(name).upper(),
++                enum = de_camel_case(key).upper(),
++                c_type=members[key],
++                c_name=c_var(key))
++
++    ret += mcgen('''
++    default:
++        abort();
++    }
++end:
++    visit_end_struct(m, errp);
++}
++''')
++
+     return ret
+ 
+ def generate_declaration(name, members, genlist=True):
+@@ -242,6 +270,7 @@ for expr in exprs:
+         fdecl.write(ret)
+     elif expr.has_key('union'):
+         ret = generate_visit_union(expr['union'], expr['data'])
++        ret += generate_visit_list(expr['union'], expr['data'])
+         fdef.write(ret)
+ 
+         ret = generate_decl_enum('%sKind' % expr['union'], expr['data'].keys())
+-- 
+1.7.3.2
+

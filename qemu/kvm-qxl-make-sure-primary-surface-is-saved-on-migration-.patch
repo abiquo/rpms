@@ -1,0 +1,44 @@
+From 7eda0cb029f6ff045cd9d58a7cdcd4e7d32bf8a0 Mon Sep 17 00:00:00 2001
+From: Yonit Halperin <yhalperi@redhat.com>
+Date: Tue, 21 Feb 2012 11:31:46 +0100
+Subject: [PATCH 4/4] qxl: make sure primary surface is saved on migration
+ also in compat mode
+
+RH-Author: Yonit Halperin <yhalperi@redhat.com>
+Message-id: <1329823906-8716-3-git-send-email-yhalperi@redhat.com>
+Patchwork-id: 37450
+O-Subject: [RHEL 6.3 qemu-kvm PACTH 2/2] qxl: make sure primary surface is saved on migration also in compat mode
+Bugzilla: 790083
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Uri Lublin <uril@redhat.com>
+
+RHBZ #790083
+upstream: http://patchwork.ozlabs.org/patch/141280/
+
+Signed-off-by: Yonit Halperin <yhalperi@redhat.com>
+---
+ hw/qxl.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/hw/qxl.c b/hw/qxl.c
+index cdb2a3c..3ab321f 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -1511,7 +1511,7 @@ static void qxl_dirty_surfaces(PCIQXLDevice *qxl)
+     intptr_t vram_base;
+     ram_addr_t vram_addr;
+ 
+-    if (qxl->mode != QXL_MODE_NATIVE) {
++    if (qxl->mode != QXL_MODE_NATIVE && qxl->mode != QXL_MODE_COMPAT) {
+         return;
+     }
+     surface0_addr = qxl->vga.vram_offset + qxl->shadow_rom.draw_area_offset;
+-- 
+1.7.7.6
+

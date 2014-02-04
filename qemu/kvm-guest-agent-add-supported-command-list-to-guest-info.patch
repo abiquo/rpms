@@ -1,0 +1,122 @@
+From 7b3ac0f97a994a3f5a5733555ffc3c232993264d Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:13 -0500
+Subject: [PATCH 46/98] guest agent: add supported command list to guest-info
+ RPC
+
+Not that there is blacklisting functionality we can no longer infer
+the agent's capabilities via version. This patch extends the current
+guest-info RPC to also return a list of dictionaries containing the name
+of each supported RPC, along with a boolean indicating whether or not
+the command has been disabled by a guest administrator/distro.
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit bf95c0d55c24e8ce1c03e1ba491437297f8f96f4)
+
+Conflicts:
+
+	qga/guest-agent-commands.c
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json     |    6 +++++-
+ qapi/qmp-core.h            |    1 +
+ qapi/qmp-registry.c        |   13 +++++++++++++
+ qga/guest-agent-commands.c |   24 ++++++++++++++++++++++++
+ 4 files changed, 43 insertions(+), 1 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index fde5971..29989fe 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -43,7 +43,11 @@
+ #
+ # Since: 0.15.0
+ ##
+-{ 'type': 'GuestAgentInfo', 'data': {'version': 'str'} }
++{ 'type': 'GuestAgentCommandInfo',
++  'data': { 'name': 'str', 'enabled': 'bool' } }
++{ 'type': 'GuestAgentInfo',
++  'data': { 'version': 'str',
++            'supported_commands': ['GuestAgentCommandInfo'] } }
+ { 'command': 'guest-info',
+   'returns': 'GuestAgentInfo' }
+ 
+diff --git a/qapi/qmp-core.h b/qapi/qmp-core.h
+index 3cf1781..3bb3acb 100644
+--- a/qapi/qmp-core.h
++++ b/qapi/qmp-core.h
+@@ -38,6 +38,7 @@ void qmp_register_command(const char *name, QmpCommandFunc *fn);
+ QmpCommand *qmp_find_command(const char *name);
+ QObject *qmp_dispatch(QObject *request);
+ void qmp_disable_command(const char *name);
++bool qmp_command_is_enabled(const char *name);
+ char **qmp_get_command_list(void);
+ 
+ #endif
+diff --git a/qapi/qmp-registry.c b/qapi/qmp-registry.c
+index 03a8abf..d1639e6 100644
+--- a/qapi/qmp-registry.c
++++ b/qapi/qmp-registry.c
+@@ -52,6 +52,19 @@ void qmp_disable_command(const char *name)
+     }
+ }
+ 
++bool qmp_command_is_enabled(const char *name)
++{
++    QmpCommand *cmd;
++
++    QTAILQ_FOREACH(cmd, &qmp_commands, node) {
++        if (strcmp(cmd->name, name) == 0) {
++            return cmd->enabled;
++        }
++    }
++
++    return false;
++}
++
+ char **qmp_get_command_list(void)
+ {
+     QmpCommand *cmd;
+diff --git a/qga/guest-agent-commands.c b/qga/guest-agent-commands.c
+index 30c4068..01c4862 100644
+--- a/qga/guest-agent-commands.c
++++ b/qga/guest-agent-commands.c
+@@ -57,9 +57,33 @@ void qmp_guest_ping(Error **err)
+ struct GuestAgentInfo *qmp_guest_info(Error **err)
+ {
+     GuestAgentInfo *info = qemu_mallocz(sizeof(GuestAgentInfo));
++    GuestAgentCommandInfo *cmd_info;
++    GuestAgentCommandInfoList *cmd_info_list;
++    char **cmd_list_head, **cmd_list;
+ 
+     info->version = g_strdup(QGA_VERSION);
+ 
++    cmd_list_head = cmd_list = qmp_get_command_list();
++    if (*cmd_list_head == NULL) {
++        goto out;
++    }
++
++    while (*cmd_list) {
++        cmd_info = g_malloc0(sizeof(GuestAgentCommandInfo));
++        cmd_info->name = strdup(*cmd_list);
++        cmd_info->enabled = qmp_command_is_enabled(cmd_info->name);
++
++        cmd_info_list = g_malloc0(sizeof(GuestAgentCommandInfoList));
++        cmd_info_list->value = cmd_info;
++        cmd_info_list->next = info->supported_commands;
++        info->supported_commands = cmd_info_list;
++
++        g_free(*cmd_list);
++        cmd_list++;
++    }
++
++out:
++    g_free(cmd_list_head);
+     return info;
+ }
+ 
+-- 
+1.7.7.6
+

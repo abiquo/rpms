@@ -1,0 +1,73 @@
+From 1b443324d93b9cc7bdc058fab7391ab26b9d370c Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Fri, 17 Feb 2012 09:52:26 +0100
+Subject: [PATCH 5/5] usb: fix usb_qdev_init() error handling again
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1329472346-21224-5-git-send-email-kraxel@redhat.com>
+Patchwork-id: 37405
+O-Subject: [RHEL-6.3 qemu-kvm PATCH 4/4] usb: fix usb_qdev_init() error handling again
+Bugzilla: 754349
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Commit f462141f18ffdd75847f6459ef83d90b831d12c0 introduced clean up code
+when usb_qdev_init() fails.  Unfortunately it calls .handle_destroy()
+when .init() was never invoked or failed.  This can lead to crashes when
+.handle_destroy() tries to clean up things that were never initialized.
+
+This patch is careful to undo only those steps that completed along the
+usb_qdev_init() code path.  It's not as pretty as the unified error
+handling in f462141f18ffdd75847f6459ef83d90b831d12c0 but it's necessary.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit db3a5ed7e4422491dac1f83264ebb01f6667ffc8)
+---
+ hw/usb-bus.c |   12 +++++-------
+ 1 files changed, 5 insertions(+), 7 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-bus.c |   12 +++++-------
+ 1 files changed, 5 insertions(+), 7 deletions(-)
+
+diff --git a/hw/usb-bus.c b/hw/usb-bus.c
+index ca69c9d..5fac638 100644
+--- a/hw/usb-bus.c
++++ b/hw/usb-bus.c
+@@ -77,23 +77,21 @@ static int usb_qdev_init(DeviceState *qdev, DeviceInfo *base)
+     QLIST_INIT(&dev->strings);
+     rc = usb_claim_port(dev);
+     if (rc != 0) {
+-        goto err;
++        return rc;
+     }
+     rc = dev->info->init(dev);
+     if (rc != 0) {
+-        goto err;
++        usb_release_port(dev);
++        return rc;
+     }
+     if (dev->auto_attach) {
+         rc = usb_device_attach(dev);
+         if (rc != 0) {
+-            goto err;
++            usb_qdev_exit(qdev);
++            return rc;
+         }
+     }
+     return 0;
+-
+-err:
+-    usb_qdev_exit(qdev);
+-    return rc;
+ }
+ 
+ static int usb_qdev_exit(DeviceState *qdev)
+-- 
+1.7.7.6
+

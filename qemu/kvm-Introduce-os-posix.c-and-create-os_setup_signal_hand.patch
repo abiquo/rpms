@@ -1,0 +1,116 @@
+From c501052bf143d21bd5fb102c49d9c6e5b2460b67 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@redhat.com>
+Date: Wed, 7 Mar 2012 11:35:40 -0500
+Subject: [PATCH 80/98] Introduce os-posix.c and create
+ os_setup_signal_handling()
+
+Introcuce os-posix.c and move posix specific signal handling
+there.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@redhat.com>
+Acked-by: Juan Quintela <quintela@redhat.com>
+Acked-by: Richard Henderson <rth@redhat.com>
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 86b645e753b9396f8cc5b74a9eadf2d36f76ae5c)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.objs   |    1 +
+ os-posix.c      |   41 +++++++++++++++++++++++++++++++++++++++++
+ qemu-os-posix.h |    2 ++
+ vl.c            |    8 +-------
+ 4 files changed, 45 insertions(+), 7 deletions(-)
+ create mode 100644 os-posix.c
+
+diff --git a/Makefile.objs b/Makefile.objs
+index 7f0d8e9..e254fab 100644
+--- a/Makefile.objs
++++ b/Makefile.objs
+@@ -163,6 +163,7 @@ hw-obj-y += usb-ehci.o
+ hw-obj-$(CONFIG_ECC) += ecc.o
+ hw-obj-$(CONFIG_NAND) += nand.o
+ hw-obj-$(CONFIG_WIN32) += os-win32.o
++hw-obj-$(CONFIG_POSIX) += os-posix.o
+ 
+ hw-obj-$(CONFIG_M48T59) += m48t59.o
+ hw-obj-$(CONFIG_ESCC) += escc.o
+diff --git a/os-posix.c b/os-posix.c
+new file mode 100644
+index 0000000..914a4d1
+--- /dev/null
++++ b/os-posix.c
+@@ -0,0 +1,41 @@
++/*
++ * os-posix.c
++ *
++ * Copyright (c) 2003-2008 Fabrice Bellard
++ * Copyright (c) 2010 Red Hat, Inc.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++
++#include <unistd.h>
++#include <fcntl.h>
++#include <signal.h>
++
++/* Needed early for CONFIG_BSD etc. */
++#include "config-host.h"
++#include "sysemu.h"
++
++void os_setup_signal_handling(void)
++{
++    struct sigaction act;
++    sigfillset(&act.sa_mask);
++    act.sa_flags = 0;
++    act.sa_handler = SIG_IGN;
++    sigaction(SIGPIPE, &act, NULL);
++}
+diff --git a/qemu-os-posix.h b/qemu-os-posix.h
+index 96d1036..ff5adb1 100644
+--- a/qemu-os-posix.h
++++ b/qemu-os-posix.h
+@@ -30,4 +30,6 @@ static inline void os_host_main_loop_wait(int *timeout)
+ {
+ }
+ 
++void os_setup_signal_handling(void);
++
+ #endif
+diff --git a/vl.c b/vl.c
+index f181818..8295665 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5049,13 +5049,7 @@ int main(int argc, char **argv, char **envp)
+ 
+     QLIST_INIT (&vm_change_state_head);
+ #ifndef _WIN32
+-    {
+-        struct sigaction act;
+-        sigfillset(&act.sa_mask);
+-        act.sa_flags = 0;
+-        act.sa_handler = SIG_IGN;
+-        sigaction(SIGPIPE, &act, NULL);
+-    }
++    os_setup_signal_handling();
+ #else
+     SetConsoleCtrlHandler(qemu_ctrl_handler, TRUE);
+     /* Note: cpu_interrupt() is currently not SMP safe, so we force
+-- 
+1.7.7.6
+

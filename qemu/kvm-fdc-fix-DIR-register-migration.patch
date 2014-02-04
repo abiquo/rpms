@@ -1,0 +1,62 @@
+From e1e38e4ef58357b226fe4823f6400ab99668e7a9 Mon Sep 17 00:00:00 2001
+Message-Id: <e1e38e4ef58357b226fe4823f6400ab99668e7a9.1350314947.git.minovotn@redhat.com>
+From: Pavel Hrdina <phrdina@redhat.com>
+Date: Mon, 15 Oct 2012 15:00:50 +0200
+Subject: [PATCH 1/4] fdc: fix DIR register migration
+
+RH-Author: Pavel Hrdina <phrdina@redhat.com>
+Message-id: <f80bd0ff8a884b5a2ea28076ad0fdee598b35a7f.1350312602.git.phrdina@redhat.com>
+Patchwork-id: 43178
+O-Subject: [RHEL-6.4 qemu-kvm PATCH v5 1/2] fdc: fix DIR register migration
+Bugzilla: 854474
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Michal Novotny <minovotn@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+
+During migration the DIR register represented in qemu as
+media_changed is not migrated to the target guest.
+
+This cause that if you have a floppy disk mounted before you
+start the migration, then the FDC returns after migration that
+the media is changed. This change ends in IO errors and you
+have to remout the floppy disk.
+
+Signed-off-by: Pavel Hrdina <phrdina@redhat.com>
+---
+ hw/fdc.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/fdc.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/hw/fdc.c b/hw/fdc.c
+index 77a304c..4e8c9f5 100644
+--- a/hw/fdc.c
++++ b/hw/fdc.c
+@@ -649,8 +649,9 @@ static CPUWriteMemoryFunc * const fdctrl_mem_write_strict[3] = {
+ 
+ static bool fdrive_media_changed_needed(void *opaque)
+ {
+-    /* Do not send the subsection to maintain the compatibility */
+-    return 0;
++    fdrive_t *drive = opaque;
++
++    return (drive->bs != NULL && drive->media_changed != 1);
+ }
+ 
+ static const VMStateDescription vmstate_fdrive_media_changed = {
+@@ -659,7 +660,7 @@ static const VMStateDescription vmstate_fdrive_media_changed = {
+     .minimum_version_id = 1,
+     .minimum_version_id_old = 1,
+     .fields      = (VMStateField[]) {
+-        VMSTATE_UNUSED(1), /* for compatibility */
++        VMSTATE_UINT8(media_changed, fdrive_t),
+         VMSTATE_END_OF_LIST()
+     }
+ };
+-- 
+1.7.11.7
+

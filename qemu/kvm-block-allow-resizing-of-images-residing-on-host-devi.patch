@@ -1,0 +1,102 @@
+From 803e2eafa8325bab448633276c31fec7af1c4716 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:52 +0100
+Subject: [PATCH 27/99] block: allow resizing of images residing on host
+ devices
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-28-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37228
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 27/96] block: allow resizing of images residing on host devices
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Christoph Hellwig <hch@lst.de>
+
+Bugzilla: 783950
+
+Allow to resize images that reside on host devices up to the available
+space.  This allows to grow images after resizing the device manually or
+vice versa.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 55b949c84761ade81ca93b2596ea45b09ad6d60a)
+---
+ block/raw-posix.c |   24 +++++++++++++++++++++---
+ 1 files changed, 21 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/raw-posix.c |   24 +++++++++++++++++++++---
+ 1 files changed, 21 insertions(+), 3 deletions(-)
+
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 23bb484..df199a2 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -632,10 +632,24 @@ static void raw_close(BlockDriverState *bs)
+ static int raw_truncate(BlockDriverState *bs, int64_t offset)
+ {
+     BDRVRawState *s = bs->opaque;
+-    if (s->type != FTYPE_FILE)
+-        return -ENOTSUP;
+-    if (ftruncate(s->fd, offset) < 0)
++    struct stat st;
++
++    if (fstat(s->fd, &st)) {
+         return -errno;
++    }
++
++    if (S_ISREG(st.st_mode)) {
++        if (ftruncate(s->fd, offset) < 0) {
++            return -errno;
++        }
++    } else if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) {
++       if (offset > raw_getlength(bs)) {
++           return -EINVAL;
++       }
++    } else {
++        return -ENOTSUP;
++    }
++
+     return 0;
+ }
+ 
+@@ -1060,6 +1074,7 @@ static BlockDriver bdrv_host_device = {
+ 
+     .bdrv_read          = raw_read,
+     .bdrv_write         = raw_write,
++    .bdrv_truncate      = raw_truncate,
+     .bdrv_getlength	= raw_getlength,
+ 
+     /* generic scsi device */
+@@ -1156,6 +1171,7 @@ static BlockDriver bdrv_host_floppy = {
+ 
+     .bdrv_read          = raw_read,
+     .bdrv_write         = raw_write,
++    .bdrv_truncate      = raw_truncate,
+     .bdrv_getlength	= raw_getlength,
+ 
+     /* removable device support */
+@@ -1252,6 +1268,7 @@ static BlockDriver bdrv_host_cdrom = {
+ 
+     .bdrv_read          = raw_read,
+     .bdrv_write         = raw_write,
++    .bdrv_truncate      = raw_truncate,
+     .bdrv_getlength     = raw_getlength,
+ 
+     /* removable device support */
+@@ -1371,6 +1388,7 @@ static BlockDriver bdrv_host_cdrom = {
+ 
+     .bdrv_read          = raw_read,
+     .bdrv_write         = raw_write,
++    .bdrv_truncate      = raw_truncate,
+     .bdrv_getlength     = raw_getlength,
+ 
+     /* removable device support */
+-- 
+1.7.7.5
+

@@ -1,0 +1,64 @@
+From a87fc8da9b6d518274ce7a5b8d48f2c1b353cac7 Mon Sep 17 00:00:00 2001
+Message-Id: <a87fc8da9b6d518274ce7a5b8d48f2c1b353cac7.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:28 +0200
+Subject: [PATCH 19/41] qemu-ga: fix help output
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-14-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39910
+O-Subject: [PATCH RHEL6.4 qemu-kvm 13/36] qemu-ga: fix help output
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+
+Reviewed-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 4bdd04165a50899d8700d8009a3e044f88ade45f)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qemu-ga.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-ga.c |    7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 3a522e0..e881b72 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -117,12 +117,13 @@ static gboolean register_signal_handlers(void)
+ static void usage(const char *cmd)
+ {
+     printf(
+-"Usage: %s -c <channel_opts>\n"
++"Usage: %s [-m <method> -p <path>] [<options>]\n"
+ "QEMU Guest Agent %s\n"
+ "\n"
+ "  -m, --method      transport method: one of unix-listen, virtio-serial, or\n"
+ "                    isa-serial (virtio-serial is the default)\n"
+-"  -p, --path        device/socket path (%s is the default for virtio-serial)\n"
++"  -p, --path        device/socket path (the default for virtio-serial is:\n"
++"                    %s)\n"
+ "  -l, --logfile     set logfile path, logs to stderr by default\n"
+ "  -f, --pidfile     specify pidfile (default is %s)\n"
+ "  -v, --verbose     log extra debugging information\n"
+@@ -131,7 +132,7 @@ static void usage(const char *cmd)
+ #ifdef _WIN32
+ "  -s, --service     service commands: install, uninstall\n"
+ #endif
+-"  -b, --blacklist   comma-separated list of RPCs to disable (no spaces, \"?\""
++"  -b, --blacklist   comma-separated list of RPCs to disable (no spaces, \"?\"\n"
+ "                    to list available RPCs)\n"
+ "  -h, --help        display this help and exit\n"
+ "\n"
+-- 
+1.7.10.4
+

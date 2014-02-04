@@ -1,0 +1,259 @@
+From c3be0434d9be3371135f6a6ea6f37d6a8a943a3e Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Wed, 7 Mar 2012 11:35:50 -0500
+Subject: [PATCH 90/98] qemu-ga: fixes for win32 build of qemu-ga
+
+Various stubs and #ifdefs to compile for Windows using mingw
+cross-build. Still has 1 linker error due to a dependency on the
+forthcoming win32 versions of the GAChannel/transport class.
+(cherry picked from commit d8ca685acbd06b5cccd9fcd7866ded1f453b8311)
+
+Conflicts:
+
+	Makefile
+	Makefile.objs
+	configure
+	qemu-ga.c
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.objs        |    9 +++--
+ configure            |    1 +
+ qemu-ga.c            |   18 +++++++++-
+ qga/commands-win32.c |   91 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 114 insertions(+), 5 deletions(-)
+ create mode 100644 qga/commands-win32.c
+
+diff --git a/Makefile.objs b/Makefile.objs
+index 840f820..6a73c68 100644
+--- a/Makefile.objs
++++ b/Makefile.objs
+@@ -197,12 +197,13 @@ qapi-obj-y = $(addprefix qapi/, $(qapi-nested-y))
+ ######################################################################
+ # guest agent
+ 
+-qga-nested-y = commands.o commands-posix.o guest-agent-command-state.o
+-qga-nested-y += channel-posix.o
++qga-nested-y = commands.o guest-agent-command-state.o
++qga-nested-$(CONFIG_POSIX) += commands-posix.o channel-posix.o
++qga-nested-$(CONFIG_WIN32) += commands-win32.o
+ qga-obj-y = $(addprefix qga/, $(qga-nested-y))
+-qga-obj-y += qemu-ga.o qemu-tool.o qemu-error.o qemu-sockets.o module.o qemu-option.o cutils.o osdep.o
++qga-obj-y += qemu-ga.o qemu-tool.o qemu-error.o module.o cutils.o osdep.o
+ qga-obj-$(CONFIG_WIN32) += qemu-malloc.o
+-qga-obj-$(CONFIG_POSIX) += qemu-malloc.o
++qga-obj-$(CONFIG_POSIX) += qemu-malloc.o qemu-sockets.o qemu-option.o
+ 
+ vl.o: QEMU_CFLAGS+=$(GPROF_CFLAGS)
+ 
+diff --git a/configure b/configure
+index 02cf8cf..71de514 100755
+--- a/configure
++++ b/configure
+@@ -440,6 +440,7 @@ if test "$mingw32" = "yes" ; then
+   EXESUF=".exe"
+   QEMU_CFLAGS="-DWIN32_LEAN_AND_MEAN -DWINVER=0x501 $QEMU_CFLAGS"
+   LIBS="-lwinmm -lws2_32 -liphlpapi $LIBS"
++  libs_qga="-lws2_32 -lwinmm $lib_qga"
+ fi
+ 
+ # find source path
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 71b0bcd..a45db59 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -15,7 +15,9 @@
+ #include <stdbool.h>
+ #include <glib.h>
+ #include <getopt.h>
++#ifndef _WIN32
+ #include <syslog.h>
++#endif
+ #include "json-streamer.h"
+ #include "json-parser.h"
+ #include "qint.h"
+@@ -44,6 +46,7 @@ struct GAState {
+ 
+ static struct GAState *ga_state;
+ 
++#ifndef _WIN32
+ static void quit_handler(int sig)
+ {
+     g_debug("received signal num %d, quitting", sig);
+@@ -73,6 +76,7 @@ static gboolean register_signal_handlers(void)
+     }
+     return true;
+ }
++#endif
+ 
+ static void usage(const char *cmd)
+ {
+@@ -87,8 +91,10 @@ static void usage(const char *cmd)
+ "  -f, --pidfile     specify pidfile (default is %s)\n"
+ "  -v, --verbose     log extra debugging information\n"
+ "  -V, --version     print version information and exit\n"
++#ifndef _WIN32
+ "  -d, --daemonize   become a daemon\n"
+-"  -b, --blacklist   comma-seperated list of RPCs to disable (no spaces, \"?\""
++#endif
++"  -b, --blacklist   comma-separated list of RPCs to disable (no spaces, \"?\""
+ "                    to list available RPCs)\n"
+ "  -h, --help        display this help and exit\n"
+ "\n"
+@@ -143,9 +149,13 @@ static void ga_log(const gchar *domain, GLogLevelFlags level,
+     }
+ 
+     level &= G_LOG_LEVEL_MASK;
++#ifndef _WIN32
+     if (domain && strcmp(domain, "syslog") == 0) {
+         syslog(LOG_INFO, "%s: %s", level_str, msg);
+     } else if (level & s->log_level) {
++#else
++    if (level & s->log_level) {
++#endif
+         g_get_current_time(&time);
+         fprintf(s->log_file,
+                 "%lu.%lu: %s: %s\n", time.tv_sec, time.tv_usec, level_str, msg);
+@@ -153,6 +163,7 @@ static void ga_log(const gchar *domain, GLogLevelFlags level,
+     }
+ }
+ 
++#ifndef _WIN32
+ static void become_daemon(const char *pidfile)
+ {
+     pid_t pid, sid;
+@@ -203,6 +214,7 @@ fail:
+     g_critical("failed to daemonize");
+     exit(EXIT_FAILURE);
+ }
++#endif
+ 
+ static int send_response(GAState *s, QObject *payload)
+ {
+@@ -466,10 +478,12 @@ int main(int argc, char **argv)
+         }
+     }
+ 
++#ifndef _WIN32
+     if (daemonize) {
+         g_debug("starting daemon");
+         become_daemon(pidfile);
+     }
++#endif
+ 
+     s = qemu_mallocz(sizeof(GAState));
+     s->log_file = log_file;
+@@ -482,10 +496,12 @@ int main(int argc, char **argv)
+     ga_command_state_init_all(s->command_state);
+     json_message_parser_init(&s->parser, process_event);
+     ga_state = s;
++#ifndef _WIN32
+     if (!register_signal_handlers()) {
+         g_critical("failed to register signal handlers");
+         goto out_bad;
+     }
++#endif
+ 
+     s->main_loop = g_main_loop_new(NULL, false);
+     if (!channel_init(ga_state, method, path)) {
+diff --git a/qga/commands-win32.c b/qga/commands-win32.c
+new file mode 100644
+index 0000000..d96f1ad
+--- /dev/null
++++ b/qga/commands-win32.c
+@@ -0,0 +1,91 @@
++/*
++ * QEMU Guest Agent win32-specific command implementations
++ *
++ * Copyright IBM Corp. 2012
++ *
++ * Authors:
++ *  Michael Roth      <mdroth@linux.vnet.ibm.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or later.
++ * See the COPYING file in the top-level directory.
++ */
++
++#include <glib.h>
++#include "qga/guest-agent-core.h"
++#include "qga-qmp-commands.h"
++#include "qerror.h"
++
++void qmp_guest_shutdown(bool has_mode, const char *mode, Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++}
++
++int64_t qmp_guest_file_open(const char *path, bool has_mode, const char *mode, Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++    return 0;
++}
++
++void qmp_guest_file_close(int64_t handle, Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++}
++
++GuestFileRead *qmp_guest_file_read(int64_t handle, bool has_count,
++                                   int64_t count, Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++    return 0;
++}
++
++GuestFileWrite *qmp_guest_file_write(int64_t handle, const char *buf_b64,
++                                     bool has_count, int64_t count, Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++    return 0;
++}
++
++GuestFileSeek *qmp_guest_file_seek(int64_t handle, int64_t offset,
++                                   int64_t whence, Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++    return 0;
++}
++
++void qmp_guest_file_flush(int64_t handle, Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++}
++
++/*
++ * Return status of freeze/thaw
++ */
++GuestFsfreezeStatus qmp_guest_fsfreeze_status(Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++    return 0;
++}
++
++/*
++ * Walk list of mounted file systems in the guest, and freeze the ones which
++ * are real local file systems.
++ */
++int64_t qmp_guest_fsfreeze_freeze(Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++    return 0;
++}
++
++/*
++ * Walk list of frozen file systems in the guest, and thaw them.
++ */
++int64_t qmp_guest_fsfreeze_thaw(Error **err)
++{
++    error_set(err, QERR_UNSUPPORTED);
++    return 0;
++}
++
++/* register init/cleanup routines for stateful command groups */
++void ga_command_state_init(GAState *s, GACommandState *cs)
++{
++}
+-- 
+1.7.7.6
+

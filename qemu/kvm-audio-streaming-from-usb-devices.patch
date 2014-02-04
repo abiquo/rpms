@@ -1,0 +1,227 @@
+From 3ef4055cdb5048ae1b1c3aa11bf1cae31c337b90 Mon Sep 17 00:00:00 2001
+Message-Id: <3ef4055cdb5048ae1b1c3aa11bf1cae31c337b90.1343750985.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Mon, 9 Jul 2012 12:56:37 +0200
+Subject: [PATCH 1/5] audio streaming from usb devices
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1341838601-27682-2-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40238
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 1/5] audio streaming from usb devices
+Bugzilla: 808653 831549
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+I have streaming audio devices working within qemu-kvm. This is a port
+of the changes to qemu.
+
+Streaming audio generates a series of isochronous requests that are
+repetitive and time sensitive. The URBs need to be submitted in
+consecutive USB frames and responses need to be handled in a timely manner.
+
+Summary of the changes for isochronous requests:
+
+1. The initial 'valid' value is increased to 32. It needs to be higher
+than its current value of 10 since the host adds a 10 frame delay to the
+scheduling of the first request; if valid is set to 10 the first
+isochronous request times out and qemu cancels it. 32 was chosen as a
+nice round number, and it is used in the path where a TD-async pairing
+already exists.
+
+2. The token field in the TD is *not* unique for isochronous requests,
+so it is not a good choice for finding a matching async request. The
+buffer (where to write the guest data) is unique, so use that value instead.
+
+3. TD's for isochronous request need to be completed in the async
+completion handler so that data is pushed to the guest as soon as it is
+available. The uhci code currently attempts to process complete
+isochronous TDs the next time the UHCI frame with the request is
+processed. The results in lost data since the async requests will have
+long since timed out based on the valid parameter. Increasing the valid
+value is not acceptable as it introduces a 1+ second delay in the data
+getting pushed to the guest.
+
+4. The frame timer needs to be run on 1 msec intervals. Currently, the
+expire time for the processing the next frame is computed after the
+processing of each frame. This regularly causes the scheduling of frames
+to shift in time. When this happens the periodic scheduling of the
+requests is broken and the subsequent request is seen as a new request
+by the host resulting in a 10 msec delay (first isochronous request is
+scheduled for 10 frames from when the URB is submitted).
+
+[ For what's worth a small change is needed to the guest driver to have
+more outstanding URBs (at least 4 URBs with 5 packets per URB).]
+
+Signed-off-by: David Ahern <daahern@cisco.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 8e65b7c04965c8355e4ce43211582b6b83054e3d)
+
+Conflicts:
+
+	hw/usb-uhci.c
+---
+ hw/usb-uhci.c |   67 ++++++++++++++++++++++++++++++++++++++++++++++----------
+ 1 files changed, 55 insertions(+), 12 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-uhci.c |   67 ++++++++++++++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 55 insertions(+), 12 deletions(-)
+
+diff --git a/hw/usb-uhci.c b/hw/usb-uhci.c
+index f986f83..017c771 100644
+--- a/hw/usb-uhci.c
++++ b/hw/usb-uhci.c
+@@ -120,6 +120,7 @@ typedef struct UHCIAsync {
+     uint32_t  td;
+     uint32_t  token;
+     int8_t    valid;
++    uint8_t   isoc;
+     uint8_t   done;
+     uint8_t   buffer[2048];
+ } UHCIAsync;
+@@ -139,6 +140,7 @@ struct UHCIState {
+     uint32_t fl_base_addr; /* frame list base address */
+     uint8_t sof_timing;
+     uint8_t status2; /* bit 0 and 1 are used to generate UHCI_STS_USBINT */
++    int64_t expire_time;
+     QEMUTimer *frame_timer;
+     UHCIPort ports[NB_PORTS];
+ 
+@@ -176,6 +178,7 @@ static UHCIAsync *uhci_async_alloc(UHCIState *s)
+     async->td    = 0;
+     async->token = 0;
+     async->done  = 0;
++    async->isoc  = 0;
+ 
+     return async;
+ }
+@@ -772,13 +775,25 @@ static int uhci_handle_td(UHCIState *s, uint32_t addr, UHCI_TD *td, uint32_t *in
+ {
+     UHCIAsync *async;
+     int len = 0, max_len;
+-    uint8_t pid;
++    uint8_t pid, isoc;
++    uint32_t token;
+ 
+     /* Is active ? */
+     if (!(td->ctrl & TD_CTRL_ACTIVE))
+         return 1;
+ 
+-    async = uhci_async_find_td(s, addr, td->token);
++    /* token field is not unique for isochronous requests,
++     * so use the destination buffer 
++     */
++    if (td->ctrl & TD_CTRL_IOS) {
++        token = td->buffer;
++        isoc = 1;
++    } else {
++        token = td->token;
++        isoc = 0;
++    }
++
++    async = uhci_async_find_td(s, addr, token);
+     if (async) {
+         /* Already submitted */
+         async->valid = 32;
+@@ -795,9 +810,13 @@ static int uhci_handle_td(UHCIState *s, uint32_t addr, UHCI_TD *td, uint32_t *in
+     if (!async)
+         return 1;
+ 
+-    async->valid = 10;
++    /* valid needs to be large enough to handle 10 frame delay
++     * for initial isochronous requests
++     */
++    async->valid = 32;
+     async->td    = addr;
+-    async->token = td->token;
++    async->token = token;
++    async->isoc  = isoc;
+ 
+     max_len = ((td->token >> 21) + 1) & 0x7ff;
+     pid = td->token & 0xff;
+@@ -849,9 +868,31 @@ static void uhci_async_complete(USBPort *port, USBPacket *packet)
+ 
+     DPRINTF("uhci: async complete. td 0x%x token 0x%x\n", async->td, async->token);
+ 
+-    async->done = 1;
++    if (async->isoc) {
++        UHCI_TD td;
++        uint32_t link = async->td;
++        uint32_t int_mask = 0, val;
++        int len;
++ 
++        cpu_physical_memory_read(link & ~0xf, (uint8_t *) &td, sizeof(td));
++        le32_to_cpus(&td.link);
++        le32_to_cpus(&td.ctrl);
++        le32_to_cpus(&td.token);
++        le32_to_cpus(&td.buffer);
++
++        uhci_async_unlink(s, async);
++        len = uhci_complete_td(s, &td, async, &int_mask);
++        s->pending_int_mask |= int_mask;
+ 
+-    uhci_process_frame(s);
++        /* update the status bits of the TD */
++        val = cpu_to_le32(td.ctrl);
++        cpu_physical_memory_write((link & ~0xf) + 4,
++                                  (const uint8_t *)&val, sizeof(val));
++        uhci_async_free(s, async);
++    } else {
++        async->done = 1;
++        uhci_process_frame(s);
++    }
+ }
+ 
+ static int is_valid(uint32_t link)
+@@ -1013,13 +1054,15 @@ static void uhci_process_frame(UHCIState *s)
+         /* go to the next entry */
+     }
+ 
+-    s->pending_int_mask = int_mask;
++    s->pending_int_mask |= int_mask;
+ }
+ 
+ static void uhci_frame_timer(void *opaque)
+ {
+     UHCIState *s = opaque;
+-    int64_t expire_time;
++
++    /* prepare the timer for the next frame */
++    s->expire_time += (get_ticks_per_sec() / FRAME_TIMER_FREQ);
+ 
+     if (!(s->cmd & UHCI_CMD_RS)) {
+         /* Full stop */
+@@ -1037,6 +1080,7 @@ static void uhci_frame_timer(void *opaque)
+         s->status  |= UHCI_STS_USBINT;
+         uhci_update_irq(s);
+     }
++    s->pending_int_mask = 0;
+ 
+     /* Start new frame */
+     s->frnum = (s->frnum + 1) & 0x7ff;
+@@ -1049,10 +1093,7 @@ static void uhci_frame_timer(void *opaque)
+ 
+     uhci_async_validate_end(s);
+ 
+-    /* prepare the timer for the next frame */
+-    expire_time = qemu_get_clock(vm_clock) +
+-        (get_ticks_per_sec() / FRAME_TIMER_FREQ);
+-    qemu_mod_timer(s->frame_timer, expire_time);
++    qemu_mod_timer(s->frame_timer, s->expire_time);
+ }
+ 
+ static void uhci_map(PCIDevice *pci_dev, int region_num,
+@@ -1107,6 +1148,8 @@ static int usb_uhci_common_initfn(UHCIState *s)
+         }
+     }
+     s->frame_timer = qemu_new_timer(vm_clock, uhci_frame_timer, s);
++    s->expire_time = qemu_get_clock(vm_clock) +
++        (get_ticks_per_sec() / FRAME_TIMER_FREQ);
+     s->num_ports_vmstate = NB_PORTS;
+     QTAILQ_INIT(&s->async_pending);
+ 
+-- 
+1.7.10.4
+

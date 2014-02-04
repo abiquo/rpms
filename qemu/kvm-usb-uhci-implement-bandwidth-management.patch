@@ -1,0 +1,116 @@
+From f3dedcdaeb4d87451ff67fae6025e4a113473869 Mon Sep 17 00:00:00 2001
+Message-Id: <f3dedcdaeb4d87451ff67fae6025e4a113473869.1343750985.git.minovotn@redhat.com>
+In-Reply-To: <3ef4055cdb5048ae1b1c3aa11bf1cae31c337b90.1343750985.git.minovotn@redhat.com>
+References: <3ef4055cdb5048ae1b1c3aa11bf1cae31c337b90.1343750985.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Mon, 9 Jul 2012 12:56:40 +0200
+Subject: [PATCH 4/5] usb-uhci: implement bandwidth management
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1341838601-27682-5-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40239
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 4/5] usb-uhci: implement bandwidth management
+Bugzilla: 808653 831549
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+The OS is allowed to make the UHCI Controller run in circles.  That is
+usually done to serve multiple connected USB devices in a robin-round
+fashion, so the available USB bandwidth is evenly distributed between
+devices.
+
+The uhci emulation handles this in a very poor way though.  When it
+figures it runs in circles it stops processing unconditionally, so
+it usually processes at most a single transfer desriptor per queue,
+even if there are multiple transfer descriptors are queued up.
+
+This patch makes uhci act in a more sophisticated way.  It keeps track
+of successful processed transfer descriptors and transfered bytes.  Then
+it will stop processing when there is nothing to do (no transfer
+descriptor was completed the last round) or when the transfered data
+reaches the usb bandwidth limit.
+
+Result is that the usb-storage devices connected to uhci are ten times
+faster, mkfs.vfat time for a 64M stick goes down from five seconds to
+a half second.  Reason for this is that we are now processing up to 20
+transfer descriptors (with 64 bytes each) per frame instead of a single
+one.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 3200d1085df5f368885428e33d9439f55c7f1a47)
+---
+ hw/usb-uhci.c |   29 ++++++++++++++++++++++-------
+ 1 files changed, 22 insertions(+), 7 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-uhci.c |   29 ++++++++++++++++++++++-------
+ 1 file changed, 22 insertions(+), 7 deletions(-)
+
+diff --git a/hw/usb-uhci.c b/hw/usb-uhci.c
+index ca1c91e..68b375a 100644
+--- a/hw/usb-uhci.c
++++ b/hw/usb-uhci.c
+@@ -71,7 +71,7 @@
+ 
+ #define FRAME_TIMER_FREQ 1000
+ 
+-#define FRAME_MAX_LOOPS  100
++#define FRAME_MAX_LOOPS  256
+ 
+ #define NB_PORTS 2
+ 
+@@ -952,7 +952,7 @@ static int qhdb_insert(QhDb *db, uint32_t addr)
+ static void uhci_process_frame(UHCIState *s)
+ {
+     uint32_t frame_addr, link, old_td_ctrl, val, int_mask;
+-    uint32_t curr_qh;
++    uint32_t curr_qh, td_count = 0, bytes_count = 0;
+     int cnt, ret;
+     UHCI_TD td;
+     UHCI_QH qh;
+@@ -977,13 +977,26 @@ static void uhci_process_frame(UHCIState *s)
+             if (qhdb_insert(&qhdb, link)) {
+                 /*
+                  * We're going in circles. Which is not a bug because
+-                 * HCD is allowed to do that as part of the BW management. 
+-                 * In our case though it makes no sense to spin here. Sync transations 
+-                 * are already done, and async completion handler will re-process 
+-                 * the frame when something is ready.
++                 * HCD is allowed to do that as part of the BW management.
++                 *
++                 * Stop processing here if
++                 *  (a) no transaction has been done since we've been
++                 *      here last time, or
++                 *  (b) we've reached the usb 1.1 bandwidth, which is
++                 *      1280 bytes/frame.
+                  */
+                 DPRINTF("uhci: detected loop. qh 0x%x\n", link);
+-                break;
++                if (td_count == 0) {
++                    DPRINTF("uhci: no transaction last round, stop\n");
++                    break;
++                } else if (bytes_count >= 1280) {
++                    DPRINTF("uhci: bandwidth limit reached, stop\n");
++                    break;
++                } else {
++                    td_count = 0;
++                    qhdb_reset(&qhdb);
++                    qhdb_insert(&qhdb, link);
++                }
+             }
+ 
+             cpu_physical_memory_read(link & ~0xf, (uint8_t *) &qh, sizeof(qh));
+@@ -1044,6 +1057,8 @@ static void uhci_process_frame(UHCIState *s)
+                 link, td.link, td.ctrl, td.token, curr_qh);
+ 
+         link = td.link;
++        td_count++;
++        bytes_count += (td.ctrl & 0x7ff) + 1;
+ 
+         if (curr_qh) {
+ 	    /* update QH element link */
+-- 
+1.7.10.4
+

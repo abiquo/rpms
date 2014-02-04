@@ -1,0 +1,113 @@
+From f0d6ba9a15c2d061b6e968977ff6f081fa04f020 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:40 -0300
+Subject: [RHEL6 qemu-kvm PATCH 20/21] QMP: Add qmp command for blockdev-group-snapshot-sync
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <251138b8671794cbf1afb8cafa1976119880c436.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38647
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 20/21] QMP: Add qmp command for blockdev-group-snapshot-sync
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+This adds the QMP command for blockdev-group-snapshot-sync. It
+takes an array in as the input, for the argument devlist.  The
+array consists of the following elements:
+
+    + device:        device to snapshot. e.g. "ide-hd0", "virtio0"
+    + snapshot-file: path & file for the snapshot image. e.g. "/tmp/file.img"
+    + format:        snapshot format. e.g., "qcow2". Optional
+
+There is no HMP equivalent for the command.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit c186402c444a9598a71da6aef1360f4171e57ad3)
+
+Conflicts:
+
+	qmp-commands.hx
+
+RHEL6 notes: added include for qmp-commands.h in monitor.c, as this is the
+             first qapi command in RHEL6
+---
+ monitor.c       |    1 +
+ qemu-monitor.hx |   41 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 42 insertions(+), 0 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ monitor.c       |    1 +
+ qemu-monitor.hx |   41 +++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 42 insertions(+), 0 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index 06dd567..5fc04ca 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -62,6 +62,7 @@
+ #include "exec-all.h"
+ #include "qemu-kvm.h"
+ #include "ui/qemu-spice.h"
++#include "qmp-commands.h"
+ 
+ //#define DEBUG
+ //#define DEBUG_COMPLETION
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 94764d9..705ce86 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1638,6 +1638,47 @@ STEXI
+ Remove host-to-guest TCP or UDP redirection.
+ ETEXI
+ 
++    {
++        .name       = "blockdev-group-snapshot-sync",
++        .args_type  = "devlist:O",
++        .params  = "device:B,snapshot-file:s,format:s?",
++        .user_print = monitor_user_noop,
++        .mhandler.cmd_new = qmp_marshal_input_blockdev_group_snapshot_sync,
++    },
++
++SQMP
++blockdev-group-snapshot-sync
++----------------------
++
++Synchronous snapshot of one or more block devices.  A list array input
++is accepted, that contains the device and snapshot file information for
++each device in group. The default format, if not specified, is qcow2.
++
++If there is any failure creating or opening a new snapshot, all snapshots
++for the group are abandoned, and the original disks pre-snapshot attempt
++are used.
++
++
++Arguments:
++
++devlist array:
++    - "device": device name to snapshot (json-string)
++    - "snapshot-file": name of new image file (json-string)
++    - "format": format of new image (json-string, optional)
++
++Example:
++
++-> { "execute": "blockdev-group-snapshot-sync", "arguments":
++                      { "devlist": [{ "device": "ide-hd0",
++                                      "snapshot-file": "/some/place/my-image",
++                                      "format": "qcow2" },
++                                    { "device": "ide-hd1",
++                                      "snapshot-file": "/some/place/my-image2",
++                                      "format": "qcow2" }] } }
++<- { "return": {} }
++
++EQMP
++
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+     {
+         .name       = "blockdev-snapshot-sync",
+-- 
+1.7.3.2
+

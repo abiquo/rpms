@@ -1,0 +1,60 @@
+From f931008f33260e42e2730c41932e6ea82a55f58f Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:09 +0100
+Subject: [PATCH 44/99] qcow2: Use QLIST_FOREACH_SAFE macro
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-45-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37236
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 44/96] qcow2: Use QLIST_FOREACH_SAFE macro
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Bugzilla: 783950
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit d4c146f0da2ace38b1a0e9ba42374901198909cf)
+
+Conflicts:
+
+	block/qcow2.c
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ block/qcow2.c |   10 ++--------
+ 1 files changed, 2 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2.c |   10 ++--------
+ 1 files changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/block/qcow2.c b/block/qcow2.c
+index e672e2c..b6eeddf 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -628,14 +628,8 @@ static void run_dependent_requests(QCowL2Meta *m)
+         QLIST_REMOVE(m, next_in_flight);
+     }
+ 
+-    /*
+-     * Restart all dependent requests.
+-     * Can't use QLIST_FOREACH here - the next link might not be the same
+-     * any more after the callback  (request could depend on a different
+-     * request now)
+-     */
+-    for (req = m->dependent_requests.lh_first; req != NULL; req = next) {
+-        next = req->next_depend.le_next;
++    /* Restart all dependent requests */
++    QLIST_FOREACH_SAFE(req, &m->dependent_requests, next_depend, next) {
+         qcow2_aio_write_cb(req, 0);
+     }
+ 
+-- 
+1.7.7.5
+

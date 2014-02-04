@@ -1,0 +1,167 @@
+From d4cbff6f5eced7371e96e620a45e59b11ada51e9 Mon Sep 17 00:00:00 2001
+Message-Id: <d4cbff6f5eced7371e96e620a45e59b11ada51e9.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:22 +0200
+Subject: [PATCH 14/18] block: add witness argument to drive-reopen
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-13-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39224
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 12/16] block: add witness argument to drive-reopen
+Bugzilla: 806432
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Management needs a way for QEMU to confirm that no I/O has been sent to the
+target and not to the source.  To provide this guarantee we rely on a file
+in local persistent storage.  QEMU receives a file descriptor via SCM_RIGHTS
+and writes a single byte to it.  If it fails, it will fail the drive-reopen
+command too and management knows that no I/O request has been issued to the
+new destination.  Likewise, if management finds the file to have nonzero
+size it knows that the target is valid and that indeed I/O requests could
+have been submitted to it.
+---
+ blockdev.c       |   20 +++++++++++++++++++-
+ hmp.c            |    2 +-
+ qapi-schema.json |   10 +++++++++-
+ qemu-monitor.hx  |   12 +++++++++++-
+ 4 files changed, 40 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ blockdev.c       |   23 ++++++++++++++++++++++-
+ hmp.c            |    2 +-
+ qapi-schema.json |   10 +++++++++-
+ qemu-monitor.hx  |   12 +++++++++++-
+ 4 files changed, 43 insertions(+), 4 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index a29416e..9fd29d7 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -680,14 +680,25 @@ void do_commit(Monitor *mon, const QDict *qdict)
+ 
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+ void qmp___com_redhat_drive_reopen(const char *device, const char *new_image_file,
+-                      bool has_format, const char *format, Error **errp)
++                      bool has_format, const char *format,
++                      bool has_witness, const char *witness,
++                      Error **errp)
+ {
+     BlockDriverState *bs;
+     BlockDriver *drv, *old_drv, *proto_drv;
++    int fd = -1;
+     int ret = 0;
+     int flags;
+     char old_filename[1024];
+ 
++    if (has_witness) {
++        fd = monitor_get_fd(cur_mon, witness);
++        if (fd == -1) {
++            error_set(errp, QERR_FD_NOT_FOUND, witness);
++            return;
++        }
++    }
++
+     bs = bdrv_find(device);
+     if (!bs) {
+         error_set(errp, QERR_DEVICE_NOT_FOUND, device);
+@@ -732,6 +743,16 @@ void qmp___com_redhat_drive_reopen(const char *device, const char *new_image_fil
+ 
+     bdrv_close(bs);
+     ret = bdrv_open(bs, new_image_file, flags, drv);
++
++    if (ret == 0 && fd != -1) {
++        ret = write(fd, "", 1) == 1 ? 0 : -1;
++        qemu_fdatasync(fd);
++        close(fd);
++        if (ret < 0) {
++            bdrv_close(bs);
++        }
++    }
++
+     /*
+      * If reopening the image file we just created fails, fall back
+      * and try to re-open the original image. If that fails too, we
+diff --git a/hmp.c b/hmp.c
+index a500123..b9e0ad3 100644
+--- a/hmp.c
++++ b/hmp.c
+@@ -81,7 +81,7 @@ void hmp_drive_reopen(Monitor *mon, const QDict *qdict)
+     const char *format = qdict_get_try_str(qdict, "format");
+     Error *errp = NULL;
+ 
+-    qmp___com_redhat_drive_reopen(device, filename, !!format, format, &errp);
++    qmp___com_redhat_drive_reopen(device, filename, !!format, format, false, NULL, &errp);
+     hmp_handle_error(mon, &errp);
+ }
+ #endif
+diff --git a/qapi-schema.json b/qapi-schema.json
+index 9c9700e..5e939dd 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -132,6 +132,13 @@
+ #
+ # @format: #optional the format of the new image, default is 'qcow2'.
+ #
++# @witness: A file descriptor name that was passed via getfd.  QEMU will write
++#   a single byte to this file descriptor before completing the command
++#   successfully.  If the byte is not written to the file, it is
++#   guaranteed that the guest has not issued any I/O to the new image.
++#   Failure to write the byte is fatal just like failure to open the new
++#   image, and will cause the guest to revert to the currently open file.
++#
+ # Returns: nothing on success
+ #          If @device is not a valid block device, DeviceNotFound
+ #          If @new-image-file can't be opened, OpenFileFailed
+@@ -140,7 +147,8 @@
+ # Since 1.1
+ ##
+ { 'command': '__com.redhat_drive-reopen',
+-  'data': { 'device': 'str', 'new-image-file': 'str', '*format': 'str' } }
++  'data': { 'device': 'str', 'new-image-file': 'str', '*format': 'str',
++            '*witness': 'str' } }
+ 
+ ##
+ # @__com.redhat_drive-mirror
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 52b92ed..bafd0ae 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1629,7 +1629,7 @@ EQMP
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+     {
+         .name       = "__com.redhat_drive-reopen",
+-        .args_type  = "device:B,new-image-file:s,format:s?",
++        .args_type  = "device:B,new-image-file:s,format:s?,witness:s?",
+         .user_print = monitor_user_noop,
+         .mhandler.cmd_new = qmp_marshal_input___com_redhat_drive_reopen,
+     },
+@@ -1644,11 +1644,21 @@ guest is expecting the drive to change its content, the new image should
+ contain the same data of the current one.  One use case is to terminate
+ a __com.redhat-drive-mirror command.
+ 
++The command can optionally write a single byte to a file descriptor name
++that was passed via SCM rights (getfd).  QEMU will write a single byte
++to this file descriptor before completing the command successfully.
++If the byte is not written to the file, it is guaranteed that the
++guest has not issued any I/O to the new image.  Failure to write the
++byte is fatal just like failure to open the new image, and will cause
++the guest to revert to the currently open file.
++
++
+ Arguments:
+ 
+ - "device": device name to operate on (json-string)
+ - "new-image-file": name of new image file (json-string)
+ - "format": format of new image (json-string, optional)
++- "witness": file descriptor previously passed via SCM rights (json-string, optional)
+ 
+ Example:
+ 
+-- 
+1.7.7.6
+

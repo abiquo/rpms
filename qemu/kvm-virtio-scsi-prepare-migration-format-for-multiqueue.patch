@@ -1,0 +1,67 @@
+From 8e20c74819db1d275690c2a426b9b9c9311ce679 Mon Sep 17 00:00:00 2001
+Message-Id: <8e20c74819db1d275690c2a426b9b9c9311ce679.1335172957.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 17 Apr 2012 15:42:00 +0200
+Subject: [PATCH 1/2] virtio-scsi: prepare migration format for multiqueue
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334677320-15204-1-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39269
+O-Subject: [RHEL 6.3 qemu-kvm PATCH] virtio-scsi: prepare migration format for multiqueue
+Bugzilla: 810507
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+
+Bugzilla: 810507
+
+Upstream status: posted, in SCSI queue
+
+Brew build: 4306487
+
+In order to restore requests correctly from a multitude of virtqueues,
+we need to store the id of the request queue that each request came
+from.
+
+Do this even for single-queue, by storing a hard-coded zero, to
+simplify future implementation of multiqueue.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/virtio-scsi.c |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-scsi.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/hw/virtio-scsi.c b/hw/virtio-scsi.c
+index d1e1df3..c75b0db 100644
+--- a/hw/virtio-scsi.c
++++ b/hw/virtio-scsi.c
+@@ -241,7 +241,9 @@ static VirtIOSCSIReq *virtio_scsi_pop_req(VirtIOSCSI *s, VirtQueue *vq)
+ static void virtio_scsi_save_request(QEMUFile *f, SCSIRequest *sreq)
+ {
+     VirtIOSCSIReq *req = sreq->hba_private;
++    uint32_t n = 0;
+ 
++    qemu_put_be32s(f, &n);
+     qemu_put_buffer(f, (unsigned char*)&req->elem, sizeof(req->elem));
+ }
+ 
+@@ -250,8 +252,11 @@ static void *virtio_scsi_load_request(QEMUFile *f, SCSIRequest *sreq)
+     SCSIBus *bus = sreq->bus;
+     VirtIOSCSI *s = container_of(bus, VirtIOSCSI, bus);
+     VirtIOSCSIReq *req;
++    uint32_t n;
+ 
+     req = qemu_malloc(sizeof(*req));
++    qemu_get_be32s(f, &n);
++    assert(n == 0);
+     qemu_get_buffer(f, (unsigned char*)&req->elem, sizeof(req->elem));
+     virtio_scsi_parse_req(s, s->cmd_vq, req);
+ 
+-- 
+1.7.7.6
+

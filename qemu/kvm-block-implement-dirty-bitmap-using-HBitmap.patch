@@ -1,0 +1,320 @@
+From 1f2ddf022aa20dee17e72993cd250a457c052d73 Mon Sep 17 00:00:00 2001
+Message-Id: <1f2ddf022aa20dee17e72993cd250a457c052d73.1350312451.git.minovotn@redhat.com>
+In-Reply-To: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+References: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 18 Sep 2012 15:25:07 +0200
+Subject: [PATCH 04/27] block: implement dirty bitmap using HBitmap
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1347981910-9069-5-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 41995
+O-Subject: [RHEL 6.4/6.3.z qemu-kvm PATCH v3 4/7] block: implement dirty bitmap using HBitmap
+Bugzilla: 844627
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+
+Bugzilla: 844627
+
+Upstream status: not yet applied
+
+This actually uses the dirty bitmap in the block layer, and converts
+mirroring to use an HBitmapIter.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+
+Conflicts:
+	Makefile.objs
+	block.c
+	block.h
+	block/mirror.c
+	block_int.h
+	trace-events
+---
+ Makefile.objs  |  2 +-
+ block.c        | 95 ++++++++++------------------------------------------------
+ block.h        |  6 ++--
+ block/mirror.c | 12 ++++++--
+ block_int.h    |  4 +--
+ trace-events   |  1 +
+ 6 file modificati, 33 inserzioni(+), 87 rimozioni(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.objs  |  2 +-
+ block.c        | 95 ++++++++++------------------------------------------------
+ block.h        |  6 ++--
+ block/mirror.c | 12 ++++++--
+ block_int.h    |  4 +--
+ trace-events   |  1 +
+ 6 files changed, 33 insertions(+), 87 deletions(-)
+
+diff --git a/Makefile.objs b/Makefile.objs
+index b63fdaa..2318683 100644
+--- a/Makefile.objs
++++ b/Makefile.objs
+@@ -16,7 +16,7 @@ coroutine-obj-$(CONFIG_WIN32) += coroutine-win32.o
+ 
+ block-obj-y = cutils.o cache-utils.o qemu-malloc.o qemu-option.o module.o async.o
+ block-obj-y += nbd.o block.o aio.o aes.o osdep.o qemu-config.o qemu-progress.o
+-block-obj-y += $(coroutine-obj-y)
++block-obj-y += $(coroutine-obj-y) hbitmap.o
+ block-obj-$(CONFIG_POSIX) += posix-aio-compat.o
+ block-obj-$(CONFIG_LINUX_AIO) += linux-aio.o
+ block-obj-$(CONFIG_POSIX) += compatfd.o
+diff --git a/block.c b/block.c
+index 162706c..d7fffd6 100644
+--- a/block.c
++++ b/block.c
+@@ -830,7 +830,6 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
+ 
+     /* dirty bitmap */
+     tmp.dirty_bitmap      = bs_top->dirty_bitmap;
+-    tmp.dirty_count       = bs_top->dirty_count;
+     assert(bs_new->dirty_bitmap == NULL);
+ 
+     /* job */
+@@ -864,7 +863,6 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
+     bs_new->job                = NULL;
+     bs_new->in_use             = 0;
+     bs_new->dirty_bitmap       = NULL;
+-    bs_new->dirty_count        = 0;
+ 
+     bdrv_iostatus_disable(bs_new);
+ }
+@@ -1419,36 +1417,6 @@ int bdrv_read(BlockDriverState *bs, int64_t sector_num,
+     return bdrv_rw_co(bs, sector_num, buf, nb_sectors, false);
+ }
+ 
+-#define BITS_PER_LONG  (sizeof(unsigned long) * 8)
+-
+-static void set_dirty_bitmap(BlockDriverState *bs, int64_t sector_num,
+-                             int nb_sectors, int dirty)
+-{
+-    int64_t start, end;
+-    unsigned long val, idx, bit;
+-
+-    start = sector_num / BDRV_SECTORS_PER_DIRTY_CHUNK;
+-    end = (sector_num + nb_sectors - 1) / BDRV_SECTORS_PER_DIRTY_CHUNK;
+-
+-    for (; start <= end; start++) {
+-        idx = start / BITS_PER_LONG;
+-        bit = start % BITS_PER_LONG;
+-        val = bs->dirty_bitmap[idx];
+-        if (dirty) {
+-            if (!(val & (1UL << bit))) {
+-                bs->dirty_count++;
+-                val |= 1UL << bit;
+-            }
+-        } else {
+-            if (val & (1UL << bit)) {
+-                bs->dirty_count--;
+-                val &= ~(1UL << bit);
+-            }
+-        }
+-        bs->dirty_bitmap[idx] = val;
+-    }
+-}
+-
+ /* Return < 0 if error. Important errors are:
+   -EIO         generic I/O error (may happen for all errors)
+   -ENOMEDIUM   No media inserted.
+@@ -3468,18 +3436,15 @@ void bdrv_set_dirty_tracking(BlockDriverState *bs, int enable)
+ {
+     int64_t bitmap_size;
+ 
+-    bs->dirty_count = 0;
+     if (enable) {
+         if (!bs->dirty_bitmap) {
+-            bitmap_size = (bdrv_getlength(bs) >> BDRV_SECTOR_BITS) +
+-                    BDRV_SECTORS_PER_DIRTY_CHUNK * BITS_PER_LONG - 1;
+-            bitmap_size /= BDRV_SECTORS_PER_DIRTY_CHUNK * BITS_PER_LONG;
+-
+-            bs->dirty_bitmap = g_new0(unsigned long, bitmap_size);
++            bitmap_size = (bdrv_getlength(bs) >> BDRV_SECTOR_BITS);
++            bs->dirty_bitmap = hbitmap_alloc(bitmap_size,
++                                             BDRV_LOG_SECTORS_PER_DIRTY_CHUNK);
+         }
+     } else {
+         if (bs->dirty_bitmap) {
+-            g_free(bs->dirty_bitmap);
++            hbitmap_free(bs->dirty_bitmap);
+             bs->dirty_bitmap = NULL;
+         }
+     }
+@@ -3487,67 +3452,37 @@ void bdrv_set_dirty_tracking(BlockDriverState *bs, int enable)
+ 
+ int bdrv_get_dirty(BlockDriverState *bs, int64_t sector)
+ {
+-    int64_t chunk = sector / (int64_t)BDRV_SECTORS_PER_DIRTY_CHUNK;
+-
+-    if (bs->dirty_bitmap &&
+-        (sector << BDRV_SECTOR_BITS) < bdrv_getlength(bs)) {
+-        return !!(bs->dirty_bitmap[chunk / BITS_PER_LONG] &
+-            (1UL << (chunk % BITS_PER_LONG)));
++    if (bs->dirty_bitmap) {
++        return hbitmap_get(bs->dirty_bitmap, sector);
+     } else {
+         return 0;
+     }
+ }
+ 
+-int64_t bdrv_get_next_dirty(BlockDriverState *bs, int64_t sector)
++void bdrv_dirty_iter_init(BlockDriverState *bs, HBitmapIter *hbi)
+ {
+-    int64_t chunk;
+-    int bit, elem;
+-
+-    /* Avoid an infinite loop.  */
+-    assert(bs->dirty_count > 0);
+-
+-    sector = (sector | (BDRV_SECTORS_PER_DIRTY_CHUNK - 1)) + 1;
+-    chunk = sector / (int64_t)BDRV_SECTORS_PER_DIRTY_CHUNK;
+-
+-    QEMU_BUILD_BUG_ON(sizeof(bs->dirty_bitmap[0]) * 8 != BITS_PER_LONG);
+-    elem = chunk / BITS_PER_LONG;
+-    bit = chunk % BITS_PER_LONG;
+-    for (;;) {
+-        if (sector >= bs->total_sectors) {
+-            sector = 0;
+-            bit = elem = 0;
+-        }
+-        if (bit == 0 && bs->dirty_bitmap[elem] == 0) {
+-            sector += BDRV_SECTORS_PER_DIRTY_CHUNK * BITS_PER_LONG;
+-            elem++;
+-        } else {
+-            if (bs->dirty_bitmap[elem] & (1UL << bit)) {
+-                return sector;
+-            }
+-            sector += BDRV_SECTORS_PER_DIRTY_CHUNK;
+-            if (++bit == BITS_PER_LONG) {
+-                bit = 0;
+-                elem++;
+-            }
+-        }
+-    }
++    hbitmap_iter_init(hbi, bs->dirty_bitmap, 0);
+ }
+ 
+ void bdrv_set_dirty(BlockDriverState *bs, int64_t cur_sector,
+                     int nr_sectors)
+ {
+-    set_dirty_bitmap(bs, cur_sector, nr_sectors, 1);
++    hbitmap_set(bs->dirty_bitmap, cur_sector, nr_sectors);
+ }
+ 
+ void bdrv_reset_dirty(BlockDriverState *bs, int64_t cur_sector,
+                       int nr_sectors)
+ {
+-    set_dirty_bitmap(bs, cur_sector, nr_sectors, 0);
++    hbitmap_reset(bs->dirty_bitmap, cur_sector, nr_sectors);
+ }
+ 
+ int64_t bdrv_get_dirty_count(BlockDriverState *bs)
+ {
+-    return bs->dirty_count;
++    if (bs->dirty_bitmap) {
++        return hbitmap_count(bs->dirty_bitmap) >> BDRV_LOG_SECTORS_PER_DIRTY_CHUNK;
++    } else {
++        return 0;
++    }
+ }
+ 
+ void bdrv_iostatus_enable(BlockDriverState *bs)
+diff --git a/block.h b/block.h
+index 3233218..a39c201 100644
+--- a/block.h
++++ b/block.h
+@@ -307,13 +307,15 @@ int bdrv_img_create(const char *filename, const char *fmt,
+                     const char *base_filename, const char *base_fmt,
+                     char *options, uint64_t img_size, int flags);
+ 
+-#define BDRV_SECTORS_PER_DIRTY_CHUNK 2048
++#define BDRV_SECTORS_PER_DIRTY_CHUNK     (1 << BDRV_LOG_SECTORS_PER_DIRTY_CHUNK)
++#define BDRV_LOG_SECTORS_PER_DIRTY_CHUNK 11
+ 
++struct HBitmapIter;
+ void bdrv_set_dirty_tracking(BlockDriverState *bs, int enable);
+ int bdrv_get_dirty(BlockDriverState *bs, int64_t sector);
+ void bdrv_set_dirty(BlockDriverState *bs, int64_t cur_sector, int nr_sectors);
+ void bdrv_reset_dirty(BlockDriverState *bs, int64_t cur_sector, int nr_sectors);
+-int64_t bdrv_get_next_dirty(BlockDriverState *bs, int64_t sector);
++void bdrv_dirty_iter_init(BlockDriverState *bs, struct HBitmapIter *hbi);
+ int64_t bdrv_get_dirty_count(BlockDriverState *bs);
+ 
+ void bdrv_enable_copy_on_read(BlockDriverState *bs);
+diff --git a/block/mirror.c b/block/mirror.c
+index 49649b4..ee780d5 100644
+--- a/block/mirror.c
++++ b/block/mirror.c
+@@ -58,6 +58,7 @@ typedef struct MirrorBlockJob {
+     RateLimit limit;
+     BlockDriverState *target;
+     bool full;
++    HBitmapIter hbi;
+ } MirrorBlockJob;
+ 
+ static int coroutine_fn mirror_populate(BlockDriverState *source,
+@@ -154,7 +155,7 @@ static void coroutine_fn mirror_run(void *opaque)
+         block_job_complete(&s->common, ret);
+     }
+ 
+-    sector_num = -1;
++    bdrv_dirty_iter_init(bs, &s->hbi);
+     for (;;) {
+         uint64_t delay_ms;
+         int64_t cnt;
+@@ -171,7 +172,14 @@ static void coroutine_fn mirror_run(void *opaque)
+ 
+         if (bdrv_get_dirty_count(bs) != 0) {
+             int nb_sectors;
+-            sector_num = bdrv_get_next_dirty(bs, sector_num);
++            sector_num = hbitmap_iter_next(&s->hbi);
++            if (sector_num < 0) {
++                bdrv_dirty_iter_init(bs, &s->hbi);
++                sector_num = hbitmap_iter_next(&s->hbi);
++                trace_mirror_restart_iter(s, bdrv_get_dirty_count(bs));
++                assert(sector_num >= 0);
++            }
++
+             nb_sectors = MIN(BDRV_SECTORS_PER_DIRTY_CHUNK, end - sector_num);
+             trace_mirror_one_iteration(s, sector_num);
+             bdrv_reset_dirty(bs, sector_num, BDRV_SECTORS_PER_DIRTY_CHUNK);
+diff --git a/block_int.h b/block_int.h
+index b986599..d0b4f7c 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -29,6 +29,7 @@
+ #include "qemu-queue.h"
+ #include "qemu-coroutine.h"
+ #include "qemu-timer.h"
++#include "hbitmap.h"
+ 
+ #define BLOCK_FLAG_ENCRYPT	1
+ #define BLOCK_FLAG_COMPAT6	4
+@@ -274,8 +275,7 @@ struct BlockDriverState {
+     BlockErrorAction on_read_error, on_write_error;
+     BlockIOStatus iostatus;
+     char device_name[32];
+-    unsigned long *dirty_bitmap;
+-    int64_t dirty_count;
++    HBitmap *dirty_bitmap;
+     int in_use; /* users other than guest access, eg. block migration */
+     QTAILQ_ENTRY(BlockDriverState) list;
+     void *private;
+diff --git a/trace-events b/trace-events
+index 333c850..95b413f 100644
+--- a/trace-events
++++ b/trace-events
+@@ -66,6 +66,7 @@ disable bdrv_co_do_copy_on_readv(void *bs, int64_t sector_num, int nb_sectors, i
+ # block/mirror.c
+ disable mirror_one_iteration(void *s, int64_t sector_num) "s %p sector_num %"PRId64""
+ disable mirror_start(void *bs, void *s, void *co, void *opaque) "bs %p s %p co %p opaque %p"
++disable mirror_restart_iter(void *s, int64_t cnt) "s %p dirty count %"PRId64
+ 
+ # block/stream.c
+ disable stream_one_iteration(void *s, int64_t sector_num, int nb_sectors, int is_allocated) "s %p sector_num %"PRId64" nb_sectors %d is_allocated %d"
+-- 
+1.7.11.7
+

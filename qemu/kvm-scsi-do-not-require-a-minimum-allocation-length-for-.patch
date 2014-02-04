@@ -1,0 +1,63 @@
+From 93baa29682ad58ad1777f313011be11e139065a0 Mon Sep 17 00:00:00 2001
+Message-Id: <93baa29682ad58ad1777f313011be11e139065a0.1343041017.git.minovotn@redhat.com>
+In-Reply-To: <1265c14a6676be3cbc003c219326a60813dc29d5.1343041017.git.minovotn@redhat.com>
+References: <1265c14a6676be3cbc003c219326a60813dc29d5.1343041017.git.minovotn@redhat.com>
+From: Miroslav Rezanina <mrezanin@redhat.com>
+Date: Thu, 12 Jul 2012 12:11:22 +0200
+Subject: [PATCH 7/9] scsi: do not require a minimum allocation length for
+ REQUEST SENSE
+
+RH-Author: Miroslav Rezanina <mrezanin@redhat.com>
+Message-id: <5cf80eca374eecfc00415007ece8427a22746e51.1342100155.git.mrezanin@redhat.com>
+Patchwork-id: 40281
+O-Subject: [RHEL6 qemu-kvm PATCH 4/5] scsi: do not require a minimum allocation length for REQUEST SENSE
+Bugzilla: 825188
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Upstream relationship: e5f38ff
+
+The requirements on the REQUEST SENSE buffer size are not in my copy of SPC
+(SPC-4 r27) and not observed by LIO.  Rip them out.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/scsi-bus.c |    7 ++-----
+ 1 files changed, 2 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |    7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 4934580..15039b4 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -395,9 +395,6 @@ static int32_t scsi_target_send_command(SCSIRequest *req, uint8_t *buf)
+         }
+         break;
+     case REQUEST_SENSE:
+-        if (req->cmd.xfer < 4) {
+-            goto illegal_request;
+-        }
+         r->len = scsi_device_get_sense(r->req.dev, r->buf,
+                                        MIN(req->cmd.xfer, sizeof r->buf),
+                                        (req->cmd.buf[1] & 1) == 0);
+@@ -506,8 +503,8 @@ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
+             req = scsi_req_alloc(&reqops_unit_attention, d, tag, lun,
+                                  hba_private);
+         } else if (lun != d->lun ||
+-            buf[0] == REPORT_LUNS ||
+-            (buf[0] == REQUEST_SENSE && (d->sense_len || cmd.xfer < 4))) {
++                   buf[0] == REPORT_LUNS ||
++                   (buf[0] == REQUEST_SENSE && d->sense_len)) {
+             req = scsi_req_alloc(&reqops_target_command, d, tag, lun,
+                                  hba_private);
+         } else {
+-- 
+1.7.10.4
+

@@ -1,0 +1,121 @@
+From 2a7436f0d1b25ba7731e3de9b01e4a2d735e9370 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:34 +0100
+Subject: [PATCH 07/55] Revert "block: add bdrv_aio_copy_backing()"
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <dc066fb2c6ffa5a3bc6dfc87f115b0025c4113ea.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38857
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 07/54] Revert "block: add bdrv_aio_copy_backing()"
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+This reverts commit 30ea65d67ad658f775ba51f64caf62a9ac13fb1e.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c     |   37 -------------------------------------
+ block.h     |    5 -----
+ block_int.h |    2 --
+ 3 files changed, 0 insertions(+), 44 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c     |   37 -------------------------------------
+ block.h     |    5 -----
+ block_int.h |    2 --
+ 3 files changed, 0 insertions(+), 44 deletions(-)
+
+diff --git a/block.c b/block.c
+index eca8c3b..ae60537 100644
+--- a/block.c
++++ b/block.c
+@@ -2240,43 +2240,6 @@ BlockDriverAIOCB *bdrv_aio_writev(BlockDriverState *bs, int64_t sector_num,
+                                  cb, opaque, true);
+ }
+ 
+-/**
+- * Attempt to copy unallocated sectors from backing file.
+- *
+- * @sector_num - the first sector to start from
+- * @cb - completion callback
+- * @opaque - data to pass completion callback
+- *
+- * Returns NULL if the image format not support the operation, the image is
+- * read-only, or no image is open.
+- *
+- * The intention of this function is for a user to execute it once with a
+- * sector_num of 0 and then upon receiving a completion callback, to remember
+- * the number of sectors copied, and then to call this function again with
+- * an offset adjusted by the number of sectors previously copied.
+- *
+- * This allows a user to progressive stream in an image at a pace that makes
+- * sense.  In general, this function tries to do the smallest amount of I/O
+- * possible to do some useful work.
+- *
+- * This function only really makes sense in combination with a block format
+- * that supports copy on read and has it enabled.  If copy on read is not
+- * enabled, a block format driver may return NULL.
+- *
+- * If an I/O error occurs the completion callback is invoked with -errno in the
+- * nb_sectors argument.
+- */
+-BlockDriverAIOCB *bdrv_aio_copy_backing(BlockDriverState *bs,
+-                                        int64_t sector_num,
+-                                        BlockDriverCopyBackingCB *cb,
+-                                        void *opaque)
+-{
+-    if (!bs->drv || bs->read_only || !bs->drv->bdrv_aio_copy_backing) {
+-        return NULL;
+-    }
+-
+-    return bs->drv->bdrv_aio_copy_backing(bs, sector_num, cb, opaque);
+-}
+ 
+ typedef struct MultiwriteCB {
+     int error;
+diff --git a/block.h b/block.h
+index 68f0d15..8aab3fd 100644
+--- a/block.h
++++ b/block.h
+@@ -171,7 +171,6 @@ typedef struct BlockDriverAIOCB BlockDriverAIOCB;
+ typedef void BlockDriverCompletionFunc(void *opaque, int ret);
+ typedef void BlockDriverDirtyHandler(BlockDriverState *bs, int64_t sector,
+ 				     int sector_num);
+-typedef void BlockDriverCopyBackingCB(void *opaque, int nb_sectors);
+ BlockDriverAIOCB *bdrv_aio_readv(BlockDriverState *bs, int64_t sector_num,
+                                  QEMUIOVector *iov, int nb_sectors,
+                                  BlockDriverCompletionFunc *cb, void *opaque);
+@@ -180,10 +179,6 @@ BlockDriverAIOCB *bdrv_aio_writev(BlockDriverState *bs, int64_t sector_num,
+                                   BlockDriverCompletionFunc *cb, void *opaque);
+ BlockDriverAIOCB *bdrv_aio_flush(BlockDriverState *bs,
+ 				 BlockDriverCompletionFunc *cb, void *opaque);
+-BlockDriverAIOCB *bdrv_aio_copy_backing(BlockDriverState *bs,
+-                                        int64_t sector_num,
+-                                        BlockDriverCopyBackingCB *cb,
+-                                        void *opaque);
+ BlockDriverAIOCB *bdrv_aio_discard(BlockDriverState *bs,
+                                    int64_t sector_num, int nb_sectors,
+                                    BlockDriverCompletionFunc *cb, void *opaque);
+diff --git a/block_int.h b/block_int.h
+index 5e0cf4b..ea428e0 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -77,8 +77,6 @@ struct BlockDriver {
+     BlockDriverAIOCB *(*bdrv_aio_discard)(BlockDriverState *bs,
+         int64_t sector_num, int nb_sectors,
+         BlockDriverCompletionFunc *cb, void *opaque);
+-    BlockDriverAIOCB *(*bdrv_aio_copy_backing)(BlockDriverState *bs,
+-        int64_t sector_num, BlockDriverCopyBackingCB *cb, void *opaque);
+ 
+     int coroutine_fn (*bdrv_co_readv)(BlockDriverState *bs,
+         int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
+-- 
+1.7.7.6
+

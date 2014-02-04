@@ -1,0 +1,220 @@
+From 8f662d0d03be06e617204d1f45d138f05c358043 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:23 +0100
+Subject: [PATCH 007/109] scsi: move request-related callbacks from
+ SCSIDeviceInfo to SCSIReqOps
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-7-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37487
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 006/102] scsi: move request-related callbacks from SCSIDeviceInfo to SCSIReqOps
+Bugzilla: 782029
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from 12010e7b29a2e777153440ded6fd5bd426eed3e4)
+---
+ hw/scsi-bus.c     |   20 ++++++++++----------
+ hw/scsi-disk.c    |   24 ++++++------------------
+ hw/scsi-generic.c |   12 ++++++------
+ hw/scsi.h         |   13 +++++++------
+ 4 files changed, 29 insertions(+), 40 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c     |   20 ++++++++++----------
+ hw/scsi-disk.c    |   24 ++++++------------------
+ hw/scsi-generic.c |   12 ++++++------
+ hw/scsi.h         |   13 +++++++------
+ 4 files changed, 29 insertions(+), 40 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 5dbfab0..e8a95ed 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -160,7 +160,7 @@ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
+ 
+ uint8_t *scsi_req_get_buf(SCSIRequest *req)
+ {
+-    return req->dev->info->get_buf(req);
++    return req->ops->get_buf(req);
+ }
+ 
+ int scsi_req_get_sense(SCSIRequest *req, uint8_t *buf, int len)
+@@ -200,7 +200,7 @@ int32_t scsi_req_enqueue(SCSIRequest *req, uint8_t *buf)
+     QTAILQ_INSERT_TAIL(&req->dev->requests, req, next);
+ 
+     scsi_req_ref(req);
+-    rc = req->dev->info->send_command(req, buf);
++    rc = req->ops->send_command(req, buf);
+     scsi_req_unref(req);
+     return rc;
+ }
+@@ -684,8 +684,8 @@ SCSIRequest *scsi_req_ref(SCSIRequest *req)
+ void scsi_req_unref(SCSIRequest *req)
+ {
+     if (--req->refcount == 0) {
+-        if (req->dev->info->free_req) {
+-            req->dev->info->free_req(req);
++        if (req->ops->free_req) {
++            req->ops->free_req(req);
+         }
+         qemu_free(req);
+     }
+@@ -697,9 +697,9 @@ void scsi_req_continue(SCSIRequest *req)
+ {
+     trace_scsi_req_continue(req->dev->id, req->lun, req->tag);
+     if (req->cmd.mode == SCSI_XFER_TO_DEV) {
+-        req->dev->info->write_data(req);
++        req->ops->write_data(req);
+     } else {
+-        req->dev->info->read_data(req);
++        req->ops->read_data(req);
+     }
+ }
+ 
+@@ -763,8 +763,8 @@ void scsi_req_complete(SCSIRequest *req, int status)
+ 
+ void scsi_req_cancel(SCSIRequest *req)
+ {
+-    if (req->dev && req->dev->info->cancel_io) {
+-        req->dev->info->cancel_io(req);
++    if (req->ops->cancel_io) {
++        req->ops->cancel_io(req);
+     }
+     scsi_req_ref(req);
+     scsi_req_dequeue(req);
+@@ -776,8 +776,8 @@ void scsi_req_cancel(SCSIRequest *req)
+ 
+ void scsi_req_abort(SCSIRequest *req, int status)
+ {
+-    if (req->dev && req->dev->info->cancel_io) {
+-        req->dev->info->cancel_io(req);
++    if (req->ops->cancel_io) {
++        req->ops->cancel_io(req);
+     }
+     scsi_req_complete(req, status);
+ }
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 364704e..0db5a40 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1319,6 +1319,12 @@ static int scsi_disk_initfn(SCSIDevice *dev)
+ 
+ static SCSIReqOps scsi_disk_reqops = {
+     .size         = sizeof(SCSIDiskReq),
++    .free_req     = scsi_free_request,
++    .send_command = scsi_send_command,
++    .read_data    = scsi_read_data,
++    .write_data   = scsi_write_data,
++    .cancel_io    = scsi_cancel_io,
++    .get_buf      = scsi_get_buf,
+ };
+ 
+ static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag,
+@@ -1349,12 +1355,6 @@ static SCSIDeviceInfo scsi_disk_info[] = {
+         .init         = scsi_hd_initfn,
+         .destroy      = scsi_destroy,
+         .alloc_req    = scsi_new_request,
+-        .free_req     = scsi_free_request,
+-        .send_command = scsi_send_command,
+-        .read_data    = scsi_read_data,
+-        .write_data   = scsi_write_data,
+-        .cancel_io    = scsi_cancel_io,
+-        .get_buf      = scsi_get_buf,
+         .qdev.props   = (Property[]) {
+             DEFINE_SCSI_DISK_PROPERTIES(),
+             DEFINE_PROP_BIT("removable", SCSIDiskState, removable, 0, false),
+@@ -1369,12 +1369,6 @@ static SCSIDeviceInfo scsi_disk_info[] = {
+         .init         = scsi_cd_initfn,
+         .destroy      = scsi_destroy,
+         .alloc_req    = scsi_new_request,
+-        .free_req     = scsi_free_request,
+-        .send_command = scsi_send_command,
+-        .read_data    = scsi_read_data,
+-        .write_data   = scsi_write_data,
+-        .cancel_io    = scsi_cancel_io,
+-        .get_buf      = scsi_get_buf,
+         .qdev.props   = (Property[]) {
+             DEFINE_SCSI_DISK_PROPERTIES(),
+             DEFINE_PROP_END_OF_LIST(),
+@@ -1388,12 +1382,6 @@ static SCSIDeviceInfo scsi_disk_info[] = {
+         .init         = scsi_disk_initfn,
+         .destroy      = scsi_destroy,
+         .alloc_req    = scsi_new_request,
+-        .free_req     = scsi_free_request,
+-        .send_command = scsi_send_command,
+-        .read_data    = scsi_read_data,
+-        .write_data   = scsi_write_data,
+-        .cancel_io    = scsi_cancel_io,
+-        .get_buf      = scsi_get_buf,
+         .qdev.props   = (Property[]) {
+             DEFINE_SCSI_DISK_PROPERTIES(),
+             DEFINE_PROP_BIT("removable", SCSIDiskState, removable, 0, false),
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index 095ac22..2ba882d 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -490,6 +490,12 @@ static int scsi_generic_initfn(SCSIDevice *dev)
+ 
+ static SCSIReqOps scsi_generic_req_ops = {
+     .size         = sizeof(SCSIGenericReq),
++    .free_req     = scsi_free_request,
++    .send_command = scsi_send_command,
++    .read_data    = scsi_read_data,
++    .write_data   = scsi_write_data,
++    .cancel_io    = scsi_cancel_io,
++    .get_buf      = scsi_get_buf,
+ };
+ 
+ static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag, uint32_t lun,
+@@ -509,12 +515,6 @@ static SCSIDeviceInfo scsi_generic_info = {
+     .init         = scsi_generic_initfn,
+     .destroy      = scsi_destroy,
+     .alloc_req    = scsi_new_request,
+-    .free_req     = scsi_free_request,
+-    .send_command = scsi_send_command,
+-    .read_data    = scsi_read_data,
+-    .write_data   = scsi_write_data,
+-    .cancel_io    = scsi_cancel_io,
+-    .get_buf      = scsi_get_buf,
+     .qdev.props   = (Property[]) {
+         DEFINE_BLOCK_PROPERTIES(SCSIGenericState, qdev.conf),
+         DEFINE_PROP_END_OF_LIST(),
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 01f0e55..ba157be 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -73,6 +73,12 @@ int cdrom_read_toc_raw(int nb_sectors, uint8_t *buf, int msf, int session_num);
+ /* scsi-bus.c */
+ struct SCSIReqOps {
+     size_t size;
++    void (*free_req)(SCSIRequest *req);
++    int32_t (*send_command)(SCSIRequest *req, uint8_t *buf);
++    void (*read_data)(SCSIRequest *req);
++    void (*write_data)(SCSIRequest *req);
++    void (*cancel_io)(SCSIRequest *req);
++    uint8_t *(*get_buf)(SCSIRequest *req);
+ };
+ 
+ typedef int (*scsi_qdev_initfn)(SCSIDevice *dev);
+@@ -82,12 +88,7 @@ struct SCSIDeviceInfo {
+     void (*destroy)(SCSIDevice *s);
+     SCSIRequest *(*alloc_req)(SCSIDevice *s, uint32_t tag, uint32_t lun,
+                               void *hba_private);
+-    void (*free_req)(SCSIRequest *req);
+-    int32_t (*send_command)(SCSIRequest *req, uint8_t *buf);
+-    void (*read_data)(SCSIRequest *req);
+-    void (*write_data)(SCSIRequest *req);
+-    void (*cancel_io)(SCSIRequest *req);
+-    uint8_t *(*get_buf)(SCSIRequest *req);
++    SCSIReqOps reqops;
+ };
+ 
+ struct SCSIBusOps {
+-- 
+1.7.7.6
+

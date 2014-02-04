@@ -1,0 +1,61 @@
+From 12cbe65e5efca396c34195b0dcb721d609eed51d Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:00 +0100
+Subject: [PATCH 06/52] Fix uint8_t comparisons with negative values
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-7-git-send-email-armbru@redhat.com>
+Patchwork-id: 36578
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 06/52] Fix uint8_t comparisons with negative values
+Bugzilla: 758194
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Blue Swirl <blauwirbel@gmail.com>
+
+Fix the following warnings:
+/src/qemu/hw/ide/core.c: In function `ide_drive_pio_post_load':
+/src/qemu/hw/ide/core.c:2767: warning: comparison is always false due to limited range of data type
+
+/src/qemu/ui/vnc-enc-tight.c: In function `tight_detect_smooth_image':
+/src/qemu/ui/vnc-enc-tight.c:284: warning: comparison is always true due to limited range of data type
+/src/qemu/ui/vnc-enc-tight.c:297: warning: comparison is always true due to limited range of data type
+/src/qemu/ui/vnc-enc-tight.c: In function `tight_encode_indexed_rect16':
+/src/qemu/ui/vnc-enc-tight.c:456: warning: comparison is always false due to limited range of data type
+/src/qemu/ui/vnc-enc-tight.c: In function `tight_encode_indexed_rect32':
+/src/qemu/ui/vnc-enc-tight.c:457: warning: comparison is always false due to limited range of data type
+
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 7bccf57383cca60a778d5c543ac80c9f62d89ef2)
+
+Conflicts:
+
+	ui/vnc-enc-tight.c
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ hw/ide/core.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/ide/core.c |    3 +--
+ 1 files changed, 1 insertions(+), 2 deletions(-)
+
+diff --git a/hw/ide/core.c b/hw/ide/core.c
+index 83efe6e..6989828 100644
+--- a/hw/ide/core.c
++++ b/hw/ide/core.c
+@@ -2006,8 +2006,7 @@ static int ide_drive_pio_post_load(void *opaque, int version_id)
+ {
+     IDEState *s = opaque;
+ 
+-    if (s->end_transfer_fn_idx < 0 ||
+-        s->end_transfer_fn_idx > ARRAY_SIZE(transfer_end_table)) {
++    if (s->end_transfer_fn_idx > ARRAY_SIZE(transfer_end_table)) {
+         return -EINVAL;
+     }
+     s->end_transfer_func = transfer_end_table[s->end_transfer_fn_idx];
+-- 
+1.7.7.5
+

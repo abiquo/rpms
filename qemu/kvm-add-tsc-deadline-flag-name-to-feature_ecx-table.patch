@@ -1,0 +1,54 @@
+From f566cc7fb05b12e470bfbe084b669c7407c207fe Mon Sep 17 00:00:00 2001
+Message-Id: <f566cc7fb05b12e470bfbe084b669c7407c207fe.1350045285.git.minovotn@redhat.com>
+In-Reply-To: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+References: <8d140e6fe679a73fd193609be44d508f17f7892b.1350045285.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Wed, 10 Oct 2012 17:22:07 +0200
+Subject: [PATCH 06/12] add "tsc-deadline" flag name to feature_ecx table
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1349889727-19210-1-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 42933
+O-Subject: [RHEL6.4 qemu-kvm PATCH] add "tsc-deadline" flag name to feature_ecx table
+Bugzilla: 767944
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+
+Bugzilla: 767944
+Upstream status: commit eaf3f0974ba48e3ebf76b331101ad333957432af
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit eaf3f0974ba48e3ebf76b331101ad333957432af)
+
+This part was missing from the previous TSC-deadline series. It is not
+essential to make "-cpu SandyBridge" work, but it's necessary in case a
+user enables tsc-deadline manually on the libvirt XML.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 7aacdd1..026b9f0 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -49,7 +49,7 @@ static const char *ext_feature_name[] = {
+     NULL, "cx16", "xtpr", NULL,
+     NULL, NULL, "dca", "sse4.1|sse4_1",
+     "sse4.2|sse4_2", "x2apic", "movbe", "popcnt",
+-    NULL, "aes", "xsave", "osxsave",
++    "tsc-deadline", "aes", "xsave", "osxsave",
+     "avx", NULL, NULL, "hypervisor",
+ };
+ static const char *ext2_feature_name[] = {
+-- 
+1.7.11.7
+

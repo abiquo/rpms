@@ -1,0 +1,38 @@
+From ec309c13aece6657ea91d52aebaf69f8fb4f3ff0 Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:27 -0500
+Subject: [PATCH 60/98] Makefile: add missing deps on $(GENERATED_HEADERS)
+
+This fixes a build issue with make -j6+ due to qapi-generated files
+being built before $(GENERATED_HEADERS) have been created.
+
+Tested-by: Stefan Berger <stefanb@linux.vnet.ibm.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 016c77ad62a8ad607dd4349d8cb8ad1365bab831)
+
+Conflicts:
+
+	Makefile
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 342a837..418683b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -219,7 +219,7 @@ test-qmp-commands: test-qmp-commands.o qfloat.o qint.o qdict.o qstring.o qlist.o
+ 
+ QGALIB_GEN=$(addprefix $(qapi-dir)/, qga-qapi-types.c qga-qapi-types.h qga-qapi-visit.c qga-qmp-marshal.c)
+ $(QGALIB_GEN): $(GENERATED_HEADERS)
+-$(qga-obj-y) qemu-ga.o: $(QGALIB_GEN)
++$(QGALIB) qemu-ga.o: $(QGALIB_GEN) $(qapi-obj-y)
+ 
+ qemu-ga$(EXESUF): qemu-ga.o $(qga-obj-y) $(qapi-obj-y) $(trace-obj-y) $(qobject-obj-y) $(version-obj-y) $(addprefix $(qapi-dir)/, qga-qapi-visit.o qga-qapi-types.o qga-qmp-marshal.o)
+ 
+-- 
+1.7.7.6
+

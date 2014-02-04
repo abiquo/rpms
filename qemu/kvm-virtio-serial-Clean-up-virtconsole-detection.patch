@@ -1,0 +1,120 @@
+From 7c5af7c07a436384c93a83a37f1bb2996f3e2f72 Mon Sep 17 00:00:00 2001
+From: Amit Shah <amit.shah@redhat.com>
+Date: Thu, 22 Dec 2011 05:01:54 +0100
+Subject: [PATCH 02/10] virtio-serial: Clean up virtconsole detection
+
+RH-Author: Amit Shah <amit.shah@redhat.com>
+Message-id: <d7e03b9c622374b7cae9fa585b9890d95399d957.1324529974.git.amit.shah@redhat.com>
+Patchwork-id: 35920
+O-Subject: [RHEL6.3 qemu-kvm PATCH 02/10] virtio-serial: Clean up virtconsole detection
+Bugzilla: 769528
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Markus Armbruster <armbru@redhat.com>
+
+virtio-serial-bus needs to treat "virtconsole" devices specially.  It
+uses VirtIOSerialPort member is_console to recognize them.  It gets
+its value via property initialization.  Cute hack, except it lets
+users mess with it: "-device virtconsole,is_console=0" isn't plugged
+into port 0 as it should.
+
+Move the flag to VirtIOSerialPortInfo.  Keep the property for backward
+compatibility; its value has no effect.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+(cherry picked from commit 2a3d57ce4278dfd898d8b5639ace21fa4a4fb9bd)
+
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+---
+ hw/virtio-console.c    |    5 +++--
+ hw/virtio-serial-bus.c |    4 ++--
+ hw/virtio-serial.h     |    8 ++++++--
+ 3 files changed, 11 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-console.c    |    5 +++--
+ hw/virtio-serial-bus.c |    4 ++--
+ hw/virtio-serial.h     |    8 ++++++--
+ 3 files changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/hw/virtio-console.c b/hw/virtio-console.c
+index e3aa4d5..f12cdce 100644
+--- a/hw/virtio-console.c
++++ b/hw/virtio-console.c
+@@ -135,7 +135,7 @@ static int virtconsole_initfn(VirtIOSerialPort *port)
+ {
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+ 
+-    port->is_console = true;
++    port->is_console_dummy = true;
+     return generic_port_init(vcon, port);
+ }
+ 
+@@ -157,10 +157,11 @@ static int virtconsole_exitfn(VirtIOSerialPort *port)
+ static VirtIOSerialPortInfo virtconsole_info = {
+     .qdev.name     = "virtconsole",
+     .qdev.size     = sizeof(VirtConsole),
++    .is_console    = true,
+     .init          = virtconsole_initfn,
+     .exit          = virtconsole_exitfn,
+     .qdev.props = (Property[]) {
+-        DEFINE_PROP_UINT8("is_console", VirtConsole, port.is_console, 1),
++        DEFINE_PROP_UINT8("is_console", VirtConsole, port.is_console_dummy, 1),
+         DEFINE_PROP_UINT32("nr", VirtConsole, port.id, VIRTIO_CONSOLE_BAD_ID),
+         DEFINE_PROP_CHR("chardev", VirtConsole, chr),
+         DEFINE_PROP_STRING("name", VirtConsole, port.name),
+diff --git a/hw/virtio-serial-bus.c b/hw/virtio-serial-bus.c
+index 849b3a8..950369c 100644
+--- a/hw/virtio-serial-bus.c
++++ b/hw/virtio-serial-bus.c
+@@ -401,7 +401,7 @@ static void handle_control_message(VirtIOSerial *vser, void *buf, size_t len)
+          * this port is a console port so that the guest can hook it
+          * up to hvc.
+          */
+-        if (port->is_console) {
++        if (port->info->is_console) {
+             send_control_event(port, VIRTIO_CONSOLE_CONSOLE_PORT, 1);
+         }
+ 
+@@ -793,7 +793,7 @@ static int virtser_port_qdev_init(DeviceState *qdev, DeviceInfo *base)
+      * location 0. This is done for backward compatibility (old
+      * kernel, new qemu).
+      */
+-    plugging_port0 = port->is_console && !find_port_by_id(port->vser, 0);
++    plugging_port0 = info->is_console && !find_port_by_id(port->vser, 0);
+ 
+     if (find_port_by_id(port->vser, port->id)) {
+         error_report("virtio-serial-bus: A port already exists at id %u",
+diff --git a/hw/virtio-serial.h b/hw/virtio-serial.h
+index 95720fe..b4d17da 100644
+--- a/hw/virtio-serial.h
++++ b/hw/virtio-serial.h
+@@ -131,8 +131,8 @@ struct VirtIOSerialPort {
+      */
+     QEMUBH *bh;
+ 
+-    /* Identify if this is a port that binds with hvc in the guest */
+-    uint8_t is_console;
++    /* For property backward compatibility, not used otherwise */
++    uint8_t is_console_dummy;
+ 
+     /* Is the corresponding guest device open? */
+     bool guest_connected;
+@@ -144,6 +144,10 @@ struct VirtIOSerialPort {
+ 
+ struct VirtIOSerialPortInfo {
+     DeviceInfo qdev;
++
++    /* Is this a device that binds with hvc in the guest? */
++    bool is_console;
++
+     /*
+      * The per-port (or per-app) init function that's called when a
+      * new device is found on the bus.
+-- 
+1.7.7.4
+

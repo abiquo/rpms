@@ -1,0 +1,43 @@
+From ce1a7d1539a0b4b36555d1035257f57af7ae8478 Mon Sep 17 00:00:00 2001
+Message-Id: <ce1a7d1539a0b4b36555d1035257f57af7ae8478.1335361915.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Tue, 24 Apr 2012 14:01:28 +0200
+Subject: [PATCH 1/8] block: make bdrv_append assert that dirty_bitmap is NULL
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1335276095-25813-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39426
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 1/8] block: make bdrv_append assert that dirty_bitmap is NULL
+Bugzilla: 813862
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 813862
+
+Pointed out by Laszlo.  Upstream does not copy dirty bitmap fields
+because drive_mirror is not transactionable
+---
+ block.c |    1 +
+ 1 file changed, 1 insertion(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index 2e64595..f497642 100644
+--- a/block.c
++++ b/block.c
+@@ -798,6 +798,7 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
+     /* dirty bitmap */
+     tmp.dirty_bitmap      = bs_top->dirty_bitmap;
+     tmp.dirty_count       = bs_top->dirty_count;
++    assert(bs_new->dirty_bitmap == NULL);
+ 
+     /* job */
+     tmp.in_use            = bs_top->in_use;
+-- 
+1.7.7.6
+

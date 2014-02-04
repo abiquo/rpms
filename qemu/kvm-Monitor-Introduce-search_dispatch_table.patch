@@ -1,0 +1,68 @@
+From 4acbed76731c1c14c6afac234944ea3fcc3774cd Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:31 -0300
+Subject: [RHEL6 qemu-kvm PATCH 11/21] Monitor: Introduce search_dispatch_table()
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <65edad3f33c7f711c2039931a86d5e6cbd96afa0.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38638
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 11/21] Monitor: Introduce search_dispatch_table()
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+It's a generic version of monitor_find_command() which searches
+the dispatch table passed as an argument.
+
+Future commits will introduce new dispatch tables, so we need
+common code to search them.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 945c5ac8d3c792bab36dc0990f11ca55f6eb3148)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ monitor.c |   10 ++++++++--
+ 1 files changed, 8 insertions(+), 2 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ monitor.c |   10 ++++++++--
+ 1 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index 31594ab..61d29c6 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -3705,11 +3705,12 @@ static int is_valid_option(const char *c, const char *typestr)
+     return (typestr != NULL);
+ }
+ 
+-static const mon_cmd_t *monitor_find_command(const char *cmdname)
++static const mon_cmd_t *search_dispatch_table(const mon_cmd_t *disp_table,
++                                              const char *cmdname)
+ {
+     const mon_cmd_t *cmd;
+ 
+-    for (cmd = mon_cmds; cmd->name != NULL; cmd++) {
++    for (cmd = disp_table; cmd->name != NULL; cmd++) {
+         if (compare_cmd(cmdname, cmd->name)) {
+             return cmd;
+         }
+@@ -3718,6 +3719,11 @@ static const mon_cmd_t *monitor_find_command(const char *cmdname)
+     return NULL;
+ }
+ 
++static const mon_cmd_t *monitor_find_command(const char *cmdname)
++{
++    return search_dispatch_table(mon_cmds, cmdname);
++}
++
+ static const mon_cmd_t *monitor_parse_command(Monitor *mon,
+                                               const char *cmdline,
+                                               QDict *qdict)
+-- 
+1.7.3.2
+

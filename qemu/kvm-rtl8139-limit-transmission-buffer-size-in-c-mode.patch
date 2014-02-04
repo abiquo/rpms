@@ -1,0 +1,64 @@
+From bb3ee7a6ee2117da8e4611ba152841abfec7b605 Mon Sep 17 00:00:00 2001
+From: Xiao Wang <jasowang@redhat.com>
+Date: Mon, 12 Mar 2012 12:42:38 +0100
+Subject: [PATCH 1/9] rtl8139: limit transmission buffer size in c+ mode
+
+RH-Author: Xiao Wang <jasowang@redhat.com>
+Message-id: <20120312124237.2256.44063.stgit@dhcp-8-146.nay.redhat.com>
+Patchwork-id: 38462
+O-Subject: [RHEL 6.3 PATCH] rtl8139: limit transmission buffer size in c+ mode
+Bugzilla: 781920
+RH-Acked-by: Amos Kong <akong@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+
+bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=781920
+Upstream: cde31a0e3dc0e4ac83e454d6096350cec584adf1
+test status: upstream version were tested through qtest
+
+The tx buffer would be re-allocated for tx descriptor with big size
+and without LS bit set, this would make guest driver could easily let
+qemu to allocate unlimited.
+
+In linux host, a glib failure were easy to be triggered:
+
+GLib-ERROR **: gmem.c:176: failed to allocate 18446744071562067968 bytes
+
+This patch fix this by adding a limit. As the spec didn't tell the maximum size
+of buffer allowed, stick it to current CP_TX_BUFFER_SIZE (65536).
+
+Signed-off-by: Jason Wang <jasowang@redhat.com>
+---
+ hw/rtl8139.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/rtl8139.c |   10 +++++-----
+ 1 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/hw/rtl8139.c b/hw/rtl8139.c
+index b14586b..c3d0552 100644
+--- a/hw/rtl8139.c
++++ b/hw/rtl8139.c
+@@ -2052,12 +2052,12 @@ static int rtl8139_cplus_transmit_one(RTL8139State *s)
+         DEBUG_PRINT(("RTL8139: +++ C+ mode transmission buffer allocated space %d\n", s->cplus_txbuffer_len));
+     }
+ 
+-    while (s->cplus_txbuffer && s->cplus_txbuffer_offset + txsize >= s->cplus_txbuffer_len)
++    if (s->cplus_txbuffer_offset + txsize >= s->cplus_txbuffer_len)
+     {
+-        s->cplus_txbuffer_len += CP_TX_BUFFER_SIZE;
+-        s->cplus_txbuffer = qemu_realloc(s->cplus_txbuffer, s->cplus_txbuffer_len);
+-
+-        DEBUG_PRINT(("RTL8139: +++ C+ mode transmission buffer space changed to %d\n", s->cplus_txbuffer_len));
++        /* The spec didn't tell the maximum size, stick to CP_TX_BUFFER_SIZE */
++        txsize = s->cplus_txbuffer_len - s->cplus_txbuffer_offset;
++        DEBUG_PRINT(("+++ C+ mode transmission buffer overrun, truncated descriptor"
++                     "length to %d\n", txsize));
+     }
+ 
+     if (!s->cplus_txbuffer)
+-- 
+1.7.7.6
+

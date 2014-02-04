@@ -1,0 +1,71 @@
+From f250f68117434ae02fcb6d4e86a98ba9f31eca37 Mon Sep 17 00:00:00 2001
+Message-Id: <f250f68117434ae02fcb6d4e86a98ba9f31eca37.1345545736.git.minovotn@redhat.com>
+In-Reply-To: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+References: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 8 Aug 2012 13:27:08 +0200
+Subject: [PATCH 3/8] usb: change VID/PID for usb-hub and usb-msd to prevent
+ conflict
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1344432431-5976-2-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40627
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 1/4] usb: change VID/PID for usb-hub and usb-msd to prevent conflict
+Bugzilla: 813713
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Roy Tam <roytam@gmail.com>
+
+Some USB drivers, for example USBASPI.SYS, will skip different type of
+device which has same VID/PID. The following patch helps preventing
+usb-msd being skipped by the driver.
+
+Signed-off-by: Roy Tam <roytam@gmail.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit db80358a20e2597a0844998c832b2dce667d0aa0)
+---
+ hw/usb-hub.c |    4 ++--
+ hw/usb-msd.c |    4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-hub.c | 4 ++--
+ hw/usb-msd.c | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/hw/usb-hub.c b/hw/usb-hub.c
+index 7fbb78c..c20fc87 100644
+--- a/hw/usb-hub.c
++++ b/hw/usb-hub.c
+@@ -127,8 +127,8 @@ static const USBDescDevice desc_device_hub = {
+ 
+ static const USBDesc desc_hub = {
+     .id = {
+-        .idVendor          = 0,
+-        .idProduct         = 0,
++        .idVendor          = 0x0409,
++        .idProduct         = 0x55aa,
+         .bcdDevice         = 0x0101,
+         .iManufacturer     = STR_MANUFACTURER,
+         .iProduct          = STR_PRODUCT,
+diff --git a/hw/usb-msd.c b/hw/usb-msd.c
+index b5ce183..719c0c9 100644
+--- a/hw/usb-msd.c
++++ b/hw/usb-msd.c
+@@ -163,8 +163,8 @@ static const USBDescDevice desc_device_high = {
+ 
+ static const USBDesc desc = {
+     .id = {
+-        .idVendor          = 0,
+-        .idProduct         = 0,
++        .idVendor          = 0x46f4, /* CRC16() of "QEMU" */
++        .idProduct         = 0x0001,
+         .bcdDevice         = 0,
+         .iManufacturer     = STR_MANUFACTURER,
+         .iProduct          = STR_PRODUCT,
+-- 
+1.7.11.2
+

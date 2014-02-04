@@ -1,0 +1,173 @@
+From 62634db355213e9ec6baf2f31a4f53f70c1add8e Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:58 +0100
+Subject: [PATCH 31/55] block: add -drive copy-on-read=on|off
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <637def26cf84e61cf0f035f1d91cee1f39222cff.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38881
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 31/54] block: add -drive copy-on-read=on|off
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+This patch adds the -drive copy-on-read=on|off command-line option:
+
+  copy-on-read=on|off
+  copy-on-read is "on" or "off" and enables whether to copy read backing
+  file sectors into the image file.  Copy-on-read avoids accessing the
+  same backing file sectors repeatedly and is useful when the backing
+  file is over a slow network.  By default copy-on-read is off.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit fb0490f69feb96b7e92457f176dc834ff0b00b09)
+
+For RHEL the copy-on-read option also needs to be added to the "simple"
+drive_add command's valid parameters list in hw/device-hotplug.c.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ blockdev.c          |    6 ++++++
+ hw/device-hotplug.c |    2 +-
+ qemu-config.c       |    4 ++++
+ qemu-monitor.hx     |    6 ++++--
+ qemu-options.hx     |    9 ++++++++-
+ 5 files changed, 23 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ blockdev.c          |    6 ++++++
+ hw/device-hotplug.c |    2 +-
+ qemu-config.c       |    4 ++++
+ qemu-monitor.hx     |    6 ++++--
+ qemu-options.hx     |    9 ++++++++-
+ 5 files changed, 23 insertions(+), 4 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 1bf8350..d84f401 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -278,6 +278,7 @@ DriveInfo *drive_init(QemuOpts *opts, int default_to_scsi)
+     DriveInfo *dinfo;
+     int is_extboot = 0;
+     int snapshot = 0;
++    bool copy_on_read;
+ 
+     translation = BIOS_ATA_TRANSLATION_AUTO;
+ 
+@@ -301,6 +302,7 @@ DriveInfo *drive_init(QemuOpts *opts, int default_to_scsi)
+ 
+     snapshot = qemu_opt_get_bool(opts, "snapshot", 0);
+     ro = qemu_opt_get_bool(opts, "readonly", 0);
++    copy_on_read = qemu_opt_get_bool(opts, "copy-on-read", false);
+ 
+     file = qemu_opt_get(opts, "file");
+     serial = qemu_opt_get(opts, "serial");
+@@ -568,6 +570,10 @@ DriveInfo *drive_init(QemuOpts *opts, int default_to_scsi)
+         bdrv_flags |= (BDRV_O_SNAPSHOT|BDRV_O_CACHE_WB);
+     }
+ 
++    if (copy_on_read) {
++        bdrv_flags |= BDRV_O_COPY_ON_READ;
++    }
++
+     if (media == MEDIA_CDROM) {
+         /* mark CDROM as read-only. CDROM is fine for any interface, don't check */
+         ro = 1;
+diff --git a/hw/device-hotplug.c b/hw/device-hotplug.c
+index 1dc6fcb..135f106 100644
+--- a/hw/device-hotplug.c
++++ b/hw/device-hotplug.c
+@@ -50,7 +50,7 @@ static void check_parm(const char *key, QObject *obj, void *opaque)
+     static const char *valid_keys[] = {
+         "id", "cyls", "heads", "secs", "trans", "media", "snapshot",
+         "file", "cache", "aio", "format", "serial", "rerror", "werror",
+-        "readonly", NULL
++        "readonly", "copy-on-read", NULL
+     };
+     int *stopped = opaque;
+     const char **p;
+diff --git a/qemu-config.c b/qemu-config.c
+index 4a2afde..adb9970 100644
+--- a/qemu-config.c
++++ b/qemu-config.c
+@@ -83,6 +83,10 @@ QemuOptsList qemu_drive_opts = {
+             .name = "boot",
+             .type = QEMU_OPT_BOOL,
+             .help = "make this a boot drive",
++        },{
++            .name = "copy-on-read",
++            .type = QEMU_OPT_BOOL,
++            .help = "copy read data from backing file into image file",
+         },
+         { /* end if list */ }
+     },
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 42bc6fa..95b4635 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1305,9 +1305,10 @@ EQMP
+         .args_type  = "pci_addr:s,opts:s",
+         .params     = "[[<domain>:]<bus>:]<slot>\n"
+                       "[file=file][,if=type][,bus=n]\n"
+-                      "[,unit=m][,media=d][index=i]\n"
++                      "[,unit=m][,media=d][,index=i]\n"
+                       "[,cyls=c,heads=h,secs=s[,trans=t]]\n"
+-                      "[snapshot=on|off][,cache=on|off]",
++                      "[,snapshot=on|off][,cache=on|off]",
++                      "[,readonly=on|off][,copy-on-read=on|off]",
+         .help       = "add drive to PCI storage controller",
+         .mhandler.cmd = drive_hot_add,
+     },
+@@ -2018,6 +2019,7 @@ Arguments:
+ - "werror": What to do on write error (json-string, optional)
+ - "serial": Drive serial number (json-string, optional)
+ - "snapshot": Enable snapshot mode (json-bool, optional)
++- "copy-on-read": Enable copy-on-read mode (json-bool, optional)
+ 
+ Example:
+ 
+diff --git a/qemu-options.hx b/qemu-options.hx
+index a151a69..35b79a3 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -104,7 +104,7 @@ DEF("drive", HAS_ARG, QEMU_OPTION_drive,
+     "       [,cyls=c,heads=h,secs=s[,trans=t]][,snapshot=on|off]\n"
+     "       [,cache=writethrough|writeback|none|unsafe][,format=f]\n"
+     "       [,serial=s][,addr=A][,id=name][,aio=threads|native]\n"
+-    "       [,readonly=on|off]\n"
++    "       [,readonly=on|off][,copy-on-read=on|off]\n"
+     "                use 'file' as a drive image\n")
+ DEF("set", HAS_ARG, QEMU_OPTION_set,
+     "-set group.id.arg=value\n"
+@@ -150,6 +150,9 @@ an untrusted format header.
+ This option specifies the serial number to assign to the device.
+ @item addr=@var{addr}
+ Specify the controller's PCI address (if=virtio only).
++@item copy-on-read=@var{copy-on-read}
++@var{copy-on-read} is "on" or "off" and enables whether to copy read backing
++file sectors into the image file.
+ @end table
+ 
+ By default, writethrough caching is used for all block device.  This means that
+@@ -177,6 +180,10 @@ to the disk but can instead keeps things in cache. If anything goes wrong,
+ like your host losing power, the disk storage getting disconnected accidently,
+ etc. you're image will most probably be rendered unusable.
+ 
++Copy-on-read avoids accessing the same backing file sectors repeatedly and is
++useful when the backing file is over a slow network.  By default copy-on-read
++is off.
++
+ Instead of @option{-cdrom} you can use:
+ @example
+ qemu -drive file=file,index=2,media=cdrom
+-- 
+1.7.7.6
+

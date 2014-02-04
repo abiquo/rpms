@@ -1,0 +1,63 @@
+From a6879d098760ae7af817b6474d4174f94c27ec21 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Mon, 9 Jan 2012 13:37:33 +0100
+Subject: [PATCH 6/9] exit if -drive specified is invalid instead of ignoring
+ the "wrong" -drive
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326116256-3685-7-git-send-email-armbru@redhat.com>
+Patchwork-id: 36284
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 6/9] exit if -drive specified is invalid instead of ignoring the "wrong" -drive
+Bugzilla: 737879
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Michael Tokarev <mjt@tls.msk.ru>
+
+This fixes the problem when qemu continues even if -drive specification
+is somehow invalid, resulting in a mess.  Applicable for both current
+master and for stable-0.14 (and the same issue exist 0.13 and 0.12 too).
+
+The prob can actually be seriuos: when you start guest with two drives
+and make an error in the specification of one of them, and the guest
+has something like a raid array on the two drives, guest may start failing
+that array or kick "missing" drives which may result in a mess - this is
+what actually happened to me, I did't want a resync at all, and a resync
+resulted in re-writing (and allocating) a 4TB virtual drive I used for
+testing, which in turn resulted in my filesystem filling up and whole
+thing failing badly.  Yes it was just testing VM, I experimented with
+larger raid arrays, but the end result was quite, well, unexpected.
+
+Signed-off-by: Michael Tokarev <mjt@tls.msk.ru>
+Acked-by: Jes Sorensen <Jes.Sorensen@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit e2982c3a27ab4c0879e61de3c9c57b838f7d0966)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ vl.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vl.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/vl.c b/vl.c
+index 5087b7e..c96182b 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5262,7 +5262,9 @@ int main(int argc, char **argv, char **envp)
+                           HD_OPTS);
+                 break;
+             case QEMU_OPTION_drive:
+-                drive_def(optarg);
++                if (drive_def(optarg) == NULL) {
++                    exit(1);
++                }
+ 	        break;
+             case QEMU_OPTION_set:
+                 if (qemu_set_option(optarg) != 0)
+-- 
+1.7.7.4
+

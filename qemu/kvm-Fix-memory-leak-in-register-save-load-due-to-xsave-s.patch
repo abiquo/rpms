@@ -1,0 +1,56 @@
+From 8598a29ef6c34d480b8e4cdb915d7277337069de Mon Sep 17 00:00:00 2001
+From: Alex Williamson <alex.williamson@redhat.com>
+Date: Mon, 13 Feb 2012 17:46:19 +0100
+Subject: [PATCH 97/99] Fix memory leak in register save load due to xsave
+ support
+
+RH-Author: Alex Williamson <alex.williamson@redhat.com>
+Message-id: <20120213174613.14789.77608.stgit@bling.home>
+Patchwork-id: 37187
+O-Subject: [RHEL6.3 qemu-kvm PATCH v2 1/2] Fix memory leak in register save load due to xsave support
+Bugzilla: 789417
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Avi Kivity <avi@redhat.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=789417
+Brew: https://brewweb.devel.redhat.com/taskinfo?taskID=4034963
+Upstream commit: 01ac6428a04576ae6f84f07d82c98da304b9ac77
+
+Signed-off-by: Avi Kivity <avi@redhat.com>
+---
+
+ qemu-kvm-x86.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-kvm-x86.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/qemu-kvm-x86.c b/qemu-kvm-x86.c
+index a09d506..a04521c 100644
+--- a/qemu-kvm-x86.c
++++ b/qemu-kvm-x86.c
+@@ -994,6 +994,7 @@ void kvm_arch_load_regs(CPUState *env)
+             xcrs.xcrs[0].value = env->xcr0;
+             kvm_set_xcrs(env, &xcrs);
+         }
++        qemu_free(xsave);
+     } else {
+         memset(&fpu, 0, sizeof fpu);
+         fpu.fsw = env->fpus & ~(7 << 11);
+@@ -1196,6 +1197,7 @@ void kvm_arch_save_regs(CPUState *env)
+             if (xcrs.xcrs[0].xcr == 0)
+                 env->xcr0 = xcrs.xcrs[0].value;
+         }
++        qemu_free(xsave);
+     } else {
+         kvm_get_fpu(env, &fpu);
+         env->fpstt = (fpu.fsw >> 11) & 7;
+-- 
+1.7.7.5
+

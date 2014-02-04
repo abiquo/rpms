@@ -1,0 +1,54 @@
+From d22fc35d1e14760dba012d88bdf0162dd7d0f3c6 Mon Sep 17 00:00:00 2001
+Message-Id: <d22fc35d1e14760dba012d88bdf0162dd7d0f3c6.1346668737.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Mon, 27 Aug 2012 12:20:43 +0200
+Subject: [PATCH 01/10] qxl-render: fix broken vnc+spice since commit f934493
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1346070043-11301-1-git-send-email-kraxel@redhat.com>
+Patchwork-id: 41318
+O-Subject: [RHEL-6.4 qemu-kvm PATCH] qxl-render: fix broken vnc+spice since commit f934493
+Bugzilla: 851143
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Alon Levy <alevy@redhat.com>
+
+Notify any listeners such as vnc that the displaysurface has been
+changed, otherwise they will segfault when first accessing the freed old
+displaysurface data.
+
+Signed-off-by: Alon Levy <alevy@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 06ddea49f8127bd055dbc7e83df896d9311c88cc)
+
+bugzilla: 851143 - qemu-kvm segfaulting when running a VM
+brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4804027
+
+This is for both 6.4 and 6.3.z
+
+---
+ hw/qxl-render.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl-render.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hw/qxl-render.c b/hw/qxl-render.c
+index bb5f1db..4b434f4 100644
+--- a/hw/qxl-render.c
++++ b/hw/qxl-render.c
+@@ -133,6 +133,7 @@ static void qxl_render_update_area_unlocked(PCIQXLDevice *qxl)
+                     qxl->guest_primary.surface.width,
+                     qxl->guest_primary.surface.height);
+         }
++        dpy_resize(vga->ds);
+     }
+     for (i = 0; i < qxl->num_dirty_rects; i++) {
+         if (qemu_spice_rect_is_empty(qxl->dirty+i)) {
+-- 
+1.7.11.4
+

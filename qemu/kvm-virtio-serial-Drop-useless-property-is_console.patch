@@ -1,0 +1,72 @@
+From 5dedfefdc2da4a927cae5ecb41c41ed989415e7d Mon Sep 17 00:00:00 2001
+From: Amit Shah <amit.shah@redhat.com>
+Date: Thu, 22 Dec 2011 05:01:55 +0100
+Subject: [PATCH 03/10] virtio-serial: Drop useless property is_console
+
+RH-Author: Amit Shah <amit.shah@redhat.com>
+Message-id: <341466b33893e7576e4970ca86d7216599c94171.1324529974.git.amit.shah@redhat.com>
+Patchwork-id: 35921
+O-Subject: [RHEL6.3 qemu-kvm PATCH 03/10] virtio-serial: Drop useless property is_console
+Bugzilla: 769528
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Markus Armbruster <armbru@redhat.com>
+
+All you could ever achieve with it is break stuff, so removing it
+should be safe.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+(cherry picked from commit 31d0f80f17b37a71ad4231daf05be9fab3c70292)
+
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+---
+ hw/virtio-console.c |    2 --
+ hw/virtio-serial.h  |    3 ---
+ 2 files changed, 0 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-console.c |    2 --
+ hw/virtio-serial.h  |    3 ---
+ 2 files changed, 0 insertions(+), 5 deletions(-)
+
+diff --git a/hw/virtio-console.c b/hw/virtio-console.c
+index f12cdce..ebf4f90 100644
+--- a/hw/virtio-console.c
++++ b/hw/virtio-console.c
+@@ -135,7 +135,6 @@ static int virtconsole_initfn(VirtIOSerialPort *port)
+ {
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+ 
+-    port->is_console_dummy = true;
+     return generic_port_init(vcon, port);
+ }
+ 
+@@ -161,7 +160,6 @@ static VirtIOSerialPortInfo virtconsole_info = {
+     .init          = virtconsole_initfn,
+     .exit          = virtconsole_exitfn,
+     .qdev.props = (Property[]) {
+-        DEFINE_PROP_UINT8("is_console", VirtConsole, port.is_console_dummy, 1),
+         DEFINE_PROP_UINT32("nr", VirtConsole, port.id, VIRTIO_CONSOLE_BAD_ID),
+         DEFINE_PROP_CHR("chardev", VirtConsole, chr),
+         DEFINE_PROP_STRING("name", VirtConsole, port.name),
+diff --git a/hw/virtio-serial.h b/hw/virtio-serial.h
+index b4d17da..d6fab00 100644
+--- a/hw/virtio-serial.h
++++ b/hw/virtio-serial.h
+@@ -131,9 +131,6 @@ struct VirtIOSerialPort {
+      */
+     QEMUBH *bh;
+ 
+-    /* For property backward compatibility, not used otherwise */
+-    uint8_t is_console_dummy;
+-
+     /* Is the corresponding guest device open? */
+     bool guest_connected;
+     /* Is this device open for IO on the host? */
+-- 
+1.7.7.4
+

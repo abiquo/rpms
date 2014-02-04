@@ -1,0 +1,172 @@
+From fc3b950e981bca6a52fb6c7f8634b2c334e30ef6 Mon Sep 17 00:00:00 2001
+From: Federico Simoncelli <fsimonce@redhat.com>
+Date: Fri, 23 Mar 2012 12:12:52 -0300
+Subject: [RHEL6 qemu-kvm PATCH 7/9] add mode field to blockdev-snapshot-sync transaction item
+
+RH-Author: Federico Simoncelli <fsimonce@redhat.com>
+Message-id: <1332504778-17403-8-git-send-email-fsimonce@redhat.com>
+Patchwork-id: 38946
+O-Subject: [RHEL6.3 qemu-kvm PATCH v6 07/13] add mode field to blockdev-snapshot-sync transaction item
+Bugzilla: 785683
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+The mode field lets a management application create the snapshot
+destination outside QEMU.
+
+Right now, the only modes are "existing" and "absolute-paths".  Mirroring
+introduces "no-backing-file".  In the future "relative-paths" could be
+implemented too.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+BZ: 785683
+
+(cherry picked from commit bc8b094feb61c5f3ad55113f1c9b3288dd843b10)
+---
+ blockdev.c       |   25 ++++++++++++++++---------
+ qapi-schema.json |   19 ++++++++++++++++++-
+ qemu-monitor.hx  |   10 ++++++++++
+ 3 files changed, 44 insertions(+), 10 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ blockdev.c       |   25 ++++++++++++++++---------
+ qapi-schema.json |   19 ++++++++++++++++++-
+ qemu-monitor.hx  |   10 ++++++++++
+ 3 files changed, 44 insertions(+), 10 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index 70cc2e4..4cb2d6d 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -731,9 +731,10 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+         BlockDriver *proto_drv;
+         BlockDriver *drv;
+         int flags;
++        enum NewImageMode mode;
++        const char *new_image_file;
+         const char *device;
+         const char *format = "qcow2";
+-        const char *new_image_file = NULL;
+ 
+         dev_info = dev_entry->value;
+         dev_entry = dev_entry->next;
+@@ -744,10 +745,14 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+         switch (dev_info->kind) {
+         case BLOCKDEV_ACTION_KIND_BLOCKDEV_SNAPSHOT_SYNC:
+             device = dev_info->blockdev_snapshot_sync->device;
++            if (!dev_info->blockdev_snapshot_sync->has_mode) {
++                dev_info->blockdev_snapshot_sync->mode = NEW_IMAGE_MODE_ABSOLUTE_PATHS;
++            }
++            new_image_file = dev_info->blockdev_snapshot_sync->snapshot_file;
+             if (dev_info->blockdev_snapshot_sync->has_format) {
+                 format = dev_info->blockdev_snapshot_sync->format;
+             }
+-            new_image_file = dev_info->blockdev_snapshot_sync->snapshot_file;
++            mode = dev_info->blockdev_snapshot_sync->mode;
+             break;
+         default:
+             abort();
+@@ -793,13 +798,15 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+         }
+ 
+         /* create new image w/backing file */
+-        ret = bdrv_img_create(new_image_file, format,
+-                              states->old_bs->filename,
+-                              states->old_bs->drv->format_name,
+-                              NULL, -1, flags);
+-        if (ret) {
+-            error_set(errp, QERR_OPEN_FILE_FAILED, new_image_file);
+-            goto delete_and_fail;
++        if (mode != NEW_IMAGE_MODE_EXISTING) {
++            ret = bdrv_img_create(new_image_file, format,
++                                  states->old_bs->filename,
++                                  states->old_bs->drv->format_name,
++                                  NULL, -1, flags);
++            if (ret) {
++                error_set(errp, QERR_OPEN_FILE_FAILED, new_image_file);
++                goto delete_and_fail;
++            }
+         }
+ 
+         /* We will manually add the backing_hd field to the bs later */
+diff --git a/qapi-schema.json b/qapi-schema.json
+index e262321..278aab1 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -4,6 +4,22 @@
+ 
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+ ##
++# @NewImageMode
++#
++# An enumeration that tells QEMU how to set the backing file path in
++# a new image file.
++#
++# @existing: QEMU should look for an existing image file.
++#
++# @absolute-paths: QEMU should create a new image with absolute paths
++# for the backing file.
++#
++# Since: 1.1
++##
++{ 'enum': 'NewImageMode'
++  'data': [ 'existing', 'absolute-paths' ] }
++
++##
+ # @BlockdevSnapshot
+ #
+ # @device:  the name of the device to generate the snapshot from.
+@@ -13,7 +29,8 @@
+ # @format: #optional the format of the snapshot image, default is 'qcow2'.
+ ##
+ { 'type': 'BlockdevSnapshot',
+-  'data': { 'device': 'str', 'snapshot-file': 'str', '*format': 'str' } }
++  'data': { 'device': 'str', 'snapshot-file': 'str', '*format': 'str',
++            '*mode': 'NewImageMode' } }
+ 
+ ##
+ # @BlockdevAction
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 75ffc52..1817a71 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1503,6 +1503,13 @@ A list of dictionaries is accepted, that contains the actions to be performed.
+ For snapshots this is the device, the file to use for the new snapshot,
+ and the format.  The default format, if not specified, is qcow2.
+ 
++Each new snapshot defaults to being created by QEMU (wiping any
++contents if the file already exists), but it is also possible to reuse
++an externally-created file.  In the latter case, you should ensure that
++the new image file has the same contents as the current one; QEMU cannot
++perform any meaningful check.  Typically this is achieved by using the
++current image file as the backing file for the new image.
++
+ Arguments:
+ 
+ actions array:
+@@ -1513,6 +1520,8 @@ actions array:
+       - "device": device name to snapshot (json-string)
+       - "snapshot-file": name of new image file (json-string)
+       - "format": format of new image (json-string, optional)
++      - "mode": whether and how QEMU should create the snapshot file
++        (NewImageMode, optional, default "absolute-paths")
+ 
+ Example:
+ 
+@@ -1523,6 +1532,7 @@ Example:
+                                          "format": "qcow2" } },
+          { 'type': 'blockdev-snapshot-sync', 'data' : { "device": "ide-hd1",
+                                          "snapshot-file": "/some/place/my-image2",
++                                         "mode": "existing",
+                                          "format": "qcow2" } } ] } }
+ <- { "return": {} }
+ 
+-- 
+1.7.3.2
+

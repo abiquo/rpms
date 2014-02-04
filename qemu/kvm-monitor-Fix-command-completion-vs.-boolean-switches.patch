@@ -1,0 +1,49 @@
+From a345b5eecd5ff3a3580f7ca8228262b45a538e3c Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 18 Sep 2012 17:29:46 -0300
+Subject: [RHEL6 qemu-kvm PATCH 2/5] monitor: Fix command completion vs.
+ boolean switches
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <1a6794c65da47a435a9630e5ab991e2600b65b79.1347988794.git.jcody@redhat.com>
+Patchwork-id: 42009
+O-Subject: [RHEL6.4 qemu-kvm PATCH 2/2] monitor: Fix command completion vs. boolean switches
+Bugzilla: 807146
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+
+From: Jan Kiszka <jan.kiszka@siemens.com>
+
+We now have to move forward to the next argument type via next_arg_type.
+This patch fixes completion for 'eject' and maybe also other commands.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 3b6dbf277232920a6463fc01d630e4d9dc378ef6)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ monitor.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ monitor.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/monitor.c b/monitor.c
+index 725a606..039d4a9 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -4403,7 +4403,7 @@ static void monitor_find_completion(const char *cmdline)
+         }
+         str = args[nb_args - 1];
+         if (*ptype == '-' && ptype[1] != '\0') {
+-            ptype += 2;
++            ptype = next_arg_type(ptype);
+         }
+         switch(*ptype) {
+         case 'F':
+-- 
+1.7.11.4
+

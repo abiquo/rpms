@@ -1,0 +1,185 @@
+From d943d4fd6b393273290f77a18e5a7fd41c0ce107 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:37 +0100
+Subject: [PATCH 021/109] scsi: remove devs array from SCSIBus
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-21-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37501
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 020/102] scsi: remove devs array from SCSIBus
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Change the devs array into a linked list, and add a scsi_device_find
+function to navigate the children list instead.  This lets the SCSI
+bus use more complex addressing, and HBAs can talk to the correct device
+when there are multiple LUNs per target.
+
+scsi_device_find may return another LUN on the same target if none is
+found that matches exactly.
+
+This patch is effectively including the one-liner upstream commit
+645a8ad (scsi-bus: use DO_UPCAST, 2011-08-04).  I didn't notice that
+the trivial conflict I encountered was actually a patch on its own.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from f48a7a6e35bb6d50573cfb42f13878c593fb6c0c)
+
+Conflicts:
+	hw/esp.c (not merged because it's not on x86)
+	hw/lsi53c895a.c (not merged because we disable it)
+	hw/scsi-bus.c (see above)
+	hw/spapr_vscsi.c (absent in RHEL6)
+---
+ hw/qdev.h     |    2 +-
+ hw/scsi-bus.c |   55 +++++++++++++++++++++++++++++++------------------------
+ hw/scsi.h     |    3 +--
+ 3 files changed, 33 insertions(+), 27 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qdev.h     |    2 +-
+ hw/scsi-bus.c |   55 +++++++++++++++++++++++++++++++------------------------
+ hw/scsi.h     |    3 +--
+ 3 files changed, 33 insertions(+), 27 deletions(-)
+
+diff --git a/hw/qdev.h b/hw/qdev.h
+index a0e4426..b295202 100644
+--- a/hw/qdev.h
++++ b/hw/qdev.h
+@@ -70,7 +70,7 @@ struct BusState {
+     const char *name;
+     int allow_hotplug;
+     int qdev_allocated;
+-    QTAILQ_HEAD(, DeviceState) children;
++    QTAILQ_HEAD(ChildrenHead, DeviceState) children;
+     QLIST_ENTRY(BusState) sibling;
+ };
+ 
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 2d5b2b7..2785274 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -37,12 +37,16 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+     SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+     SCSIDeviceInfo *info = DO_UPCAST(SCSIDeviceInfo, qdev, base);
+     SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, dev->qdev.parent_bus);
++    SCSIDevice *olddev;
+     int rc = -1;
+ 
+     if (dev->id == -1) {
+-        for (dev->id = 0; dev->id < bus->info->ndev; dev->id++) {
+-            if (bus->devs[dev->id] == NULL)
++        int id;
++        for (id = 0; id < bus->info->ndev; id++) {
++            if (!scsi_device_find(bus, id, 0)) {
++                dev->id = id;
+                 break;
++            }
+         }
+     }
+     if (dev->id >= bus->info->ndev) {
+@@ -50,17 +54,14 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+         goto err;
+     }
+ 
+-    if (bus->devs[dev->id]) {
+-        qdev_free(&bus->devs[dev->id]->qdev);
++    olddev = scsi_device_find(bus, dev->id, dev->lun);
++    if (olddev && dev->lun == olddev->lun) {
++        qdev_free(&olddev->qdev);
+     }
+-    bus->devs[dev->id] = dev;
+ 
+     dev->info = info;
+     QTAILQ_INIT(&dev->requests);
+     rc = dev->info->init(dev);
+-    if (rc != 0) {
+-        bus->devs[dev->id] = NULL;
+-    }
+ 
+ err:
+     return rc;
+@@ -69,13 +70,10 @@ err:
+ static int scsi_qdev_exit(DeviceState *qdev)
+ {
+     SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+-    SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, dev->qdev.parent_bus);
+ 
+-    assert(bus->devs[dev->id] != NULL);
+-    if (bus->devs[dev->id]->info->destroy) {
+-        bus->devs[dev->id]->info->destroy(bus->devs[dev->id]);
++    if (dev->info->destroy) {
++        dev->info->destroy(dev);
+     }
+-    bus->devs[dev->id] = NULL;
+     return 0;
+ }
+ 
+@@ -1138,20 +1136,29 @@ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense)
+ 
+ static char *scsibus_get_fw_dev_path(DeviceState *dev)
+ {
+-    SCSIDevice *d = (SCSIDevice*)dev;
+-    SCSIBus *bus = scsi_bus_from_device(d);
++    SCSIDevice *d = DO_UPCAST(SCSIDevice, qdev, dev);
+     char path[100];
+-    int i;
+ 
+-    for (i = 0; i < bus->info->ndev; i++) {
+-        if (bus->devs[i] == d) {
+-            break;
+-        }
+-    }
++    snprintf(path, sizeof(path), "%s@%d:%d:%d", qdev_fw_name(dev),
++             0, d->id, d->lun);
+ 
+-    assert(i != bus->info->ndev);
++    return strdup(path);
++}
+ 
+-    snprintf(path, sizeof(path), "%s@%x", qdev_fw_name(dev), i);
++SCSIDevice *scsi_device_find(SCSIBus *bus, int id, int lun)
++{
++    DeviceState *qdev;
++    SCSIDevice *target_dev = NULL;
+ 
+-    return strdup(path);
++    QTAILQ_FOREACH_REVERSE(qdev, &bus->qbus.children, ChildrenHead, sibling) {
++        SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
++
++        if (dev->id == id) {
++            if (dev->lun == lun) {
++                return dev;
++            }
++            target_dev = dev;
++        }
++    }
++    return target_dev;
+ }
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 502fd0d..39da0d1 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -109,8 +109,6 @@ struct SCSIBus {
+ 
+     SCSISense unit_attention;
+     const SCSIBusInfo *info;
+-
+-    SCSIDevice *devs[MAX_SCSI_DEVS];
+ };
+ 
+ void scsi_bus_new(SCSIBus *bus, DeviceState *host, const SCSIBusInfo *info);
+@@ -192,5 +190,6 @@ void scsi_req_abort(SCSIRequest *req, int status);
+ void scsi_req_cancel(SCSIRequest *req);
+ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense);
+ int scsi_device_get_sense(SCSIDevice *dev, uint8_t *buf, int len, bool fixed);
++SCSIDevice *scsi_device_find(SCSIBus *bus, int target, int lun);
+ 
+ #endif
+-- 
+1.7.7.6
+

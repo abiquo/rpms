@@ -1,0 +1,52 @@
+From 9aace0dadd3a48f11d70c8e128dc56c0a1f743b2 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:23 +0100
+Subject: [PATCH 29/52] sysbus: Supply missing va_end()
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-30-git-send-email-armbru@redhat.com>
+Patchwork-id: 36584
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 29/52] sysbus: Supply missing va_end()
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+C99 7.15.1: Each invocation of the va_start and va_copy macros shall
+be matched by a corresponding invocation of the va_end macro in the
+same function.
+
+Spotted by Coverity.  Harmless on the (common) systems where va_end()
+does nothing.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit d0bc5bc3aac64be2c0b91f1446ed748444cc3141)
+
+Conflicts:
+
+	hw/sysbus.c
+---
+ hw/sysbus.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/sysbus.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/hw/sysbus.c b/hw/sysbus.c
+index 89f9b6e..ee8fbdd 100644
+--- a/hw/sysbus.c
++++ b/hw/sysbus.c
+@@ -169,6 +169,7 @@ DeviceState *sysbus_create_varargs(const char *name,
+         sysbus_connect_irq(s, n, irq);
+         n++;
+     }
++    va_end(va);
+     return dev;
+ }
+ 
+-- 
+1.7.7.5
+

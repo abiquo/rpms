@@ -1,0 +1,157 @@
+From 3c3becc108721cbf2c61411d1bbac14797604a4a Mon Sep 17 00:00:00 2001
+Message-Id: <3c3becc108721cbf2c61411d1bbac14797604a4a.1346328309.git.minovotn@redhat.com>
+From: Laszlo Ersek <lersek@redhat.com>
+Date: Wed, 29 Aug 2012 08:57:59 +0200
+Subject: [PATCH] console: bounds check whenever changing the cursor due to an
+ escape code
+
+Bugzilla: 851258
+
+Brew:
+- https://brewweb.devel.redhat.com/taskinfo?taskID=4809235
+- sftp://shell.eng.rdu.redhat.com/home/brq/lersek/public_html/bz851258_task4809235
+
+Testing: in progress. Any help highly appreciated, please find reproducers
+linked in <https://bugzilla.redhat.com/show_bug.cgi?id=851252#c8>.
+
+This is a verbatim backport of the XSA-17 fix
+("xsa17-qemu-xen-traditional-all.patch"):
+
+  patching file console.c
+  Hunk #1 succeeded at 832 (offset 38 lines).
+  Hunk #2 succeeded at 923 (offset 34 lines).
+  Hunk #3 succeeded at 938 (offset 34 lines).
+
+>From the advisory:
+
+  ISSUE DESCRIPTION
+  =================
+
+  The device model used by fully virtualised (HVM) domains, qemu, does not
+  properly handle escape VT100 sequences when emulating certain devices
+  with a virtual console backend.
+
+  IMPACT
+  ======
+
+  An attacker who has sufficient privilege to access a vulnerable device
+  within a guest can overwrite portions of the device model's address
+  space. This can allow them to escalate their privileges to that of the
+  device model process.
+
+Signed-off-by: Laszlo Ersek <lersek@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ console.c | 57 ++++++++++++++++++++++++++++-----------------------------
+ 1 file changed, 28 insertions(+), 29 deletions(-)
+
+diff --git a/console.c b/console.c
+index d4c9eb2..1751cb7 100644
+--- a/console.c
++++ b/console.c
+@@ -832,6 +832,26 @@ static void console_clear_xy(TextConsole *s, int x, int y)
+     update_xy(s, x, y);
+ }
+ 
++/* set cursor, checking bounds */
++static void set_cursor(TextConsole *s, int x, int y)
++{
++    if (x < 0) {
++        x = 0;
++    }
++    if (y < 0) {
++        y = 0;
++    }
++    if (y >= s->height) {
++        y = s->height - 1;
++    }
++    if (x >= s->width) {
++        x = s->width - 1;
++    }
++
++    s->x = x;
++    s->y = y;
++}
++
+ static void console_putchar(TextConsole *s, int ch)
+ {
+     TextCell *c;
+@@ -903,7 +923,8 @@ static void console_putchar(TextConsole *s, int ch)
+                     s->esc_params[s->nb_esc_params] * 10 + ch - '0';
+             }
+         } else {
+-            s->nb_esc_params++;
++            if (s->nb_esc_params < MAX_ESC_PARAMS)
++                s->nb_esc_params++;
+             if (ch == ';')
+                 break;
+ #ifdef DEBUG_CONSOLE
+@@ -917,59 +938,37 @@ static void console_putchar(TextConsole *s, int ch)
+                 if (s->esc_params[0] == 0) {
+                     s->esc_params[0] = 1;
+                 }
+-                s->y -= s->esc_params[0];
+-                if (s->y < 0) {
+-                    s->y = 0;
+-                }
++                set_cursor(s, s->x, s->y - s->esc_params[0]);
+                 break;
+             case 'B':
+                 /* move cursor down */
+                 if (s->esc_params[0] == 0) {
+                     s->esc_params[0] = 1;
+                 }
+-                s->y += s->esc_params[0];
+-                if (s->y >= s->height) {
+-                    s->y = s->height - 1;
+-                }
++                set_cursor(s, s->x, s->y + s->esc_params[0]);
+                 break;
+             case 'C':
+                 /* move cursor right */
+                 if (s->esc_params[0] == 0) {
+                     s->esc_params[0] = 1;
+                 }
+-                s->x += s->esc_params[0];
+-                if (s->x >= s->width) {
+-                    s->x = s->width - 1;
+-                }
++                set_cursor(s, s->x + s->esc_params[0], s->y);
+                 break;
+             case 'D':
+                 /* move cursor left */
+                 if (s->esc_params[0] == 0) {
+                     s->esc_params[0] = 1;
+                 }
+-                s->x -= s->esc_params[0];
+-                if (s->x < 0) {
+-                    s->x = 0;
+-                }
++                set_cursor(s, s->x - s->esc_params[0], s->y);
+                 break;
+             case 'G':
+                 /* move cursor to column */
+-                s->x = s->esc_params[0] - 1;
+-                if (s->x < 0) {
+-                    s->x = 0;
+-                }
++                set_cursor(s, s->esc_params[0] - 1, s->y);
+                 break;
+             case 'f':
+             case 'H':
+                 /* move cursor to row, column */
+-                s->x = s->esc_params[1] - 1;
+-                if (s->x < 0) {
+-                    s->x = 0;
+-                }
+-                s->y = s->esc_params[0] - 1;
+-                if (s->y < 0) {
+-                    s->y = 0;
+-                }
++                set_cursor(s, s->esc_params[1] - 1, s->esc_params[0] - 1);
+                 break;
+             case 'J':
+                 switch (s->esc_params[0]) {
+-- 
+1.7.11.4
+

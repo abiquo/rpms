@@ -1,0 +1,47 @@
+From b142c4d48135bb9845dbe931a96c8112867d27e3 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:41 +0100
+Subject: [PATCH 47/52] ehci: add assert
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-48-git-send-email-armbru@redhat.com>
+Patchwork-id: 36607
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 47/52] ehci: add assert
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Gerd Hoffmann <kraxel@redhat.com>
+
+Coverity thinks q could be NULL there and warns.
+I believe it can't be NULL there.
+Add assert to prove it.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit b246721614e316ce948d058dbe45702447998b5f)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ hw/usb-ehci.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-ehci.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index 468ec0f..256f939 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -2028,6 +2028,7 @@ static void ehci_advance_state(EHCIState *ehci,
+             break;
+ 
+         case EST_WRITEBACK:
++            assert(q != NULL);
+             again = ehci_state_writeback(q, async);
+             break;
+ 
+-- 
+1.7.7.5
+

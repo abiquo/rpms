@@ -1,0 +1,91 @@
+From bba05be169d56db3154d4cb3950ed765f23c1031 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 7 May 2012 15:01:59 -0300
+Subject: [RHEL6 qemu-kvm PATCH 6/6] qemu-img: make "info" backing file output correct and easier to use
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1336402919-26889-6-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39615
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 5/5] qemu-img: make "info" backing file output correct and easier to use
+Bugzilla: 818876
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+
+Upstream status: to be submitted, in my github blkmirror-job branch
+
+qemu-img info should use the same logic as qemu when printing the
+backing file path, or debugging becomes quite tricky.  We can also
+simplify the output in case the backing file has an absolute path
+or a protocol.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ block.c    |    2 +-
+ block.h    |    1 +
+ qemu-img.c |   17 ++++++++++++-----
+ 3 files changed, 14 insertions(+), 6 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ block.c    |    2 +-
+ block.h    |    1 +
+ qemu-img.c |   17 ++++++++++++-----
+ 3 files changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/block.c b/block.c
+index a63cdd5..02b61fa 100644
+--- a/block.c
++++ b/block.c
+@@ -112,7 +112,7 @@ int is_windows_drive(const char *filename)
+ #endif
+ 
+ /* check if the path starts with "<protocol>:" */
+-static int path_has_protocol(const char *path)
++int path_has_protocol(const char *path)
+ {
+     const char *p;
+ 
+diff --git a/block.h b/block.h
+index e1a1ef6..3233218 100644
+--- a/block.h
++++ b/block.h
+@@ -292,6 +292,7 @@ char *bdrv_snapshot_dump(char *buf, int buf_size, QEMUSnapshotInfo *sn);
+ 
+ char *get_human_readable_size(char *buf, int buf_size, int64_t size);
+ int path_is_absolute(const char *path);
++int path_has_protocol(const char *path);
+ void path_combine(char *dest, int dest_size,
+                   const char *base_path,
+                   const char *filename);
+diff --git a/qemu-img.c b/qemu-img.c
+index f4f7020..0553b40 100644
+--- a/qemu-img.c
++++ b/qemu-img.c
+@@ -1139,11 +1139,18 @@ static int img_info(int argc, char **argv)
+     }
+     bdrv_get_backing_filename(bs, backing_filename, sizeof(backing_filename));
+     if (backing_filename[0] != '\0') {
+-        path_combine(backing_filename2, sizeof(backing_filename2),
+-                     filename, backing_filename);
+-        printf("backing file: %s (actual path: %s)\n",
+-               backing_filename,
+-               backing_filename2);
++        if (path_has_protocol(backing_filename)) {
++            pstrcpy(backing_filename2, sizeof(backing_filename2),
++                    backing_filename);
++        } else {
++            path_combine(backing_filename2, sizeof(backing_filename2),
++                         filename, backing_filename);
++        }
++        printf("backing file: %s", backing_filename);
++        if (strcmp(backing_filename, backing_filename2) != 0) {
++            printf(" (actual path: %s)", backing_filename2);
++        }
++        putchar('\n');
+     }
+     dump_snapshots(bs);
+     bdrv_delete(bs);
+-- 
+1.7.3.2
+

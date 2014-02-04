@@ -1,0 +1,128 @@
+From 4052bd8f73f8ae7617a865d253f0d09a06f4f08c Mon Sep 17 00:00:00 2001
+Message-Id: <4052bd8f73f8ae7617a865d253f0d09a06f4f08c.1343915404.git.minovotn@redhat.com>
+In-Reply-To: <5b3bcf18e866636f24ca1c23eb94d5caf23c6dd6.1343915404.git.minovotn@redhat.com>
+References: <5b3bcf18e866636f24ca1c23eb94d5caf23c6dd6.1343915404.git.minovotn@redhat.com>
+From: Pavel Hrdina <phrdina@redhat.com>
+Date: Mon, 16 Jul 2012 16:14:55 +0200
+Subject: [PATCH 6/7] fdc: fix interrupt handling
+
+RH-Author: Pavel Hrdina <phrdina@redhat.com>
+Message-id: <a32b49b7f42d51a4cc8d408f58348e636448c958.1342446805.git.phrdina@redhat.com>
+Patchwork-id: 40342
+O-Subject: [RHEL-6.4 qemu-kvm PATCH v6 6/6] fdc: fix interrupt handling
+Bugzilla: 729244
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Michal Novotny <minovotn@redhat.com>
+
+If you call the SENSE INTERRUPT STATUS command while there is no interrupt
+waiting you get as result unknown command.
+
+Fixed status0 register handling for read/write/format commands.
+
+Signed-off-by: Pavel Hrdina <phrdina@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 2fee00885a9ea4db69bbfc1ba8ccf95f2ae9aec6)
+---
+ hw/fdc.c |   34 +++++++++++++++++++++-------------
+ 1 file changed, 21 insertions(+), 13 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/fdc.c |   34 +++++++++++++++++++++-------------
+ 1 file changed, 21 insertions(+), 13 deletions(-)
+
+diff --git a/hw/fdc.c b/hw/fdc.c
+index fe38649..77a304c 100644
+--- a/hw/fdc.c
++++ b/hw/fdc.c
+@@ -398,6 +398,9 @@ enum {
+ };
+ 
+ enum {
++    FD_SR0_DS0      = 0x01,
++    FD_SR0_DS1      = 0x02,
++    FD_SR0_HEAD     = 0x04,
+     FD_SR0_EQPMT    = 0x10,
+     FD_SR0_SEEK     = 0x20,
+     FD_SR0_ABNTERM  = 0x40,
+@@ -1043,14 +1046,15 @@ static void fdctrl_reset_fifo (fdctrl_t *fdctrl)
+ }
+ 
+ /* Set FIFO status for the host to read */
+-static void fdctrl_set_fifo (fdctrl_t *fdctrl, int fifo_len, int do_irq)
++static void fdctrl_set_fifo(fdctrl_t *fdctrl, int fifo_len, uint8_t status0)
+ {
+     fdctrl->data_dir = FD_DIR_READ;
+     fdctrl->data_len = fifo_len;
+     fdctrl->data_pos = 0;
+     fdctrl->msr |= FD_MSR_CMDBUSY | FD_MSR_RQM | FD_MSR_DIO;
+-    if (do_irq)
+-        fdctrl_raise_irq(fdctrl, 0x00);
++    if (status0) {
++        fdctrl_raise_irq(fdctrl, status0);
++    }
+ }
+ 
+ /* Set an error: unimplemented/unknown command */
+@@ -1114,10 +1118,12 @@ static void fdctrl_stop_transfer (fdctrl_t *fdctrl, uint8_t status0,
+     fdrive_t *cur_drv;
+ 
+     cur_drv = get_cur_drv(fdctrl);
++    fdctrl->status0 = status0 | FD_SR0_SEEK | (cur_drv->head << 2) |
++                      GET_CUR_DRV(fdctrl);
++
+     FLOPPY_DPRINTF("transfer status: %02x %02x %02x (%02x)\n",
+-                   status0, status1, status2,
+-                   status0 | (cur_drv->head << 2) | GET_CUR_DRV(fdctrl));
+-    fdctrl->fifo[0] = status0 | (cur_drv->head << 2) | GET_CUR_DRV(fdctrl);
++                   status0, status1, status2, fdctrl->status0);
++    fdctrl->fifo[0] = fdctrl->status0;
+     fdctrl->fifo[1] = status1;
+     fdctrl->fifo[2] = status2;
+     fdctrl->fifo[3] = cur_drv->track;
+@@ -1130,7 +1136,7 @@ static void fdctrl_stop_transfer (fdctrl_t *fdctrl, uint8_t status0,
+     }
+     fdctrl->msr |= FD_MSR_RQM | FD_MSR_DIO;
+     fdctrl->msr &= ~FD_MSR_NONDMA;
+-    fdctrl_set_fifo(fdctrl, 7, 1);
++    fdctrl_set_fifo(fdctrl, 7, fdctrl->status0);
+ }
+ 
+ /* Prepare a data transfer (either DMA or FIFO) */
+@@ -1230,7 +1236,7 @@ static void fdctrl_start_transfer (fdctrl_t *fdctrl, int direction)
+     if (direction != FD_DIR_WRITE)
+         fdctrl->msr |= FD_MSR_DIO;
+     /* IO based transfer: calculate len */
+-    fdctrl_raise_irq(fdctrl, 0x00);
++    fdctrl_raise_irq(fdctrl, FD_SR0_SEEK);
+ 
+     return;
+ }
+@@ -1648,16 +1654,18 @@ static void fdctrl_handle_sense_interrupt_status (fdctrl_t *fdctrl, int directio
+ {
+     fdrive_t *cur_drv = get_cur_drv(fdctrl);
+ 
+-    if(fdctrl->reset_sensei > 0) {
++    if (fdctrl->reset_sensei > 0) {
+         fdctrl->fifo[0] =
+             FD_SR0_RDYCHG + FD_RESET_SENSEI_COUNT - fdctrl->reset_sensei;
+         fdctrl->reset_sensei--;
++    } else if (!(fdctrl->sra & FD_SRA_INTPEND)) {
++        fdctrl->fifo[0] = FD_SR0_INVCMD;
++        fdctrl_set_fifo(fdctrl, 1, 0);
++        return;
+     } else {
+-        /* XXX: status0 handling is broken for read/write
+-           commands, so we do this hack. It should be suppressed
+-           ASAP */
+         fdctrl->fifo[0] =
+-            FD_SR0_SEEK | (cur_drv->head << 2) | GET_CUR_DRV(fdctrl);
++                (fdctrl->status0 & ~(FD_SR0_HEAD | FD_SR0_DS1 | FD_SR0_DS0))
++                | GET_CUR_DRV(fdctrl);
+     }
+ 
+     fdctrl->fifo[1] = cur_drv->track;
+-- 
+1.7.10.4
+

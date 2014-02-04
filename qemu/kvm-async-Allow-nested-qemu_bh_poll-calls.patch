@@ -1,0 +1,89 @@
+From 19d7219176df65a532a2e99f304a457ceb6986ae Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:38 +0100
+Subject: [PATCH 73/99] async: Allow nested qemu_bh_poll calls
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-74-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37270
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 73/96] async: Allow nested qemu_bh_poll calls
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+qemu may segfault when a BH handler first deletes a BH and then (possibly
+indirectly) calls a nested qemu_bh_poll(). This is because the inner instance
+frees the BH and deletes it from the list that the outer one processes.
+
+This patch deletes BHs only in the outermost qemu_bh_poll instance.
+
+Commit 7887f620 already tried to achieve the same, but it assumed that the BH
+handler would only delete its own BH. With a nested qemu_bh_poll(), this isn't
+guaranteed, so that commit wasn't enough. Hope this one fixes it for real.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 648fb0ea5e9d7f32c80ec23c3ece4321403dfecd)
+
+Conflicts:
+
+	async.c
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ async.c |   24 ++++++++++++++++--------
+ 1 files changed, 16 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ async.c |   24 ++++++++++++++++--------
+ 1 files changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/async.c b/async.c
+index 3fe70b9..a8b4ef6 100644
+--- a/async.c
++++ b/async.c
+@@ -55,6 +55,9 @@ int qemu_bh_poll(void)
+ {
+     QEMUBH *bh, **bhp, *next;
+     int ret;
++    static int nesting = 0;
++
++    nesting++;
+ 
+     ret = 0;
+     for (bh = first_bh; bh; bh = next) {
+@@ -68,15 +71,20 @@ int qemu_bh_poll(void)
+         }
+     }
+ 
++    nesting--;
++
+     /* remove deleted bhs */
+-    bhp = &first_bh;
+-    while (*bhp) {
+-        bh = *bhp;
+-        if (bh->deleted) {
+-            *bhp = bh->next;
+-            qemu_free(bh);
+-        } else
+-            bhp = &bh->next;
++    if (!nesting) {
++        bhp = &first_bh;
++        while (*bhp) {
++            bh = *bhp;
++            if (bh->deleted) {
++                *bhp = bh->next;
++                g_free(bh);
++            } else {
++                bhp = &bh->next;
++            }
++        }
+     }
+ 
+     return ret;
+-- 
+1.7.7.5
+

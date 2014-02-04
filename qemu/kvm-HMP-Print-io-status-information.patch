@@ -1,0 +1,46 @@
+From 4de2fb1de2ee7dcefd82939c931d8f363c721569 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 27 Feb 2012 20:31:08 +0100
+Subject: [PATCH 109/109] HMP: Print 'io-status' information
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1330374668-8838-7-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 37645
+O-Subject: [PATCH RHEL6.3 qemu-kvm 6/6] HMP: Print 'io-status' information
+Bugzilla: 797186
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit d2078cc238ae30956f9ec74e656323e701937b4e)
+---
+ block.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index 00d8e2b..7f1da08 100644
+--- a/block.c
++++ b/block.c
+@@ -1725,6 +1725,11 @@ static void bdrv_print_dict(QObject *obj, void *opaque)
+         monitor_printf(mon, " tray-open=%d",
+                        qdict_get_bool(bs_dict, "tray-open"));
+     }
++
++    if (qdict_haskey(bs_dict, "io-status")) {
++        monitor_printf(mon, " io-status=%s", qdict_get_str(bs_dict, "io-status"));
++    }
++
+     if (qdict_haskey(bs_dict, "inserted")) {
+         QDict *qdict = qobject_to_qdict(qdict_get(bs_dict, "inserted"));
+ 
+-- 
+1.7.7.6
+

@@ -1,0 +1,97 @@
+From 6dd38b59636c92a86274da3ef8ef9cc1aa91ed1b Mon Sep 17 00:00:00 2001
+Message-Id: <6dd38b59636c92a86274da3ef8ef9cc1aa91ed1b.1334581530.git.minovotn@redhat.com>
+In-Reply-To: <28774cb15d2443e325049ef410956f5635a1484b.1334581530.git.minovotn@redhat.com>
+References: <28774cb15d2443e325049ef410956f5635a1484b.1334581530.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Fri, 30 Mar 2012 12:35:32 +0200
+Subject: [PATCH 2/6] usb: use USBDescriptor for device qualifier descriptors.
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1333110936-22700-3-git-send-email-kraxel@redhat.com>
+Patchwork-id: 39040
+O-Subject: [RHEL-6.3 qemu-kvm PATCH 2/6] usb: use USBDescriptor for device qualifier descriptors.
+Bugzilla: 807878
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+Add device qualifier substruct to USBDescriptor,
+use it in the descriptor generator code.
+
+upstream: http://patchwork.ozlabs.org/patch/149401/
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ hw/usb-desc.c |   21 +++++++++++----------
+ hw/usb-desc.h |   10 ++++++++++
+ 2 files changed, 21 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-desc.c |   23 ++++++++++++-----------
+ hw/usb-desc.h |   10 ++++++++++
+ 2 files changed, 22 insertions(+), 11 deletions(-)
+
+diff --git a/hw/usb-desc.c b/hw/usb-desc.c
+index 84482a2..98ec6a9 100644
+--- a/hw/usb-desc.c
++++ b/hw/usb-desc.c
+@@ -53,22 +53,23 @@ int usb_desc_device_qualifier(const USBDescDevice *dev,
+                               uint8_t *dest, size_t len)
+ {
+     uint8_t bLength = 0x0a;
++    USBDescriptor *d = (void *)dest;
+ 
+     if (len < bLength) {
+         return -1;
+     }
+ 
+-    dest[0x00] = bLength;
+-    dest[0x01] = USB_DT_DEVICE_QUALIFIER;
+-
+-    dest[0x02] = usb_lo(dev->bcdUSB);
+-    dest[0x03] = usb_hi(dev->bcdUSB);
+-    dest[0x04] = dev->bDeviceClass;
+-    dest[0x05] = dev->bDeviceSubClass;
+-    dest[0x06] = dev->bDeviceProtocol;
+-    dest[0x07] = dev->bMaxPacketSize0;
+-    dest[0x08] = dev->bNumConfigurations;
+-    dest[0x09] = 0; /* reserved */
++    d->bLength                               = bLength;
++    d->bDescriptorType                       = USB_DT_DEVICE_QUALIFIER;
++
++    d->u.device_qualifier.bcdUSB_lo          = usb_lo(dev->bcdUSB);
++    d->u.device_qualifier.bcdUSB_hi          = usb_hi(dev->bcdUSB);
++    d->u.device_qualifier.bDeviceClass       = dev->bDeviceClass;
++    d->u.device_qualifier.bDeviceSubClass    = dev->bDeviceSubClass;
++    d->u.device_qualifier.bDeviceProtocol    = dev->bDeviceProtocol;
++    d->u.device_qualifier.bMaxPacketSize0    = dev->bMaxPacketSize0;
++    d->u.device_qualifier.bNumConfigurations = dev->bNumConfigurations;
++    d->u.device_qualifier.bReserved          = 0;
+ 
+     return bLength;
+ }
+diff --git a/hw/usb-desc.h b/hw/usb-desc.h
+index 081866f..12eee65 100644
+--- a/hw/usb-desc.h
++++ b/hw/usb-desc.h
+@@ -26,6 +26,16 @@ typedef struct USBDescriptor {
+             uint8_t           iSerialNumber;
+             uint8_t           bNumConfigurations;
+         } device;
++        struct {
++            uint8_t           bcdUSB_lo;
++            uint8_t           bcdUSB_hi;
++            uint8_t           bDeviceClass;
++            uint8_t           bDeviceSubClass;
++            uint8_t           bDeviceProtocol;
++            uint8_t           bMaxPacketSize0;
++            uint8_t           bNumConfigurations;
++            uint8_t           bReserved;
++        } device_qualifier;
+     } u;
+ } __attribute__((packed)) USBDescriptor;
+ 
+-- 
+1.7.7.6
+

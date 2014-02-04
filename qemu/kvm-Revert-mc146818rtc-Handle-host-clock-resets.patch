@@ -1,0 +1,61 @@
+From 2ca289c3e630269ca7e4fb1f4baa3d38acb9a2ba Mon Sep 17 00:00:00 2001
+From: Michal Novotny <minovotn@redhat.com>
+Date: Mon, 12 Mar 2012 18:10:18 +0100
+Subject: [PATCH 3/3] Revert "mc146818rtc: Handle host clock resets"
+
+RH-Reverts: 12ff69b9a0621a598e55ad9960dee0c9fbb65246
+RH-Reverts-patchwork-id: 37476
+Bugzilla-related: 734426
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/mc146818rtc.c |   20 --------------------
+ 1 files changed, 0 insertions(+), 20 deletions(-)
+
+diff --git a/hw/mc146818rtc.c b/hw/mc146818rtc.c
+index 524ca1e..4fd4ad9 100644
+--- a/hw/mc146818rtc.c
++++ b/hw/mc146818rtc.c
+@@ -84,7 +84,6 @@ struct RTCState {
+     QEMUTimer *coalesced_timer;
+     QEMUTimer *second_timer;
+     QEMUTimer *second_timer2;
+-    Notifier clock_reset_notifier;
+ };
+ 
+ static void rtc_irq_raise(qemu_irq irq)
+@@ -562,22 +561,6 @@ static const VMStateDescription vmstate_rtc = {
+     }
+ };
+ 
+-static void rtc_notify_clock_reset(Notifier *notifier, void *data)
+-{
+-    RTCState *s = container_of(notifier, RTCState, clock_reset_notifier);
+-    int64_t now = *(int64_t *)data;
+-
+-    rtc_set_date_from_host(s);
+-    s->next_second_time = now + (get_ticks_per_sec() * 99) / 100;
+-    qemu_mod_timer(s->second_timer2, s->next_second_time);
+-    rtc_timer_update(s, now);
+-#ifdef TARGET_I386
+-    if (rtc_td_hack) {
+-        rtc_coalesced_timer_update(s);
+-    }
+-#endif
+-}
+-
+ static void rtc_reset(void *opaque)
+ {
+     RTCState *s = opaque;
+@@ -617,9 +600,6 @@ static int rtc_initfn(ISADevice *dev)
+     s->second_timer = qemu_new_timer(rtc_clock, rtc_update_second, s);
+     s->second_timer2 = qemu_new_timer(rtc_clock, rtc_update_second2, s);
+ 
+-    s->clock_reset_notifier.notify = rtc_notify_clock_reset;
+-    qemu_register_clock_reset_notifier(rtc_clock, &s->clock_reset_notifier);
+-
+     s->next_second_time =
+         qemu_get_clock(rtc_clock) + (get_ticks_per_sec() * 99) / 100;
+     qemu_mod_timer(s->second_timer2, s->next_second_time);
+-- 
+1.7.7.6
+

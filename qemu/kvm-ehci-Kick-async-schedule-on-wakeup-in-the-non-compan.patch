@@ -1,0 +1,62 @@
+From e060c81ffab58f5a5d36f83b71bada377b75fcb3 Mon Sep 17 00:00:00 2001
+Message-Id: <e060c81ffab58f5a5d36f83b71bada377b75fcb3.1346940159.git.minovotn@redhat.com>
+In-Reply-To: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+References: <c629acdc74c5b775c5cf7a7a3cb20ac833bcd0cc.1346940159.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Thu, 16 Aug 2012 11:39:07 +0200
+Subject: [PATCH 05/18] ehci: Kick async schedule on wakeup in the non
+ companion case
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1345117160-21046-6-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40935
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 05/18] ehci: Kick async schedule on wakeup in the non companion case
+Bugzilla: 805172
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Hans de Goede <hdegoede@redhat.com>
+
+Commit 0f588df8b3688b00e77aabaa32e26ece5f19bd39, added code
+to ehci_wakeup to kick the async schedule on wakeup, but the else
+was positioned wrong making it trigger for devices which are routed
+to the companion rather then to the ehci controller itself.
+
+This patch fixes this. Note that the "programming style" with using the
+return at the end of the companion block matches how the companion case
+is handled in the other ports ops, and is done this way for consistency.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 379521175c6adecd48afcfde647c224f9586c9c0)
+---
+ hw/usb-ehci.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-ehci.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/hw/usb-ehci.c b/hw/usb-ehci.c
+index f9c5371..16d3112 100644
+--- a/hw/usb-ehci.c
++++ b/hw/usb-ehci.c
+@@ -802,10 +802,11 @@ static void ehci_wakeup(USBPort *port)
+         USBPort *companion = s->companion_ports[port->index];
+         if (companion->ops->wakeup) {
+             companion->ops->wakeup(companion);
+-        } else {
+-            qemu_bh_schedule(s->async_bh);
+         }
++        return;
+     }
++
++    qemu_bh_schedule(s->async_bh);
+ }
+ 
+ static int ehci_register_companion(USBBus *bus, USBPort *ports[],
+-- 
+1.7.11.4
+

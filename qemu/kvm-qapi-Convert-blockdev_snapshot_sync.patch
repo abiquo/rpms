@@ -1,0 +1,354 @@
+From 0b07947750205e5329b4805072834a86df1b72ed Mon Sep 17 00:00:00 2001
+From: Federico Simoncelli <fsimonce@redhat.com>
+Date: Fri, 23 Mar 2012 12:12:47 -0300
+Subject: [RHEL6 qemu-kvm PATCH 2/9] qapi: Convert blockdev_snapshot_sync
+
+RH-Author: Federico Simoncelli <fsimonce@redhat.com>
+Message-id: <1332504778-17403-3-git-send-email-fsimonce@redhat.com>
+Patchwork-id: 38951
+O-Subject: [RHEL6.3 qemu-kvm PATCH v6 02/13] qapi: Convert blockdev_snapshot_sync
+Bugzilla: 802284
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Luiz Capitulino <lcapitulino@redhat.com>
+
+Unfortunately, this conversion required an additional change.
+
+In the old QMP command, the 'snapshot-file' argument is specified as
+optional. The idea is to take the snapshot internally if 'snapshot-file'
+is not passed. However, internal snapshots are not supported yet so
+the command returns a MissingParamater error if 'snapshot-file' is not
+passed. Which makes the argument actually required and will cause
+compatibility breakage if we change that in the future.
+
+To fix this the QAPI converted blockdev_snapshot_sync command makes the
+'snapshot-file' argument required. Again, in practice it's actually required,
+so this is not incompatible.
+
+If we do implement internal snapshots someday, we'll need a new argument
+for it.
+
+Note that this discussion doesn't affect HMP.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+
+BZ: 802284
+
+(cherry picked from 6106e2492fe0080ad85d4862dec9c3bebc57b2f0)
+
+RHEL6 notes: hmp.c and hmp.h were added taking bits from 48a32be (qapi:
+             convert query-name) and 0cfd6a9 (qapi: Convert memsave).
+             Both patches had several dependencies and it wasn't
+             possible to backport them completely.
+
+Signed-off-by: Federico Simoncelli <fsimonce@redhat.com>
+---
+ Makefile.objs    |    1 +
+ blockdev.c       |   54 +++++++++++++++++++-----------------------------------
+ hmp.c            |   44 ++++++++++++++++++++++++++++++++++++++++++++
+ hmp.h            |   25 +++++++++++++++++++++++++
+ monitor.c        |    1 +
+ qapi-schema.json |   29 +++++++++++++++++++++++++++++
+ qemu-monitor.hx  |    6 +++---
+ 7 files changed, 122 insertions(+), 38 deletions(-)
+ create mode 100644 hmp.c
+ create mode 100644 hmp.h
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ Makefile.objs    |    1 +
+ blockdev.c       |   54 +++++++++++++++++++-----------------------------------
+ hmp.c            |   44 ++++++++++++++++++++++++++++++++++++++++++++
+ hmp.h            |   25 +++++++++++++++++++++++++
+ monitor.c        |    1 +
+ qapi-schema.json |   29 +++++++++++++++++++++++++++++
+ qemu-monitor.hx  |    6 +++---
+ 7 files changed, 122 insertions(+), 38 deletions(-)
+ create mode 100644 hmp.c
+ create mode 100644 hmp.h
+
+diff --git a/Makefile.objs b/Makefile.objs
+index d21d747..4d35939 100644
+--- a/Makefile.objs
++++ b/Makefile.objs
+@@ -204,6 +204,7 @@ endif
+ qapi-obj-y = $(addprefix qapi/, $(qapi-nested-y))
+ 
+ common-obj-y += $(qapi-obj-y) $(qapi-generated-y)
++common-obj-y += hmp.o
+ 
+ ######################################################################
+ # guest agent
+diff --git a/blockdev.c b/blockdev.c
+index 12ef6f5..130c23e 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -631,33 +631,24 @@ void do_commit(Monitor *mon, const QDict *qdict)
+ }
+ 
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+-int do_snapshot_blkdev(Monitor *mon, const QDict *qdict, QObject **ret_data)
++void qmp_blockdev_snapshot_sync(const char *device, const char *snapshot_file,
++                                bool has_format, const char *format,
++                                Error **errp)
+ {
+-    const char *device = qdict_get_str(qdict, "device");
+-    const char *filename = qdict_get_try_str(qdict, "snapshot-file");
+-    const char *format = qdict_get_try_str(qdict, "format");
+     BlockDriverState *bs;
+     BlockDriver *drv, *old_drv, *proto_drv;
+     int ret = 0;
+     int flags;
+     char old_filename[1024];
+ 
+-    if (!filename) {
+-        qerror_report(QERR_MISSING_PARAMETER, "snapshot-file");
+-        ret = -1;
+-        goto out;
+-    }
+-
+     bs = bdrv_find(device);
+     if (!bs) {
+-        qerror_report(QERR_DEVICE_NOT_FOUND, device);
+-        ret = -1;
+-        goto out;
++        error_set(errp, QERR_DEVICE_NOT_FOUND, device);
++        return;
+     }
+     if (bdrv_in_use(bs)) {
+-        qerror_report(QERR_DEVICE_IN_USE, device);
+-        ret = -1;
+-        goto out;
++        error_set(errp, QERR_DEVICE_IN_USE, device);
++        return;
+     }
+ 
+     pstrcpy(old_filename, sizeof(old_filename), bs->filename);
+@@ -665,35 +656,34 @@ int do_snapshot_blkdev(Monitor *mon, const QDict *qdict, QObject **ret_data)
+     old_drv = bs->drv;
+     flags = bs->open_flags;
+ 
+-    if (!format) {
++    if (!has_format) {
+         format = "qcow2";
+     }
+ 
+     drv = bdrv_find_format(format);
+     if (!drv) {
+-        qerror_report(QERR_INVALID_BLOCK_FORMAT, format);
+-        ret = -1;
+-        goto out;
++        error_set(errp, QERR_INVALID_BLOCK_FORMAT, format);
++        return;
+     }
+ 
+-    proto_drv = bdrv_find_protocol(filename);
++    proto_drv = bdrv_find_protocol(snapshot_file);
+     if (!proto_drv) {
+-        qerror_report(QERR_INVALID_BLOCK_FORMAT, format);
+-        ret = -1;
+-        goto out;
++        error_set(errp, QERR_INVALID_BLOCK_FORMAT, format);
++        return;
+     }
+ 
+-    ret = bdrv_img_create(filename, format, bs->filename,
++    ret = bdrv_img_create(snapshot_file, format, bs->filename,
+                           bs->drv->format_name, NULL, -1, flags);
+     if (ret) {
+-        goto out;
++        error_set(errp, QERR_UNDEFINED_ERROR);
++        return;
+     }
+ 
+     bdrv_drain_all();
+     bdrv_flush(bs);
+ 
+     bdrv_close(bs);
+-    ret = bdrv_open(bs, filename, flags, drv);
++    ret = bdrv_open(bs, snapshot_file, flags, drv);
+     /*
+      * If reopening the image file we just created fails, fall back
+      * and try to re-open the original image. If that fails too, we
+@@ -702,17 +692,11 @@ int do_snapshot_blkdev(Monitor *mon, const QDict *qdict, QObject **ret_data)
+     if (ret != 0) {
+         ret = bdrv_open(bs, old_filename, flags, old_drv);
+         if (ret != 0) {
+-            qerror_report(QERR_OPEN_FILE_FAILED, old_filename);
++            error_set(errp, QERR_OPEN_FILE_FAILED, old_filename);
+         } else {
+-            qerror_report(QERR_OPEN_FILE_FAILED, filename);
++            error_set(errp, QERR_OPEN_FILE_FAILED, snapshot_file);
+         }
+     }
+-out:
+-    if (ret) {
+-        ret = -1;
+-    }
+-
+-    return ret;
+ }
+ #endif 
+ 
+diff --git a/hmp.c b/hmp.c
+new file mode 100644
+index 0000000..dccd5ff
+--- /dev/null
++++ b/hmp.c
+@@ -0,0 +1,44 @@
++/*
++ * Human Monitor Interface
++ *
++ * Copyright IBM, Corp. 2011
++ *
++ * Authors:
++ *  Anthony Liguori   <aliguori@us.ibm.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2.  See
++ * the COPYING file in the top-level directory.
++ *
++ */
++
++#include "hmp.h"
++#include "qmp-commands.h"
++
++#ifdef CONFIG_LIVE_SNAPSHOTS
++static void hmp_handle_error(Monitor *mon, Error **errp)
++{
++    if (error_is_set(errp)) {
++        monitor_printf(mon, "%s\n", error_get_pretty(*errp));
++        error_free(*errp);
++    }
++}
++
++void hmp_snapshot_blkdev(Monitor *mon, const QDict *qdict)
++{
++    const char *device = qdict_get_str(qdict, "device");
++    const char *filename = qdict_get_try_str(qdict, "snapshot-file");
++    const char *format = qdict_get_try_str(qdict, "format");
++    Error *errp = NULL;
++
++    if (!filename) {
++        /* In the future, if 'snapshot-file' is not specified, the snapshot
++           will be taken internally. Today it's actually required. */
++        error_set(&errp, QERR_MISSING_PARAMETER, "snapshot-file");
++        hmp_handle_error(mon, &errp);
++        return;
++    }
++
++    qmp_blockdev_snapshot_sync(device, filename, !!format, format, &errp);
++    hmp_handle_error(mon, &errp);
++}
++#endif
+diff --git a/hmp.h b/hmp.h
+new file mode 100644
+index 0000000..3f5643b
+--- /dev/null
++++ b/hmp.h
+@@ -0,0 +1,25 @@
++/*
++ * Human Monitor Interface
++ *
++ * Copyright IBM, Corp. 2011
++ *
++ * Authors:
++ *  Anthony Liguori   <aliguori@us.ibm.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2.  See
++ * the COPYING file in the top-level directory.
++ *
++ */
++
++#ifndef HMP_H
++#define HMP_H
++
++#include "qemu-common.h"
++
++#ifdef CONFIG_LIVE_SNAPSHOTS
++#include "rhev-qapi-types.h"
++
++void hmp_snapshot_blkdev(Monitor *mon, const QDict *qdict);
++#endif
++
++#endif
+diff --git a/monitor.c b/monitor.c
+index e73dce7..f81698c 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -63,6 +63,7 @@
+ #include "qemu-kvm.h"
+ #include "ui/qemu-spice.h"
+ #include "qmp-commands.h"
++#include "hmp.h"
+ 
+ //#define DEBUG
+ //#define DEBUG_COMPLETION
+diff --git a/qapi-schema.json b/qapi-schema.json
+index 5fb482a..59edf0e 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -40,4 +40,33 @@
+ ##
+ { 'command': 'blockdev-group-snapshot-sync',
+   'data': { 'devlist': [ 'SnapshotDev' ] } }
++
++##
++# @blockdev-snapshot-sync
++#
++# Generates a synchronous snapshot of a block device.
++#
++# @device:  the name of the device to generate the snapshot from.
++#
++# @snapshot-file: the target of the new image. If the file exists, or if it
++#                 is a device, the snapshot will be created in the existing
++#                 file/device. If does not exist, a new file will be created.
++#
++# @format: #optional the format of the snapshot image, default is 'qcow2'.
++#
++# Returns: nothing on success
++#          If @device is not a valid block device, DeviceNotFound
++#          If @snapshot-file can't be opened, OpenFileFailed
++#          If @format is invalid, InvalidBlockFormat
++#
++# Notes: One of the last steps taken by this command is to close the current
++#        image being used by @device and open the @snapshot-file one. If that
++#        fails, the command will try to reopen the original image file. If
++#        that also fails OpenFileFailed will be returned and the guest may get
++#        unexpected errors.
++#
++# Since 0.14.0
++##
++{ 'command': 'blockdev-snapshot-sync',
++  'data': { 'device': 'str', 'snapshot-file': 'str', '*format': 'str' } }
+ #endif
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index fa9f552..ac032ec 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1253,7 +1253,7 @@ EQMP
+                       "If format is specified, the snapshot file will\n\t\t\t"
+                       "be created in that format. Otherwise the\n\t\t\t"
+                       "snapshot will be internal! (currently unsupported)",
+-        .mhandler.cmd_new = do_snapshot_blkdev,
++        .mhandler.cmd = hmp_snapshot_blkdev,
+     },
+ #endif
+ 
+@@ -1527,10 +1527,10 @@ EQMP
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+     {
+         .name       = "blockdev-snapshot-sync",
+-        .args_type  = "device:B,snapshot-file:s?,format:s?",
++        .args_type  = "device:B,snapshot-file:s,format:s?",
+         .params     = "device [new-image-file] [format]",
+         .user_print = monitor_user_noop,
+-        .mhandler.cmd_new = do_snapshot_blkdev,
++        .mhandler.cmd_new = qmp_marshal_input_blockdev_snapshot_sync,
+     },
+ #endif
+ 
+-- 
+1.7.3.2
+

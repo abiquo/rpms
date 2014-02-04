@@ -1,0 +1,58 @@
+From 0963c26bc61da7ca3ebd28514fc7b9bb17417465 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:44 +0100
+Subject: [PATCH 088/109] dma-helpers: add accounting wrappers
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-88-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37568
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 087/102] dma-helpers: add accounting wrappers
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+The length of the transfer is already in the sglist, and may be opaque to
+the device if it is not in hw/.  So add a wrapper that fetches it.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ dma-helpers.c |    6 ++++++
+ dma.h         |    3 +++
+ 2 files changed, 9 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ dma-helpers.c |    6 ++++++
+ dma.h         |    3 +++
+ 2 files changed, 9 insertions(+), 0 deletions(-)
+
+diff --git a/dma-helpers.c b/dma-helpers.c
+index b1216d2..8c397af 100644
+--- a/dma-helpers.c
++++ b/dma-helpers.c
+@@ -235,3 +235,9 @@ uint64_t dma_buf_write(uint8_t *ptr, int32_t len, QEMUSGList *sg)
+ {
+     return dma_buf_rw(ptr, len, sg, 1);
+ }
++
++void dma_acct_start(BlockDriverState *bs, BlockAcctCookie *cookie,
++                    QEMUSGList *sg, enum BlockAcctType type)
++{
++    bdrv_acct_start(bs, cookie, sg->size, type);
++}
+diff --git a/dma.h b/dma.h
+index 375f59e..0935d87 100644
+--- a/dma.h
++++ b/dma.h
+@@ -45,4 +45,7 @@ BlockDriverAIOCB *dma_bdrv_write(BlockDriverState *bs,
+ uint64_t dma_buf_read(uint8_t *ptr, int32_t len, QEMUSGList *sg);
+ uint64_t dma_buf_write(uint8_t *ptr, int32_t len, QEMUSGList *sg);
+ 
++void dma_acct_start(BlockDriverState *bs, BlockAcctCookie *cookie,
++                    QEMUSGList *sg, enum BlockAcctType type);
++
+ #endif
+-- 
+1.7.7.6
+

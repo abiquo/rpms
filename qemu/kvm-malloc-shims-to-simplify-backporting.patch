@@ -1,0 +1,63 @@
+From fcada79f2730846c988c7729c841b531277bfaf6 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:28 +0100
+Subject: [PATCH 34/52] malloc shims to simplify backporting
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-35-git-send-email-armbru@redhat.com>
+Patchwork-id: 36595
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 34/52] malloc shims to simplify backporting
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ qemu-common.h |   25 +++++++++++++++++++++++++
+ 1 files changed, 25 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-common.h |   25 +++++++++++++++++++++++++
+ 1 files changed, 25 insertions(+), 0 deletions(-)
+
+diff --git a/qemu-common.h b/qemu-common.h
+index d333f58..f4aa65d 100644
+--- a/qemu-common.h
++++ b/qemu-common.h
+@@ -172,6 +172,31 @@ void qemu_free(void *ptr);
+ char *qemu_strdup(const char *str);
+ char *qemu_strndup(const char *str, size_t size);
+ 
++/* Red Hat Enterprise Linux malloc shims to simplify backporting */
++
++static inline void *g_malloc(size_t sz)
++{
++    return sz ? qemu_malloc(sz) : NULL;
++}
++
++static inline void *g_malloc0(size_t sz)
++{
++    return sz ? qemu_mallocz(sz) : NULL;
++}
++
++static inline void *g_realloc(void *ptr, size_t sz)
++{
++    if (!sz) {
++        free(ptr);
++        return NULL;
++    }
++    return qemu_realloc(ptr, sz);
++}
++#define g_free(ptr) qemu_free((ptr))
++#define g_strdup(str) qemu_strdup((str))
++
++/* end of malloc shims */
++
+ void *get_mmap_addr(unsigned long size);
+ 
+ 
+-- 
+1.7.7.5
+

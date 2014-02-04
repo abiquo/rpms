@@ -1,0 +1,53 @@
+From 1ebf57e3058231b6757c2916d3408c9dccc826e2 Mon Sep 17 00:00:00 2001
+From: Gleb Natapov <gleb@redhat.com>
+Date: Wed, 19 Sep 2012 08:16:00 -0300
+Subject: [RHEL6 qemu-kvm PATCH 13/14] disable s3/s4 by default
+
+RH-Author: Gleb Natapov <gleb@redhat.com>
+Message-id: <20120919081600.GR20907@redhat.com>
+Patchwork-id: 42021
+O-Subject: [PATCH RHEL6.4 qemu-kvm] disable s3/s4 by default
+Bugzilla: 848369
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+After the changes proposed in Bug 827503, S3/S4 will be enabled by
+default on qemu/seabios, but we want it disabled by default in RHEL6.4
+to avoid problems on problematic OSes (it'll be enabled on a
+case-by-case basis in the management layer).
+
+Since we want to have it fully supported when enabled, QE should perform
+the expected tests (which AFAIK have been run in rhel6.3 already, so
+enabling it manually should not be a problem).
+
+BZ: 848369
+Upstream: N/A
+
+Signed-off-by: Gleb Natapov <gleb@redhat.com>
+--
+			Gleb.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/acpi.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index cda4758..cf7dc00 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -770,8 +770,8 @@ static PCIDeviceInfo piix4_pm_info = {
+     .config_write       = pm_write_config,
+     .qdev.props         = (Property[]) {
+         DEFINE_PROP_UINT32("smb_io_base", PIIX4PMState, smb_io_base, 0),
+-        DEFINE_PROP_UINT8("disable_s3", PIIX4PMState, disable_s3, 0),
+-        DEFINE_PROP_UINT8("disable_s4", PIIX4PMState, disable_s4, 0),
++        DEFINE_PROP_UINT8("disable_s3", PIIX4PMState, disable_s3, 1),
++        DEFINE_PROP_UINT8("disable_s4", PIIX4PMState, disable_s4, 1),
+         DEFINE_PROP_UINT8("s4_val", PIIX4PMState, s4_val, 2),
+         DEFINE_PROP_END_OF_LIST(),
+     }
+-- 
+1.7.11.4
+

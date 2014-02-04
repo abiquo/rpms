@@ -1,0 +1,65 @@
+From 28cee423152715a3f9050eac7705b09c760ed673 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:14 +0100
+Subject: [PATCH 058/109] scsi-generic: remove scsi_req_fixup
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-58-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37538
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 057/102] scsi-generic: remove scsi_req_fixup
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+This is not needed anymore, since asynchronous ioctls were introduced
+by commit 221f715 (new scsi-generic abstraction, use SG_IO, 2009-03-28).
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 6a58a3a6ebb738e4173f93ecc089b45dd57c7574)
+---
+ hw/scsi-generic.c |   15 ---------------
+ 1 files changed, 0 insertions(+), 15 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-generic.c |   15 ---------------
+ 1 files changed, 0 insertions(+), 15 deletions(-)
+
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index affd519..083197e 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -241,19 +241,6 @@ static uint8_t *scsi_get_buf(SCSIRequest *req)
+     return r->buf;
+ }
+ 
+-static void scsi_req_fixup(SCSIRequest *req)
+-{
+-    switch(req->cmd.buf[0]) {
+-    case REWIND:
+-    case START_STOP:
+-        if (req->dev->type == TYPE_TAPE) {
+-            /* force IMMED, otherwise qemu waits end of command */
+-            req->cmd.buf[1] = 0x01;
+-        }
+-        break;
+-    }
+-}
+-
+ /* Execute a scsi command.  Returns the length of the data expected by the
+    command.  This will be Positive for data transfers from the device
+    (eg. disk reads), negative for transfers to the device (eg. disk writes),
+@@ -265,8 +252,6 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *cmd)
+     SCSIGenericReq *r = DO_UPCAST(SCSIGenericReq, req, req);
+     int ret;
+ 
+-    scsi_req_fixup(&r->req);
+-
+     DPRINTF("Command: lun=%d tag=0x%x len %zd data=0x%02x", lun, tag,
+             r->req.cmd.xfer, cmd[0]);
+ 
+-- 
+1.7.7.6
+

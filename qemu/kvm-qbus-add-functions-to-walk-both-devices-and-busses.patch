@@ -1,0 +1,122 @@
+From b5612fc5e1ad00012e0b35ee551ee526739a9b21 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:18 +0100
+Subject: [PATCH 002/109] qbus: add functions to walk both devices and busses
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37482
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 001/102] qbus: add functions to walk both devices and busses
+Bugzilla: 782029
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+From: Anthony Liguori <anthony@codemonkey.ws>
+
+There are some cases where you want to walk the busses, in particular, when
+searching for a bus either by name or DeviceInfo.
+Paolo suggested that we model the return values on how GCC's walkers work which
+allows an actor to skip child transversal, or terminate walking with a positive
+value that's returned as the qbus_walk_children's result.
+
+Signed-off-by: Isaku Yamahata <yamahata@valinux.co.jp>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+(cherry picked from 81699d8a90deac361e9e14fd853f8341f40b2fad)
+---
+ hw/qdev.c |   46 ++++++++++++++++++++++++++++++++++++++++++++++
+ hw/qdev.h |   11 +++++++++++
+ 2 files changed, 57 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qdev.c |   46 ++++++++++++++++++++++++++++++++++++++++++++++
+ hw/qdev.h |   11 +++++++++++
+ 2 files changed, 57 insertions(+), 0 deletions(-)
+
+diff --git a/hw/qdev.c b/hw/qdev.c
+index 9a8b7b4..5021041 100644
+--- a/hw/qdev.c
++++ b/hw/qdev.c
+@@ -456,6 +456,52 @@ BusState *qdev_get_child_bus(DeviceState *dev, const char *name)
+     return NULL;
+ }
+ 
++int qbus_walk_children(BusState *bus, qdev_walkerfn *devfn,
++                       qbus_walkerfn *busfn, void *opaque)
++{
++    DeviceState *dev;
++    int err;
++
++    if (busfn) {
++        err = busfn(bus, opaque);
++        if (err) {
++            return err;
++        }
++    }
++
++    QLIST_FOREACH(dev, &bus->children, sibling) {
++        err = qdev_walk_children(dev, devfn, busfn, opaque);
++        if (err < 0) {
++            return err;
++        }
++    }
++
++    return 0;
++}
++
++int qdev_walk_children(DeviceState *dev, qdev_walkerfn *devfn,
++                       qbus_walkerfn *busfn, void *opaque)
++{
++    BusState *bus;
++    int err;
++
++    if (devfn) {
++        err = devfn(dev, opaque);
++        if (err) {
++            return err;
++        }
++    }
++
++    QLIST_FOREACH(bus, &dev->child_bus, sibling) {
++        err = qbus_walk_children(bus, devfn, busfn, opaque);
++        if (err < 0) {
++            return err;
++        }
++    }
++
++    return 0;
++}
++
+ static BusState *qbus_find_recursive(BusState *bus, const char *name,
+                                      const BusInfo *info)
+ {
+diff --git a/hw/qdev.h b/hw/qdev.h
+index 7265558..294212a 100644
+--- a/hw/qdev.h
++++ b/hw/qdev.h
+@@ -181,9 +181,20 @@ BusState *qdev_get_parent_bus(DeviceState *dev);
+ 
+ /*** BUS API. ***/
+ 
++/* Returns 0 to walk children, > 0 to skip walk, < 0 to terminate walk. */
++typedef int (qbus_walkerfn)(BusState *bus, void *opaque);
++typedef int (qdev_walkerfn)(DeviceState *dev, void *opaque);
++
+ void qbus_create_inplace(BusState *bus, BusInfo *info,
+                          DeviceState *parent, const char *name);
+ BusState *qbus_create(BusInfo *info, DeviceState *parent, const char *name);
++/* Returns > 0 if either devfn or busfn skip walk somewhere in cursion,
++ *         < 0 if either devfn or busfn terminate walk somewhere in cursion,
++ *           0 otherwise. */
++int qbus_walk_children(BusState *bus, qdev_walkerfn *devfn,
++                       qbus_walkerfn *busfn, void *opaque);
++int qdev_walk_children(DeviceState *dev, qdev_walkerfn *devfn,
++                       qbus_walkerfn *busfn, void *opaque);
+ void qbus_free(BusState *bus);
+ 
+ #define FROM_QBUS(type, dev) DO_UPCAST(type, qbus, dev)
+-- 
+1.7.7.6
+

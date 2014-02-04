@@ -1,0 +1,36 @@
+From bbcbd4c355e0aa022dcbe2760d3ee3098efdf090 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:44:22 -0500
+Subject: [PATCH 55/98] qapi: Automatically generate a _MAX value for enums
+
+It's the last value in the enum and is very useful for the C
+implementation.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 303b54b1a2611eda47abb28546869c49b5664f59)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ scripts/qapi-types.py |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/scripts/qapi-types.py b/scripts/qapi-types.py
+index 3bacc0c..f64d84c 100644
+--- a/scripts/qapi-types.py
++++ b/scripts/qapi-types.py
+@@ -91,8 +91,11 @@ typedef enum %(name)s
+ ''',
+                 name=name)
+ 
++    # append automatically generated _MAX value
++    enum_values = values + [ 'MAX' ]
++
+     i = 0
+-    for value in values:
++    for value in enum_values:
+         enum_decl += mcgen('''
+     %(abbrev)s_%(value)s = %(i)d,
+ ''',
+-- 
+1.7.7.6
+

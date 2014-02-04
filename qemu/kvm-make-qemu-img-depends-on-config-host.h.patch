@@ -1,0 +1,53 @@
+From ef739afc73ce5527e1125c6a3d58be4112b4034d Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:27 +0100
+Subject: [PATCH 02/99] make: qemu-img depends on config-host.h
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-3-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37195
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 02/96] make: qemu-img depends on config-host.h
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Anthony Liguori <aliguori@us.ibm.com>
+
+Bugzilla: 783950
+
+Fixes mingw32 build out of tree.
+
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit a6a853c86275efd89996ce59612a000c5873db5d)
+
+Conflicts:
+
+	Makefile
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ Makefile |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 467d18c..09a9456 100644
+--- a/Makefile
++++ b/Makefile
+@@ -164,7 +164,7 @@ trace-dtrace.o: trace-dtrace.dtrace $(GENERATED_HEADERS)
+ 
+ ######################################################################
+ 
+-qemu-img.o: qemu-img-cmds.h
++qemu-img.o: qemu-img-cmds.h config-host.h
+ 
+ TOOLS_OBJ=qemu-tool.o $(shared-obj-y) $(trace-obj-y)
+ 
+-- 
+1.7.7.5
+

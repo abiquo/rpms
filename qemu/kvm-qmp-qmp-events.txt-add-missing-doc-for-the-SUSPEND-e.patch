@@ -1,0 +1,54 @@
+From 49d5fa536ca7adca78b21987a517da88e7924db1 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Thu, 13 Sep 2012 17:32:51 -0300
+Subject: [RHEL6 qemu-kvm PATCH 5/6] qmp: qmp-events.txt: add missing doc for
+ the SUSPEND event
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1347557572-27294-2-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 41917
+O-Subject: [PATCH 1/2] qmp: qmp-events.txt: add missing doc for the SUSPEND event
+Bugzilla: 827499
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Eric Blake <eblake@redhat.com>
+Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 67e3cf2664b3fc858a895d1e0e4b8d81c3400823)
+---
+ QMP/qmp-events.txt | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ QMP/qmp-events.txt | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/QMP/qmp-events.txt b/QMP/qmp-events.txt
+index 8e2026e..cbd01cf 100644
+--- a/QMP/qmp-events.txt
++++ b/QMP/qmp-events.txt
+@@ -125,6 +125,18 @@ Example:
+ { "event": "SHUTDOWN",
+     "timestamp": { "seconds": 1267041730, "microseconds": 281295 } }
+ 
++SUSPEND
++-------
++
++Emitted when guest enters S3 state.
++
++Data: None.
++
++Example:
++
++{ "event": "SUSPEND",
++     "timestamp": { "seconds": 1344456160, "microseconds": 309119 } }
++
+ VNC_CONNECTED
+ -------------
+ 
+-- 
+1.7.11.4
+

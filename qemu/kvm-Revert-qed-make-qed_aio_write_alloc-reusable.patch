@@ -1,0 +1,119 @@
+From c951bfda28fd8ee1ff22e405a2655d5c72a5a1ef Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:36 +0100
+Subject: [PATCH 09/55] Revert "qed: make qed_aio_write_alloc() reusable"
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <7e021a6b823715cfbf2617a677f51d5efef0173a.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38859
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 09/54] Revert "qed: make qed_aio_write_alloc() reusable"
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+This reverts commit dea96fbd2f41cba35e89bd4fbaba5539238256c4.
+
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/qed.c |   52 +++++++++++++++++++++++++++++++++++++---------------
+ 1 files changed, 37 insertions(+), 15 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qed.c |   52 +++++++++++++++++++++++++++++++++++++---------------
+ 1 files changed, 37 insertions(+), 15 deletions(-)
+
+diff --git a/block/qed.c b/block/qed.c
+index efb22c5..87b96cc 100644
+--- a/block/qed.c
++++ b/block/qed.c
+@@ -1117,18 +1117,19 @@ static bool qed_start_allocating_write(QEDAIOCB *acb)
+  *
+  * This path is taken when writing to previously unallocated clusters.
+  */
+-static void qed_aio_write_alloc(QEDAIOCB *acb)
++static void qed_aio_write_alloc(QEDAIOCB *acb, size_t len)
+ {
+     BDRVQEDState *s = acb_to_s(acb);
++    BlockDriverCompletionFunc *cb;
+ 
+     if (!qed_start_allocating_write(acb)) {
+-        qemu_iovec_reset(&acb->cur_qiov);
+-        return; /* wait until current allocating write completes */
++        return;
+     }
+ 
+     acb->cur_nclusters = qed_bytes_to_clusters(s,
+-            qed_offset_into_cluster(s, acb->cur_pos) + acb->cur_qiov.size);
++            qed_offset_into_cluster(s, acb->cur_pos) + len);
+     acb->cur_cluster = qed_alloc_clusters(s, acb->cur_nclusters);
++    qemu_iovec_copy(&acb->cur_qiov, acb->qiov, acb->qiov_offset, len);
+ 
+     if (qed_should_set_need_check(s)) {
+         s->header.features |= QED_F_NEED_CHECK;
+@@ -1139,6 +1140,25 @@ static void qed_aio_write_alloc(QEDAIOCB *acb)
+ }
+ 
+ /**
++ * Write data cluster in place
++ *
++ * @acb:        Write request
++ * @offset:     Cluster offset in bytes
++ * @len:        Length in bytes
++ *
++ * This path is taken when writing to already allocated clusters.
++ */
++static void qed_aio_write_inplace(QEDAIOCB *acb, uint64_t offset, size_t len)
++{
++    /* Calculate the I/O vector */
++    acb->cur_cluster = offset;
++    qemu_iovec_copy(&acb->cur_qiov, acb->qiov, acb->qiov_offset, len);
++
++    /* Do the actual write */
++    qed_aio_write_main(acb, 0);
++}
++
++/**
+  * Write data cluster
+  *
+  * @opaque:     Write request
+@@ -1156,19 +1176,21 @@ static void qed_aio_write_data(void *opaque, int ret,
+ 
+     trace_qed_aio_write_data(acb_to_s(acb), acb, ret, offset, len);
+ 
+-    if (ret < 0) {
+-        qed_aio_complete(acb, ret);
+-        return;
+-    }
+-
+     acb->find_cluster_ret = ret;
+-    qemu_iovec_copy(&acb->cur_qiov, acb->qiov, acb->qiov_offset, len);
+ 
+-    if (ret == QED_CLUSTER_FOUND) {
+-        acb->cur_cluster = offset;
+-        qed_aio_write_main(acb, 0);
+-    } else {
+-        qed_aio_write_alloc(acb);
++    switch (ret) {
++    case QED_CLUSTER_FOUND:
++        qed_aio_write_inplace(acb, offset, len);
++        break;
++
++    case QED_CLUSTER_L2:
++    case QED_CLUSTER_L1:
++        qed_aio_write_alloc(acb, len);
++        break;
++
++    default:
++        qed_aio_complete(acb, ret);
++        break;
+     }
+ }
+ 
+-- 
+1.7.7.6
+

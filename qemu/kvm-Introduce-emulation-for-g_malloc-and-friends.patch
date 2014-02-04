@@ -1,0 +1,97 @@
+From ad48fb1efd3ecd9dc70eefe5cbfe450c94348714 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:26 +0100
+Subject: [PATCH 61/99] Introduce emulation for g_malloc and friends
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-62-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37252
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 61/96] Introduce emulation for g_malloc and friends
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+
+Bugzilla: 783950
+Upstream status: n/a
+
+Upstream has switched from qemu_malloc to g_malloc, and this causes a
+lot of pain when backporting things. This patch introduces the glib
+memory allocation functions as wrappers around the qemu ones, so that we
+can do the conversion and avoid conflicts, without actually using glib.
+
+The function prototypes are the glib ones, just that I didn't introduce
+the glib typedefs but used the C types they map to.
+
+v2:
+Meanwhile some other patch series introduced a similar emulation.
+This one is a bit closer to real glib (especially regarding the parameter
+types) and doesn't use free() instead of qemu_free(), so replacing the
+emulation instead of dropping this patch is an improvement.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ qemu-common.h |   30 ++++++++++++++++++------------
+ 1 files changed, 18 insertions(+), 12 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-common.h |   30 ++++++++++++++++++------------
+ 1 files changed, 18 insertions(+), 12 deletions(-)
+
+diff --git a/qemu-common.h b/qemu-common.h
+index b93eeb7..c46f060 100644
+--- a/qemu-common.h
++++ b/qemu-common.h
+@@ -168,30 +168,36 @@ void qemu_free(void *ptr);
+ char *qemu_strdup(const char *str);
+ char *qemu_strndup(const char *str, size_t size);
+ 
+-/* Red Hat Enterprise Linux malloc shims to simplify backporting */
++/* Emulation of g_malloc and friends */
++static inline void *g_malloc(unsigned long n_bytes)
++{
++    return n_bytes ? qemu_malloc(n_bytes) : NULL;
++}
+ 
+-static inline void *g_malloc(size_t sz)
++static inline void *g_malloc0(unsigned long n_bytes)
+ {
+-    return sz ? qemu_malloc(sz) : NULL;
++    return n_bytes ? qemu_mallocz(n_bytes) : NULL;
+ }
+ 
+-static inline void *g_malloc0(size_t sz)
++static inline void g_free(void *mem)
+ {
+-    return sz ? qemu_mallocz(sz) : NULL;
++    qemu_free(mem);
+ }
+ 
+-static inline void *g_realloc(void *ptr, size_t sz)
++static inline void *g_realloc(void *mem, unsigned long n_bytes)
+ {
+-    if (!sz) {
+-        free(ptr);
++    if (n_bytes == 0) {
++        g_free(mem);
+         return NULL;
+     }
+-    return qemu_realloc(ptr, sz);
++
++    return qemu_realloc(mem, n_bytes);
+ }
+-#define g_free(ptr) qemu_free((ptr))
+-#define g_strdup(str) qemu_strdup((str))
+ 
+-/* end of malloc shims */
++static inline char *g_strdup(const char *str)
++{
++    return qemu_strdup(str);
++}
+ 
+ void qemu_mutex_lock_iothread(void);
+ void qemu_mutex_unlock_iothread(void);
+-- 
+1.7.7.5
+

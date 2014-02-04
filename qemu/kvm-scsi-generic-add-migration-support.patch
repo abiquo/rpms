@@ -1,0 +1,77 @@
+From a3c02dd5b8aaaa3bd4c8433e271b5b36743897cd Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:49 +0100
+Subject: [PATCH 093/109] scsi-generic: add migration support
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-93-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37571
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 092/102] scsi-generic: add migration support
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/scsi-generic.c |   25 +++++++++++++++++++++++++
+ 1 files changed, 25 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-generic.c |   25 +++++++++++++++++++++++++
+ 1 files changed, 25 insertions(+), 0 deletions(-)
+
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index d5da2bc..49a79d9 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -59,6 +59,28 @@ typedef struct SCSIGenericReq {
+     sg_io_hdr_t io_header;
+ } SCSIGenericReq;
+ 
++static void scsi_generic_save_request(QEMUFile *f, SCSIRequest *req)
++{
++    SCSIGenericReq *r = DO_UPCAST(SCSIGenericReq, req, req);
++
++    qemu_put_sbe32s(f, &r->buflen);
++    if (r->buflen && r->req.cmd.mode == SCSI_XFER_TO_DEV) {
++        assert(!r->req.sg);
++        qemu_put_buffer(f, r->buf, r->req.cmd.xfer);
++    }
++}
++
++static void scsi_generic_load_request(QEMUFile *f, SCSIRequest *req)
++{
++    SCSIGenericReq *r = DO_UPCAST(SCSIGenericReq, req, req);
++
++    qemu_get_sbe32s(f, &r->buflen);
++    if (r->buflen && r->req.cmd.mode == SCSI_XFER_TO_DEV) {
++        assert(!r->req.sg);
++        qemu_get_buffer(f, r->buf, r->req.cmd.xfer);
++    }
++}
++
+ static void scsi_free_request(SCSIRequest *req)
+ {
+     SCSIGenericReq *r = DO_UPCAST(SCSIGenericReq, req, req);
+@@ -456,6 +478,8 @@ const SCSIReqOps scsi_generic_req_ops = {
+     .write_data   = scsi_write_data,
+     .cancel_io    = scsi_cancel_io,
+     .get_buf      = scsi_get_buf,
++    .load_request = scsi_generic_load_request,
++    .save_request = scsi_generic_save_request,
+ };
+ 
+ static SCSIRequest *scsi_new_request(SCSIDevice *d, uint32_t tag, uint32_t lun,
+@@ -473,6 +497,7 @@ static SCSIDeviceInfo scsi_generic_info = {
+     .qdev.desc    = "pass through generic scsi device (/dev/sg*)",
+     .qdev.size    = sizeof(SCSIDevice),
+     .qdev.reset   = scsi_generic_reset,
++    .qdev.vmsd    = &vmstate_scsi_device,
+     .init         = scsi_generic_initfn,
+     .destroy      = scsi_destroy,
+     .alloc_req    = scsi_new_request,
+-- 
+1.7.7.6
+

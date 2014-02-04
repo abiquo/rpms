@@ -1,0 +1,99 @@
+From 32733f2a246685e60a0642d6fa65cb6e46d76e96 Mon Sep 17 00:00:00 2001
+Message-Id: <32733f2a246685e60a0642d6fa65cb6e46d76e96.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Pavel Hrdina <phrdina@redhat.com>
+Date: Wed, 30 May 2012 19:35:22 +0200
+Subject: [PATCH 04/41] add set_echo implementation for qemu_chr_stdio
+
+RH-Author: Pavel Hrdina <phrdina@redhat.com>
+Message-id: <b6aa2bff2eaf82a2546e7e84ae3a1b268a88cc78.1338401409.git.phrdina@redhat.com>
+Patchwork-id: 39861
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 4/4] add set_echo implementation for qemu_chr_stdio
+Bugzilla: 806768
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+This also requires moving QemuOpts out of term_init.
+
+Clearing ISIG is independent of whether echo is enabled or disabled.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit bb002513a9bd2bff169c3d431a8f00c5b2e3aa99)
+Signed-off-by: Pavel Hrdina <phrdina@redhat.com>
+---
+ qemu-char.c |   26 ++++++++++++++++----------
+ 1 files changed, 16 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-char.c |   26 ++++++++++++++++----------
+ 1 file changed, 16 insertions(+), 10 deletions(-)
+
+diff --git a/qemu-char.c b/qemu-char.c
+index 8a5c103..b338579 100644
+--- a/qemu-char.c
++++ b/qemu-char.c
+@@ -825,6 +825,7 @@ static void stdio_read(void *opaque)
+ /* init terminal so that we can grab keys */
+ static struct termios oldtty;
+ static int old_fd0_flags;
++static bool stdio_allow_signal;
+ 
+ static void term_exit(void)
+ {
+@@ -832,22 +833,24 @@ static void term_exit(void)
+     fcntl(0, F_SETFL, old_fd0_flags);
+ }
+ 
+-static void term_init(QemuOpts *opts)
++static void qemu_chr_set_echo_stdio(CharDriverState *chr, bool echo)
+ {
+     struct termios tty;
+ 
+     tty = oldtty;
+-    tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP
++    if (!echo) {
++        tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP
+                           |INLCR|IGNCR|ICRNL|IXON);
+-    tty.c_oflag |= OPOST;
+-    tty.c_lflag &= ~(ECHO|ECHONL|ICANON|IEXTEN);
++        tty.c_oflag |= OPOST;
++        tty.c_lflag &= ~(ECHO|ECHONL|ICANON|IEXTEN);
++        tty.c_cflag &= ~(CSIZE|PARENB);
++        tty.c_cflag |= CS8;
++        tty.c_cc[VMIN] = 1;
++        tty.c_cc[VTIME] = 0;
++    }
+     /* if graphical mode, we allow Ctrl-C handling */
+-    if (!qemu_opt_get_bool(opts, "signal", display_type != DT_NOGRAPHIC))
++    if (!stdio_allow_signal)
+         tty.c_lflag &= ~ISIG;
+-    tty.c_cflag &= ~(CSIZE|PARENB);
+-    tty.c_cflag |= CS8;
+-    tty.c_cc[VMIN] = 1;
+-    tty.c_cc[VTIME] = 0;
+ 
+     tcsetattr (0, TCSANOW, &tty);
+ }
+@@ -875,9 +878,12 @@ static CharDriverState *qemu_chr_open_stdio(QemuOpts *opts)
+ 
+     chr = qemu_chr_open_fd(0, 1);
+     chr->chr_close = qemu_chr_close_stdio;
++    chr->chr_set_echo = qemu_chr_set_echo_stdio;
+     qemu_set_fd_handler2(0, stdio_read_poll, stdio_read, NULL, chr);
+     stdio_nb_clients++;
+-    term_init(opts);
++    stdio_allow_signal = qemu_opt_get_bool(opts, "signal",
++                                           display_type != DT_NOGRAPHIC);
++    qemu_chr_set_echo(chr, false);
+ 
+     return chr;
+ }
+-- 
+1.7.10.4
+

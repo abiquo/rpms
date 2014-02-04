@@ -1,0 +1,126 @@
+From 831682ef05265c8319fe8209277ce276339b86c8 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:47 +0100
+Subject: [PATCH 20/55] vvfat: Fix read-write mode
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <4d58782f6c5141b971ee6b9ab882e05f73fa6b6f.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38870
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 20/54] vvfat: Fix read-write mode
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Kevin Wolf <kwolf@redhat.com>
+
+vvfat used to directly call into the qcow2 block driver instead of using the
+block.c wrappers. With the coroutine conversion, this stopped working.
+
+[This commit is needed so that .bdrv_is_allocated() can be replaced by
+.bdrv_co_is_allocated() -- Stefan Hajnoczi]
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+Reviewed-by: Paolo Bonzini <pbonzini@redhat.com>
+
+(cherry picked from commit 7704df98b09f886a9cf1d42aa6aa9a776ad1be3c)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/vvfat.c |   44 +++++++++++++++++++++++---------------------
+ 1 files changed, 23 insertions(+), 21 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/vvfat.c |   44 +++++++++++++++++++++++---------------------
+ 1 files changed, 23 insertions(+), 21 deletions(-)
+
+diff --git a/block/vvfat.c b/block/vvfat.c
+index 389ec24..6c0f6f3 100644
+--- a/block/vvfat.c
++++ b/block/vvfat.c
+@@ -1294,15 +1294,15 @@ static int vvfat_read(BlockDriverState *bs, int64_t sector_num,
+ 	   return -1;
+ 	if (s->qcow) {
+ 	    int n;
+-	    if (s->qcow->drv->bdrv_is_allocated(s->qcow,
+-			sector_num, nb_sectors-i, &n)) {
++            if (bdrv_is_allocated(s->qcow, sector_num, nb_sectors-i, &n)) {
+ DLOG(fprintf(stderr, "sectors %d+%d allocated\n", (int)sector_num, n));
+-		if (s->qcow->drv->bdrv_read(s->qcow, sector_num, buf+i*0x200, n))
+-		    return -1;
+-		i += n - 1;
+-		sector_num += n - 1;
+-		continue;
+-	    }
++                if (bdrv_read(s->qcow, sector_num, buf + i*0x200, n)) {
++                    return -1;
++                }
++                i += n - 1;
++                sector_num += n - 1;
++                continue;
++            }
+ DLOG(fprintf(stderr, "sector %d not allocated\n", (int)sector_num));
+ 	}
+ 	if(sector_num<s->faked_sectors) {
+@@ -1556,7 +1556,7 @@ static inline int cluster_was_modified(BDRVVVFATState* s, uint32_t cluster_num)
+ 	return 0;
+ 
+     for (i = 0; !was_modified && i < s->sectors_per_cluster; i++)
+-	was_modified = s->qcow->drv->bdrv_is_allocated(s->qcow,
++	was_modified = bdrv_is_allocated(s->qcow,
+ 		cluster2sector(s, cluster_num) + i, 1, &dummy);
+ 
+     return was_modified;
+@@ -1705,16 +1705,16 @@ static uint32_t get_cluster_count_for_direntry(BDRVVVFATState* s,
+ 		int64_t offset = cluster2sector(s, cluster_num);
+ 
+ 		vvfat_close_current_file(s);
+-		for (i = 0; i < s->sectors_per_cluster; i++)
+-		    if (!s->qcow->drv->bdrv_is_allocated(s->qcow,
+-				offset + i, 1, &dummy)) {
+-			if (vvfat_read(s->bs,
+-				    offset, s->cluster_buffer, 1))
+-			    return -1;
+-			if (s->qcow->drv->bdrv_write(s->qcow,
+-				    offset, s->cluster_buffer, 1))
+-			    return -2;
+-		    }
++                for (i = 0; i < s->sectors_per_cluster; i++) {
++                    if (!bdrv_is_allocated(s->qcow, offset + i, 1, &dummy)) {
++                        if (vvfat_read(s->bs, offset, s->cluster_buffer, 1)) {
++                            return -1;
++                        }
++                        if (bdrv_write(s->qcow, offset, s->cluster_buffer, 1)) {
++                            return -2;
++                        }
++                    }
++                }
+ 	    }
+ 	}
+ 
+@@ -2646,7 +2646,9 @@ static int do_commit(BDRVVVFATState* s)
+ 	return ret;
+     }
+ 
+-    s->qcow->drv->bdrv_make_empty(s->qcow);
++    if (s->qcow->drv->bdrv_make_empty) {
++        s->qcow->drv->bdrv_make_empty(s->qcow);
++    }
+ 
+     memset(s->used_clusters, 0, sector2cluster(s, s->sector_count));
+ 
+@@ -2736,7 +2738,7 @@ DLOG(checkpoint());
+      * Use qcow backend. Commit later.
+      */
+ DLOG(fprintf(stderr, "Write to qcow backend: %d + %d\n", (int)sector_num, nb_sectors));
+-    ret = s->qcow->drv->bdrv_write(s->qcow, sector_num, buf, nb_sectors);
++    ret = bdrv_write(s->qcow, sector_num, buf, nb_sectors);
+     if (ret < 0) {
+ 	fprintf(stderr, "Error writing to qcow backend\n");
+ 	return ret;
+-- 
+1.7.7.6
+

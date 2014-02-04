@@ -1,0 +1,52 @@
+From 3adb4b49c032cf0bee1dc179af2dcdd369e40a89 Mon Sep 17 00:00:00 2001
+Message-Id: <3adb4b49c032cf0bee1dc179af2dcdd369e40a89.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Gleb Natapov <gleb@redhat.com>
+Date: Mon, 15 Oct 2012 09:29:18 +0200
+Subject: [PATCH 16/17] kvm: x86: Fix DPL write back of segment registers
+
+RH-Author: Gleb Natapov <gleb@redhat.com>
+Message-id: <1350293359-26619-2-git-send-email-gleb@redhat.com>
+Patchwork-id: 43127
+O-Subject: [PATCH qemu-kvm RHEL6.4 1/2] kvm: x86: Fix DPL write back of segment registers
+Bugzilla: 852612
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+
+The DPL is stored in the flags and not in the selector. In fact, the RPL
+may differ from the DPL at some point in time, and so we were corrupting
+the guest state so far.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Avi Kivity <avi@redhat.com>
+
+Upstream: acaa75507b34f7b588924a09c76c6848d209e08c
+
+Signed-off-by: Gleb Natapov <gleb@redhat.com>
+---
+ qemu-kvm-x86.c |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-kvm-x86.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/qemu-kvm-x86.c b/qemu-kvm-x86.c
+index c720124..f8796cd 100644
+--- a/qemu-kvm-x86.c
++++ b/qemu-kvm-x86.c
+@@ -909,7 +909,7 @@ static void set_seg(struct kvm_segment *lhs, const SegmentCache *rhs)
+     lhs->limit = rhs->limit;
+     lhs->type = (flags >> DESC_TYPE_SHIFT) & 15;
+     lhs->present = (flags & DESC_P_MASK) != 0;
+-    lhs->dpl = rhs->selector & 3;
++    lhs->dpl = (flags >> DESC_DPL_SHIFT) & 3;
+     lhs->db = (flags >> DESC_B_SHIFT) & 1;
+     lhs->s = (flags & DESC_S_MASK) != 0;
+     lhs->l = (flags >> DESC_L_SHIFT) & 1;
+-- 
+1.7.11.7
+

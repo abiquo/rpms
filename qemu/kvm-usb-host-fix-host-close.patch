@@ -1,0 +1,61 @@
+From 3d7dcd20dbff972b01d5ffdf92845836d86ab834 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Tue, 10 Jan 2012 12:39:23 +0100
+Subject: [PATCH 2/7] usb-host: fix host close
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1326199166-8305-2-git-send-email-kraxel@redhat.com>
+Patchwork-id: 36315
+O-Subject: [RHEL-6.3 qemu-kvm PATCH 1/4] usb-host: fix host close
+Bugzilla: 746866
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+The whole usb_host_close() function is skipped in case the device is not
+in attached state.  This is wrong though, only then usb_device_detach()
+must be skipped, all other cleanup (especially device reset and closing
+the file handle) still needs to be done.  There are code paths where
+usb_host_close() is called with the device in detached state already.
+
+This fixes usb-host devices not being released and returned to the host
+after removing them with device_del.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 39fba3ada9a9e36a29a40e1acddec0923839c39b)
+---
+ usb-linux.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ usb-linux.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/usb-linux.c b/usb-linux.c
+index 62d6b79..5ab8e30 100644
+--- a/usb-linux.c
++++ b/usb-linux.c
+@@ -1313,7 +1313,7 @@ static int usb_host_close(USBHostDevice *dev)
+ {
+     int i;
+ 
+-    if (dev->fd == -1 || !dev->dev.attached) {
++    if (dev->fd == -1) {
+         return -1;
+     }
+ 
+@@ -1329,7 +1329,9 @@ static int usb_host_close(USBHostDevice *dev)
+     }
+     async_complete(dev);
+     dev->closing = 0;
+-    usb_device_detach(&dev->dev);
++    if (dev->dev.attached) {
++        usb_device_detach(&dev->dev);
++    }
+     ioctl(dev->fd, USBDEVFS_RESET);
+     close(dev->fd);
+     dev->fd = -1;
+-- 
+1.7.7.5
+

@@ -1,0 +1,87 @@
+From 569ead9c9659c24e9c55532eac7734e45714a4c8 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 27 Aug 2012 13:43:13 -0300
+Subject: [RHEL6 qemu-kvm PATCH 3/5] scsi: add a qdev property for the disk's
+ WWN
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1346074994-12293-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 41338
+O-Subject: [RHEL 6.4 qemu-kvm PATCH 1/2] scsi: add a qdev property for the disk's WWN
+Bugzilla: 831102
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+Bugzilla: 831102
+
+Allow the user to specify a disk's World Wide Name.
+
+Linux guests can address disks by their unique World Wide Name number
+(e.g. /dev/disk/by-id/wwn-0x5001517959123522). This patch adds support
+for assigning a World Wide Name number to a virtio-scsi disk.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit 27395add759ff4caeb04a97c1bb0e8bdd7db12fb)
+
+Conflicts:
+	hw/scsi-disk.c
+---
+ hw/scsi-disk.c | 20 ++++++++++++++++++--
+ 1 file modificato, 18 inserzioni(+), 2 rimozioni(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/scsi-disk.c | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 3b318f6..212018a 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -64,6 +64,7 @@ struct SCSIDiskState
+     bool media_changed;
+     bool media_event;
+     bool eject_request;
++    uint64_t wwn;
+     QEMUBH *bh;
+     char *version;
+     char *serial;
+@@ -550,9 +551,23 @@ static int scsi_disk_emulate_inquiry(SCSIRequest *req, uint8_t *outbuf)
+             outbuf[buflen++] = 0;   // not officially assigned
+             outbuf[buflen++] = 0;   // reserved
+             outbuf[buflen++] = id_len; // length of data following
+-
+             memcpy(outbuf+buflen, str, id_len);
+             buflen += id_len;
++
++            if (s->wwn) {
++                outbuf[buflen++] = 0x1; // Binary
++                outbuf[buflen++] = 0x3; // NAA
++                outbuf[buflen++] = 0;   // reserved
++                outbuf[buflen++] = 8;
++		outbuf[buflen++] = (s->wwn >> 56) & 255;
++		outbuf[buflen++] = (s->wwn >> 48) & 255;
++		outbuf[buflen++] = (s->wwn >> 40) & 255;
++		outbuf[buflen++] = (s->wwn >> 32) & 255;
++		outbuf[buflen++] = (s->wwn >> 24) & 255;
++		outbuf[buflen++] = (s->wwn >> 16) & 255;
++		outbuf[buflen++] = (s->wwn >> 8) & 255;
++		outbuf[buflen++] = s->wwn & 255;
++            }
+             break;
+         }
+         case 0xb0: /* block limits */
+@@ -1879,7 +1894,8 @@ static SCSIRequest *scsi_block_new_request(SCSIDevice *d, uint32_t tag,
+ #define DEFINE_SCSI_DISK_PROPERTIES()                           \
+     DEFINE_BLOCK_PROPERTIES(SCSIDiskState, qdev.conf),          \
+     DEFINE_PROP_STRING("ver",  SCSIDiskState, version),         \
+-    DEFINE_PROP_STRING("serial",  SCSIDiskState, serial)
++    DEFINE_PROP_STRING("serial",  SCSIDiskState, serial),       \
++    DEFINE_PROP_HEX64("wwn", SCSIDiskState, wwn, 0)
+ 
+ static const VMStateDescription vmstate_scsi_disk_state = {
+     .name = "scsi-disk",
+-- 
+1.7.11.4
+

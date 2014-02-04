@@ -1,0 +1,151 @@
+From df5e8f62a048267d3423cc163461588e3afa7941 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:02 +0100
+Subject: [PATCH 046/109] scsi-disk: add stubs for more MMC commands
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-46-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37525
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 045/102] scsi-disk: add stubs for more MMC commands
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+This patch adds a few stub implementations for MMC commands to
+scsi-disk, to be filled in later in the series.  It also adds to
+scsi-defs.h constants for commands implemented by ide/atapi.c,
+when missing.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from b6c251ab1739cd67817db003e9878f92c3feff2b)
+---
+ hw/scsi-defs.h |    3 ++
+ hw/scsi-disk.c |   67 +++++++++++++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 65 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-defs.h |    3 ++
+ hw/scsi-disk.c |   67 +++++++++++++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 65 insertions(+), 5 deletions(-)
+
+diff --git a/hw/scsi-defs.h b/hw/scsi-defs.h
+index 5e6c9b7..d0a467a 100644
+--- a/hw/scsi-defs.h
++++ b/hw/scsi-defs.h
+@@ -113,6 +113,7 @@
+ #define READ_12               0xa8
+ #define WRITE_12              0xaa
+ #define SERVICE_ACTION_IN_12  0xab
++#define READ_DVD_STRUCTURE    0xad
+ #define WRITE_VERIFY_12       0xae
+ #define VERIFY_12             0xaf
+ #define SEARCH_HIGH_12        0xb0
+@@ -122,6 +123,8 @@
+ #define SEND_VOLUME_TAG       0xb6
+ #define READ_DEFECT_DATA_12   0xb7
+ #define SET_CD_SPEED          0xbb
++#define MECHANISM_STATUS      0xbd
++#define READ_CD               0xbe
+ 
+ /*
+  * SERVICE ACTION IN subcodes
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index dd09af3..8052d43 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -601,6 +601,43 @@ static int scsi_disk_emulate_inquiry(SCSIRequest *req, uint8_t *outbuf)
+     return buflen;
+ }
+ 
++static int scsi_read_dvd_structure(SCSIDiskState *s, SCSIDiskReq *r,
++                                   uint8_t *outbuf)
++{
++    scsi_check_condition(r, SENSE_CODE(INVALID_OPCODE));
++    return -1;
++}
++
++static int scsi_get_event_status_notification(SCSIDiskState *s,
++                                              SCSIDiskReq *r, uint8_t *outbuf)
++{
++    scsi_check_condition(r, SENSE_CODE(INVALID_OPCODE));
++    return -1;
++}
++
++static int scsi_get_configuration(SCSIDiskState *s, SCSIDiskReq *r,
++                                  uint8_t *outbuf)
++{
++    if (s->qdev.type != TYPE_ROM) {
++        return -1;
++    }
++    memset(outbuf, 0, 8);
++    /* ??? This should probably return much more information.  For now
++       just return the basic header indicating the CD-ROM profile.  */
++    outbuf[7] = 8; /* CD-ROM */
++    return 8;
++}
++
++static int scsi_emulate_mechanism_status(SCSIDiskState *s, uint8_t *outbuf)
++{
++    if (s->qdev.type != TYPE_ROM) {
++        return -1;
++    }
++    memset(outbuf, 0, 8);
++    outbuf[5] = 1; /* CD-ROM */
++    return 8;
++}
++
+ static int mode_sense_page(SCSIDiskState *s, int page, uint8_t **p_outbuf,
+                            int page_control)
+ {
+@@ -998,12 +1035,29 @@ static int scsi_disk_emulate_command(SCSIDiskReq *r)
+         outbuf[7] = 0;
+         buflen = 8;
+         break;
++    case MECHANISM_STATUS:
++        buflen = scsi_emulate_mechanism_status(s, outbuf);
++        if (buflen < 0) {
++            goto illegal_request;
++        }
++        break;
+     case GET_CONFIGURATION:
+-        memset(outbuf, 0, 8);
+-        /* ??? This should probably return much more information.  For now
+-           just return the basic header indicating the CD-ROM profile.  */
+-        outbuf[7] = 8; // CD-ROM
+-        buflen = 8;
++        buflen = scsi_get_configuration(s, r, outbuf);
++        if (buflen < 0) {
++            goto illegal_request;
++        }
++        break;
++    case GET_EVENT_STATUS_NOTIFICATION:
++        buflen = scsi_get_event_status_notification(s, r, outbuf);
++        if (buflen < 0) {
++            goto illegal_request;
++        }
++        break;
++    case READ_DVD_STRUCTURE:
++        buflen = scsi_read_dvd_structure(s, r, outbuf);
++        if (buflen < 0) {
++            goto illegal_request;
++        }
+         break;
+     case SERVICE_ACTION_IN_16:
+         /* Service Action In subcommands. */
+@@ -1107,7 +1161,10 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *buf)
+     case ALLOW_MEDIUM_REMOVAL:
+     case READ_CAPACITY_10:
+     case READ_TOC:
++    case READ_DVD_STRUCTURE:
+     case GET_CONFIGURATION:
++    case GET_EVENT_STATUS_NOTIFICATION:
++    case MECHANISM_STATUS:
+     case SERVICE_ACTION_IN_16:
+     case VERIFY_10:
+         rc = scsi_disk_emulate_command(r);
+-- 
+1.7.7.6
+

@@ -1,0 +1,140 @@
+From ce0ccffa310e6177652f567da4076d4fb2aa4378 Mon Sep 17 00:00:00 2001
+From: Federico Simoncelli <fsimonce@redhat.com>
+Date: Fri, 23 Mar 2012 12:12:46 -0300
+Subject: [RHEL6 qemu-kvm PATCH 1/9] block: use proper qerrors in qmp_block_resize
+
+RH-Author: Federico Simoncelli <fsimonce@redhat.com>
+Message-id: <1332504778-17403-2-git-send-email-fsimonce@redhat.com>
+Patchwork-id: 38942
+O-Subject: [RHEL6.3 qemu-kvm PATCH v6 01/13] block: use proper qerrors in qmp_block_resize
+Bugzilla: 802284
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Let's report specific errors so that management tools and users can
+identify the problem.
+
+Two new qerrors are needed:
+ * QERR_DEVICE_HAS_NO_MEDIUM for ENOMEDIUM
+ * QERR_DEVICE_IS_READ_ONLY for EACCES
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+
+BZ: 802284
+
+(cherry picked from commit 939a1cc399adb92640d156097d528b6471c136ae)
+---
+ blockdev.c |   24 +++++++++++++++++-------
+ qerror.c   |    8 ++++++++
+ qerror.h   |    6 ++++++
+ 3 files changed, 31 insertions(+), 7 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ blockdev.c |   24 +++++++++++++++++-------
+ qerror.c   |    8 ++++++++
+ qerror.h   |    6 ++++++
+ 3 files changed, 31 insertions(+), 7 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index d35ec58..12ef6f5 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -971,11 +971,6 @@ int do_drive_del(Monitor *mon, const QDict *qdict, QObject **ret_data)
+     return 0;
+ }
+ 
+-/*
+- * XXX: replace the QERR_UNDEFINED_ERROR errors with real values once the
+- * existing QERR_ macro mess is cleaned up.  A good example for better
+- * error reports can be found in the qemu-img resize code.
+- */
+ int do_block_resize(Monitor *mon, const QDict *qdict, QObject **ret_data)
+ {
+     const char *device = qdict_get_str(qdict, "device");
+@@ -989,11 +984,26 @@ int do_block_resize(Monitor *mon, const QDict *qdict, QObject **ret_data)
+     }
+ 
+     if (size < 0) {
+-        qerror_report(QERR_UNDEFINED_ERROR);
++        qerror_report(QERR_INVALID_PARAMETER_VALUE, "size", "a >0 size");
+         return -1;
+     }
+ 
+-    if (bdrv_truncate(bs, size)) {
++    switch (bdrv_truncate(bs, size)) {
++    case 0:
++        break;
++    case -ENOMEDIUM:
++        qerror_report(QERR_DEVICE_HAS_NO_MEDIUM, device);
++        return -1;
++    case -ENOTSUP:
++        qerror_report(QERR_UNSUPPORTED);
++        return -1;
++    case -EACCES:
++        qerror_report(QERR_DEVICE_IS_READ_ONLY, device);
++        return -1;
++    case -EBUSY:
++        qerror_report(QERR_DEVICE_IN_USE, device);
++        return -1;
++    default:
+         qerror_report(QERR_UNDEFINED_ERROR);
+         return -1;
+     }
+diff --git a/qerror.c b/qerror.c
+index 76043d6..3db387b 100644
+--- a/qerror.c
++++ b/qerror.c
+@@ -73,6 +73,10 @@ static const QErrorStringTable qerror_table[] = {
+         .desc      = "Device '%(device)' is encrypted",
+     },
+     {
++        .error_fmt = QERR_DEVICE_HAS_NO_MEDIUM,
++        .desc      = "Device '%(device)' has no medium",
++    },
++    {
+         .error_fmt = QERR_DEVICE_INIT_FAILED,
+         .desc      = "Device '%(device)' could not be initialized",
+     },
+@@ -85,6 +89,10 @@ static const QErrorStringTable qerror_table[] = {
+         .desc      = "Device '%(device)' is in use",
+     },
+     {
++        .error_fmt = QERR_DEVICE_IS_READ_ONLY,
++        .desc      = "Device '%(device)' is read only",
++    },
++    {
+         .error_fmt = QERR_DEVICE_LOCKED,
+         .desc      = "Device '%(device)' is locked",
+     },
+diff --git a/qerror.h b/qerror.h
+index 9e18fb8..3ac8c0c 100644
+--- a/qerror.h
++++ b/qerror.h
+@@ -72,6 +72,9 @@ QError *qobject_to_qerror(const QObject *obj);
+ #define QERR_DEVICE_ENCRYPTED \
+     "{ 'class': 'DeviceEncrypted', 'data': { 'device': %s } }"
+ 
++#define QERR_DEVICE_HAS_NO_MEDIUM \
++    "{ 'class': 'DeviceHasNoMedium', 'data': { 'device': %s } }"
++
+ #define QERR_DEVICE_INIT_FAILED \
+     "{ 'class': 'DeviceInitFailed', 'data': { 'device': %s } }"
+ 
+@@ -82,6 +85,9 @@ QError *qobject_to_qerror(const QObject *obj);
+ #define QERR_DEVICE_IN_USE \
+     "{ 'class': 'DeviceInUse', 'data': { 'device': %s } }"
+ 
++#define QERR_DEVICE_IS_READ_ONLY \
++    "{ 'class': 'DeviceIsReadOnly', 'data': { 'device': %s } }"
++
+ #define QERR_DEVICE_LOCKED \
+     "{ 'class': 'DeviceLocked', 'data': { 'device': %s } }"
+ 
+-- 
+1.7.3.2
+

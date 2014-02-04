@@ -1,0 +1,126 @@
+From 89791ede6270659dc2aad31b63d1b84017526e2c Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:53 +0100
+Subject: [PATCH 26/55] block: add interface to toggle copy-on-read
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <91b8b89e2ca8556a3eb9b873dec78208ee21b749.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38876
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 26/54] block: add interface to toggle copy-on-read
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+The bdrv_enable_copy_on_read()/bdrv_disable_copy_on_read() functions can
+be used to programmatically enable or disable copy-on-read for a block
+device.  Later patches add the actual copy-on-read logic.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit 53fec9d3fd3d3a4ded4b92dfa843436bf71380f1)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c     |   22 ++++++++++++++++++++++
+ block.h     |    4 ++++
+ block_int.h |    2 ++
+ 3 files changed, 28 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c     |   22 ++++++++++++++++++++++
+ block.h     |    4 ++++
+ block_int.h |    2 ++
+ 3 files changed, 28 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index 50d80fe..c2a2493 100644
+--- a/block.c
++++ b/block.c
+@@ -420,6 +420,22 @@ static int refresh_total_sectors(BlockDriverState *bs, int64_t hint)
+     return 0;
+ }
+ 
++/**
++ * The copy-on-read flag is actually a reference count so multiple users may
++ * use the feature without worrying about clobbering its previous state.
++ * Copy-on-read stays enabled until all users have called to disable it.
++ */
++void bdrv_enable_copy_on_read(BlockDriverState *bs)
++{
++    bs->copy_on_read++;
++}
++
++void bdrv_disable_copy_on_read(BlockDriverState *bs)
++{
++    assert(bs->copy_on_read > 0);
++    bs->copy_on_read--;
++}
++
+ /*
+  * Common part for opening disk images and files
+  */
+@@ -438,6 +454,11 @@ static int bdrv_open_common(BlockDriverState *bs, const char *filename,
+     /* buffer_alignment defaulted to 512, drivers can change this value */
+     bs->buffer_alignment = 512;
+ 
++    assert(bs->copy_on_read == 0); /* bdrv_new() and bdrv_close() make it so */
++    if ((flags & BDRV_O_RDWR) && (flags & BDRV_O_COPY_ON_READ)) {
++        bdrv_enable_copy_on_read(bs);
++    }
++
+     pstrcpy(bs->filename, sizeof(bs->filename), filename);
+ 
+     if (use_bdrv_whitelist && !bdrv_is_whitelisted(drv)) {
+@@ -671,6 +692,7 @@ void bdrv_close(BlockDriverState *bs)
+ #endif
+         bs->opaque = NULL;
+         bs->drv = NULL;
++        bs->copy_on_read = 0;
+ 
+         if (bs->file != NULL) {
+             bdrv_close(bs->file);
+diff --git a/block.h b/block.h
+index 330ed10..9b4a3a5 100644
+--- a/block.h
++++ b/block.h
+@@ -69,6 +69,7 @@ typedef struct BlockDevOps {
+ #define BDRV_O_NATIVE_AIO  0x0080 /* use native AIO instead of the thread pool */
+ #define BDRV_O_NO_BACKING  0x0100 /* don't open the backing file */
+ #define BDRV_O_NO_FLUSH    0x0200 /* disable flushing on this disk */
++#define BDRV_O_COPY_ON_READ 0x0400 /* copy read backing sectors into image */
+ #define BDRV_O_INCOMING    0x0800 /* consistency hint for incoming migration */
+ 
+ #define BDRV_O_CACHE_MASK  (BDRV_O_NOCACHE | BDRV_O_CACHE_WB)
+@@ -299,6 +300,9 @@ int bdrv_get_dirty(BlockDriverState *bs, int64_t sector);
+ void bdrv_reset_dirty(BlockDriverState *bs, int64_t cur_sector,
+                       int nr_sectors);
+ 
++void bdrv_enable_copy_on_read(BlockDriverState *bs);
++void bdrv_disable_copy_on_read(BlockDriverState *bs);
++
+ void bdrv_set_in_use(BlockDriverState *bs, int in_use);
+ int bdrv_in_use(BlockDriverState *bs);
+ 
+diff --git a/block_int.h b/block_int.h
+index f3cd33a..bdda1af 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -165,6 +165,8 @@ struct BlockDriverState {
+     int encrypted; /* if true, the media is encrypted */
+     int valid_key; /* if true, a valid encryption key has been set */
+     int sg;        /* if true, the device is a /dev/sg* */
++    int copy_on_read; /* if true, copy read backing sectors into image
++                         note this is a reference count */
+ 
+     BlockDriver *drv; /* NULL means no media */
+     void *opaque;
+-- 
+1.7.7.6
+

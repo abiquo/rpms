@@ -1,0 +1,124 @@
+From 3d073b25cf10d70db40ef612c79fbb2c8b8eee83 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:30 +0100
+Subject: [PATCH 014/109] scsi: move handling of REQUEST SENSE to common code
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-14-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37491
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 013/102] scsi: move handling of REQUEST SENSE to common code
+Bugzilla: 782029
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from 739df2150d7e6291d54b3d2dcbd9ed52078e991c)
+---
+ hw/scsi-bus.c     |   12 ++++++++++--
+ hw/scsi-disk.c    |    9 ++-------
+ hw/scsi-generic.c |   16 ----------------
+ 3 files changed, 12 insertions(+), 25 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c     |   12 ++++++++++--
+ hw/scsi-disk.c    |    9 ++-------
+ hw/scsi-generic.c |   16 ----------------
+ 3 files changed, 12 insertions(+), 25 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index b00e6fd..08d9ff4 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -270,6 +270,13 @@ static int32_t scsi_target_send_command(SCSIRequest *req, uint8_t *buf)
+             goto illegal_request;
+         }
+         break;
++    case REQUEST_SENSE:
++        if (req->cmd.xfer < 4) {
++            goto illegal_request;
++        }
++        r->len = scsi_device_get_sense(r->req.dev, r->buf, req->cmd.xfer,
++                                       (req->cmd.buf[1] & 1) == 0);
++        break;
+     default:
+         scsi_req_build_sense(req, SENSE_CODE(LUN_NOT_SUPPORTED));
+         scsi_req_complete(req, CHECK_CONDITION);
+@@ -351,8 +358,9 @@ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
+                                       cmd.lba);
+         }
+ 
+-        if ((lun != d->lun && buf[0] != REQUEST_SENSE) ||
+-            buf[0] == REPORT_LUNS) {
++        if (lun != d->lun ||
++            buf[0] == REPORT_LUNS ||
++            buf[0] == REQUEST_SENSE) {
+             req = scsi_req_alloc(&reqops_target_command, d, tag, lun,
+                                  hba_private);
+         } else {
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index a537704..430a7c3 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -862,12 +862,6 @@ static int scsi_disk_emulate_command(SCSIDiskReq *r, uint8_t *outbuf)
+         if (s->tray_open || !bdrv_is_inserted(s->bs))
+             goto not_ready;
+         break;
+-    case REQUEST_SENSE:
+-        if (req->cmd.xfer < 4)
+-            goto illegal_request;
+-        buflen = scsi_device_get_sense(&s->qdev, outbuf, req->cmd.xfer,
+-                                       (req->cmd.buf[1] & 1) == 0);
+-        break;
+     case INQUIRY:
+         buflen = scsi_disk_emulate_inquiry(req, outbuf);
+         if (buflen < 0)
+@@ -1044,7 +1038,6 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *buf)
+ 
+     switch (command) {
+     case TEST_UNIT_READY:
+-    case REQUEST_SENSE:
+     case INQUIRY:
+     case MODE_SENSE:
+     case MODE_SENSE_10:
+@@ -1143,6 +1136,8 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *buf)
+         }
+ 
+         break;
++    case REQUEST_SENSE:
++        abort();
+     default:
+         DPRINTF("Unknown SCSI command (%2.2x)\n", buf[0]);
+         scsi_check_condition(r, SENSE_CODE(INVALID_OPCODE));
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index b0525dd..a4809d0 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -183,22 +183,6 @@ static void scsi_read_data(SCSIRequest *req)
+         return;
+     }
+ 
+-    if (r->req.cmd.buf[0] == REQUEST_SENSE) {
+-        r->io_header.driver_status = 0;
+-        r->io_header.status = 0;
+-        r->io_header.dxfer_len =
+-            scsi_device_get_sense(&s->qdev, r->buf, r->req.cmd.xfer,
+-                                  (r->req.cmd.buf[1] & 1) == 0);
+-        r->len = -1;
+-        DPRINTF("Data ready tag=0x%x len=%d\n", r->req.tag, r->io_header.dxfer_len);
+-        DPRINTF("Sense: %d %d %d %d %d %d %d %d\n",
+-                r->buf[0], r->buf[1], r->buf[2], r->buf[3],
+-                r->buf[4], r->buf[5], r->buf[6], r->buf[7]);
+-        scsi_req_data(&r->req, r->io_header.dxfer_len);
+-        /* The sense buffer is cleared when we return GOOD */
+-        return;
+-    }
+-
+     ret = execute_command(s->bs, r, SG_DXFER_FROM_DEV, scsi_read_complete);
+     if (ret < 0) {
+         scsi_command_complete(r, ret);
+-- 
+1.7.7.6
+

@@ -1,0 +1,64 @@
+From 555212a9e981111d6df337beab02fe59f81d9860 Mon Sep 17 00:00:00 2001
+Message-Id: <555212a9e981111d6df337beab02fe59f81d9860.1355923269.git.minovotn@redhat.com>
+In-Reply-To: <d2057772c367ef69443b067dca18d1f4f42c6711.1355923269.git.minovotn@redhat.com>
+References: <d2057772c367ef69443b067dca18d1f4f42c6711.1355923269.git.minovotn@redhat.com>
+From: =?UTF-8?q?Marc-Andr=C3=A9=20Lureau?= <marcandre.lureau@gmail.com>
+Date: Tue, 18 Dec 2012 11:25:43 +0100
+Subject: [PATCH 4/9] audio: add VOICE_VOLUME ctl
+
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ audio/audio.c     | 12 ++++++++++++
+ audio/audio_int.h |  1 +
+ 2 files changed, 13 insertions(+)
+
+diff --git a/audio/audio.c b/audio/audio.c
+index 89e618f..565248e 100644
+--- a/audio/audio.c
++++ b/audio/audio.c
+@@ -2045,17 +2045,29 @@ void AUD_del_capture (CaptureVoiceOut *cap, void *cb_opaque)
+ void AUD_set_volume_out (SWVoiceOut *sw, int mute, uint8_t lvol, uint8_t rvol)
+ {
+     if (sw) {
++        HWVoiceOut *hw = sw->hw;
++
+         sw->vol.mute = mute;
+         sw->vol.l = nominal_volume.l * lvol / 255;
+         sw->vol.r = nominal_volume.r * rvol / 255;
++
++        if (hw->pcm_ops->ctl_out) {
++            hw->pcm_ops->ctl_out (hw, VOICE_VOLUME, sw);
++        }
+     }
+ }
+ 
+ void AUD_set_volume_in (SWVoiceIn *sw, int mute, uint8_t lvol, uint8_t rvol)
+ {
+     if (sw) {
++        HWVoiceIn *hw = sw->hw;
++
+         sw->vol.mute = mute;
+         sw->vol.l = nominal_volume.l * lvol / 255;
+         sw->vol.r = nominal_volume.r * rvol / 255;
++
++        if (hw->pcm_ops->ctl_in) {
++            hw->pcm_ops->ctl_in (hw, VOICE_VOLUME, sw);
++        }
+     }
+ }
+diff --git a/audio/audio_int.h b/audio/audio_int.h
+index 2003f8b..117f95e 100644
+--- a/audio/audio_int.h
++++ b/audio/audio_int.h
+@@ -231,6 +231,7 @@ void audio_run (const char *msg);
+ 
+ #define VOICE_ENABLE 1
+ #define VOICE_DISABLE 2
++#define VOICE_VOLUME 3
+ 
+ static inline int audio_ring_dist (int dst, int src, int len)
+ {
+-- 
+1.7.11.7
+

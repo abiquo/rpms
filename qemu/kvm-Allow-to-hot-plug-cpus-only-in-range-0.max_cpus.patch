@@ -1,0 +1,98 @@
+From 63ae89e9d6b6a53f78abf5ff4b844dd6865ff6d8 Mon Sep 17 00:00:00 2001
+Message-Id: <63ae89e9d6b6a53f78abf5ff4b844dd6865ff6d8.1334064600.git.minovotn@redhat.com>
+In-Reply-To: <d69aa50cc1da54200db61b797e782f2a158f2a2e.1334064600.git.minovotn@redhat.com>
+References: <d69aa50cc1da54200db61b797e782f2a158f2a2e.1334064600.git.minovotn@redhat.com>
+From: Igor Mammedov <imammedo@redhat.com>
+Date: Thu, 5 Apr 2012 11:39:01 +0200
+Subject: [PATCH 2/2] Allow to hot-plug cpus only in range (0..max_cpus)
+
+RH-Author: Igor Mammedov <imammedo@redhat.com>
+Message-id: <1333625941-10301-1-git-send-email-imammedo@redhat.com>
+Patchwork-id: 39120
+O-Subject: [RHEL6.3 qemu-kvm PATCH v2] Allow to hot-plug cpus only in range (0..max_cpus)
+Bugzilla: 807512
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Andrew Jones <drjones@redhat.com>
+
+BZ#807512
+Upstream status: rhel only
+Brew: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4264971
+
+Fixes SIGSEGV when hot-plugging cpu with big id, for example
+300000000.
+
+Changes since v1:
+ * report error messgage through monitor
+ * s/max_cpus/max_cpus - 1/, when reporting valid range
+
+Signed-off-by: Igor Mammedov <imammedo@redhat.com>
+---
+ hw/acpi.c |   10 ++++++++--
+ monitor.c |    2 +-
+ sysemu.h  |    2 +-
+ 3 files changed, 10 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/acpi.c |   10 ++++++++--
+ monitor.c |    2 +-
+ sysemu.h  |    2 +-
+ 3 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index 43d45d6..2ccc0d1 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -935,14 +935,20 @@ static void disable_processor(struct gpe_regs *g, int cpu)
+     g->cpus_sts[cpu / 8] &= ~(1 << (cpu % 8));
+ }
+ 
+-void qemu_system_cpu_hot_add(int cpu, int state)
++void qemu_system_cpu_hot_add(int cpu, int state, Monitor *mon)
+ {
+     CPUState *env;
+ 
++    if ((cpu < 1) || (cpu > max_cpus - 1)) {
++        monitor_printf(mon, "cpu id[%d] must be in range [1..%d]\n",
++            cpu, max_cpus - 1);
++        return;
++    }
++
+     if (state && !qemu_get_cpu(cpu)) {
+         env = pc_new_cpu(model);
+         if (!env) {
+-            fprintf(stderr, "cpu %d creation failed\n", cpu);
++            monitor_printf(mon, "cpu %d creation failed\n", cpu);
+             return;
+         }
+         env->cpuid_apic_id = cpu;
+diff --git a/monitor.c b/monitor.c
+index f81698c..ade63ac 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -1017,7 +1017,7 @@ static void do_cpu_set_nr(Monitor *mon, const QDict *qdict)
+         return;
+     }
+ #if defined(TARGET_I386) || defined(TARGET_X86_64)
+-    qemu_system_cpu_hot_add(value, state);
++    qemu_system_cpu_hot_add(value, state, mon);
+ #endif
+ }
+ 
+diff --git a/sysemu.h b/sysemu.h
+index 7d4ae86..1efac0d 100644
+--- a/sysemu.h
++++ b/sysemu.h
+@@ -192,7 +192,7 @@ extern unsigned int nb_prom_envs;
+ #endif
+ 
+ /* acpi */
+-void qemu_system_cpu_hot_add(int cpu, int state);
++void qemu_system_cpu_hot_add(int cpu, int state, Monitor *mon);
+ 
+ /* pci-hotplug */
+ void pci_device_hot_add(Monitor *mon, const QDict *qdict);
+-- 
+1.7.7.6
+

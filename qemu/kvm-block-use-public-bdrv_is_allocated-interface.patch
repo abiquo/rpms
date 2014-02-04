@@ -1,0 +1,54 @@
+From d0e5153ae65911a60cd892983e540106efc3e36a Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:40 +0100
+Subject: [PATCH 13/55] block: use public bdrv_is_allocated() interface
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <c9fb532a83fba26ee5fea7a6564306c9066b13ef.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38863
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 13/54] block: use public bdrv_is_allocated() interface
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+There is no need for bdrv_commit() to use the BlockDriver
+.bdrv_is_allocated() interface directly.  Converting to the public
+interface gives us the freedom to drop .bdrv_is_allocated() entirely in
+favor of a new .bdrv_co_is_allocated() in the future.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit 05c4af54c670f5143bd4ac5d79aa1ef53a9f31ca)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/block.c b/block.c
+index db7ca8f..1db27aa 100644
+--- a/block.c
++++ b/block.c
+@@ -1027,7 +1027,7 @@ int bdrv_commit(BlockDriverState *bs)
+     buf = g_malloc(COMMIT_BUF_SECTORS * BDRV_SECTOR_SIZE);
+ 
+     for (sector = 0; sector < total_sectors; sector += n) {
+-        if (drv->bdrv_is_allocated(bs, sector, COMMIT_BUF_SECTORS, &n)) {
++        if (bdrv_is_allocated(bs, sector, COMMIT_BUF_SECTORS, &n)) {
+ 
+             if (bdrv_read(bs, sector, buf, n) != 0) {
+                 ret = -EIO;
+-- 
+1.7.7.6
+

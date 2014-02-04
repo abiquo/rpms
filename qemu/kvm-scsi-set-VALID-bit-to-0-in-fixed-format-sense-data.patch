@@ -1,0 +1,59 @@
+From e45d7dc62c9bbfcd0439375d5cd1efc4568a9b36 Mon Sep 17 00:00:00 2001
+Message-Id: <e45d7dc62c9bbfcd0439375d5cd1efc4568a9b36.1343041017.git.minovotn@redhat.com>
+In-Reply-To: <1265c14a6676be3cbc003c219326a60813dc29d5.1343041017.git.minovotn@redhat.com>
+References: <1265c14a6676be3cbc003c219326a60813dc29d5.1343041017.git.minovotn@redhat.com>
+From: Miroslav Rezanina <mrezanin@redhat.com>
+Date: Thu, 12 Jul 2012 12:11:20 +0200
+Subject: [PATCH 5/9] scsi: set VALID bit to 0 in fixed format sense data
+
+RH-Author: Miroslav Rezanina <mrezanin@redhat.com>
+Message-id: <5410384a04c5387f2133412111552ba4d40141d5.1342100155.git.mrezanin@redhat.com>
+Patchwork-id: 40282
+O-Subject: [RHEL6 qemu-kvm PATCH 2/5] scsi: set VALID bit to 0 in fixed format sense data
+Bugzilla: 825188
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Upstream relationship: 77e4743
+
+The INFORMATION field (bytes 3..6) is never set by QEMU, so the VALID
+bit must be 0.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/scsi-bus.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index a18688e..1ba050e 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -622,7 +622,7 @@ void scsi_req_build_sense(SCSIRequest *req, SCSISense sense)
+     trace_scsi_req_build_sense(req->dev->id, req->lun, req->tag,
+                                sense.key, sense.asc, sense.ascq);
+     memset(req->sense, 0, 18);
+-    req->sense[0] = 0xf0;
++    req->sense[0] = 0x70;
+     req->sense[2] = sense.key;
+     req->sense[7] = 10;
+     req->sense[12] = sense.asc;
+@@ -1114,7 +1114,7 @@ int scsi_build_sense(uint8_t *in_buf, int in_len,
+     memset(buf, 0, len);
+     if (fixed) {
+         /* Return fixed format sense buffer */
+-        buf[0] = 0xf0;
++        buf[0] = 0x70;
+         buf[2] = sense.key;
+         buf[7] = 10;
+         buf[12] = sense.asc;
+-- 
+1.7.10.4
+

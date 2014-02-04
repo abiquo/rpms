@@ -1,0 +1,87 @@
+From 201891f3977fb08cf51bf1cb1cee4f320df4f859 Mon Sep 17 00:00:00 2001
+Message-Id: <201891f3977fb08cf51bf1cb1cee4f320df4f859.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Sat, 29 Sep 2012 03:42:41 +0200
+Subject: [PATCH 19/34] convert -boot to QemuOpts
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1348890162-29391-2-git-send-email-akong@redhat.com>
+Patchwork-id: 42548
+O-Subject: [RHEL-6.4 qemu-kvm PATCH v2 1/2] convert -boot to QemuOpts
+Bugzilla: 854191
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Jason Baron <jbaron@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+Upstream commit 3d3b8303 does two things: convert -boot to QemuOpts,
+add splash screen feature. This patch only backported first part.
+
+Signed-off-by: Amos Kong <akong@redhat.com>
+---
+ qemu-config.c |   21 +++++++++++++++++++++
+ vl.c          |    2 ++
+ 2 files changed, 23 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-config.c | 21 +++++++++++++++++++++
+ vl.c          |  2 ++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/qemu-config.c b/qemu-config.c
+index 8d9ead6..6d0815c 100644
+--- a/qemu-config.c
++++ b/qemu-config.c
+@@ -419,6 +419,26 @@ QemuOptsList qemu_option_rom_opts = {
+     },
+ };
+ 
++QemuOptsList qemu_boot_opts = {
++    .name = "boot-opts",
++    .head = QTAILQ_HEAD_INITIALIZER(qemu_boot_opts.head),
++    .desc = {
++        /* the three names below are not used now */
++        {
++            .name = "order",
++            .type = QEMU_OPT_STRING,
++        }, {
++            .name = "once",
++            .type = QEMU_OPT_STRING,
++        }, {
++            .name = "menu",
++            .type = QEMU_OPT_STRING,
++        /* following are really used */
++        },
++        { /*End of list */ }
++    },
++};
++
+ static QemuOptsList *vm_config_groups[] = {
+     &qemu_drive_opts,
+     &qemu_simple_drive_opts,
+@@ -432,6 +452,7 @@ static QemuOptsList *vm_config_groups[] = {
+     &qemu_cpudef_opts,
+     &qemu_spice_opts,
+     &qemu_option_rom_opts,
++    &qemu_boot_opts,
+     NULL,
+ };
+ 
+diff --git a/vl.c b/vl.c
+index 249b014..9cfbf2e 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5369,6 +5369,8 @@ int main(int argc, char **argv, char **envp)
+                                 exit(1);
+                             }
+                         }
++                        qemu_opts_parse(qemu_find_opts("boot-opts"),
++                                        optarg, 0);
+                     }
+                 }
+                 break;
+-- 
+1.7.11.4
+

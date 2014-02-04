@@ -1,0 +1,100 @@
+From dd500cdd65fde8973dabf8a1edd59b0872b22af5 Mon Sep 17 00:00:00 2001
+Message-Id: <dd500cdd65fde8973dabf8a1edd59b0872b22af5.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 12 Oct 2012 16:22:38 +0200
+Subject: [PATCH 06/17] scsi: introduce hotplug() and hot_unplug() interfaces
+ for SCSI bus
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1350058967-27351-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 43057
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v2 01/10] scsi: introduce hotplug() and hot_unplug() interfaces for SCSI bus
+Bugzilla: 808660
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+From: Cong Meng <mc@linux.vnet.ibm.com>
+
+Bugzilla: 808660
+
+Add two interfaces hotplug() and hot_unplug() to scsi bus info.
+The scsi bus can implement these two interfaces to signal the HBA driver
+of guest kernel to add/remove the scsi device in question.
+
+Signed-off-by: Sen Wang <senwang@linux.vnet.ibm.com>
+Signed-off-by: Cong Meng <mc@linux.vnet.ibm.com>
+[ Fixed braces and indentation - Paolo ]
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit 350e6e419902991b073b313aa65b240d1024d57e)
+
+Conflicts:
+	hw/scsi-bus.c
+---
+ hw/scsi-bus.c | 17 ++++++++++++++++-
+ hw/scsi.h     |  2 ++
+ 2 file modificati, 18 inserzioni(+). 1 rimozione(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c | 17 ++++++++++++++++-
+ hw/scsi.h     |  2 ++
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index f60db4b..8b47780 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -143,10 +143,25 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+                                                          dev);
+     }
+ 
++    if (bus->info->hotplug) {
++        bus->info->hotplug(bus, dev);
++    }
++
+ err:
+     return rc;
+ }
+ 
++static int scsi_qdev_unplug(DeviceState *qdev)
++{
++    SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
++    SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, dev->qdev.parent_bus);
++
++    if (bus->info->hot_unplug) {
++        bus->info->hot_unplug(bus, dev);
++    }
++    return qdev_simple_unplug_cb(qdev);
++}
++
+ static int scsi_qdev_exit(DeviceState *qdev)
+ {
+     SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+@@ -164,7 +179,7 @@ void scsi_qdev_register(SCSIDeviceInfo *info)
+ {
+     info->qdev.bus_info = &scsi_bus_info;
+     info->qdev.init     = scsi_qdev_init;
+-    info->qdev.unplug   = qdev_simple_unplug_cb;
++    info->qdev.unplug   = scsi_qdev_unplug;
+     info->qdev.exit     = scsi_qdev_exit;
+     qdev_register(&info->qdev);
+ }
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 334d2ff..0802d72 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -126,6 +126,8 @@ struct SCSIBusInfo {
+     void (*transfer_data)(SCSIRequest *req, uint32_t arg);
+     void (*complete)(SCSIRequest *req, uint32_t arg, int32_t len);
+     void (*cancel)(SCSIRequest *req);
++    void (*hotplug)(SCSIBus *bus, SCSIDevice *dev);
++    void (*hot_unplug)(SCSIBus *bus, SCSIDevice *dev);
+     QEMUSGList *(*get_sg_list)(SCSIRequest *req);
+ 
+     void (*save_request)(QEMUFile *f, SCSIRequest *req);
+-- 
+1.7.11.7
+

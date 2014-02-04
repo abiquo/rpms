@@ -1,0 +1,203 @@
+From da3ad0fe52c46d72250925dc6d140d388c82ca1e Mon Sep 17 00:00:00 2001
+Message-Id: <da3ad0fe52c46d72250925dc6d140d388c82ca1e.1345545736.git.minovotn@redhat.com>
+In-Reply-To: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+References: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 8 Aug 2012 13:27:09 +0200
+Subject: [PATCH 4/8] usb: add serial number generator
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1344432431-5976-3-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40631
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 2/4] usb: add serial number generator
+Bugzilla: 813713
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+This patch adds a function which creates unique serial numbers for usb
+devices and puts it into use.  Windows guests tend to become unhappy if
+they find two identical usb devices in the system.  Effects range from
+non-functional devices (with yellow exclamation mark in device manager)
+to BSODs.  Handing out unique serial numbers to devices fixes this.
+
+With this patch applied almost all emulated devices get a generated,
+unique serial number.  There are two exceptions:
+
+ * usb-storage devices will prefer a user-specified serial number
+   and will only get a generated number in case the serial property
+   is unset.
+ * usb-hid devices keep the fixed serial number "42" as it is used
+   to signal "remote wakeup actually works".
+   See commit 7b074a22dab4bdda9864b933f1bc811a3db42845
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 9d55d1adc848a3dc1d2431c4ec4e7e4ea37fa0ee)
+
+[ rhel6: third exception: usb-ccid doesn't use the usb_desc_*
+         infrastructure in rhel6, thus skipped. ]
+[ extra note: this is most important for the usb hub ]
+
+Conflicts:
+
+	hw/usb-ccid.c
+	hw/usb-desc.c
+	hw/usb/dev-audio.c
+---
+ hw/usb-bt.c     |    1 +
+ hw/usb-desc.c   |   32 ++++++++++++++++++++++++++++++++
+ hw/usb-desc.h   |    1 +
+ hw/usb-hub.c    |    1 +
+ hw/usb-msd.c    |    2 ++
+ hw/usb-net.c    |    1 +
+ hw/usb-serial.c |    1 +
+ hw/usb-wacom.c  |    1 +
+ 8 files changed, 40 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-bt.c     |  1 +
+ hw/usb-desc.c   | 32 ++++++++++++++++++++++++++++++++
+ hw/usb-desc.h   |  1 +
+ hw/usb-hub.c    |  1 +
+ hw/usb-msd.c    |  2 ++
+ hw/usb-net.c    |  1 +
+ hw/usb-serial.c |  1 +
+ hw/usb-wacom.c  |  1 +
+ 8 files changed, 40 insertions(+)
+
+diff --git a/hw/usb-bt.c b/hw/usb-bt.c
+index 021121f..8120889 100644
+--- a/hw/usb-bt.c
++++ b/hw/usb-bt.c
+@@ -523,6 +523,7 @@ static void usb_bt_handle_destroy(USBDevice *dev)
+ 
+ static int usb_bt_initfn(USBDevice *dev)
+ {
++    usb_desc_create_serial(dev);
+     usb_desc_init(dev);
+     return 0;
+ }
+diff --git a/hw/usb-desc.c b/hw/usb-desc.c
+index d8c9aa3..e4a8ee4 100644
+--- a/hw/usb-desc.c
++++ b/hw/usb-desc.c
+@@ -1,3 +1,5 @@
++#include <ctype.h>
++
+ #include "usb.h"
+ #include "usb-desc.h"
+ #include "trace.h"
+@@ -299,6 +301,36 @@ void usb_desc_set_string(USBDevice *dev, uint8_t index, const char *str)
+     s->str = qemu_strdup(str);
+ }
+ 
++/*
++ * This function creates a serial number for a usb device.
++ * The serial number should:
++ *   (a) Be unique within the virtual machine.
++ *   (b) Be constant, so you don't get a new one each
++ *       time the guest is started.
++ * So we are using the physical location to generate a serial number
++ * from it.  It has three pieces:  First a fixed, device-specific
++ * prefix.  Second the device path of the host controller (which is
++ * the pci address in most cases).  Third the physical port path.
++ * Results in serial numbers like this: "314159-0000:00:1d.7-3".
++ */
++void usb_desc_create_serial(USBDevice *dev)
++{
++    DeviceState *hcd = dev->qdev.parent_bus->parent;
++    const USBDesc *desc = dev->info->usb_desc;
++    int index = desc->id.iSerialNumber;
++    char serial[64];
++    int dst;
++
++    assert(index != 0 && desc->str[index] != NULL);
++    dst = snprintf(serial, sizeof(serial), "%s", desc->str[index]);
++    if (hcd && hcd->parent_bus && hcd->parent_bus->info->get_dev_path) {
++        char *path = hcd->parent_bus->info->get_dev_path(hcd);
++        dst += snprintf(serial+dst, sizeof(serial)-dst, "-%s", path);
++    }
++    dst += snprintf(serial+dst, sizeof(serial)-dst, "-%s", dev->port->path);
++    usb_desc_set_string(dev, index, serial);
++}
++
+ const char *usb_desc_get_string(USBDevice *dev, uint8_t index)
+ {
+     USBDescString *s;
+diff --git a/hw/usb-desc.h b/hw/usb-desc.h
+index df53d2c..78b1ff2 100644
+--- a/hw/usb-desc.h
++++ b/hw/usb-desc.h
+@@ -166,6 +166,7 @@ int usb_desc_other(const USBDescOther *desc, uint8_t *dest, size_t len);
+ void usb_desc_init(USBDevice *dev);
+ void usb_desc_attach(USBDevice *dev);
+ void usb_desc_set_string(USBDevice *dev, uint8_t index, const char *str);
++void usb_desc_create_serial(USBDevice *dev);
+ const char *usb_desc_get_string(USBDevice *dev, uint8_t index);
+ int usb_desc_string(USBDevice *dev, int index, uint8_t *dest, size_t len);
+ int usb_desc_get_descriptor(USBDevice *dev, int value, uint8_t *dest, size_t len);
+diff --git a/hw/usb-hub.c b/hw/usb-hub.c
+index c20fc87..0320551 100644
+--- a/hw/usb-hub.c
++++ b/hw/usb-hub.c
+@@ -503,6 +503,7 @@ static int usb_hub_initfn(USBDevice *dev)
+     USBHubPort *port;
+     int i;
+ 
++    usb_desc_create_serial(dev);
+     usb_desc_init(dev);
+     for (i = 0; i < NUM_PORTS; i++) {
+         port = &s->ports[i];
+diff --git a/hw/usb-msd.c b/hw/usb-msd.c
+index 719c0c9..d04b97f 100644
+--- a/hw/usb-msd.c
++++ b/hw/usb-msd.c
+@@ -565,6 +565,8 @@ static int usb_msd_initfn(USBDevice *dev)
+     }
+     if (s->serial) {
+         usb_desc_set_string(dev, STR_SERIALNUMBER, s->serial);
++    } else {
++        usb_desc_create_serial(dev);
+     }
+ 
+     usb_desc_init(dev);
+diff --git a/hw/usb-net.c b/hw/usb-net.c
+index 5dfc4f1..bba2151 100644
+--- a/hw/usb-net.c
++++ b/hw/usb-net.c
+@@ -1364,6 +1364,7 @@ static int usb_net_initfn(USBDevice *dev)
+ {
+     USBNetState *s = DO_UPCAST(USBNetState, dev, dev);
+ 
++    usb_desc_create_serial(dev);
+     usb_desc_init(dev);
+ 
+     s->rndis_state = RNDIS_UNINITIALIZED;
+diff --git a/hw/usb-serial.c b/hw/usb-serial.c
+index 8947b34..f6706ca 100644
+--- a/hw/usb-serial.c
++++ b/hw/usb-serial.c
+@@ -486,6 +486,7 @@ static int usb_serial_initfn(USBDevice *dev)
+ {
+     USBSerialState *s = DO_UPCAST(USBSerialState, dev, dev);
+ 
++    usb_desc_create_serial(dev);
+     usb_desc_init(dev);
+ 
+     if (!s->cs) {
+diff --git a/hw/usb-wacom.c b/hw/usb-wacom.c
+index 9d348e1..5aa16cd 100644
+--- a/hw/usb-wacom.c
++++ b/hw/usb-wacom.c
+@@ -344,6 +344,7 @@ static void usb_wacom_handle_destroy(USBDevice *dev)
+ static int usb_wacom_initfn(USBDevice *dev)
+ {
+     USBWacomState *s = DO_UPCAST(USBWacomState, dev, dev);
++    usb_desc_create_serial(dev);
+     usb_desc_init(dev);
+     s->changed = 1;
+     return 0;
+-- 
+1.7.11.2
+

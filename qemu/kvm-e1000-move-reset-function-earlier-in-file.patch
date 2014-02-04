@@ -1,0 +1,147 @@
+From c29b64e5d39621fe4a504199cec4a8a75bef6464 Mon Sep 17 00:00:00 2001
+From: Xiao Wang <jasowang@redhat.com>
+Date: Fri, 10 Aug 2012 09:03:46 -0300
+Subject: [RHEL6 qemu-kvm PATCH 6/9] e1000: move reset function earlier in
+ file
+
+RH-Author: Xiao Wang <jasowang@redhat.com>
+Message-id: <1344589429-3229-7-git-send-email-jasowang@redhat.com>
+Patchwork-id: 40680
+O-Subject: [RHEL6.4 qemu-kvm 6/9] e1000: move reset function earlier in file
+Bugzilla: 607510 819915
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Vlad Yasevich <vyasevic@redhat.com>
+
+From: Michael S. Tsirkin <mst@redhat.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=607510
+
+Make it easier to reuse this function.
+
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+(cherry picked from commit 814cd3ac37be8e71c8ef76234d0da0bbfb2f2fb2)
+---
+ hw/e1000.c |   80 ++++++++++++++++++++++++++++++------------------------------
+ 1 files changed, 40 insertions(+), 40 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/e1000.c | 80 +++++++++++++++++++++++++++++++-------------------------------
+ 1 file changed, 40 insertions(+), 40 deletions(-)
+
+diff --git a/hw/e1000.c b/hw/e1000.c
+index e405210..38bcde2 100644
+--- a/hw/e1000.c
++++ b/hw/e1000.c
+@@ -147,6 +147,29 @@ static const char phy_regcap[0x20] = {
+     [PHY_ID2] = PHY_R,		[M88E1000_PHY_SPEC_STATUS] = PHY_R
+ };
+ 
++static const uint16_t phy_reg_init[] = {
++    [PHY_CTRL] = 0x1140,			[PHY_STATUS] = 0x796d, // link initially up
++    [PHY_ID1] = 0x141,				[PHY_ID2] = PHY_ID2_INIT,
++    [PHY_1000T_CTRL] = 0x0e00,			[M88E1000_PHY_SPEC_CTRL] = 0x360,
++    [M88E1000_EXT_PHY_SPEC_CTRL] = 0x0d60,	[PHY_AUTONEG_ADV] = 0xde1,
++    [PHY_LP_ABILITY] = 0x1e0,			[PHY_1000T_STATUS] = 0x3c00,
++    [M88E1000_PHY_SPEC_STATUS] = 0xac00,
++};
++
++static const uint32_t mac_reg_init[] = {
++    [PBA] =     0x00100030,
++    [LEDCTL] =  0x602,
++    [CTRL] =    E1000_CTRL_SWDPIN2 | E1000_CTRL_SWDPIN0 |
++                E1000_CTRL_SPD_1000 | E1000_CTRL_SLU,
++    [STATUS] =  0x80000000 | E1000_STATUS_GIO_MASTER_ENABLE |
++                E1000_STATUS_ASDV | E1000_STATUS_MTXCKOK |
++                E1000_STATUS_SPEED_1000 | E1000_STATUS_FD |
++                E1000_STATUS_LU,
++    [MANC] =    E1000_MANC_EN_MNG2HOST | E1000_MANC_RCV_TCO_EN |
++                E1000_MANC_ARP_EN | E1000_MANC_0298_EN |
++                E1000_MANC_RMCP_EN,
++};
++
+ static void
+ ioport_map(PCIDevice *pci_dev, int region_num, pcibus_t addr,
+            pcibus_t size, int type)
+@@ -196,6 +219,23 @@ rxbufsize(uint32_t v)
+     return 2048;
+ }
+ 
++static void e1000_reset(void *opaque)
++{
++    E1000State *d = opaque;
++
++    memset(d->phy_reg, 0, sizeof d->phy_reg);
++    memmove(d->phy_reg, phy_reg_init, sizeof phy_reg_init);
++    memset(d->mac_reg, 0, sizeof d->mac_reg);
++    memmove(d->mac_reg, mac_reg_init, sizeof mac_reg_init);
++    d->rxbuf_min_shift = 1;
++    memset(&d->tx, 0, sizeof d->tx);
++
++    if (d->nic->nc.link_down) {
++        d->mac_reg[STATUS] &= ~E1000_STATUS_LU;
++        d->phy_reg[PHY_STATUS] &= ~MII_SR_LINK_STATUS;
++    }
++}
++
+ static void
+ set_ctrl(E1000State *s, int index, uint32_t val)
+ {
+@@ -1041,29 +1081,6 @@ static const uint16_t e1000_eeprom_template[64] = {
+     0xffff, 0xffff, 0xffff, 0xffff,      0xffff, 0xffff,      0xffff, 0x0000,
+ };
+ 
+-static const uint16_t phy_reg_init[] = {
+-    [PHY_CTRL] = 0x1140,			[PHY_STATUS] = 0x796d, // link initially up
+-    [PHY_ID1] = 0x141,				[PHY_ID2] = PHY_ID2_INIT,
+-    [PHY_1000T_CTRL] = 0x0e00,			[M88E1000_PHY_SPEC_CTRL] = 0x360,
+-    [M88E1000_EXT_PHY_SPEC_CTRL] = 0x0d60,	[PHY_AUTONEG_ADV] = 0xde1,
+-    [PHY_LP_ABILITY] = 0x1e0,			[PHY_1000T_STATUS] = 0x3c00,
+-    [M88E1000_PHY_SPEC_STATUS] = 0xac00,
+-};
+-
+-static const uint32_t mac_reg_init[] = {
+-    [PBA] =     0x00100030,
+-    [LEDCTL] =  0x602,
+-    [CTRL] =    E1000_CTRL_SWDPIN2 | E1000_CTRL_SWDPIN0 |
+-                E1000_CTRL_SPD_1000 | E1000_CTRL_SLU,
+-    [STATUS] =  0x80000000 | E1000_STATUS_GIO_MASTER_ENABLE |
+-                E1000_STATUS_ASDV | E1000_STATUS_MTXCKOK |
+-                E1000_STATUS_SPEED_1000 | E1000_STATUS_FD |
+-                E1000_STATUS_LU,
+-    [MANC] =    E1000_MANC_EN_MNG2HOST | E1000_MANC_RCV_TCO_EN |
+-                E1000_MANC_ARP_EN | E1000_MANC_0298_EN |
+-                E1000_MANC_RMCP_EN,
+-};
+-
+ /* PCI interface */
+ 
+ static CPUWriteMemoryFunc * const e1000_mmio_write[] = {
+@@ -1116,23 +1133,6 @@ pci_e1000_uninit(PCIDevice *dev)
+     return 0;
+ }
+ 
+-static void e1000_reset(void *opaque)
+-{
+-    E1000State *d = opaque;
+-
+-    memset(d->phy_reg, 0, sizeof d->phy_reg);
+-    memmove(d->phy_reg, phy_reg_init, sizeof phy_reg_init);
+-    memset(d->mac_reg, 0, sizeof d->mac_reg);
+-    memmove(d->mac_reg, mac_reg_init, sizeof mac_reg_init);
+-    d->rxbuf_min_shift = 1;
+-    memset(&d->tx, 0, sizeof d->tx);
+-
+-    if (d->nic->nc.link_down) {
+-        d->mac_reg[STATUS] &= ~E1000_STATUS_LU;
+-        d->phy_reg[PHY_STATUS] &= ~MII_SR_LINK_STATUS;
+-    }
+-}
+-
+ static NetClientInfo net_e1000_info = {
+     .type = NET_CLIENT_TYPE_NIC,
+     .size = sizeof(NICState),
+-- 
+1.7.11.2
+

@@ -1,0 +1,286 @@
+From 32f51db640131e8c3cc089c7a03271111b6cb070 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Thu, 19 Jan 2012 18:58:30 +0100
+Subject: [PATCH 3/4] debugcon: support for debugging consoles (e.g. Bochs
+ port 0xe9)
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326999511-23666-2-git-send-email-armbru@redhat.com>
+Patchwork-id: 36650
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 1/2] debugcon: support for debugging consoles (e.g. Bochs port 0xe9)
+Bugzilla: 782825
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+From: "H. Peter Anvin" <hpa@linux.intel.com>
+
+Add generic support for debugging consoles (simple I/O ports which
+when written to cause debugging output to be written to a target.)
+The current implementation matches Bochs' port 0xe9, allowing the same
+debugging code to be used for both Bochs and Qemu.
+
+There is no vm state associated with the debugging port, simply
+because it has none -- the entire interface is a single, stateless,
+write-only port.
+
+Most of the code was cribbed from the serial port driver.
+
+v2: removed non-ISA variants (they can be introduced when/if someone
+wants them, using code from the serial port); added configurable
+readback (Bochs returns 0xe9 on a read from this register, mimic that
+by default)  This retains the apparently somewhat controversial user
+friendly option, however.
+
+v3: reimplemented the user friendly option as a synthetic option
+("-debugcon foo" basically ends up being a parser-level shorthand for
+"-chardev stdio,id=debugcon -device isa-debugcon,chardev=debugcon") --
+this dramatically reduced the complexity while keeping the same level
+of user friendliness.
+
+v4: spaces, not tabs.
+
+v5: update to match current top of tree.  Calling qemu_chr_open()
+already during parsing no longer works; defer until we are parsing the
+other console-like devices.
+
+Signed-off-by: H. Peter Anvin <hpa@linux.intel.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit c9f398e53fedb88df243e32eb9bc50fda4ec44d0)
+
+Conflicts:
+
+	Makefile.target
+	vl.c
+
+debugcon.c adapted for our non-upstream commit 45b991f7.
+
+Note that -debugcon is entirely useless with SeaBios (wrong iobase).
+Use "-device isa-debugcon,iobase=0x402,chardev=...".
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ Makefile.target |    1 +
+ hw/debugcon.c   |  110 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ qemu-options.hx |   11 +++++
+ vl.c            |   23 +++++++++++
+ 4 files changed, 145 insertions(+), 0 deletions(-)
+ create mode 100644 hw/debugcon.c
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.target |    1 +
+ hw/debugcon.c   |  110 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ qemu-options.hx |   11 +++++
+ vl.c            |   23 +++++++++++
+ 4 files changed, 145 insertions(+), 0 deletions(-)
+ create mode 100644 hw/debugcon.c
+
+diff --git a/Makefile.target b/Makefile.target
+index 939334c..fc593f7 100644
+--- a/Makefile.target
++++ b/Makefile.target
+@@ -254,6 +254,7 @@ obj-i386-y += extboot.o
+ obj-i386-y += ne2000-isa.o
+ obj-i386-y += testdev.o
+ obj-i386-y += kvmclock.o
++obj-i386-y += debugcon.o
+ 
+ obj-i386-$(CONFIG_KVM_PIT) += i8254-kvm.o
+ obj-i386-$(CONFIG_KVM_DEVICE_ASSIGNMENT) += device-assignment.o
+diff --git a/hw/debugcon.c b/hw/debugcon.c
+new file mode 100644
+index 0000000..631faa2
+--- /dev/null
++++ b/hw/debugcon.c
+@@ -0,0 +1,110 @@
++/*
++ * QEMU Bochs-style debug console ("port E9") emulation
++ *
++ * Copyright (c) 2003-2004 Fabrice Bellard
++ * Copyright (c) 2008 Citrix Systems, Inc.
++ * Copyright (c) Intel Corporation; author: H. Peter Anvin
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++
++#include "hw.h"
++#include "qemu-char.h"
++#include "isa.h"
++#include "pc.h"
++
++//#define DEBUG_DEBUGCON
++
++typedef struct DebugconState {
++    CharDriverState *chr;
++    uint32_t readback;
++} DebugconState;
++
++typedef struct ISADebugconState {
++    ISADevice dev;
++    uint32_t iobase;
++    DebugconState state;
++} ISADebugconState;
++
++static void debugcon_ioport_write(void *opaque, uint32_t addr, uint32_t val)
++{
++    DebugconState *s = opaque;
++    unsigned char ch = val;
++
++#ifdef DEBUG_DEBUGCON
++    printf("debugcon: write addr=0x%04x val=0x%02x\n", addr, val);
++#endif
++
++    qemu_chr_write(s->chr, &ch, 1);
++}
++
++
++static uint32_t debugcon_ioport_read(void *opaque, uint32_t addr)
++{
++    DebugconState *s = opaque;
++
++#ifdef DEBUG_DEBUGCON
++    printf("debugcon: read addr=0x%04x\n", addr, val);
++#endif
++
++    return s->readback;
++}
++
++static const QemuChrHandlers chr_handlers = {
++};
++
++static void debugcon_init_core(DebugconState *s)
++{
++    if (!s->chr) {
++        fprintf(stderr, "Can't create debugcon device, empty char device\n");
++        exit(1);
++    }
++
++    qemu_chr_add_handlers(s->chr, &chr_handlers, s);
++}
++
++static int debugcon_isa_initfn(ISADevice *dev)
++{
++    ISADebugconState *isa = DO_UPCAST(ISADebugconState, dev, dev);
++    DebugconState *s = &isa->state;
++
++    debugcon_init_core(s);
++    register_ioport_write(isa->iobase, 1, 1, debugcon_ioport_write, s);
++    register_ioport_read(isa->iobase, 1, 1, debugcon_ioport_read, s);
++    return 0;
++}
++
++static ISADeviceInfo debugcon_isa_info = {
++    .qdev.name  = "isa-debugcon",
++    .qdev.size  = sizeof(ISADebugconState),
++    .init       = debugcon_isa_initfn,
++    .qdev.props = (Property[]) {
++        DEFINE_PROP_HEX32("iobase", ISADebugconState, iobase, 0xe9),
++        DEFINE_PROP_CHR("chardev",  ISADebugconState, state.chr),
++        DEFINE_PROP_HEX32("readback", ISADebugconState, state.readback, 0xe9),
++        DEFINE_PROP_END_OF_LIST(),
++    },
++};
++
++static void debugcon_register_devices(void)
++{
++    isa_qdev_register(&debugcon_isa_info);
++}
++
++device_init(debugcon_register_devices)
+diff --git a/qemu-options.hx b/qemu-options.hx
+index 195b091..a014459 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -1731,6 +1731,17 @@ STEXI
+ Setup monitor on chardev @var{name}.
+ ETEXI
+ 
++DEF("debugcon", HAS_ARG, QEMU_OPTION_debugcon, \
++    "-debugcon dev   redirect the debug console to char device 'dev'\n")
++STEXI
++@item -debugcon @var{dev}
++Redirect the debug console to host device @var{dev} (same devices as the
++serial port).  The debug console is an I/O port which is typically port
++0xe9; writing to that I/O port sends output to this device.
++The default device is @code{vc} in graphical mode and @code{stdio} in
++non graphical mode.
++ETEXI
++
+ DEF("pidfile", HAS_ARG, QEMU_OPTION_pidfile, \
+     "-pidfile file   write PID to 'file'\n")
+ STEXI
+diff --git a/vl.c b/vl.c
+index 0e91a41..48ec0b3 100644
+--- a/vl.c
++++ b/vl.c
+@@ -4836,6 +4836,7 @@ struct device_config {
+         DEV_SERIAL,    /* -serial        */
+         DEV_PARALLEL,  /* -parallel      */
+         DEV_VIRTCON,   /* -virtioconsole */
++        DEV_DEBUGCON,  /* -debugcon */
+     } type;
+     const char *cmdline;
+     QTAILQ_ENTRY(device_config) next;
+@@ -4943,6 +4944,23 @@ static int virtcon_parse(const char *devname)
+     return 0;
+ }
+ 
++static int debugcon_parse(const char *devname)
++{   
++    QemuOpts *opts;
++
++    if (!qemu_chr_open("debugcon", devname, NULL)) {
++        exit(1);
++    }
++    opts = qemu_opts_create(&qemu_device_opts, "debugcon", 1);
++    if (!opts) {
++        fprintf(stderr, "qemu: already have a debugcon device\n");
++        exit(1);
++    }
++    qemu_opt_set(opts, "driver", "isa-debugcon");
++    qemu_opt_set(opts, "chardev", "debugcon");
++    return 0;
++}
++
+ void qemu_add_machine_init_done_notifier(Notifier *notify)
+ {
+     notifier_list_add(&machine_init_done_notifiers, notify);
+@@ -5626,6 +5644,9 @@ int main(int argc, char **argv, char **envp)
+                     default_monitor = 0;
+                 }
+                 break;
++            case QEMU_OPTION_debugcon:
++                add_device_config(DEV_DEBUGCON, optarg);
++                break;
+ 	    case QEMU_OPTION_loadvm:
+ 		loadvm = optarg;
+ 		break;
+@@ -6235,6 +6256,8 @@ int main(int argc, char **argv, char **envp)
+         exit(1);
+     if (foreach_device_config(DEV_VIRTCON, virtcon_parse) < 0)
+         exit(1);
++    if (foreach_device_config(DEV_DEBUGCON, debugcon_parse) < 0)
++        exit(1);
+ 
+     module_call_init(MODULE_INIT_DEVICE);
+ 
+-- 
+1.7.7.5
+

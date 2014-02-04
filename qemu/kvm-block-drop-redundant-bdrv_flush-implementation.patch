@@ -1,0 +1,266 @@
+From 485c930ea6931e6c12c0aa737c2ede61a51722b9 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:54 +0100
+Subject: [PATCH 89/99] block: drop redundant bdrv_flush implementation
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-90-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37280
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 89/96] block: drop redundant bdrv_flush implementation
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Bugzilla: 783950
+
+Block drivers now only need to provide either of .bdrv_co_flush,
+.bdrv_aio_flush() or for legacy drivers .bdrv_flush().  Remove
+the redundant .bdrv_flush() implementations.
+
+[Paolo Bonzini: change raw driver to bdrv_co_flush]
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 6f6dc6565e2b65ec8c0cf47622b4f5f1468d194e)
+
+Conflicts:
+
+	block/blkverify.c
+	block/raw-posix.c
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ block/blkdebug.c  |    6 ------
+ block/qcow.c      |    6 ------
+ block/qcow2.c     |   19 -------------------
+ block/qed.c       |    6 ------
+ block/raw-posix.c |   18 ------------------
+ block/raw.c       |   13 +++----------
+ 6 files changed, 3 insertions(+), 65 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/blkdebug.c  |    6 ------
+ block/qcow.c      |    6 ------
+ block/qcow2.c     |   19 -------------------
+ block/qed.c       |    6 ------
+ block/raw-posix.c |   18 ------------------
+ block/raw.c       |   13 +++----------
+ 6 files changed, 3 insertions(+), 65 deletions(-)
+
+diff --git a/block/blkdebug.c b/block/blkdebug.c
+index a84acbc..3853412 100644
+--- a/block/blkdebug.c
++++ b/block/blkdebug.c
+@@ -392,11 +392,6 @@ static void blkdebug_close(BlockDriverState *bs)
+     }
+ }
+ 
+-static int blkdebug_flush(BlockDriverState *bs)
+-{
+-    return bdrv_flush(bs->file);
+-}
+-
+ static BlockDriverAIOCB *blkdebug_aio_flush(BlockDriverState *bs,
+     BlockDriverCompletionFunc *cb, void *opaque)
+ {
+@@ -451,7 +446,6 @@ static BlockDriver bdrv_blkdebug = {
+ 
+     .bdrv_file_open     = blkdebug_open,
+     .bdrv_close         = blkdebug_close,
+-    .bdrv_flush         = blkdebug_flush,
+ 
+     .bdrv_aio_readv     = blkdebug_aio_readv,
+     .bdrv_aio_writev    = blkdebug_aio_writev,
+diff --git a/block/qcow.c b/block/qcow.c
+index 738958f..06f8a97 100644
+--- a/block/qcow.c
++++ b/block/qcow.c
+@@ -895,11 +895,6 @@ static int qcow_write_compressed(BlockDriverState *bs, int64_t sector_num,
+     return 0;
+ }
+ 
+-static int qcow_flush(BlockDriverState *bs)
+-{
+-    return bdrv_flush(bs->file);
+-}
+-
+ static BlockDriverAIOCB *qcow_aio_flush(BlockDriverState *bs,
+         BlockDriverCompletionFunc *cb, void *opaque)
+ {
+@@ -940,7 +935,6 @@ static BlockDriver bdrv_qcow = {
+     .bdrv_open		= qcow_open,
+     .bdrv_close		= qcow_close,
+     .bdrv_create	= qcow_create,
+-    .bdrv_flush		= qcow_flush,
+     .bdrv_is_allocated	= qcow_is_allocated,
+     .bdrv_set_key	= qcow_set_key,
+     .bdrv_make_empty	= qcow_make_empty,
+diff --git a/block/qcow2.c b/block/qcow2.c
+index 28cebb1..1aaa2f2 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -1220,24 +1220,6 @@ static int qcow2_write_compressed(BlockDriverState *bs, int64_t sector_num,
+     return 0;
+ }
+ 
+-static int qcow2_flush(BlockDriverState *bs)
+-{
+-    BDRVQcowState *s = bs->opaque;
+-    int ret;
+-
+-    ret = qcow2_cache_flush(bs, s->l2_table_cache);
+-    if (ret < 0) {
+-        return ret;
+-    }
+-
+-    ret = qcow2_cache_flush(bs, s->refcount_block_cache);
+-    if (ret < 0) {
+-        return ret;
+-    }
+-
+-    return bdrv_flush(bs->file);
+-}
+-
+ static BlockDriverAIOCB *qcow2_aio_flush(BlockDriverState *bs,
+                                          BlockDriverCompletionFunc *cb,
+                                          void *opaque)
+@@ -1370,7 +1352,6 @@ static BlockDriver bdrv_qcow2 = {
+     .bdrv_open          = qcow2_open,
+     .bdrv_close         = qcow2_close,
+     .bdrv_create        = qcow2_create,
+-    .bdrv_flush         = qcow2_flush,
+     .bdrv_is_allocated  = qcow2_is_allocated,
+     .bdrv_set_key       = qcow2_set_key,
+     .bdrv_make_empty    = qcow2_make_empty,
+diff --git a/block/qed.c b/block/qed.c
+index c644717..6e55a90 100644
+--- a/block/qed.c
++++ b/block/qed.c
+@@ -526,11 +526,6 @@ static void bdrv_qed_close(BlockDriverState *bs)
+     qemu_vfree(s->l1_table);
+ }
+ 
+-static int bdrv_qed_flush(BlockDriverState *bs)
+-{
+-    return bdrv_flush(bs->file);
+-}
+-
+ static int qed_create(const char *filename, uint32_t cluster_size,
+                       uint64_t image_size, uint32_t table_size,
+                       const char *backing_file, const char *backing_fmt)
+@@ -1715,7 +1710,6 @@ static BlockDriver bdrv_qed = {
+     .bdrv_open                = bdrv_qed_open,
+     .bdrv_close               = bdrv_qed_close,
+     .bdrv_create              = bdrv_qed_create,
+-    .bdrv_flush               = bdrv_qed_flush,
+     .bdrv_is_allocated        = bdrv_qed_is_allocated,
+     .bdrv_make_empty          = bdrv_qed_make_empty,
+     .bdrv_aio_readv           = bdrv_qed_aio_readv,
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 911e4a8..9e7d092 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -523,19 +523,6 @@ static int raw_create(const char *filename, QEMUOptionParameter *options)
+     return result;
+ }
+ 
+-static int raw_flush(BlockDriverState *bs)
+-{
+-    BDRVRawState *s = bs->opaque;
+-    int ret;
+-
+-    ret = qemu_fdatasync(s->fd);
+-    if (ret < 0) {
+-        return -errno;
+-    }
+-
+-    return 0;
+-}
+-
+ #ifdef CONFIG_XFS
+ static int xfs_discard(BDRVRawState *s, int64_t sector_num, int nb_sectors)
+ {
+@@ -585,7 +572,6 @@ static BlockDriver bdrv_file = {
+     .bdrv_file_open = raw_open,
+     .bdrv_close = raw_close,
+     .bdrv_create = raw_create,
+-    .bdrv_flush = raw_flush,
+     .bdrv_discard = raw_discard,
+ 
+     .bdrv_aio_readv = raw_aio_readv,
+@@ -848,7 +834,6 @@ static BlockDriver bdrv_host_device = {
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+-    .bdrv_flush         = raw_flush,
+ 
+     .bdrv_aio_readv	= raw_aio_readv,
+     .bdrv_aio_writev	= raw_aio_writev,
+@@ -943,7 +928,6 @@ static BlockDriver bdrv_host_floppy = {
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+-    .bdrv_flush         = raw_flush,
+ 
+     .bdrv_aio_readv     = raw_aio_readv,
+     .bdrv_aio_writev    = raw_aio_writev,
+@@ -1038,7 +1022,6 @@ static BlockDriver bdrv_host_cdrom = {
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+-    .bdrv_flush         = raw_flush,
+ 
+     .bdrv_aio_readv     = raw_aio_readv,
+     .bdrv_aio_writev    = raw_aio_writev,
+@@ -1156,7 +1139,6 @@ static BlockDriver bdrv_host_cdrom = {
+     .bdrv_create        = hdev_create,
+     .create_options     = raw_create_options,
+     .bdrv_has_zero_init = hdev_has_zero_init,
+-    .bdrv_flush         = raw_flush,
+ 
+     .bdrv_aio_readv     = raw_aio_readv,
+     .bdrv_aio_writev    = raw_aio_writev,
+diff --git a/block/raw.c b/block/raw.c
+index 5ca606b..39a3a9a 100644
+--- a/block/raw.c
++++ b/block/raw.c
+@@ -25,15 +25,9 @@ static void raw_close(BlockDriverState *bs)
+ {
+ }
+ 
+-static int raw_flush(BlockDriverState *bs)
++static int coroutine_fn raw_co_flush(BlockDriverState *bs)
+ {
+-    return bdrv_flush(bs->file);
+-}
+-
+-static BlockDriverAIOCB *raw_aio_flush(BlockDriverState *bs,
+-    BlockDriverCompletionFunc *cb, void *opaque)
+-{
+-    return bdrv_aio_flush(bs->file, cb, opaque);
++    return bdrv_co_flush(bs->file);
+ }
+ 
+ static int64_t raw_getlength(BlockDriverState *bs)
+@@ -117,12 +111,11 @@ static BlockDriver bdrv_raw = {
+     .bdrv_close         = raw_close,
+     .bdrv_co_readv      = raw_co_readv,
+     .bdrv_co_writev     = raw_co_writev,
+-    .bdrv_flush         = raw_flush,
++    .bdrv_co_flush      = raw_co_flush,
+     .bdrv_probe         = raw_probe,
+     .bdrv_getlength     = raw_getlength,
+     .bdrv_truncate      = raw_truncate,
+ 
+-    .bdrv_aio_flush     = raw_aio_flush,
+     .bdrv_discard       = raw_discard,
+ 
+     .bdrv_is_inserted   = raw_is_inserted,
+-- 
+1.7.7.5
+

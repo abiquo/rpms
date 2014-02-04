@@ -1,0 +1,50 @@
+From 2a8fe77654080cef2caba7f21a233efe65fb6637 Mon Sep 17 00:00:00 2001
+Message-Id: <2a8fe77654080cef2caba7f21a233efe65fb6637.1350312451.git.minovotn@redhat.com>
+In-Reply-To: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+References: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+From: Alon Levy <alevy@redhat.com>
+Date: Sun, 7 Oct 2012 15:31:49 +0200
+Subject: [PATCH 12/27] qxl: replace panic with guest bug in qxl_track_command
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1349623920-19894-6-git-send-email-alevy@redhat.com>
+Patchwork-id: 42780
+O-Subject: [PATCH RHEL-6.4 v2 05/16] qxl: replace panic with guest bug in qxl_track_command
+Bugzilla: 770842
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Arnon Gilboa <agilboa@redhat.com>
+
+Signed-off-by: Alon Levy <alevy@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Upstream: 47eddfbfe061dd18aad525863375028b1ee78d5c
+---
+ hw/qxl.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/hw/qxl.c b/hw/qxl.c
+index b2f674b..a466845 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -418,7 +418,11 @@ static int qxl_track_command(PCIQXLDevice *qxl, struct QXLCommandExt *ext)
+             return 1;
+         }
+         uint32_t id = le32_to_cpu(cmd->surface_id);
+-        PANIC_ON(id >= NUM_SURFACES);
++
++        if (id >= NUM_SURFACES) {
++            qxl_guest_bug(qxl, "QXL_CMD_SURFACE id %d >= %d", id, NUM_SURFACES);
++            return 1;
++        }
+         qemu_mutex_lock(&qxl->track_lock);
+         if (cmd->type == QXL_SURFACE_CMD_CREATE) {
+             qxl->guest_surfaces.cmds[id] = ext->cmd.data;
+-- 
+1.7.11.7
+

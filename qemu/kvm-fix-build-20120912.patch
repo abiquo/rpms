@@ -1,0 +1,30 @@
+From cd6ac7c39743fc4de3dd01b8ce131ed5a3539f38 Mon Sep 17 00:00:00 2001
+Message-Id: <cd6ac7c39743fc4de3dd01b8ce131ed5a3539f38.1347459676.git.minovotn@redhat.com>
+From: Michal Novotny <minovotn@redhat.com>
+Date: Wed, 12 Sep 2012 16:20:50 +0200
+Subject: [PATCH] Fix build
+
+This is patch to fix build with PIIX4 with PM states patch.
+
+- Related: bz#827503
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/acpi.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hw/acpi.c b/hw/acpi.c
+index 7c9a855..5c712e3 100644
+--- a/hw/acpi.c
++++ b/hw/acpi.c
+@@ -26,6 +26,7 @@
+ #include "qemu-kvm.h"
+ #include "string.h"
+ #include "ioport.h"
++#include "fw_cfg.h"
+ 
+ //#define DEBUG
+ 
+-- 
+1.7.11.4
+

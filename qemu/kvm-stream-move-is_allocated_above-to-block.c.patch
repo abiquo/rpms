@@ -1,0 +1,190 @@
+From 90418df62498257b19963b33a71285e6db623534 Mon Sep 17 00:00:00 2001
+Message-Id: <90418df62498257b19963b33a71285e6db623534.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:22 +0200
+Subject: [PATCH 09/35] stream: move is_allocated_above to block.c
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <f0e7b139b3378839c360383f221f9e93d07a960a.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43265
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 09/35] stream: move is_allocated_above to block.c
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 188a7bbf94aa53019ef7d2438c8e9d900e590091)
+
+Conflicts:
+	block.c
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c        | 49 +++++++++++++++++++++++++++++++++++++++++++++++++
+ block.h        |  4 ++++
+ block/stream.c | 53 ++---------------------------------------------------
+ 3 files changed, 55 insertions(+), 51 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c        | 49 +++++++++++++++++++++++++++++++++++++++++++++++++
+ block.h        |  4 ++++
+ block/stream.c | 53 ++---------------------------------------------------
+ 3 files changed, 55 insertions(+), 51 deletions(-)
+
+diff --git a/block.c b/block.c
+index 7dd4e6b..a2cc214 100644
+--- a/block.c
++++ b/block.c
+@@ -2209,6 +2209,55 @@ int bdrv_is_allocated(BlockDriverState *bs, int64_t sector_num, int nb_sectors,
+     return data.ret;
+ }
+ 
++/*
++ * Given an image chain: ... -> [BASE] -> [INTER1] -> [INTER2] -> [TOP]
++ *
++ * Return true if the given sector is allocated in any image between
++ * BASE and TOP (inclusive).  BASE can be NULL to check if the given
++ * sector is allocated in any image of the chain.  Return false otherwise.
++ *
++ * 'pnum' is set to the number of sectors (including and immediately following
++ *  the specified sector) that are known to be in the same
++ *  allocated/unallocated state.
++ *
++ */
++int coroutine_fn bdrv_co_is_allocated_above(BlockDriverState *top,
++                                            BlockDriverState *base,
++                                            int64_t sector_num,
++                                            int nb_sectors, int *pnum)
++{
++    BlockDriverState *intermediate;
++    int ret, n = nb_sectors;
++
++    intermediate = top;
++    while (intermediate && intermediate != base) {
++        int pnum_inter;
++        ret = bdrv_co_is_allocated(intermediate, sector_num, nb_sectors,
++                                   &pnum_inter);
++        if (ret < 0) {
++            return ret;
++        } else if (ret) {
++            *pnum = pnum_inter;
++            return 1;
++        }
++
++        /*
++         * [sector_num, nb_sectors] is unallocated on top but intermediate
++         * might have
++         *
++         * [sector_num+x, nr_sectors] allocated.
++         */
++        if (n > pnum_inter) {
++            n = pnum_inter;
++        }
++
++        intermediate = intermediate->backing_hd;
++    }
++
++    *pnum = n;
++    return 0;
++}
++
+ static void bdrv_print_dict(QObject *obj, void *opaque)
+ {
+     QDict *bs_dict;
+diff --git a/block.h b/block.h
+index 9eb1d96..8fe6708 100644
+--- a/block.h
++++ b/block.h
+@@ -160,6 +160,10 @@ int coroutine_fn bdrv_co_write_zeroes(BlockDriverState *bs, int64_t sector_num,
+     int nb_sectors);
+ int coroutine_fn bdrv_co_is_allocated(BlockDriverState *bs, int64_t sector_num,
+     int nb_sectors, int *pnum);
++int coroutine_fn bdrv_co_is_allocated_above(BlockDriverState *top,
++                                            BlockDriverState *base,
++                                            int64_t sector_num,
++                                            int nb_sectors, int *pnum);
+ BlockDriverState *bdrv_find_backing_image(BlockDriverState *bs,
+     const char *backing_file);
+ int bdrv_truncate(BlockDriverState *bs, int64_t offset);
+diff --git a/block/stream.c b/block/stream.c
+index de76f76..f03c934 100644
+--- a/block/stream.c
++++ b/block/stream.c
+@@ -98,55 +98,6 @@ static void close_unused_images(BlockDriverState *top, BlockDriverState *base,
+     top->backing_hd = base;
+ }
+ 
+-/*
+- * Given an image chain: [BASE] -> [INTER1] -> [INTER2] -> [TOP]
+- *
+- * Return true if the given sector is allocated in any image between
+- * BASE and TOP (inclusive).  BASE can be NULL to check if the given
+- * sector is allocated in any image of the chain.  Return false otherwise.
+- *
+- * 'pnum' is set to the number of sectors (including and immediately following
+- *  the specified sector) that are known to be in the same
+- *  allocated/unallocated state.
+- *
+- */
+-static int coroutine_fn is_allocated_above(BlockDriverState *top,
+-                                           BlockDriverState *base,
+-                                           int64_t sector_num,
+-                                           int nb_sectors, int *pnum)
+-{
+-    BlockDriverState *intermediate;
+-    int ret, n = nb_sectors;
+-
+-    intermediate = top;
+-    while (intermediate != base) {
+-        int pnum_inter;
+-        ret = bdrv_co_is_allocated(intermediate, sector_num, nb_sectors,
+-                                   &pnum_inter);
+-        if (ret < 0) {
+-            return ret;
+-        } else if (ret) {
+-            *pnum = pnum_inter;
+-            return 1;
+-        }
+-
+-        /*
+-         * [sector_num, nb_sectors] is unallocated on top but intermediate
+-         * might have
+-         *
+-         * [sector_num+x, nr_sectors] allocated.
+-         */
+-        if (n > pnum_inter) {
+-            n = pnum_inter;
+-        }
+-
+-        intermediate = intermediate->backing_hd;
+-    }
+-
+-    *pnum = n;
+-    return 0;
+-}
+-
+ static void coroutine_fn stream_run(void *opaque)
+ {
+     StreamBlockJob *s = opaque;
+@@ -196,10 +147,10 @@ wait:
+         } else {
+             /* Copy if allocated in the intermediate images.  Limit to the
+              * known-unallocated area [sector_num, sector_num+n).  */
+-            ret = is_allocated_above(bs->backing_hd, base, sector_num, n, &n);
++            ret = bdrv_co_is_allocated_above(bs->backing_hd, base,
++                                             sector_num, n, &n);
+             copy = (ret == 1);
+         }
+-
+         trace_stream_one_iteration(s, sector_num, n, ret);
+         if (ret >= 0 && copy) {
+             if (s->common.speed) {
+-- 
+1.7.11.7
+

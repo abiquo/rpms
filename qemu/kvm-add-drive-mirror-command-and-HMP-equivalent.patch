@@ -1,0 +1,211 @@
+From df38914e5fad2f4f3e17b6a79b99ff77c123a000 Mon Sep 17 00:00:00 2001
+From: Federico Simoncelli <fsimonce@redhat.com>
+Date: Fri, 23 Mar 2012 12:12:57 -0300
+Subject: [RHEL6 qemu-kvm PATCH 4/5] add drive-mirror command and HMP equivalent
+
+RH-Author: Federico Simoncelli <fsimonce@redhat.com>
+Message-id: <1332504778-17403-13-git-send-email-fsimonce@redhat.com>
+Patchwork-id: 38955
+O-Subject: [RHEL6.3 qemu-kvm PATCH v6 12/13] add drive-mirror command and HMP equivalent
+Bugzilla: 802284
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+Since QMP transactions are supposed to take (pseudo) QMP commands,
+add a standalone drive-mirror command.
+
+The corresponding HMP command does not provide atomic snapshot+mirror,
+but it can still be used together with image streaming.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Federico Simoncelli <fsimonce@redhat.com>
+
+BZ: 802284
+
+Based on an patch posted upstream:
+http://lists.gnu.org/archive/html/qemu-devel/2012-03/msg00902.html
+
+Deviations from upstream:
+ - drive-mirror commands renamed with a downstream prefix
+---
+ blockdev.c       |   15 +++++++++++++++
+ hmp.c            |   28 ++++++++++++++++++++++++++++
+ hmp.h            |    1 +
+ qapi-schema.json |   27 +++++++++++++++++++++++++++
+ qemu-monitor.hx  |   35 +++++++++++++++++++++++++++++++++++
+ 5 files changed, 106 insertions(+), 0 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ blockdev.c       |   15 +++++++++++++++
+ hmp.c            |   28 ++++++++++++++++++++++++++++
+ hmp.h            |    1 +
+ qapi-schema.json |   27 +++++++++++++++++++++++++++
+ qemu-monitor.hx  |   35 +++++++++++++++++++++++++++++++++++
+ 5 files changed, 106 insertions(+), 0 deletions(-)
+
+diff --git a/blockdev.c b/blockdev.c
+index bdbb5a1..b96d846 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -662,6 +662,21 @@ void qmp_blockdev_snapshot_sync(const char *device, const char *snapshot_file,
+ #endif 
+ 
+ #ifdef CONFIG_LIVE_SNAPSHOTS
++void qmp___com_redhat_drive_mirror(const char *device, const char *target,
++                      bool has_format, const char *format,
++                      bool has_mode, enum NewImageMode mode, Error **errp)
++{
++    BlockdevMirror mirror = {
++        .device = (char *) device,
++        .target = (char *) target,
++        .has_format = has_format,
++        .format = (char *) format,
++        .has_mode = has_mode,
++        .mode = mode,
++    };
++    blockdev_do_action(BLOCKDEV_ACTION_KIND___COM_REDHAT_DRIVE_MIRROR, &mirror, errp);
++}
++
+ /* New and old BlockDriverState structs for group snapshots */
+ typedef struct BlkTransactionStates {
+     BlockDriverState *old_bs;
+diff --git a/hmp.c b/hmp.c
+index 7391a9a..812e364 100644
+--- a/hmp.c
++++ b/hmp.c
+@@ -23,6 +23,34 @@ static void hmp_handle_error(Monitor *mon, Error **errp)
+     }
+ }
+ 
++void hmp_drive_mirror(Monitor *mon, const QDict *qdict)
++{
++    const char *device = qdict_get_str(qdict, "device");
++    const char *filename = qdict_get_try_str(qdict, "target");
++    const char *format = qdict_get_try_str(qdict, "format");
++    int reuse = qdict_get_try_bool(qdict, "reuse", 0);
++    int no_backing = qdict_get_try_bool(qdict, "no-backing", 0);
++    enum NewImageMode mode;
++    Error *errp = NULL;
++
++    if (!filename) {
++        error_set(&errp, QERR_MISSING_PARAMETER, "target");
++        hmp_handle_error(mon, &errp);
++        return;
++    }
++
++    if (reuse) {
++        mode = NEW_IMAGE_MODE_EXISTING;
++    } else if (no_backing) {
++        mode = NEW_IMAGE_MODE_NO_BACKING_FILE;
++    } else {
++        mode = NEW_IMAGE_MODE_ABSOLUTE_PATHS;
++    }
++
++    qmp___com_redhat_drive_mirror(device, filename, !!format, format, true, mode, &errp);
++    hmp_handle_error(mon, &errp);
++}
++
+ void hmp_snapshot_blkdev(Monitor *mon, const QDict *qdict)
+ {
+     const char *device = qdict_get_str(qdict, "device");
+diff --git a/hmp.h b/hmp.h
+index 3f5643b..7c4cae4 100644
+--- a/hmp.h
++++ b/hmp.h
+@@ -20,6 +20,7 @@
+ #include "rhev-qapi-types.h"
+ 
+ void hmp_snapshot_blkdev(Monitor *mon, const QDict *qdict);
++void hmp_drive_mirror(Monitor *mon, const QDict *qdict);
+ #endif
+ 
+ #endif
+diff --git a/qapi-schema.json b/qapi-schema.json
+index 24f6b99..0a50b0d 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -119,4 +119,31 @@
+ { 'command': 'blockdev-snapshot-sync',
+   'data': { 'device': 'str', 'snapshot-file': 'str', '*format': 'str',
+             '*mode': 'NewImageMode'} }
++
++##
++# @__com.redhat_drive-mirror
++#
++# Start mirroring a block device's writes to a new destination.
++#
++# @device:  the name of the device whose writes should be mirrored.
++#
++# @target: the target of the new image. If the file exists, or if it
++#          is a device, the existing file/device will be used as the new
++#          destination.  If it does not exist, a new file will be created.
++#
++# @format: #optional the format of the new destination, default is 'qcow2'.
++#
++# @mode: #optional whether and how QEMU should create a new image, default is
++# 'absolute-paths'.
++#
++# Returns: nothing on success
++#          If @device is not a valid block device, DeviceNotFound
++#          If @target can't be opened, OpenFileFailed
++#          If @format is invalid, InvalidBlockFormat
++#
++# Since 1.1
++##
++{ 'command': '__com.redhat_drive-mirror',
++  'data': { 'device': 'str', 'target': 'str', '*format': 'str',
++            '*mode': 'NewImageMode'} }
+ #endif
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index b492bce..4c5b9c3 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1589,6 +1589,41 @@ Example:
+ 
+ EQMP
+ 
++#ifdef CONFIG_LIVE_SNAPSHOTS
++    {
++        .name       = "__com.redhat_drive-mirror",
++        .args_type  = "device:B,snapshot-file:s,mode:s?,format:s?",
++        .mhandler.cmd_new = qmp_marshal_input___com_redhat_drive_mirror,
++    },
++#endif
++
++SQMP
++__com.redhat_drive-mirror
++-------------------------
++
++Start mirroring a block device's writes to a new destination. target
++specifies the target of the new image. If the file exists, or if it is
++a device, it will be used as the new destination for writes. If does not
++exist, a new file will be created. format specifies the format of the
++mirror image, default is qcow2.
++
++Arguments:
++
++- "device": device name to operate on (json-string)
++- "target": name of new image file (json-string)
++- "format": format of new image (json-string, optional)
++- "mode": how an image file should be created into the target
++  file/device (NewImageMode, optional, default 'absolute-paths')
++
++Example:
++
++-> { "execute": "__com.redhat_drive-mirror", "arguments": { "device": "ide-hd0",
++                                               "target": "/some/place/my-image",
++                                               "format": "qcow2" } }
++<- { "return": {} }
++
++EQMP
++
+     {
+         .name       = "balloon",
+         .args_type  = "value:M",
+-- 
+1.7.3.2
+

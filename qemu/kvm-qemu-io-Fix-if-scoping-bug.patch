@@ -1,0 +1,57 @@
+From 9c526c29e14b794ca7a67fc3f8203bc971aa01b1 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:18 +0100
+Subject: [PATCH 24/52] qemu-io: Fix if scoping bug
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-25-git-send-email-armbru@redhat.com>
+Patchwork-id: 36620
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 24/52] qemu-io: Fix if scoping bug
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Devin Nakamura <devin122@gmail.com>
+
+Fix a bug caused by lack of braces in if statement
+
+Lack of braces means that if(count & 0x1ff) is never reached
+
+Signed-off-by: Devin Nakamura <devin122@gmail.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 5afc8b3de9a8a472a45d2b980632a15cb7f1e1c3)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ qemu-io.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-io.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/qemu-io.c b/qemu-io.c
+index 081d7a9..4c70a99 100644
+--- a/qemu-io.c
++++ b/qemu-io.c
+@@ -407,7 +407,7 @@ static int read_f(int argc, char **argv)
+         return 0;
+     }
+ 
+-    if (!pflag)
++    if (!pflag) {
+         if (offset & 0x1ff) {
+             printf("offset %" PRId64 " is not sector aligned\n",
+                    offset);
+@@ -418,6 +418,7 @@ static int read_f(int argc, char **argv)
+                    count);
+             return 0;
+         }
++    }
+ 
+     buf = qemu_io_alloc(count, 0xab);
+ 
+-- 
+1.7.7.5
+

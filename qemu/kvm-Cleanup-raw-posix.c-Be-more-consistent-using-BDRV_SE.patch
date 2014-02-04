@@ -1,0 +1,107 @@
+From 2cfbd76884ccd712afcc9af0eb1dea0468fb6358 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:51 +0100
+Subject: [PATCH 26/99] Cleanup: raw-posix.c: Be more consistent using
+ BDRV_SECTOR_SIZE instead of 512
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-27-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37226
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 26/96] Cleanup: raw-posix.c: Be more consistent using BDRV_SECTOR_SIZE instead of 512
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Jes Sorensen <Jes.Sorensen@redhat.com>
+
+Bugzilla: 783950
+
+Clean up raw-posix.c to be more consistent using BDRV_SECTOR_SIZE
+instead of hard coded 512 values.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 9040385dcc0a4b32ca8ceeda6dc679aea56e3832)
+
+Conflicts:
+
+	block/raw-posix.c
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ block/raw-posix.c |   18 ++++++++++--------
+ 1 files changed, 10 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/raw-posix.c |   18 ++++++++++--------
+ 1 files changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 791199e..23bb484 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -438,8 +438,9 @@ static int raw_read(BlockDriverState *bs, int64_t sector_num,
+ {
+     int ret;
+ 
+-    ret = raw_pread(bs, sector_num * 512, buf, nb_sectors * 512);
+-    if (ret == (nb_sectors * 512))
++    ret = raw_pread(bs, sector_num * BDRV_SECTOR_SIZE, buf,
++                    nb_sectors * BDRV_SECTOR_SIZE);
++    if (ret == (nb_sectors * BDRV_SECTOR_SIZE))
+         ret = 0;
+     return ret;
+ }
+@@ -531,8 +532,9 @@ static int raw_write(BlockDriverState *bs, int64_t sector_num,
+                      const uint8_t *buf, int nb_sectors)
+ {
+     int ret;
+-    ret = raw_pwrite(bs, sector_num * 512, buf, nb_sectors * 512);
+-    if (ret == (nb_sectors * 512))
++    ret = raw_pwrite(bs, sector_num * BDRV_SECTOR_SIZE, buf,
++                     nb_sectors * BDRV_SECTOR_SIZE);
++    if (ret == (nb_sectors * BDRV_SECTOR_SIZE))
+         ret = 0;
+     return ret;
+ }
+@@ -742,7 +744,7 @@ static int raw_create(const char *filename, QEMUOptionParameter *options)
+     /* Read out options */
+     while (options && options->name) {
+         if (!strcmp(options->name, BLOCK_OPT_SIZE)) {
+-            total_size = options->value.n / 512;
++            total_size = options->value.n / BDRV_SECTOR_SIZE;
+         }
+         options++;
+     }
+@@ -752,7 +754,7 @@ static int raw_create(const char *filename, QEMUOptionParameter *options)
+     if (fd < 0) {
+         result = -errno;
+     } else {
+-        if (ftruncate(fd, total_size * 512) != 0) {
++        if (ftruncate(fd, total_size * BDRV_SECTOR_SIZE) != 0) {
+             result = -errno;
+         }
+         if (close(fd) != 0) {
+@@ -1015,7 +1017,7 @@ static int hdev_create(const char *filename, QEMUOptionParameter *options)
+     /* Read out options */
+     while (options && options->name) {
+         if (!strcmp(options->name, "size")) {
+-            total_size = options->value.n / 512;
++            total_size = options->value.n / BDRV_SECTOR_SIZE;
+         }
+         options++;
+     }
+@@ -1028,7 +1030,7 @@ static int hdev_create(const char *filename, QEMUOptionParameter *options)
+         ret = -EIO;
+     else if (!S_ISBLK(stat_buf.st_mode) && !S_ISCHR(stat_buf.st_mode))
+         ret = -EIO;
+-    else if (lseek(fd, 0, SEEK_END) < total_size * 512)
++    else if (lseek(fd, 0, SEEK_END) < total_size * BDRV_SECTOR_SIZE)
+         ret = -ENOSPC;
+ 
+     close(fd);
+-- 
+1.7.7.5
+

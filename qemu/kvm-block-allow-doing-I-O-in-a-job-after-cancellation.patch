@@ -1,0 +1,133 @@
+From 61d51a5f1d711f2ca152e3f9c2b455971f11c23d Mon Sep 17 00:00:00 2001
+Message-Id: <61d51a5f1d711f2ca152e3f9c2b455971f11c23d.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:20 +0200
+Subject: [PATCH 12/18] block: allow doing I/O in a job after cancellation
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-11-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39223
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 10/16] block: allow doing I/O in a job after cancellation
+Bugzilla: 806432
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 806432
+
+Upstream status: submitted as part of the mirroring forward-port
+
+Track the coroutine that executes the job, so that the wait can be
+cancelled before block_job_cancel restarts.  This also gives to the
+coroutine an opportunity to flip job->busy to true, and submit new
+I/O before exiting.  block_job_cancel_sync will wait for job->busy
+to become false again.
+
+Also drain the I/O *before* canceling the job, so that all I/O from
+the guest is visible to the job.
+
+All this is needed for mirroring.  Once mirroring reaches "steady state"
+(i.e. all data from the source is also in the target, except for new
+writes coming in from the guest), cancellation of the job will keep
+the disks synchronized.  The job thus requires to handle cancellation
+with care, and this patch provides the infrastructure.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+
+Conflicts:
+
+	block_int.h
+---
+ block.c        |    8 ++++++++
+ block/stream.c |    7 +++----
+ block_int.h    |   20 ++++++++++++++++++++
+ 3 files changed, 31 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c        |    8 ++++++++
+ block/stream.c |    7 +++----
+ block_int.h    |   20 ++++++++++++++++++++
+ 3 files changed, 31 insertions(+), 4 deletions(-)
+
+diff --git a/block.c b/block.c
+index 4d57262..a241b4d 100644
+--- a/block.c
++++ b/block.c
+@@ -3763,7 +3763,15 @@ int block_job_set_speed(BlockJob *job, int64_t value)
+ 
+ void block_job_cancel(BlockJob *job)
+ {
++    /* Complete all guest I/O before cancelling the job, so that if the
++     * job chooses to complete itself it will do so with a consistent
++     * view of the disk.
++     */
++    bdrv_drain_all();
+     job->cancelled = true;
++    if (job->co && !job->busy) {
++        qemu_coroutine_enter(job->co, NULL);
++    }
+ }
+ 
+ bool block_job_is_cancelled(BlockJob *job)
+diff --git a/block/stream.c b/block/stream.c
+index d010e28..1b19ac9 100644
+--- a/block/stream.c
++++ b/block/stream.c
+@@ -288,7 +288,6 @@ int stream_start(BlockDriverState *bs, BlockDriverState *base,
+                  void *opaque)
+ {
+     StreamBlockJob *s;
+-    Coroutine *co;
+ 
+     s = block_job_create(&stream_job_type, bs, cb, opaque);
+     if (!s) {
+@@ -300,8 +299,8 @@ int stream_start(BlockDriverState *bs, BlockDriverState *base,
+         pstrcpy(s->backing_file_id, sizeof(s->backing_file_id), base_id);
+     }
+ 
+-    co = qemu_coroutine_create(stream_run);
+-    trace_stream_start(bs, base, s, co, opaque);
+-    qemu_coroutine_enter(co, s);
++    s->common.co = qemu_coroutine_create(stream_run);
++    trace_stream_start(bs, base, s, s->common.co, opaque);
++    qemu_coroutine_enter(s->common.co, s);
+     return 0;
+ }
+diff --git a/block_int.h b/block_int.h
+index c97a14d..037ca61 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -69,7 +69,27 @@ typedef struct BlockJobType {
+ struct BlockJob {
+     const BlockJobType *job_type;
+     BlockDriverState *bs;
++
++    /**
++     * The coroutine that executes the job.  If not NULL, it is
++     * reentered when busy is false and the job is cancelled.
++     */
++    Coroutine *co;
++
++    /**
++     * Set to true if the job should cancel itself.  The flag must
++     * always be tested just before toggling the busy flag from false
++     * to true.  After a job has detected that the cancelled flag is
++     * true, it should not anymore issue any I/O operation to the
++     * block device.
++     */
+     bool cancelled;
++
++    /**
++     * Set to false by the job while it is in a quiescent state, where
++     * no I/O is pending and the job goes to sleep on any condition
++     * that is not detected by #qemu_aio_wait, such as a timer.
++     */
+     bool busy;
+ 
+     /* These fields are published by the query-block-jobs QMP API */
+-- 
+1.7.7.6
+

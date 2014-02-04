@@ -1,0 +1,31 @@
+From 042fd3a8e7d8c24de46a176bf163f46b12200de4 Mon Sep 17 00:00:00 2001
+From: Anthony Liguori <aliguori@us.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:36 -0500
+Subject: [PATCH 69/98] json-lexer: reset the lexer state on an invalid token
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 529a0ef5f30e28a801d6527a3556adcaa4959669)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ json-lexer.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/json-lexer.c b/json-lexer.c
+index fe5a060..a5bbe9e 100644
+--- a/json-lexer.c
++++ b/json-lexer.c
+@@ -305,6 +305,9 @@ static int json_lexer_feed_char(JSONLexer *lexer, char ch)
+             new_state = IN_START;
+             break;
+         case IN_ERROR:
++            QDECREF(lexer->token);
++            lexer->token = qstring_new();
++            new_state = IN_START;
+             return -EINVAL;
+         default:
+             break;
+-- 
+1.7.7.6
+

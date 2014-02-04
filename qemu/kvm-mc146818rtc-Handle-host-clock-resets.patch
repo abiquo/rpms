@@ -1,0 +1,80 @@
+From 12ff69b9a0621a598e55ad9960dee0c9fbb65246 Mon Sep 17 00:00:00 2001
+From: Gleb Natapov <gleb@redhat.com>
+Date: Wed, 22 Feb 2012 10:28:18 +0100
+Subject: [PATCH 3/3] mc146818rtc: Handle host clock resets
+
+RH-Author: Gleb Natapov <gleb@redhat.com>
+Message-id: <1329906498-3472-4-git-send-email-gleb@redhat.com>
+Patchwork-id: 37476
+O-Subject: [PATCH qemu-kvm RHEL6.3 3/3] mc146818rtc: Handle host clock resets
+Bugzilla: 734426
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Make use of the new clock reset notifier to update the RTC whenever
+rtc_clock is the host clock and that happens to jump backward. This
+avoids that the RTC stalls for the period the host clock was set back.
+
+Signed-off-by: Jan Kiszka <jan.kiszka@siemens.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+
+Upstream commit: 17604dac28b2410c021a4a52dcfa58e8803dfb24
+Signed-off-by: Gleb Natapov <gleb@redhat.com>
+---
+ hw/mc146818rtc.c |   20 ++++++++++++++++++++
+ 1 files changed, 20 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/mc146818rtc.c |   20 ++++++++++++++++++++
+ 1 files changed, 20 insertions(+), 0 deletions(-)
+
+diff --git a/hw/mc146818rtc.c b/hw/mc146818rtc.c
+index 4fd4ad9..524ca1e 100644
+--- a/hw/mc146818rtc.c
++++ b/hw/mc146818rtc.c
+@@ -84,6 +84,7 @@ struct RTCState {
+     QEMUTimer *coalesced_timer;
+     QEMUTimer *second_timer;
+     QEMUTimer *second_timer2;
++    Notifier clock_reset_notifier;
+ };
+ 
+ static void rtc_irq_raise(qemu_irq irq)
+@@ -561,6 +562,22 @@ static const VMStateDescription vmstate_rtc = {
+     }
+ };
+ 
++static void rtc_notify_clock_reset(Notifier *notifier, void *data)
++{
++    RTCState *s = container_of(notifier, RTCState, clock_reset_notifier);
++    int64_t now = *(int64_t *)data;
++
++    rtc_set_date_from_host(s);
++    s->next_second_time = now + (get_ticks_per_sec() * 99) / 100;
++    qemu_mod_timer(s->second_timer2, s->next_second_time);
++    rtc_timer_update(s, now);
++#ifdef TARGET_I386
++    if (rtc_td_hack) {
++        rtc_coalesced_timer_update(s);
++    }
++#endif
++}
++
+ static void rtc_reset(void *opaque)
+ {
+     RTCState *s = opaque;
+@@ -600,6 +617,9 @@ static int rtc_initfn(ISADevice *dev)
+     s->second_timer = qemu_new_timer(rtc_clock, rtc_update_second, s);
+     s->second_timer2 = qemu_new_timer(rtc_clock, rtc_update_second2, s);
+ 
++    s->clock_reset_notifier.notify = rtc_notify_clock_reset;
++    qemu_register_clock_reset_notifier(rtc_clock, &s->clock_reset_notifier);
++
+     s->next_second_time =
+         qemu_get_clock(rtc_clock) + (get_ticks_per_sec() * 99) / 100;
+     qemu_mod_timer(s->second_timer2, s->next_second_time);
+-- 
+1.7.7.6
+

@@ -1,0 +1,90 @@
+From 2a45ef6389cf5abf4169b25314bd0a0d2b1ef1f0 Mon Sep 17 00:00:00 2001
+From: Miroslav Rezanina <mrezanin@redhat.com>
+Date: Fri, 23 Mar 2012 12:49:32 -0300
+Subject: [RHEL6 qemu-kvm PATCH 9/9] Add -global option to man page
+
+RH-Author: Miroslav Rezanina <mrezanin@redhat.com>
+Message-id: <20120323124932.GA2109@lws.brq.redhat.com>
+Patchwork-id: 38957
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3] Add -global option to man page
+Bugzilla: 723754
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Ademar de Souza Reis Jr. <areis@redhat.com>
+
+BZ 723754 - Update qemu-kvm -global option man page
+https://bugzilla.redhat.com/show_bug.cgi?id=723754
+
+As we support -global option (see qemu-kvm whitelist[1]) it should be documented in man page.
+This patch add short description of -global option and do small change of qemu-options.hx file
+to be closer to upstream version.
+
+-global man page entry was sent upstream and it is waiting for review.
+
+Signed-off-by: Miroslav Rezanina <mrezanin@redhat.com>
+
+v3:
+- update to current codebase
+- add missing word in description (to sync with upstream v4)
+
+v2: (based on upstream review)
+- Added usage part after example
+- Used prop instead of property
+
+Patch:
+--
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ qemu-options.hx |   28 +++++++++++++++++++++-------
+ 1 files changed, 21 insertions(+), 7 deletions(-)
+
+diff --git a/qemu-options.hx b/qemu-options.hx
+index 35b79a3..f10fa32 100644
+--- a/qemu-options.hx
++++ b/qemu-options.hx
+@@ -106,13 +106,6 @@ DEF("drive", HAS_ARG, QEMU_OPTION_drive,
+     "       [,serial=s][,addr=A][,id=name][,aio=threads|native]\n"
+     "       [,readonly=on|off][,copy-on-read=on|off]\n"
+     "                use 'file' as a drive image\n")
+-DEF("set", HAS_ARG, QEMU_OPTION_set,
+-    "-set group.id.arg=value\n"
+-    "                set <arg> parameter for item <id> of type <group>\n"
+-    "                i.e. -set drive.$id.file=/path/to/image\n")
+-DEF("global", HAS_ARG, QEMU_OPTION_global,
+-    "-global driver.property=value\n"
+-    "                set a global default for a driver property\n")
+ STEXI
+ @item -drive @var{option}[,@var{option}[,@var{option}[,...]]]
+ 
+@@ -230,6 +223,27 @@ qemu -hda a -hdb b
+ @end example
+ ETEXI
+ 
++DEF("set", HAS_ARG, QEMU_OPTION_set,
++    "-set group.id.arg=value\n"
++    "                set <arg> parameter for item <id> of type <group>\n"
++    "                i.e. -set drive.$id.file=/path/to/image\n")
++DEF("global", HAS_ARG, QEMU_OPTION_global,
++    "-global driver.prop=value\n"
++    "                set a global default for a driver property\n")
++STEXI
++@item -global @var{driver}.@var{prop}=@var{value}
++@findex -global
++Set default value of @var{driver}'s property @var{prop} to @var{value}, e.g.:
++
++@example
++qemu -global ide-drive.physical_block_size=4096 -drive file=file,if=ide,index=0,media=disk
++@end example
++
++In particular, you can use this to set driver properties for devices which are 
++created automatically by the machine model. To create a device which is not
++created automatically and set properties on it, use -@option{device}.
++ETEXI
++
+ DEF("mtdblock", HAS_ARG, QEMU_OPTION_mtdblock,
+     "-mtdblock file  use 'file' as on-board Flash memory image\n")
+ STEXI
+-- 
+1.7.3.2
+

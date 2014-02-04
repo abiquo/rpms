@@ -1,0 +1,98 @@
+From f0a51eb1e60aa6ffab22360d412f2258e3f449a4 Mon Sep 17 00:00:00 2001
+From: Alex Williamson <alex.williamson@redhat.com>
+Date: Wed, 8 Feb 2012 16:01:37 +0100
+Subject: [PATCH] pci-assign: Fix multifunction support
+
+RH-Author: Alex Williamson <alex.williamson@redhat.com>
+Message-id: <20120208160117.837.85541.stgit@bling.home>
+Patchwork-id: 37146
+O-Subject: [RHEL6.3 qemu-kvm PATCH v2] pci-assign: Fix multifunction support
+Bugzilla: 782161
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Don Dutile <ddutile@redhat.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=782161
+https://brewweb.devel.redhat.com/taskinfo?taskID=4019357
+Upstream commit: based on 289a1056a2b902e25f8d6ec5e17984aa48d201c1
+RHEL Note: RHEL device assignment doesn't have the granularity of
+           automatic config space emulation that upstream does, so we
+           can't set HEADER_TYPE read-only as noted in the upstream
+           description below.  Instead we use the merge_bits function,
+           which will use the specified bit from emulated config space
+           when there's an overlapping access.  This lets us do an
+           on-the-fly fixup of the HEADER_TYPE read.
+
+The core PCI code sets the multifunction bit in the header before
+calling the device initfn.  For device assignment, we're blasting
+that value with the actual hardware value, so nobody sees the
+additional functions if the devices isn't physically multifunction.
+Switch the HEADER_TYPE to a fully emulated field (all read-only
+anyway) and add setting and clearing of the multifunction bit to
+match qemu directive.
+
+Signed-off-by: Alex Williamson <alex.williamson@redhat.com>
+
+v2: s/pci_get_byte/pci_get_long/ Which Laszlo pointed out could
+    statically mask a zero in for the 4 byte case.  Update the
+    RHEL note to explain a little more.
+
+Testing:
+ - Enable multifunction on an 82576 VF with devices at .0 & .1
+   - Both show up and initialized by guest
+   - setpci reports MF bit set for 1/2/4 byte read cases
+ - Disable multifunction on 82576 PF
+   - Device shows up and initialized by guest
+   - setpci shows MF bit clear for 1/2/4 byte read cases
+---
+
+ hw/device-assignment.c |   14 ++++++++++++++
+ 1 files changed, 14 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/device-assignment.c |   14 ++++++++++++++
+ 1 files changed, 14 insertions(+), 0 deletions(-)
+
+diff --git a/hw/device-assignment.c b/hw/device-assignment.c
+index 053b053..307238c 100644
+--- a/hw/device-assignment.c
++++ b/hw/device-assignment.c
+@@ -513,6 +513,9 @@ again:
+     }
+ }
+ 
++static uint32_t merge_bits(uint32_t val, uint32_t mval, uint8_t addr,
++                           int len, uint8_t pos, uint32_t mask);
++
+ static uint32_t assigned_dev_pci_read_config(PCIDevice *d, uint32_t address,
+                                              int len)
+ {
+@@ -567,6 +570,10 @@ do_log:
+             val &= ~0x10;
+     }
+ 
++    /* Use emulated multifunction header type bit */
++    val = merge_bits(val, pci_get_long(d->config + address), address,
++                     len, PCI_HEADER_TYPE, PCI_HEADER_TYPE_MULTI_FUNCTION);
++
+     return val;
+ }
+ 
+@@ -712,6 +719,13 @@ again:
+         fprintf(stderr, "%s: read failed, errno = %d\n", __func__, errno);
+     }
+ 
++    /* Restore or clear multifunction, this is always controlled by qemu */
++    if (pci_dev->dev.cap_present & QEMU_PCI_CAP_MULTIFUNCTION) {
++        pci_dev->dev.config[PCI_HEADER_TYPE] |= PCI_HEADER_TYPE_MULTI_FUNCTION;
++    } else {
++        pci_dev->dev.config[PCI_HEADER_TYPE] &= ~PCI_HEADER_TYPE_MULTI_FUNCTION;
++    }
++
+     /* Clear host resource mapping info.  If we choose not to register a
+      * BAR, such as might be the case with the option ROM, we can get
+      * confusing, unwritable, residual addresses from the host here. */
+-- 
+1.7.7.5
+

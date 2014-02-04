@@ -1,0 +1,99 @@
+From 6c7ecc5625662da780d9dfda1449367945de8fb9 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 27 Feb 2012 20:31:07 +0100
+Subject: [PATCH 108/109] QMP: query-status: Add 'io-status' key
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1330374668-8838-6-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 37646
+O-Subject: [PATCH RHEL6.3 qemu-kvm 5/6] QMP: query-status: Add 'io-status' key
+Bugzilla: 797186
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Contains the I/O status for the given device. The key is only present
+if the device supports it and the VM is configured to stop on errors.
+
+Please, check the documentation being added in this commit for more
+information.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit f04ef601007743499b11c12381a4ca7258199555)
+---
+ block.c         |   12 ++++++++++++
+ qemu-monitor.hx |    6 ++++++
+ 2 files changed, 18 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c         |   12 ++++++++++++
+ qemu-monitor.hx |    6 ++++++
+ 2 files changed, 18 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index 24932e5..00d8e2b 100644
+--- a/block.c
++++ b/block.c
+@@ -1750,6 +1750,12 @@ void bdrv_info_print(Monitor *mon, const QObject *data)
+     qlist_iter(qobject_to_qlist(data), bdrv_print_dict, mon);
+ }
+ 
++static const char *const io_status_name[BDRV_IOS_MAX] = {
++    [BDRV_IOS_OK] = "ok",
++    [BDRV_IOS_FAILED] = "failed",
++    [BDRV_IOS_ENOSPC] = "nospace",
++};
++
+ void bdrv_info(Monitor *mon, QObject **ret_data)
+ {
+     QList *bs_list;
+@@ -1772,6 +1778,12 @@ void bdrv_info(Monitor *mon, QObject **ret_data)
+             qdict_put(bs_dict, "tray-open",
+                       qbool_from_int(bdrv_dev_is_tray_open(bs)));
+         }
++
++        if (bdrv_iostatus_is_enabled(bs)) {
++            qdict_put(bs_dict, "io-status",
++                      qstring_from_str(io_status_name[bs->iostatus]));
++        }
++
+         if (bs->drv) {
+             QObject *obj;
+ 
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 98cc55c..76a6587 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -2301,6 +2301,10 @@ Each json-object contain the following:
+                                 "tftp", "vdi", "vmdk", "vpc", "vvfat"
+          - "backing_file": backing file name (json-string, optional)
+          - "encrypted": true if encrypted, false otherwise (json-bool)
++- "io-status": I/O operation status, only present if the device supports it
++               and the VM is configured to stop on errors. It's always reset
++               to "ok" when the "cont" command is issued (json_string, optional)
++             - Possible values: "ok", "failed", "nospace"
+ 
+ Example:
+ 
+@@ -2308,6 +2312,7 @@ Example:
+ <- {
+       "return":[
+          {
++            "io-status": "ok",
+             "device":"ide0-hd0",
+             "locked":false,
+             "removable":false,
+@@ -2320,6 +2325,7 @@ Example:
+             "type":"unknown"
+          },
+          {
++            "io-status": "ok",
+             "device":"ide1-cd0",
+             "locked":false,
+             "removable":true,
+-- 
+1.7.7.6
+

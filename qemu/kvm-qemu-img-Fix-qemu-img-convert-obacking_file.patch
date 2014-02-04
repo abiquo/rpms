@@ -1,0 +1,67 @@
+From 448700b7c59942f3ea41a05929e95746c6236c16 Mon Sep 17 00:00:00 2001
+Message-Id: <448700b7c59942f3ea41a05929e95746c6236c16.1345545736.git.minovotn@redhat.com>
+In-Reply-To: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+References: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Wed, 15 Aug 2012 15:19:20 +0200
+Subject: [PATCH 8/8] qemu-img: Fix qemu-img convert -obacking_file
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1345043960-30594-1-git-send-email-kwolf@redhat.com>
+Patchwork-id: 40878
+O-Subject: [RHEL-6.4 qemu-kvm PATCH] qemu-img: Fix qemu-img convert -obacking_file
+Bugzilla: 816575
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+
+Bugzilla: 816575
+
+The old -B option caused a backing file to be used for the converted image and
+to avoid copying clusters from the old backing file. When replaced with
+-obacking_file, qemu-img convert does assign the backing file to the new image,
+but it doesn't realize that it should avoid copying clusters from the backing
+file.
+
+This patch checks the -o options for a backing_file and applies the same logic
+as for -B in this case.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit a18953fbe72ba553a564ba11fdda03aac41d4f38)
+---
+ qemu-img.c |    7 +++++++
+ 1 files changed, 7 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-img.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/qemu-img.c b/qemu-img.c
+index 844d03b..1686527 100644
+--- a/qemu-img.c
++++ b/qemu-img.c
+@@ -652,6 +652,7 @@ static int img_convert(int argc, char **argv)
+     const uint8_t *buf1;
+     BlockDriverInfo bdi;
+     QEMUOptionParameter *param = NULL, *create_options = NULL;
++    QEMUOptionParameter *out_baseimg_param;
+     char *options = NULL;
+     float local_progress;
+     int min_sparse = 8; /* Need at least 4k of zeros for sparse detection */
+@@ -789,6 +790,12 @@ static int img_convert(int argc, char **argv)
+         goto out;
+     }
+ 
++    /* Get backing file name if -o backing_file was used */
++    out_baseimg_param = get_option_parameter(param, BLOCK_OPT_BACKING_FILE);
++    if (out_baseimg_param) {
++        out_baseimg = out_baseimg_param->value.s;
++    }
++
+     /* Check if compression is supported */
+     if (compress) {
+         QEMUOptionParameter *encryption =
+-- 
+1.7.11.2
+

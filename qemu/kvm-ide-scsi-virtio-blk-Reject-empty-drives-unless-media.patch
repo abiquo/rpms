@@ -1,0 +1,76 @@
+From 2b93514caf2a9d389c0bee4addfeb30bab7f019c Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Mon, 9 Jan 2012 13:37:32 +0100
+Subject: [PATCH 5/9] ide scsi virtio-blk: Reject empty drives unless media is
+ removable
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326116256-3685-6-git-send-email-armbru@redhat.com>
+Patchwork-id: 36287
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 5/9] ide scsi virtio-blk: Reject empty drives unless media is removable
+Bugzilla: 737879
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+Disks without media make no sense.  For SCSI, a Linux guest kernel
+complains during boot.  I didn't try other combinations.
+
+scsi-generic doesn't need the additional check, because it already
+requires bdrv_is_sg(), which fails without media.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 98f28ad7a7d26e5e77c5cb37b262d76d6ccd963d)
+
+Conflicts:
+
+	hw/scsi-disk.c
+
+Conflicts because we got the change to hw/scsi-disk.c already in
+commit b6ad069c "scsi: Rebase to upstream v0.15.0-rc2".  Simply drop
+that part.
+---
+ hw/ide/core.c   |    4 ++++
+ hw/virtio-blk.c |    4 ++++
+ 2 files changed, 8 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/ide/core.c   |    4 ++++
+ hw/virtio-blk.c |    4 ++++
+ 2 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/hw/ide/core.c b/hw/ide/core.c
+index 7262a4c..5c3148f 100644
+--- a/hw/ide/core.c
++++ b/hw/ide/core.c
+@@ -1858,6 +1858,10 @@ int ide_init_drive(IDEState *s, BlockDriverState *bs, const char *version)
+         bdrv_set_dev_ops(bs, &ide_cd_block_ops, s);
+         s->bs->buffer_alignment = 2048;
+     } else {
++        if (!bdrv_is_inserted(s->bs)) {
++            error_report("Device needs media, but drive is empty");
++            return -1;
++        }
+         if (bdrv_is_read_only(bs)) {
+             error_report("Can't use a read-only drive");
+             return -1;
+diff --git a/hw/virtio-blk.c b/hw/virtio-blk.c
+index 4641e99..7466cf7 100644
+--- a/hw/virtio-blk.c
++++ b/hw/virtio-blk.c
+@@ -562,6 +562,10 @@ VirtIODevice *virtio_blk_init(DeviceState *dev, BlockConf *conf)
+         error_report("virtio-blk-pci: drive property not set");
+         return NULL;
+     }
++    if (!bdrv_is_inserted(conf->bs)) {
++        error_report("Device needs media, but drive is empty");
++        return NULL;
++    }
+ 
+     s = (VirtIOBlock *)virtio_common_init("virtio-blk", VIRTIO_ID_BLOCK,
+                                           sizeof(struct virtio_blk_config),
+-- 
+1.7.7.4
+

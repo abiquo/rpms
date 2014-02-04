@@ -1,0 +1,53 @@
+From e96e7d186d75c8d66ab62b2b1a18ba94ab8dd3ce Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Wed, 7 Dec 2011 16:35:59 +0100
+Subject: [PATCH 1/7] qemu-img rebase: Fix segfault if backing file can't be
+ opened
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1323275759-24857-1-git-send-email-kwolf@redhat.com>
+Patchwork-id: 35704
+O-Subject: [RHEL-6.3 qemu-kvm PATCH] qemu-img rebase: Fix segfault if backing file can't be opened
+Bugzilla: 736942
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+
+Bugzilla: 736942
+
+bdrv_delete must not be called for a NULL BlockDriverState.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+Reviewed-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit eb863add0204210480d018a3298ca22e4eadf3ce)
+---
+ qemu-img.c |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-img.c |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/qemu-img.c b/qemu-img.c
+index 7621325..5c740c7 100644
+--- a/qemu-img.c
++++ b/qemu-img.c
+@@ -1497,8 +1497,12 @@ out:
+     qemu_progress_end();
+     /* Cleanup */
+     if (!unsafe) {
+-        bdrv_delete(bs_old_backing);
+-        bdrv_delete(bs_new_backing);
++        if (bs_old_backing != NULL) {
++            bdrv_delete(bs_old_backing);
++        }
++        if (bs_new_backing != NULL) {
++            bdrv_delete(bs_new_backing);
++        }
+     }
+ 
+     bdrv_delete(bs);
+-- 
+1.7.7.5
+

@@ -1,0 +1,83 @@
+From cb329131c082c94d14c23456cf2873a05411dfe4 Mon Sep 17 00:00:00 2001
+Message-Id: <cb329131c082c94d14c23456cf2873a05411dfe4.1349774431.git.minovotn@redhat.com>
+In-Reply-To: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+References: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Fri, 5 Oct 2012 17:46:19 +0200
+Subject: [PATCH 07/21] Add API to check whether paging mode is enabled
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349459193-18226-6-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42753
+O-Subject: [RHEL6.4 qemu-kvm PATCH 05/19] Add API to check whether paging mode is enabled
+Bugzilla: 832458
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Wen Congyang <wency@cn.fujitsu.com>
+
+This API will be used in the following patch.
+
+Signed-off-by: Wen Congyang <wency@cn.fujitsu.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 31a2207a8e1c39bcf88e527ac62f4e12316920a4)
+---
+ cpu-all.h                         | 6 ++++++
+ target-i386/arch_memory_mapping.c | 7 ++++++-
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ cpu-all.h                         | 6 ++++++
+ target-i386/arch_memory_mapping.c | 7 ++++++-
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/cpu-all.h b/cpu-all.h
+index c413f30..8f6b8f9 100644
+--- a/cpu-all.h
++++ b/cpu-all.h
+@@ -1107,12 +1107,18 @@ void pause_all_vcpus(void);
+ 
+ #if defined(CONFIG_HAVE_GET_MEMORY_MAPPING)
+ int cpu_get_memory_mapping(MemoryMappingList *list, CPUArchState *env);
++bool cpu_paging_enabled(CPUArchState *env);
+ #else
+ static inline int cpu_get_memory_mapping(MemoryMappingList *list,
+                                          CPUArchState *env)
+ {
+     return -1;
+ }
++
++static inline bool cpu_paging_enabled(CPUArchState *env)
++{
++    return true;
++}
+ #endif
+ 
+ #endif /* CPU_ALL_H */
+diff --git a/target-i386/arch_memory_mapping.c b/target-i386/arch_memory_mapping.c
+index dd64bec..bd50e11 100644
+--- a/target-i386/arch_memory_mapping.c
++++ b/target-i386/arch_memory_mapping.c
+@@ -233,7 +233,7 @@ static void walk_pml4e(MemoryMappingList *list,
+ 
+ int cpu_get_memory_mapping(MemoryMappingList *list, CPUArchState *env)
+ {
+-    if (!(env->cr[0] & CR0_PG_MASK)) {
++    if (!cpu_paging_enabled(env)) {
+         /* paging is disabled */
+         return 0;
+     }
+@@ -264,3 +264,8 @@ int cpu_get_memory_mapping(MemoryMappingList *list, CPUArchState *env)
+ 
+     return 0;
+ }
++
++bool cpu_paging_enabled(CPUArchState *env)
++{
++    return env->cr[0] & CR0_PG_MASK;
++}
+-- 
+1.7.11.4
+

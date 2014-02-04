@@ -1,0 +1,61 @@
+From 7dc2506c220ba2fb48f00a3cf5da9dd3f5e26474 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:09 +0100
+Subject: [PATCH 053/109] scsi-disk: fail READ CAPACITY if LBA != 0 but PMI ==
+ 0
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-53-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37534
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 052/102] scsi-disk: fail READ CAPACITY if LBA != 0 but PMI == 0
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Tested by the Windows Logo Kit SCSI Compliance test. From SBC-3, paragraph
+5.25: "The LOGICAL BLOCK ADDRESS field shall be set to zero if the PMI
+bit is set to zero. If the PMI bit is set to zero and the LOGICAL BLOCK
+ADDRESS field is not set to zero, then the device server shall terminate
+the command with CHECK CONDITION status with the sense key set to ILLEGAL
+REQUEST and the additional sense code set to INVALID FIELD IN CDB".
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 7cec78b6f0e9a3b33732afd14a811849d219ffbc)
+---
+ hw/scsi-disk.c |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 2f4f000..5d03eb8 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1215,6 +1215,9 @@ static int scsi_disk_emulate_command(SCSIDiskReq *r)
+         if (!nb_sectors) {
+             goto not_ready;
+         }
++        if ((req->cmd.buf[8] & 1) == 0 && req->cmd.lba) {
++            goto illegal_request;
++        }
+         nb_sectors /= s->cluster_size;
+         /* Returned value is the address of the last sector.  */
+         nb_sectors--;
+@@ -1267,6 +1270,9 @@ static int scsi_disk_emulate_command(SCSIDiskReq *r)
+             if (!nb_sectors) {
+                 goto not_ready;
+             }
++            if ((req->cmd.buf[14] & 1) == 0 && req->cmd.lba) {
++                goto illegal_request;
++            }
+             nb_sectors /= s->cluster_size;
+             /* Returned value is the address of the last sector.  */
+             nb_sectors--;
+-- 
+1.7.7.6
+

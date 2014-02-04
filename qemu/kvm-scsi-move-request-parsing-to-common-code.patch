@@ -1,0 +1,186 @@
+From 3e0f576c2e469b44e9584f3486a9822ef99352b7 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:27 +0100
+Subject: [PATCH 011/109] scsi: move request parsing to common code
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-11-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37489
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 010/102] scsi: move request parsing to common code
+Bugzilla: 782029
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Also introduce the first occurrence of "independent" SCSIReqOps,
+to handle invalid commands in common code.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from afa46c468acc18914c2773538f1b088c507766ee)
+---
+ hw/scsi-bus.c     |   53 ++++++++++++++++++++++++++++++++++++++---------------
+ hw/scsi-disk.c    |    5 -----
+ hw/scsi-generic.c |    9 ---------
+ hw/scsi.h         |    1 -
+ 4 files changed, 38 insertions(+), 30 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c     |   53 ++++++++++++++++++++++++++++++++++++++---------------
+ hw/scsi-disk.c    |    5 -----
+ hw/scsi-generic.c |    9 ---------
+ hw/scsi.h         |    1 -
+ 4 files changed, 38 insertions(+), 30 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index fc51628..a3c9b4f 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -7,6 +7,7 @@
+ #include "trace.h"
+ 
+ static char *scsibus_get_fw_dev_path(DeviceState *dev);
++static int scsi_req_parse(SCSICommand *cmd, SCSIDevice *dev, uint8_t *buf);
+ static int scsi_build_sense(uint8_t *in_buf, int in_len,
+                             uint8_t *buf, int len, bool fixed);
+ 
+@@ -134,6 +135,20 @@ int scsi_bus_legacy_handle_cmdline(SCSIBus *bus)
+     return res;
+ }
+ 
++/* SCSIReqOps implementation for invalid commands.  */
++
++static int32_t scsi_invalid_command(SCSIRequest *req, uint8_t *buf)
++{
++    scsi_req_build_sense(req, SENSE_CODE(INVALID_OPCODE));
++    scsi_req_complete(req, CHECK_CONDITION);
++    return 0;
++}
++
++struct SCSIReqOps reqops_invalid_opcode = {
++    .size         = sizeof(SCSIRequest),
++    .send_command = scsi_invalid_command
++};
++
+ SCSIRequest *scsi_req_alloc(SCSIReqOps *reqops, SCSIDevice *d, uint32_t tag,
+                             uint32_t lun, void *hba_private)
+ {
+@@ -157,8 +172,22 @@ SCSIRequest *scsi_req_new(SCSIDevice *d, uint32_t tag, uint32_t lun,
+                           uint8_t *buf, void *hba_private)
+ {
+     SCSIRequest *req;
+-    req = d->info->alloc_req(d, tag, lun, hba_private);
+-    memcpy(req->cmd.buf, buf, 16);
++    SCSICommand cmd;
++
++    if (scsi_req_parse(&cmd, d, buf) != 0) {
++        trace_scsi_req_parse_bad(d->id, lun, tag, buf[0]);
++        req = scsi_req_alloc(&reqops_invalid_opcode, d, tag, lun, hba_private);
++    } else {
++        trace_scsi_req_parsed(d->id, lun, tag, buf[0],
++                              cmd.mode, cmd.xfer);
++        if (req->cmd.lba != -1) {
++            trace_scsi_req_parsed_lba(d->id, lun, tag, buf[0],
++                                      cmd.lba);
++        }
++        req = d->info->alloc_req(d, tag, lun, hba_private);
++    }
++
++    req->cmd = cmd;
+     return req;
+ }
+ 
+@@ -425,27 +454,21 @@ static uint64_t scsi_cmd_lba(SCSICommand *cmd)
+     return lba;
+ }
+ 
+-int scsi_req_parse(SCSIRequest *req, uint8_t *buf)
++int scsi_req_parse(SCSICommand *cmd, SCSIDevice *dev, uint8_t *buf)
+ {
+     int rc;
+ 
+-    if (req->dev->type == TYPE_TAPE) {
+-        rc = scsi_req_stream_length(&req->cmd, req->dev, buf);
++    if (dev->type == TYPE_TAPE) {
++        rc = scsi_req_stream_length(cmd, dev, buf);
+     } else {
+-        rc = scsi_req_length(&req->cmd, req->dev, buf);
++        rc = scsi_req_length(cmd, dev, buf);
+     }
+     if (rc != 0)
+         return rc;
+ 
+-    assert(buf == req->cmd.buf);
+-    scsi_cmd_xfer_mode(&req->cmd);
+-    req->cmd.lba = scsi_cmd_lba(&req->cmd);
+-    trace_scsi_req_parsed(req->dev->id, req->lun, req->tag, buf[0],
+-                          req->cmd.mode, req->cmd.xfer);
+-    if (req->cmd.lba != -1) {
+-        trace_scsi_req_parsed_lba(req->dev->id, req->lun, req->tag, buf[0],
+-                              req->cmd.lba);
+-    }
++    memcpy(cmd->buf, buf, cmd->len);
++    scsi_cmd_xfer_mode(cmd);
++    cmd->lba = scsi_cmd_lba(cmd);
+     return 0;
+ }
+ 
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 0db5a40..7b7135d 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1044,11 +1044,6 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *buf)
+     outbuf = (uint8_t *)r->iov.iov_base;
+     DPRINTF("Command: lun=%d tag=0x%x data=0x%02x", req->lun, req->tag, buf[0]);
+ 
+-    if (scsi_req_parse(&r->req, buf) != 0) {
+-        BADF("Unsupported command length, command %x\n", command);
+-        scsi_check_condition(r, SENSE_CODE(INVALID_OPCODE));
+-        return 0;
+-    }
+ #ifdef DEBUG_SCSI
+     {
+         int i;
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index f522bc5..51a6cbe 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -84,10 +84,6 @@ static void scsi_command_complete(void *opaque, int ret)
+         case -EDOM:
+             status = TASK_SET_FULL;
+             break;
+-        case -EINVAL:
+-            status = CHECK_CONDITION;
+-            scsi_req_build_sense(&r->req, SENSE_CODE(INVALID_FIELD));
+-            break;
+         case -ENOMEM:
+             status = CHECK_CONDITION;
+             scsi_req_build_sense(&r->req, SENSE_CODE(TARGET_FAILURE));
+@@ -298,11 +294,6 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *cmd)
+         return 0;
+     }
+ 
+-    if (-1 == scsi_req_parse(&r->req, cmd)) {
+-        BADF("Unsupported command length, command %x\n", cmd[0]);
+-        scsi_command_complete(r, -EINVAL);
+-        return 0;
+-    }
+     scsi_req_fixup(&r->req);
+ 
+     DPRINTF("Command: lun=%d tag=0x%x len %zd data=0x%02x", lun, tag,
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 1ab515a..db2d1f8 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -169,7 +169,6 @@ SCSIRequest *scsi_req_ref(SCSIRequest *req);
+ void scsi_req_unref(SCSIRequest *req);
+ 
+ void scsi_req_build_sense(SCSIRequest *req, SCSISense sense);
+-int scsi_req_parse(SCSIRequest *req, uint8_t *buf);
+ void scsi_req_print(SCSIRequest *req);
+ void scsi_req_continue(SCSIRequest *req);
+ void scsi_req_data(SCSIRequest *req, int len);
+-- 
+1.7.7.6
+

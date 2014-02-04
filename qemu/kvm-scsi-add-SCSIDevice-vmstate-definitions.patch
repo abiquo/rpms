@@ -1,0 +1,202 @@
+From 7255a82ccc2166035dd404e1e7e2036086f66711 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:48 +0100
+Subject: [PATCH 092/109] scsi: add SCSIDevice vmstate definitions
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-92-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37578
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 091/102] scsi: add SCSIDevice vmstate definitions
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/scsi-bus.c |  108 +++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ hw/scsi.h     |   16 ++++++++
+ 2 files changed, 121 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |  108 +++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ hw/scsi.h     |   16 ++++++++
+ 2 files changed, 121 insertions(+), 3 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 293d386..44273c4 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -631,10 +631,8 @@ void scsi_req_build_sense(SCSIRequest *req, SCSISense sense)
+     req->sense_len = 18;
+ }
+ 
+-int32_t scsi_req_enqueue(SCSIRequest *req)
++static void scsi_req_enqueue_internal(SCSIRequest *req)
+ {
+-    int32_t rc;
+-
+     assert(!req->enqueued);
+     scsi_req_ref(req);
+     if (req->bus->info->get_sg_list) {
+@@ -644,7 +642,14 @@ int32_t scsi_req_enqueue(SCSIRequest *req)
+     }
+     req->enqueued = true;
+     QTAILQ_INSERT_TAIL(&req->dev->requests, req, next);
++}
+ 
++int32_t scsi_req_enqueue(SCSIRequest *req)
++{
++    int32_t rc;
++
++    assert (!req->retry);
++    scsi_req_enqueue_internal(req);
+     scsi_req_ref(req);
+     rc = req->ops->send_command(req, req->cmd.buf);
+     scsi_req_unref(req);
+@@ -1436,3 +1441,100 @@ SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
+     }
+     return target_dev;
+ }
++
++
++/* SCSI request list.  For simplicity, pv points to the whole device */
++
++static void put_scsi_requests(QEMUFile *f, void *pv, size_t size)
++{
++    SCSIDevice *s = pv;
++    SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, s->qdev.parent_bus);
++    SCSIRequest *req;
++
++    QTAILQ_FOREACH(req, &s->requests, next) {
++        assert(!req->io_canceled);
++        assert(req->status == -1);
++        assert(req->retry);
++        assert(req->enqueued);
++
++        qemu_put_sbyte(f, 1);
++        qemu_put_buffer(f, req->cmd.buf, sizeof(req->cmd.buf));
++        qemu_put_be32s(f, &req->tag);
++        qemu_put_be32s(f, &req->lun);
++        if (bus->info->save_request) {
++            bus->info->save_request(f, req);
++        }
++        if (req->ops->save_request) {
++            req->ops->save_request(f, req);
++        }
++    }
++    qemu_put_sbyte(f, 0);
++}
++
++static int get_scsi_requests(QEMUFile *f, void *pv, size_t size)
++{
++    SCSIDevice *s = pv;
++    SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, s->qdev.parent_bus);
++
++    while (qemu_get_sbyte(f)) {
++        uint8_t buf[SCSI_CMD_BUF_SIZE];
++        uint32_t tag;
++        uint32_t lun;
++        SCSIRequest *req;
++
++        qemu_get_buffer(f, buf, sizeof(buf));
++        qemu_get_be32s(f, &tag);
++        qemu_get_be32s(f, &lun);
++        req = scsi_req_new(s, tag, lun, buf, NULL);
++        if (bus->info->load_request) {
++            req->hba_private = bus->info->load_request(f, req);
++        }
++        if (req->ops->load_request) {
++            req->ops->load_request(f, req);
++        }
++
++        /* Just restart it later.  */
++        req->retry = true;
++        scsi_req_enqueue_internal(req);
++
++        /* At this point, the request will be kept alive by the reference
++         * added by scsi_req_enqueue_internal, so we can release our reference.
++         * The HBA of course will add its own reference in the load_request
++         * callback if it needs to hold on the SCSIRequest.
++         */
++        scsi_req_unref(req);
++    }
++
++    return 0;
++}
++
++const VMStateInfo vmstate_info_scsi_requests = {
++    .name = "scsi-requests",
++    .get  = get_scsi_requests,
++    .put  = put_scsi_requests,
++};
++
++const VMStateDescription vmstate_scsi_device = {
++    .name = "SCSIDevice",
++    .version_id = 1,
++    .minimum_version_id = 1,
++    .minimum_version_id_old = 1,
++    .fields = (VMStateField[]) {
++        VMSTATE_UINT8(unit_attention.key, SCSIDevice),
++        VMSTATE_UINT8(unit_attention.asc, SCSIDevice),
++        VMSTATE_UINT8(unit_attention.ascq, SCSIDevice),
++        VMSTATE_BOOL(sense_is_ua, SCSIDevice),
++        VMSTATE_UINT8_ARRAY(sense, SCSIDevice, SCSI_SENSE_BUF_SIZE),
++        VMSTATE_UINT32(sense_len, SCSIDevice),
++        {
++            .name         = "requests",
++            .version_id   = 0,
++            .field_exists = NULL,
++            .size         = 0,   /* ouch */
++            .info         = &vmstate_info_scsi_requests,
++            .flags        = VMS_SINGLE,
++            .offset       = 0,
++        },
++        VMSTATE_END_OF_LIST()
++    }
++};
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 88e3472..5428f02 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -82,6 +82,16 @@ struct SCSIDevice
+     uint64_t max_lba;
+ };
+ 
++extern const VMStateDescription vmstate_scsi_device;
++
++#define VMSTATE_SCSI_DEVICE(_field, _state) {                        \
++    .name       = (stringify(_field)),                               \
++    .size       = sizeof(SCSIDevice),                                \
++    .vmsd       = &vmstate_scsi_device,                              \
++    .flags      = VMS_STRUCT,                                        \
++    .offset     = vmstate_offset_value(_state, _field, SCSIDevice),  \
++}
++
+ /* cdrom.c */
+ int cdrom_read_toc(int nb_sectors, uint8_t *buf, int msf, int start_track);
+ int cdrom_read_toc_raw(int nb_sectors, uint8_t *buf, int msf, int session_num);
+@@ -95,6 +105,9 @@ struct SCSIReqOps {
+     void (*write_data)(SCSIRequest *req);
+     void (*cancel_io)(SCSIRequest *req);
+     uint8_t *(*get_buf)(SCSIRequest *req);
++
++    void (*save_request)(QEMUFile *f, SCSIRequest *req);
++    void (*load_request)(QEMUFile *f, SCSIRequest *req);
+ };
+ 
+ typedef int (*scsi_qdev_initfn)(SCSIDevice *dev);
+@@ -114,6 +127,9 @@ struct SCSIBusInfo {
+     void (*complete)(SCSIRequest *req, uint32_t arg, int32_t len);
+     void (*cancel)(SCSIRequest *req);
+     QEMUSGList *(*get_sg_list)(SCSIRequest *req);
++
++    void (*save_request)(QEMUFile *f, SCSIRequest *req);
++    void *(*load_request)(QEMUFile *f, SCSIRequest *req);
+ };
+ 
+ struct SCSIBus {
+-- 
+1.7.7.6
+

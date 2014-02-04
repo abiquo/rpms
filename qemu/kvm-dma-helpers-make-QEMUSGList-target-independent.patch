@@ -1,0 +1,75 @@
+From d24629e746e4c83e3955ed684cb57324774cb6ab Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:42 +0100
+Subject: [PATCH 086/109] dma-helpers: make QEMUSGList target independent
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-86-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37565
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 085/102] dma-helpers: make QEMUSGList target independent
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Started from this one, the patches have been sent upstream but have
+not been applied yet.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ dma.h         |   14 +++++++-------
+ qemu-common.h |    1 +
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ dma.h         |   14 +++++++-------
+ qemu-common.h |    1 +
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/dma.h b/dma.h
+index 94b7f1d..45e536e 100644
+--- a/dma.h
++++ b/dma.h
+@@ -17,19 +17,19 @@
+ 
+ typedef struct ScatterGatherEntry ScatterGatherEntry;
+ 
++struct QEMUSGList {
++    ScatterGatherEntry *sg;
++    int nsg;
++    int nalloc;
++    size_t size;
++};
++
+ #if defined(TARGET_PHYS_ADDR_BITS)
+ struct ScatterGatherEntry {
+     target_phys_addr_t base;
+     target_phys_addr_t len;
+ };
+ 
+-typedef struct {
+-    ScatterGatherEntry *sg;
+-    int nsg;
+-    int nalloc;
+-    target_phys_addr_t size;
+-} QEMUSGList;
+-
+ void qemu_sglist_init(QEMUSGList *qsg, int alloc_hint);
+ void qemu_sglist_add(QEMUSGList *qsg, target_phys_addr_t base,
+                      target_phys_addr_t len);
+diff --git a/qemu-common.h b/qemu-common.h
+index c46f060..8909218 100644
+--- a/qemu-common.h
++++ b/qemu-common.h
+@@ -265,6 +265,7 @@ typedef struct SSIBus SSIBus;
+ typedef struct EventNotifier EventNotifier;
+ typedef struct VirtIODevice VirtIODevice;
+ typedef struct BlockDriver BlockDriver;
++typedef struct QEMUSGList QEMUSGList;
+ 
+ /* CPU save/load.  */
+ void cpu_save(QEMUFile *f, void *opaque);
+-- 
+1.7.7.6
+

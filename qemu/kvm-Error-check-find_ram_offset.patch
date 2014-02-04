@@ -1,0 +1,75 @@
+From 10e4d0c9e2439c47168af4a5200409d2e3b28d41 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:25 +0100
+Subject: [PATCH 31/52] Error check find_ram_offset
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-32-git-send-email-armbru@redhat.com>
+Patchwork-id: 36603
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 31/52] Error check find_ram_offset
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Alex Williamson <alex.williamson@redhat.com>
+
+Spotted via code review, we initialize offset to 0 to avoid a
+compiler warning, but in the unlikely case that offset is
+never set to something else, we should abort instead of return
+a value that will almost certainly cause problems.
+
+Signed-off-by: Alex Williamson <alex.williamson@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 3e837b2c05bc63fe2226baf3c29923d5a688593f)
+
+Conflicts:
+
+	exec.c
+
+Conflicts because we lack upstream commit f15fbc4b.
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ exec.c |   11 +++++++++--
+ 1 files changed, 9 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ exec.c |   11 +++++++++--
+ 1 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/exec.c b/exec.c
+index 58cc70e..4762bbe 100644
+--- a/exec.c
++++ b/exec.c
+@@ -2654,7 +2654,7 @@ extern int disable_KSM;
+ static ram_addr_t find_ram_offset(ram_addr_t size)
+ {
+     RAMBlock *block, *next_block;
+-    ram_addr_t offset = 0, mingap = ULONG_MAX;
++    ram_addr_t offset = ULONG_MAX, mingap = ULONG_MAX;
+ 
+     if (QLIST_EMPTY(&ram_list.blocks))
+         return 0;
+@@ -2670,10 +2670,17 @@ static ram_addr_t find_ram_offset(ram_addr_t size)
+             }
+         }
+         if (next - end >= size && next - end < mingap) {
+-            offset =  end;
++            offset = end;
+             mingap = next - end;
+         }
+     }
++
++    if (offset == ULONG_MAX) {
++        fprintf(stderr, "Failed to find gap of requested size: %" PRIu64 "\n",
++                (uint64_t)size);
++        abort();
++    }
++
+     return offset;
+ }
+ 
+-- 
+1.7.7.5
+

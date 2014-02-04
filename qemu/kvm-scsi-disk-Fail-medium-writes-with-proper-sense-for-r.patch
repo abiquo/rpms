@@ -1,0 +1,101 @@
+From ce6a1236ff6378d861fc49740f0180c6577bef30 Mon Sep 17 00:00:00 2001
+Message-Id: <ce6a1236ff6378d861fc49740f0180c6577bef30.1347457394.git.minovotn@redhat.com>
+In-Reply-To: <5d2ec4d8ecd7ab6bd4a62bec6b2f63577549b3bd.1347457394.git.minovotn@redhat.com>
+References: <5d2ec4d8ecd7ab6bd4a62bec6b2f63577549b3bd.1347457394.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 27 Aug 2012 13:43:55 +0200
+Subject: [PATCH 2/6] scsi-disk: Fail medium writes with proper sense for
+ readonly LUNs
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1346075035-12374-1-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 41339
+O-Subject: [RHEL 6.4 qemu-kvm PATCH] scsi-disk: Fail medium writes with proper sense for readonly LUNs
+Bugzilla: 846268
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+
+From: Ronnie Sahlberg <ronniesahlberg@gmail.com>
+
+Bugzilla: 846268
+
+Add sense code for DATA_PROTECT/WRITE_PROTECTED and return this error
+for any WRITE*/WRITE_VERIFY* calls if the device is readonly=on,
+i.e. write-protected
+
+Without this patch, writing to a read-only disk would stop the VM if
+werror=stop is specified on the command line.  QE here observed a crash
+due to bug 808664, but in this case the VM should not have stopped at all
+even with werror=stop.
+
+Signed-off-by: Ronnie Sahlberg <ronniesahlberg@gmail.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry-picked from commit 6a8a685c4d022d4edee57b0fb78c0ae1b4876478)
+
+Conflicts:
+	hw/scsi-disk.c
+---
+ hw/scsi-bus.c  | 5 +++++
+ hw/scsi-disk.c | 8 ++++++++
+ hw/scsi.h      | 2 ++
+ 3 file modificati, 15 inserzioni(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c  | 5 +++++
+ hw/scsi-disk.c | 8 ++++++++
+ hw/scsi.h      | 2 ++
+ 3 files changed, 15 insertions(+)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 495805b..5988790 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -1075,6 +1075,11 @@ const struct SCSISense sense_code_DEVICE_INTERNAL_RESET = {
+     .key = UNIT_ATTENTION, .asc = 0x29, .ascq = 0x04
+ };
+ 
++/* Data Protection, Write Protected */
++const struct SCSISense sense_code_WRITE_PROTECTED = {
++    .key = DATA_PROTECT, .asc = 0x27, .ascq = 0x00
++};
++
+ /*
+  * scsi_build_sense
+  *
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 138b642..3b318f6 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1488,6 +1488,14 @@ static int32_t scsi_send_command(SCSIRequest *req, uint8_t *buf)
+     case WRITE_VERIFY_10:
+     case WRITE_VERIFY_12:
+     case WRITE_VERIFY_16:
++        if (bdrv_is_read_only(s->qdev.conf.bs)) {
++            scsi_check_condition(r, SENSE_CODE(WRITE_PROTECTED));
++            return 0;
++        }
++        /* fallthrough */
++    case VERIFY_10:
++    case VERIFY_12:
++    case VERIFY_16:
+         len = r->req.cmd.xfer / s->qdev.blocksize;
+         DPRINTF("Write %s(sector %" PRId64 ", count %d)\n",
+                 (command & 0xe) == 0xe ? "And Verify " : "",
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 5428f02..334d2ff 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -196,6 +196,8 @@ extern const struct SCSISense sense_code_MEDIUM_CHANGED;
+ extern const struct SCSISense sense_code_REPORTED_LUNS_CHANGED;
+ /* Unit attention, Device internal reset */
+ extern const struct SCSISense sense_code_DEVICE_INTERNAL_RESET;
++/* Data Protection, Write Protected */
++extern const struct SCSISense sense_code_WRITE_PROTECTED;
+ 
+ #define SENSE_CODE(x) sense_code_ ## x
+ 
+-- 
+1.7.11.4
+

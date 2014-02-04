@@ -1,0 +1,272 @@
+From 38a80d23c1fa7e28394933a194984a9e3a53c35b Mon Sep 17 00:00:00 2001
+Message-Id: <38a80d23c1fa7e28394933a194984a9e3a53c35b.1357726992.git.minovotn@redhat.com>
+In-Reply-To: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+References: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Wed, 2 Jan 2013 15:02:35 +0100
+Subject: [PATCH 12/16] virtio-blk: define VirtIOBlkConf
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1357138959-1918-13-git-send-email-stefanha@redhat.com>
+Patchwork-id: 45525
+O-Subject: [RHEL6.4 qemu-kvm PATCH v5 12/16] virtio-blk: define VirtIOBlkConf
+Bugzilla: 877836
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Paolo Bonzini <pbonzini@redhat.com>
+
+We will have to add another field to the virtio-blk configuration in
+the next patch.  Avoid a proliferation of arguments to virtio_blk_init.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from 12c5674b846dccf1f80fb43b64606721e6f78976)
+
+Conflicts:
+	hw/s390-virtio-bus.c
+	hw/s390-virtio-bus.h
+	hw/virtio-blk.c
+	hw/virtio-pci.c
+	hw/virtio-pci.h
+
+The s390 and virtio-pci.c conflicts are mostly because RHEL qemu-kvm
+doesn't have QEMU Object Model qdev changes.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ hw/s390-virtio-bus.c |  7 +++----
+ hw/s390-virtio-bus.h |  5 +++--
+ hw/virtio-blk.c      | 27 +++++++++++++--------------
+ hw/virtio-blk.h      |  7 +++++++
+ hw/virtio-pci.c      | 12 +++++-------
+ hw/virtio.h          |  4 ++--
+ 6 files changed, 33 insertions(+), 29 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/s390-virtio-bus.c |  7 +++----
+ hw/s390-virtio-bus.h |  5 +++--
+ hw/virtio-blk.c      | 27 +++++++++++++--------------
+ hw/virtio-blk.h      |  7 +++++++
+ hw/virtio-pci.c      | 12 +++++-------
+ hw/virtio.h          |  4 ++--
+ 6 files changed, 33 insertions(+), 29 deletions(-)
+
+diff --git a/hw/s390-virtio-bus.c b/hw/s390-virtio-bus.c
+index d18f916..26aac5c 100644
+--- a/hw/s390-virtio-bus.c
++++ b/hw/s390-virtio-bus.c
+@@ -124,8 +124,7 @@ static int s390_virtio_blk_init(VirtIOS390Device *dev)
+ {
+     VirtIODevice *vdev;
+ 
+-    vdev = virtio_blk_init((DeviceState *)dev, &dev->block,
+-                           &dev->block_serial);
++    vdev = virtio_blk_init((DeviceState *)dev, &dev->blk);
+     if (!vdev) {
+         return -1;
+     }
+@@ -344,8 +343,8 @@ static VirtIOS390DeviceInfo s390_virtio_blk = {
+     .qdev.name = "virtio-blk-s390",
+     .qdev.size = sizeof(VirtIOS390Device),
+     .qdev.props = (Property[]) {
+-        DEFINE_BLOCK_PROPERTIES(VirtIOS390Device, block),
+-        DEFINE_PROP_STRING("serial", VirtIOS390Device, block_serial),
++        DEFINE_BLOCK_PROPERTIES(VirtIOS390Device, blk.conf),
++        DEFINE_PROP_STRING("serial", VirtIOS390Device, blk.serial),
+         DEFINE_PROP_END_OF_LIST(),
+     },
+ };
+diff --git a/hw/s390-virtio-bus.h b/hw/s390-virtio-bus.h
+index bb0b9a7..470bd50 100644
+--- a/hw/s390-virtio-bus.h
++++ b/hw/s390-virtio-bus.h
+@@ -17,6 +17,8 @@
+  * License along with this library; if not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#include "virtio-blk.h"
++
+ #define VIRTIO_DEV_OFFS_TYPE		0	/* 8 bits */
+ #define VIRTIO_DEV_OFFS_NUM_VQ		1	/* 8 bits */
+ #define VIRTIO_DEV_OFFS_FEATURE_LEN	2	/* 8 bits */
+@@ -38,8 +40,7 @@ typedef struct VirtIOS390Device {
+     ram_addr_t feat_offs;
+     uint8_t feat_len;
+     VirtIODevice *vdev;
+-    BlockConf block;
+-    char *block_serial;
++    VirtIOBlkConf blk;
+     NICConf nic;
+     uint32_t host_features;
+     /* Max. number of ports we can have for a the virtio-serial device */
+diff --git a/hw/virtio-blk.c b/hw/virtio-blk.c
+index 8b3be64..d6e8423 100644
+--- a/hw/virtio-blk.c
++++ b/hw/virtio-blk.c
+@@ -28,7 +28,7 @@ typedef struct VirtIOBlock
+     void *rq;
+     QEMUBH *bh;
+     BlockConf *conf;
+-    char *serial;
++    VirtIOBlkConf *blk;
+     unsigned short sector_mask;
+     DeviceState *qdev;
+ } VirtIOBlock;
+@@ -397,7 +397,7 @@ static void virtio_blk_handle_request(VirtIOBlockReq *req,
+          * terminated by '\0' only when shorter than buffer.
+          */
+         strncpy(req->elem.in_sg[0].iov_base,
+-                s->serial ? s->serial : "",
++                s->blk->serial ? s->blk->serial : "",
+                 MIN(req->elem.in_sg[0].iov_len, VIRTIO_BLK_ID_BYTES));
+         virtio_blk_req_complete(req, VIRTIO_BLK_S_OK);
+         qemu_free(req);
+@@ -591,28 +591,27 @@ static const BlockDevOps virtio_block_ops = {
+     .resize_cb = virtio_blk_resize,
+ };
+ 
+-VirtIODevice *virtio_blk_init(DeviceState *dev, BlockConf *conf,
+-                              char **serial)
++VirtIODevice *virtio_blk_init(DeviceState *dev, VirtIOBlkConf *blk)
+ {
+     VirtIOBlock *s;
+     int cylinders, heads, secs;
+     static int virtio_blk_id;
+     DriveInfo *dinfo;
+ 
+-    if (!conf->bs) {
++    if (!blk->conf.bs) {
+         error_report("drive property not set");
+         return NULL;
+     }
+-    if (!bdrv_is_inserted(conf->bs)) {
++    if (!bdrv_is_inserted(blk->conf.bs)) {
+         error_report("Device needs media, but drive is empty");
+         return NULL;
+     }
+ 
+-    if (!*serial) {
++    if (!blk->serial) {
+         /* try to fall back to value set with legacy -drive serial=... */
+-        dinfo = drive_get_by_blockdev(conf->bs);
++        dinfo = drive_get_by_blockdev(blk->conf.bs);
+         if (*dinfo->serial) {
+-            *serial = strdup(dinfo->serial);
++            blk->serial = strdup(dinfo->serial);
+         }
+     }
+ 
+@@ -623,9 +622,9 @@ VirtIODevice *virtio_blk_init(DeviceState *dev, BlockConf *conf,
+     s->vdev.get_config = virtio_blk_update_config;
+     s->vdev.get_features = virtio_blk_get_features;
+     s->vdev.reset = virtio_blk_reset;
+-    s->bs = conf->bs;
+-    s->conf = conf;
+-    s->serial = *serial;
++    s->bs = blk->conf.bs;
++    s->conf = &blk->conf;
++    s->blk = blk;
+     s->rq = NULL;
+     s->sector_mask = (s->conf->logical_block_size / 512) - 1;
+     bdrv_guess_geometry(s->bs, &cylinders, &heads, &secs);
+@@ -638,10 +637,10 @@ VirtIODevice *virtio_blk_init(DeviceState *dev, BlockConf *conf,
+     register_savevm(dev, "virtio-blk", virtio_blk_id++, 2,
+                     virtio_blk_save, virtio_blk_load, s);
+     bdrv_set_dev_ops(s->bs, &virtio_block_ops, s);
+-    s->bs->buffer_alignment = conf->logical_block_size;
++    s->bs->buffer_alignment = s->conf->logical_block_size;
+ 
+     bdrv_iostatus_enable(s->bs);
+-    add_boot_device_path(conf->bootindex, dev, "/disk@0,0");
++    add_boot_device_path(s->conf->bootindex, dev, "/disk@0,0");
+ 
+     return &s->vdev;
+ }
+diff --git a/hw/virtio-blk.h b/hw/virtio-blk.h
+index 5645d2b..5eea647 100644
+--- a/hw/virtio-blk.h
++++ b/hw/virtio-blk.h
+@@ -97,6 +97,12 @@ struct virtio_scsi_inhdr
+     uint32_t residual;
+ };
+ 
++struct VirtIOBlkConf
++{
++    BlockConf conf;
++    char *serial;
++};
++
+ #ifdef __linux__
+ #define DEFINE_VIRTIO_BLK_FEATURES(_state, _field) \
+         DEFINE_VIRTIO_COMMON_FEATURES(_state, _field), \
+@@ -105,4 +111,5 @@ struct virtio_scsi_inhdr
+ #define DEFINE_VIRTIO_BLK_FEATURES(_state, _field) \
+         DEFINE_VIRTIO_COMMON_FEATURES(_state, _field)
+ #endif
++
+ #endif
+diff --git a/hw/virtio-pci.c b/hw/virtio-pci.c
+index 9e001d2..01a1e45 100644
+--- a/hw/virtio-pci.c
++++ b/hw/virtio-pci.c
+@@ -113,8 +113,7 @@ typedef struct {
+     uint32_t addr;
+     uint32_t class_code;
+     uint32_t nvectors;
+-    BlockConf block;
+-    char *block_serial;
++    VirtIOBlkConf blk;
+     NICConf nic;
+     VirtIOSCSIConf scsi;
+     uint32_t host_features;
+@@ -827,8 +826,7 @@ static int virtio_blk_init_pci(PCIDevice *pci_dev)
+         proxy->class_code != PCI_CLASS_STORAGE_OTHER)
+         proxy->class_code = PCI_CLASS_STORAGE_SCSI;
+ 
+-    vdev = virtio_blk_init(&pci_dev->qdev, &proxy->block,
+-                           &proxy->block_serial);
++    vdev = virtio_blk_init(&pci_dev->qdev, &proxy->blk);
+     if (!vdev) {
+         return -1;
+     }
+@@ -853,7 +851,7 @@ static int virtio_blk_exit_pci(PCIDevice *pci_dev)
+ 
+     virtio_pci_stop_ioeventfd(proxy);
+     virtio_blk_exit(proxy->vdev);
+-    blockdev_mark_auto_del(proxy->block.bs);
++    blockdev_mark_auto_del(proxy->blk.conf.bs);
+     return virtio_exit_pci(pci_dev);
+ }
+ 
+@@ -988,8 +986,8 @@ static PCIDeviceInfo virtio_info[] = {
+         .exit      = virtio_blk_exit_pci,
+         .qdev.props = (Property[]) {
+             DEFINE_PROP_HEX32("class", VirtIOPCIProxy, class_code, 0),
+-            DEFINE_BLOCK_PROPERTIES(VirtIOPCIProxy, block),
+-            DEFINE_PROP_STRING("serial", VirtIOPCIProxy, block_serial),
++            DEFINE_BLOCK_PROPERTIES(VirtIOPCIProxy, blk.conf),
++            DEFINE_PROP_STRING("serial", VirtIOPCIProxy, blk.serial),
+             DEFINE_PROP_BIT("ioeventfd", VirtIOPCIProxy, flags,
+                             VIRTIO_PCI_FLAG_USE_IOEVENTFD_BIT, true),
+             DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors, 2),
+diff --git a/hw/virtio.h b/hw/virtio.h
+index dadf563..e6f96e7 100644
+--- a/hw/virtio.h
++++ b/hw/virtio.h
+@@ -196,8 +196,8 @@ void virtio_bind_device(VirtIODevice *vdev, const VirtIOBindings *binding,
+                         void *opaque);
+ 
+ /* Base devices.  */
+-VirtIODevice *virtio_blk_init(DeviceState *dev, BlockConf *conf,
+-                              char **serial);
++typedef struct VirtIOBlkConf VirtIOBlkConf;
++VirtIODevice *virtio_blk_init(DeviceState *dev, VirtIOBlkConf *blk);
+ struct virtio_net_conf;
+ VirtIODevice *virtio_net_init(DeviceState *dev, NICConf *conf,
+                               struct virtio_net_conf *net);
+-- 
+1.7.11.7
+

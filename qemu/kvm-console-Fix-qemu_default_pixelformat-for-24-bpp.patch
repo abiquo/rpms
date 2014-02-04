@@ -1,0 +1,45 @@
+From a8752b83ad2f6953fab3b44de3b29b314ea497f9 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:44 +0100
+Subject: [PATCH 50/52] console: Fix qemu_default_pixelformat() for 24 bpp
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-51-git-send-email-armbru@redhat.com>
+Patchwork-id: 36614
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 50/52] console: Fix qemu_default_pixelformat() for 24 bpp
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+Falls through to 32 bpp.  Harmless, because the only difference is the
+alpha component, and we're not using that.  Spotted by Coverity.
+
+Acked-by: Stefano Stabellini <stefano.stabellini@eu.citrix.com>
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 0eba62e03292ff91201358fd544cadfbff36f1bf)
+---
+ console.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ console.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/console.c b/console.c
+index 1c85a48..83703fe 100644
+--- a/console.c
++++ b/console.c
+@@ -1537,6 +1537,7 @@ PixelFormat qemu_default_pixelformat(int bpp)
+             pf.rbits = 8;
+             pf.gbits = 8;
+             pf.bbits = 8;
++            break;
+         case 32:
+             pf.rmask = 0x00FF0000;
+             pf.gmask = 0x0000FF00;
+-- 
+1.7.7.5
+

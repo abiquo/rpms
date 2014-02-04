@@ -1,0 +1,80 @@
+From 14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7 Mon Sep 17 00:00:00 2001
+Message-Id: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Fri, 12 Oct 2012 14:27:01 +0200
+Subject: [PATCH 01/17] x86/cpuid: add missing CPUID feature flag names
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <20121012142701.GL22722@otherpad.lan.raisama.net>
+Patchwork-id: 43052
+O-Subject: [RHEL6 qemu-kvm v2 PATCH] x86/cpuid: add missing CPUID feature flag names
+Bugzilla: 843084
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+
+From: Andre Przywara <andre.przywara@amd.com>
+
+Bugzilla: 843084
+Upstream status: commit e117f7725af8416a0c6e416fe18549d1625f7498
+
+Some CPUID feature flags had no string value, so they could not be
+switched on or off from the command line.
+Add names for the missing ones mentioned in the current public CPUID
+specification from both Intel and AMD. Those only mentioned in the
+Linux kernel source I put as comments.
+
+Signed-off-by: Andre Przywara <andre.przywara@amd.com>
+Signed-off-by: Aurelien Jarno <aurelien@aurel32.net>
+(cherry picked from commit e117f7725af8416a0c6e416fe18549d1625f7498)
+
+Conflicts:
+	target-i386/cpuid.c
+(trivial conflicts due to existing flag names)
+
+Changes v1 -> v2:
+ - Fix mistake that removed the "pclmulqdq|pclmuldq" item
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 026b9f0..296c535 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -43,10 +43,10 @@ static const char *feature_name[] = {
+     "ht" /* Intel htt */, "tm", "ia64", "pbe",
+ };
+ static const char *ext_feature_name[] = {
+-    "pni|sse3" /* Intel,AMD sse3 */, "pclmulqdq|pclmuldq", NULL, "monitor",
+-    "ds_cpl", "vmx", NULL /* Linux smx */, "est",
++    "pni|sse3" /* Intel,AMD sse3 */, "pclmulqdq|pclmuldq", "dtes64", "monitor",
++    "ds_cpl", "vmx", "smx", "est",
+     "tm2", "ssse3", "cid", NULL,
+-    NULL, "cx16", "xtpr", NULL,
++    "fma", "cx16", "xtpr", "pdcm",
+     NULL, NULL, "dca", "sse4.1|sse4_1",
+     "sse4.2|sse4_2", "x2apic", "movbe", "popcnt",
+     "tsc-deadline", "aes", "xsave", "osxsave",
+@@ -65,9 +65,9 @@ static const char *ext2_feature_name[] = {
+ static const char *ext3_feature_name[] = {
+     "lahf_lm" /* AMD LahfSahf */, "cmp_legacy", "svm", "extapic" /* AMD ExtApicSpace */,
+     "cr8legacy" /* AMD AltMovCr8 */, "abm", "sse4a", "misalignsse",
+-    "3dnowprefetch", "osvw", NULL, "xop",
++    "3dnowprefetch", "osvw", "ibs", "xop",
+     "skinit", "wdt", NULL, NULL,
+-    "fma4", NULL, NULL, NULL,
++    "fma4", NULL, "cvt16", "nodeid_msr",
+     NULL, NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL,
+     NULL, NULL, NULL, NULL,
+-- 
+1.7.11.7
+

@@ -1,0 +1,59 @@
+From 7c6fd693044ae2799d89adcf2919e6abd185ca2f Mon Sep 17 00:00:00 2001
+Message-Id: <7c6fd693044ae2799d89adcf2919e6abd185ca2f.1355928222.git.minovotn@redhat.com>
+In-Reply-To: <5bb1efba7d5e7913c8641db9d9acc3ed80e03ed7.1355928222.git.minovotn@redhat.com>
+References: <5bb1efba7d5e7913c8641db9d9acc3ed80e03ed7.1355928222.git.minovotn@redhat.com>
+From: Gerhard Wiesinger <lists@wiesinger.com>
+Date: Thu, 13 Dec 2012 09:25:20 +0100
+Subject: [PATCH 4/6] hw/vmmouse.c: Disable vmmouse after reboot
+
+Bugfix after reboot when vmmouse was enabled and another OS which uses e.g. PS/2
+mouse.
+
+Details:
+When a guest activated the vmmouse followed by a reboot the vmmouse was still
+enabled and the PS/2 mouse was therefore unsusable. When another guest is then
+booted without vmmouse support (e.g. PS/2 mouse) the mouse is not working.
+
+Reason is that VMMouse has priority and disables all other mouse entities
+and therefore must be disabled on reset.
+
+Testscenario:
+1.) Boot e.g. OS with VMMouse support (e.g. Windows with VMMouse tools)
+2.) reboot
+3.) Boot e.g. OS without VMMouse support (e.g. DOS) => PS/2 mouse doesn't work
+     any more. Fixes that issue.
+
+Testscenario 2 by Jan Kiszka <jan.kiszka@siemens.com>:
+Confirm that this patch fixes a real issue. Setup: qemu.git,
+opensuse 11.4 guest, SDL graphic, system_reset while guest is using the
+vmmouse. Without the patch, the vmmouse become unusable after the
+reboot. Also, the mouse stays in absolute mode even before X starts again.
+
+Fixed by:
+Disabling the vmmouse in its reset handler.
+
+Tested-by: Andreas F=E4rber <afaerber@suse.de>
+Signed-off-by: Gerhard Wiesinger <lists@wiesinger.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 069ab0eb8a46bc4ff6f4d4d81bf037d3441347da)
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/vmmouse.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/hw/vmmouse.c b/hw/vmmouse.c
+index 3778225..d6f96a6 100644
+--- a/hw/vmmouse.c
++++ b/hw/vmmouse.c
+@@ -276,6 +276,8 @@ static void vmmouse_reset(void *opaque)
+ 
+     s->status = 0xffff;
+     s->queue_size = VMMOUSE_QUEUE_SIZE;
++
++    vmmouse_disable(s);
+ }
+ 
+ void *vmmouse_init(void *m)
+-- 
+1.7.11.7
+

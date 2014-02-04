@@ -1,0 +1,77 @@
+From cd25bf0fc50cb7842622f1a556f45a5dc5195205 Mon Sep 17 00:00:00 2001
+From: Amit Shah <amit.shah@redhat.com>
+Date: Thu, 22 Dec 2011 05:02:00 +0100
+Subject: [PATCH 08/10] virtio-console: Check if chardev backends available
+ before calling into them
+
+RH-Author: Amit Shah <amit.shah@redhat.com>
+Message-id: <7651056aad4cbba26db809474611ad8bc7544fa5.1324529974.git.amit.shah@redhat.com>
+Patchwork-id: 35926
+O-Subject: [RHEL6.3 qemu-kvm PATCH 08/10] virtio-console: Check if chardev backends available before calling into them
+Bugzilla: 769528
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+For the callback functions invoked by the virtio-serial-bus code, check
+if we have chardev backends registered before we call into the chardev
+functions.
+
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+Reported-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Amit Shah <amit.shah@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 6640422c172e01d0e191a754d3643a68abca83bc)
+
+Conflicts:
+
+	hw/virtio-console.c
+	(Conflict due to upstream function name change:
+	 qemu_chr_write->qemu_chr_fe_write etc.)
+---
+ hw/virtio-console.c |   10 ++++++++++
+ 1 files changed, 10 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-console.c |   10 ++++++++++
+ 1 files changed, 10 insertions(+), 0 deletions(-)
+
+diff --git a/hw/virtio-console.c b/hw/virtio-console.c
+index 8bf1cab..09bee01 100644
+--- a/hw/virtio-console.c
++++ b/hw/virtio-console.c
+@@ -36,6 +36,10 @@ static ssize_t flush_buf(VirtIOSerialPort *port, const uint8_t *buf, size_t len)
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+     ssize_t ret;
+ 
++    if (!vcon->chr) {
++        /* If there's no backend, we can just say we consumed all data. */
++        return len;
++    }
+     ret = qemu_chr_write(vcon->chr, buf, len);
+     if (ret < 0 && ret != -EAGAIN) {
+         /*
+@@ -59,6 +63,9 @@ static void guest_open(VirtIOSerialPort *port)
+ {
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+ 
++    if (!vcon->chr) {
++        return;
++    }
+     return qemu_chr_guest_open(vcon->chr);
+ }
+ 
+@@ -67,6 +74,9 @@ static void guest_close(VirtIOSerialPort *port)
+ {
+     VirtConsole *vcon = DO_UPCAST(VirtConsole, port, port);
+ 
++    if (!vcon->chr) {
++        return;
++    }
+     return qemu_chr_guest_close(vcon->chr);
+ }
+ 
+-- 
+1.7.7.4
+

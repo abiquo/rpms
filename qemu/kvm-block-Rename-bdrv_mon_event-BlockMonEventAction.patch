@@ -1,0 +1,323 @@
+From 66517bdbe3fd147e9d80e33e1286db760a4f3e6d Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Wed, 29 Feb 2012 20:01:01 +0100
+Subject: [PATCH 06/11] block: Rename bdrv_mon_event() & BlockMonEventAction
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1330545665-1595-2-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 37788
+O-Subject: [PATCH RHEL6.3 qemu-kvm 1/5] block: Rename bdrv_mon_event() & BlockMonEventAction
+Bugzilla: 575159
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+This is a RHEL6 version of upstream commit:
+329c0a48a92664eb48b70993c0f2473b37aa7429.
+
+Cherry picking is just impossible, it conflicts in all files where
+the change is made. The solution is to re-do the change for RHEL6.
+
+Original changelog is:
+
+    They are QMP events, not monitor events. Rename them accordingly.
+
+    Also, move bdrv_emit_qmp_error_event() up in the file. A new event will
+    be added soon and it's good to have them next each other.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ block.c         |  142 +++++++++++++++++++++++++++---------------------------
+ block.h         |    6 +-
+ hw/ide/core.c   |    6 +-
+ hw/scsi-disk.c  |    6 +-
+ hw/virtio-blk.c |    6 +-
+ 5 files changed, 83 insertions(+), 83 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c         |  142 +++++++++++++++++++++++++++---------------------------
+ block.h         |    6 +-
+ hw/ide/core.c   |    6 +-
+ hw/scsi-disk.c  |    6 +-
+ hw/virtio-blk.c |    6 +-
+ 5 files changed, 83 insertions(+), 83 deletions(-)
+
+diff --git a/block.c b/block.c
+index 7f1da08..3aa3fe6 100644
+--- a/block.c
++++ b/block.c
+@@ -764,6 +764,77 @@ void bdrv_set_dev_ops(BlockDriverState *bs, const BlockDevOps *ops,
+     }
+ }
+ 
++#define BDRV_REASON_KEY RFQDN_REDHAT "reason"
++
++/* RHEL6 vendor extension */
++static void bdrv_put_rhel6_reason(QDict *event, int error)
++{
++    const char *reason;
++
++    switch (error) {
++    case ENOSPC:
++        reason = "enospc";
++        break;
++    case EPERM:
++        reason = "eperm";
++        break;
++    case EIO:
++        reason = "eio";
++        break;
++    default:
++        reason = "eother";
++        break;
++    }
++
++    qdict_put(event, BDRV_REASON_KEY, qstring_from_str(reason));
++}
++
++#define BDRV_DEBUG_KEY  RFQDN_REDHAT "debug_info"
++
++/* RHEL6 vendor extension */
++static void bdrv_put_rhel6_debug_info(QDict *event, int error)
++{
++    QObject *info;
++
++    info = qobject_from_jsonf("{ 'errno': %d, 'message': %s }", error,
++                               strerror(error));
++    qdict_put_obj(event, BDRV_DEBUG_KEY, info);
++}
++
++void bdrv_emit_qmp_error_event(const BlockDriverState *bdrv,
++                    BlockQMPEventAction action, int error, int is_read)
++{
++    QObject *data;
++    const char *action_str;
++
++    switch (action) {
++    case BDRV_ACTION_REPORT:
++        action_str = "report";
++        break;
++    case BDRV_ACTION_IGNORE:
++        action_str = "ignore";
++        break;
++    case BDRV_ACTION_STOP:
++        action_str = "stop";
++        break;
++    default:
++        abort();
++    }
++
++    fprintf(stderr, "block I/O error in device '%s': %s (%d)\n",
++                     bdrv->device_name, strerror(error), error);
++
++    data = qobject_from_jsonf("{ 'device': %s, 'action': %s, 'operation': %s }",
++                              bdrv->device_name,
++                              action_str,
++                              is_read ? "read" : "write");
++    bdrv_put_rhel6_reason(qobject_to_qdict(data), error);
++    bdrv_put_rhel6_debug_info(qobject_to_qdict(data), error);
++    monitor_protocol_event(QEVENT_BLOCK_IO_ERROR, data);
++
++    qobject_decref(data);
++}
++
+ static void bdrv_dev_change_media_cb(BlockDriverState *bs, bool load)
+ {
+     if (bs->dev_ops && bs->dev_ops->change_media_cb) {
+@@ -1638,77 +1709,6 @@ int bdrv_is_allocated(BlockDriverState *bs, int64_t sector_num, int nb_sectors,
+     return bs->drv->bdrv_is_allocated(bs, sector_num, nb_sectors, pnum);
+ }
+ 
+-#define BDRV_REASON_KEY RFQDN_REDHAT "reason"
+-
+-/* RHEL6 vendor extension */
+-static void bdrv_put_rhel6_reason(QDict *event, int error)
+-{
+-    const char *reason;
+-
+-    switch (error) {
+-    case ENOSPC:
+-        reason = "enospc";
+-        break;
+-    case EPERM:
+-        reason = "eperm";
+-        break;
+-    case EIO:
+-        reason = "eio";
+-        break;
+-    default:
+-        reason = "eother";
+-        break;
+-    }
+-
+-    qdict_put(event, BDRV_REASON_KEY, qstring_from_str(reason));
+-}
+-
+-#define BDRV_DEBUG_KEY  RFQDN_REDHAT "debug_info"
+-
+-/* RHEL6 vendor extension */
+-static void bdrv_put_rhel6_debug_info(QDict *event, int error)
+-{
+-    QObject *info;
+-
+-    info = qobject_from_jsonf("{ 'errno': %d, 'message': %s }", error,
+-                               strerror(error));
+-    qdict_put_obj(event, BDRV_DEBUG_KEY, info);
+-}
+-
+-void bdrv_mon_event(const BlockDriverState *bdrv,
+-                    BlockMonEventAction action, int error, int is_read)
+-{
+-    QObject *data;
+-    const char *action_str;
+-
+-    switch (action) {
+-    case BDRV_ACTION_REPORT:
+-        action_str = "report";
+-        break;
+-    case BDRV_ACTION_IGNORE:
+-        action_str = "ignore";
+-        break;
+-    case BDRV_ACTION_STOP:
+-        action_str = "stop";
+-        break;
+-    default:
+-        abort();
+-    }
+-
+-    fprintf(stderr, "block I/O error in device '%s': %s (%d)\n",
+-                     bdrv->device_name, strerror(error), error);
+-
+-    data = qobject_from_jsonf("{ 'device': %s, 'action': %s, 'operation': %s }",
+-                              bdrv->device_name,
+-                              action_str,
+-                              is_read ? "read" : "write");
+-    bdrv_put_rhel6_reason(qobject_to_qdict(data), error);
+-    bdrv_put_rhel6_debug_info(qobject_to_qdict(data), error);
+-    monitor_protocol_event(QEVENT_BLOCK_IO_ERROR, data);
+-
+-    qobject_decref(data);
+-}
+-
+ static void bdrv_print_dict(QObject *obj, void *opaque)
+ {
+     QDict *bs_dict;
+diff --git a/block.h b/block.h
+index cc198ef..37232cc 100644
+--- a/block.h
++++ b/block.h
+@@ -85,7 +85,7 @@ typedef enum {
+ 
+ typedef enum {
+     BDRV_ACTION_REPORT, BDRV_ACTION_IGNORE, BDRV_ACTION_STOP
+-} BlockMonEventAction;
++} BlockQMPEventAction;
+ 
+ typedef enum {
+     BDRV_IOS_INVAL, BDRV_IOS_OK, BDRV_IOS_FAILED, BDRV_IOS_ENOSPC,
+@@ -97,8 +97,8 @@ void bdrv_iostatus_reset(BlockDriverState *bs);
+ void bdrv_iostatus_disable(BlockDriverState *bs);
+ bool bdrv_iostatus_is_enabled(const BlockDriverState *bs);
+ void bdrv_iostatus_set_err(BlockDriverState *bs, int error);
+-void bdrv_mon_event(const BlockDriverState *bdrv,
+-                    BlockMonEventAction action, int error, int is_read);
++void bdrv_emit_qmp_error_event(const BlockDriverState *bdrv,
++                    BlockQMPEventAction action, int error, int is_read);
+ void bdrv_info_print(Monitor *mon, const QObject *data);
+ void bdrv_info(Monitor *mon, QObject **ret_data);
+ void bdrv_stats_print(Monitor *mon, const QObject *data);
+diff --git a/hw/ide/core.c b/hw/ide/core.c
+index 4ed5b57..73bc133 100644
+--- a/hw/ide/core.c
++++ b/hw/ide/core.c
+@@ -469,7 +469,7 @@ static int ide_handle_rw_error(IDEState *s, int error, int op)
+     BlockErrorAction action = bdrv_get_on_error(s->bs, is_read);
+ 
+     if (action == BLOCK_ERR_IGNORE) {
+-        bdrv_mon_event(s->bs, BDRV_ACTION_IGNORE, error, is_read);
++        bdrv_emit_qmp_error_event(s->bs, BDRV_ACTION_IGNORE, error, is_read);
+         return 0;
+     }
+ 
+@@ -477,7 +477,7 @@ static int ide_handle_rw_error(IDEState *s, int error, int op)
+             || action == BLOCK_ERR_STOP_ANY) {
+         s->bus->bmdma->unit = s->unit;
+         s->bus->error_status = op;
+-        bdrv_mon_event(s->bs, BDRV_ACTION_STOP, error, is_read);
++        bdrv_emit_qmp_error_event(s->bs, BDRV_ACTION_STOP, error, is_read);
+         vm_stop(RUN_STATE_IO_ERROR);
+         bdrv_iostatus_set_err(s->bs, error);
+     } else {
+@@ -487,7 +487,7 @@ static int ide_handle_rw_error(IDEState *s, int error, int op)
+         } else {
+             ide_rw_error(s);
+         }
+-        bdrv_mon_event(s->bs, BDRV_ACTION_REPORT, error, is_read);
++        bdrv_emit_qmp_error_event(s->bs, BDRV_ACTION_REPORT, error, is_read);
+     }
+ 
+     return 1;
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 1b969bc..7689722 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -294,14 +294,14 @@ static int scsi_handle_rw_error(SCSIDiskReq *r, int error)
+     BlockErrorAction action = bdrv_get_on_error(s->qdev.conf.bs, is_read);
+ 
+     if (action == BLOCK_ERR_IGNORE) {
+-        bdrv_mon_event(s->qdev.conf.bs, BDRV_ACTION_IGNORE, error, is_read);
++        bdrv_emit_qmp_error_event(s->qdev.conf.bs, BDRV_ACTION_IGNORE, error, is_read);
+         return 0;
+     }
+ 
+     if ((error == ENOSPC && action == BLOCK_ERR_STOP_ENOSPC)
+             || action == BLOCK_ERR_STOP_ANY) {
+ 
+-        bdrv_mon_event(s->qdev.conf.bs, BDRV_ACTION_STOP, error, is_read);
++        bdrv_emit_qmp_error_event(s->qdev.conf.bs, BDRV_ACTION_STOP, error, is_read);
+         vm_stop(RUN_STATE_IO_ERROR);
+         bdrv_iostatus_set_err(s->qdev.conf.bs, error);
+         scsi_req_retry(&r->req);
+@@ -320,7 +320,7 @@ static int scsi_handle_rw_error(SCSIDiskReq *r, int error)
+             scsi_check_condition(r, SENSE_CODE(IO_ERROR));
+             break;
+         }
+-        bdrv_mon_event(s->qdev.conf.bs, BDRV_ACTION_REPORT, error, is_read);
++        bdrv_emit_qmp_error_event(s->qdev.conf.bs, BDRV_ACTION_REPORT, error, is_read);
+     }
+     return 1;
+ }
+diff --git a/hw/virtio-blk.c b/hw/virtio-blk.c
+index b19b4c2..278e886 100644
+--- a/hw/virtio-blk.c
++++ b/hw/virtio-blk.c
+@@ -68,7 +68,7 @@ static int virtio_blk_handle_rw_error(VirtIOBlockReq *req, int error,
+     VirtIOBlock *s = req->dev;
+ 
+     if (action == BLOCK_ERR_IGNORE) {
+-        bdrv_mon_event(s->bs, BDRV_ACTION_IGNORE, error, is_read);
++        bdrv_emit_qmp_error_event(s->bs, BDRV_ACTION_IGNORE, error, is_read);
+         return 0;
+     }
+ 
+@@ -76,14 +76,14 @@ static int virtio_blk_handle_rw_error(VirtIOBlockReq *req, int error,
+             || action == BLOCK_ERR_STOP_ANY) {
+         req->next = s->rq;
+         s->rq = req;
+-        bdrv_mon_event(s->bs, BDRV_ACTION_STOP, error, is_read);
++        bdrv_emit_qmp_error_event(s->bs, BDRV_ACTION_STOP, error, is_read);
+         vm_stop(RUN_STATE_IO_ERROR);
+         bdrv_iostatus_set_err(s->bs, error);
+     } else {
+         virtio_blk_req_complete(req, VIRTIO_BLK_S_IOERR);
+         bdrv_acct_done(s->bs, &req->acct);
+         qemu_free(req);
+-        bdrv_mon_event(s->bs, BDRV_ACTION_REPORT, error, is_read);
++        bdrv_emit_qmp_error_event(s->bs, BDRV_ACTION_REPORT, error, is_read);
+     }
+ 
+     return 1;
+-- 
+1.7.7.6
+

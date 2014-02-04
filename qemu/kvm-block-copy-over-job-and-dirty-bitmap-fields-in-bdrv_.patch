@@ -1,0 +1,71 @@
+From 2d78ac1079e203ca2f15136f812a1f914eedbc1d Mon Sep 17 00:00:00 2001
+Message-Id: <2d78ac1079e203ca2f15136f812a1f914eedbc1d.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:24 +0200
+Subject: [PATCH 16/18] block: copy over job and dirty bitmap fields in
+ bdrv_append
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-15-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39225
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 14/16] block: copy over job and dirty bitmap fields in bdrv_append
+Bugzilla: 806432
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 806432
+
+Upstream status: not needed (drive-mirror not transactionable upstream)
+
+While these should not be in use at the time a transaction
+is started, a command in the prepare phase of a transaction
+might have added them, so they need to be brought over.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ block.c |   14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |   14 ++++++++++++++
+ 1 files changed, 14 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index a241b4d..6bf6d18 100644
+--- a/block.c
++++ b/block.c
+@@ -793,6 +793,15 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
+     /* i/o status */
+     tmp.iostatus          = bs_top->iostatus;
+ 
++    /* dirty bitmap */
++    tmp.dirty_bitmap      = bs_top->dirty_bitmap;
++    tmp.dirty_count       = bs_top->dirty_count;
++
++    /* job */
++    tmp.in_use            = bs_top->in_use;
++    tmp.job               = bs_top->job;
++    assert(bs_new->job == NULL);
++
+     /* keep the same entry in bdrv_states */
+     pstrcpy(tmp.device_name, sizeof(tmp.device_name), bs_top->device_name);
+     tmp.list = bs_top->list;
+@@ -816,6 +825,11 @@ void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
+     /* clear the copied fields in the new backing file */
+     bdrv_detach_dev(bs_new, bs_new->dev);
+ 
++    bs_new->job                = NULL;
++    bs_new->in_use             = 0;
++    bs_new->dirty_bitmap       = NULL;
++    bs_new->dirty_count        = 0;
++
+     bdrv_iostatus_disable(bs_new);
+ }
+ 
+-- 
+1.7.7.6
+

@@ -1,0 +1,44 @@
+From 41f62ced0a3723fd5244c473e7c98b247fe94389 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Wed, 12 Sep 2012 13:10:23 -0300
+Subject: [RHEL6 qemu-kvm PATCH 04/14] usb-redir: Correctly handle the
+ usb_redir_babble usbredir status
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1347455431-11260-5-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 41850
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 04/12] usb-redir: Correctly handle the usb_redir_babble usbredir status
+Bugzilla:
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Christophe Fergeau <cfergeau@redhat.com>
+Bugzilla-related: 805172
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Upstream commit: adae502c0ae4572ef08f71cb5b5ed5a8e90299fe
+---
+ usb-redir.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ usb-redir.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index a3f950a..bf1a2c9 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -1051,6 +1051,8 @@ static int usbredir_handle_status(USBRedirDevice *dev,
+     case usb_redir_inval:
+         WARNING("got invalid param error from usb-host?\n");
+         return USB_RET_NAK;
++    case usb_redir_babble:
++        return USB_RET_BABBLE;
+     case usb_redir_ioerror:
+     case usb_redir_timeout:
+     default:
+-- 
+1.7.11.4
+

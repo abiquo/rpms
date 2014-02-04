@@ -1,0 +1,174 @@
+From 000a39225ba4dee2a836842076b428de522f0966 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:01 +0100
+Subject: [PATCH 36/99] qcow2: Add bdrv_discard support
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-37-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37227
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 36/96] qcow2: Add bdrv_discard support
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+This adds a bdrv_discard function to qcow2 that frees the discarded clusters.
+It does not yet pass the discard on to the underlying file system driver, but
+the space can be reused by future writes to the image.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+Reviewed-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 5ea929e3d13622e5d06ca8795819f1590644cda2)
+
+Conflicts:
+
+	block/qcow2.c
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ block/qcow2-cluster.c |   82 +++++++++++++++++++++++++++++++++++++++++++++++++
+ block/qcow2.c         |    8 +++++
+ block/qcow2.h         |    2 +
+ 3 files changed, 92 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2-cluster.c |   82 +++++++++++++++++++++++++++++++++++++++++++++++++
+ block/qcow2.c         |    8 +++++
+ block/qcow2.h         |    2 +
+ 3 files changed, 92 insertions(+), 0 deletions(-)
+
+diff --git a/block/qcow2-cluster.c b/block/qcow2-cluster.c
+index 945bad4..85dd758 100644
+--- a/block/qcow2-cluster.c
++++ b/block/qcow2-cluster.c
+@@ -884,3 +884,85 @@ int qcow2_decompress_cluster(BlockDriverState *bs, uint64_t cluster_offset)
+     }
+     return 0;
+ }
++
++/*
++ * This discards as many clusters of nb_clusters as possible at once (i.e.
++ * all clusters in the same L2 table) and returns the number of discarded
++ * clusters.
++ */
++static int discard_single_l2(BlockDriverState *bs, uint64_t offset,
++    unsigned int nb_clusters)
++{
++    BDRVQcowState *s = bs->opaque;
++    uint64_t l2_offset, *l2_table;
++    int l2_index;
++    int ret;
++    int i;
++
++    ret = get_cluster_table(bs, offset, &l2_table, &l2_offset, &l2_index);
++    if (ret < 0) {
++        return ret;
++    }
++
++    /* Limit nb_clusters to one L2 table */
++    nb_clusters = MIN(nb_clusters, s->l2_size - l2_index);
++
++    for (i = 0; i < nb_clusters; i++) {
++        uint64_t old_offset;
++
++        old_offset = be64_to_cpu(l2_table[l2_index + i]);
++        old_offset &= ~QCOW_OFLAG_COPIED;
++
++        if (old_offset == 0) {
++            continue;
++        }
++
++        /* First remove L2 entries */
++        qcow2_cache_entry_mark_dirty(s->l2_table_cache, l2_table);
++        l2_table[l2_index + i] = cpu_to_be64(0);
++
++        /* Then decrease the refcount */
++        qcow2_free_any_clusters(bs, old_offset, 1);
++    }
++
++    ret = qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
++    if (ret < 0) {
++        return ret;
++    }
++
++    return nb_clusters;
++}
++
++int qcow2_discard_clusters(BlockDriverState *bs, uint64_t offset,
++    int nb_sectors)
++{
++    BDRVQcowState *s = bs->opaque;
++    uint64_t end_offset;
++    unsigned int nb_clusters;
++    int ret;
++
++    end_offset = offset + (nb_sectors << BDRV_SECTOR_BITS);
++
++    /* Round start up and end down */
++    offset = align_offset(offset, s->cluster_size);
++    end_offset &= ~(s->cluster_size - 1);
++
++    if (offset > end_offset) {
++        return 0;
++    }
++
++    nb_clusters = size_to_clusters(s, end_offset - offset);
++
++    /* Each L2 table is handled by its own loop iteration */
++    while (nb_clusters > 0) {
++        ret = discard_single_l2(bs, offset, nb_clusters);
++        if (ret < 0) {
++            return ret;
++        }
++
++        nb_clusters -= ret;
++        offset += (ret * s->cluster_size);
++    }
++
++    return 0;
++}
+diff --git a/block/qcow2.c b/block/qcow2.c
+index ef1dd5e..46f7e59 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -1272,6 +1272,13 @@ static int qcow2_make_empty(BlockDriverState *bs)
+     return 0;
+ }
+ 
++static int qcow2_discard(BlockDriverState *bs, int64_t sector_num,
++    int nb_sectors)
++{
++    return qcow2_discard_clusters(bs, sector_num << BDRV_SECTOR_BITS,
++        nb_sectors);
++}
++
+ /* XXX: put compressed sectors first, then all the cluster aligned
+    tables to avoid losing bytes in alignment */
+ static int qcow2_write_compressed(BlockDriverState *bs, int64_t sector_num,
+@@ -1501,6 +1508,7 @@ static BlockDriver bdrv_qcow2 = {
+     .bdrv_aio_writev    = qcow2_aio_writev,
+     .bdrv_aio_flush     = qcow2_aio_flush,
+ 
++    .bdrv_discard           = qcow2_discard,
+     .bdrv_truncate          = qcow2_truncate,
+     .bdrv_write_compressed  = qcow2_write_compressed,
+ 
+diff --git a/block/qcow2.h b/block/qcow2.h
+index 9a6a025..8dc8d7d 100644
+--- a/block/qcow2.h
++++ b/block/qcow2.h
+@@ -212,6 +212,8 @@ uint64_t qcow2_alloc_compressed_cluster_offset(BlockDriverState *bs,
+                                          int compressed_size);
+ 
+ int qcow2_alloc_cluster_link_l2(BlockDriverState *bs, QCowL2Meta *m);
++int qcow2_discard_clusters(BlockDriverState *bs, uint64_t offset,
++    int nb_sectors);
+ 
+ /* qcow2-snapshot.c functions */
+ int qcow2_snapshot_create(BlockDriverState *bs, QEMUSnapshotInfo *sn_info);
+-- 
+1.7.7.5
+

@@ -1,0 +1,167 @@
+From 9593a6989c6e74879c9fd115fad5ff8aa7339fc0 Mon Sep 17 00:00:00 2001
+Message-Id: <9593a6989c6e74879c9fd115fad5ff8aa7339fc0.1349774431.git.minovotn@redhat.com>
+In-Reply-To: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+References: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Fri, 5 Oct 2012 17:46:28 +0200
+Subject: [PATCH 16/21] monitor: allow qapi and old hmp to share the same
+ dispatch table
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349459193-18226-15-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42762
+O-Subject: [RHEL6.4 qemu-kvm PATCH 14/19] monitor: allow qapi and old hmp to share the same dispatch table
+Bugzilla: 832458
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+On upstream, qmp and hmp use different dispatch tables: qmp/qapi handlers
+are added to qmp-commands.hx and hmp handlers are added to hmp-commands.hx.
+
+On RHEL6 though, qmp/qapi and hmp share the same dispatch table. This
+makes it impossible to have a command with the same name in qmp and hmp.
+
+There are two ways to solve that problem:
+
+ 1. Backport the table split patches. This is a lot of work (19 patches
+    at a minimum, most will conflict). Besides, we're problably going
+    to drop qmp-commands.hx soon upstream. This means that if we
+    backport the table split patches now, we'll still be in an
+    intermediate point in RHEL6
+
+ 2. Let the dispatch table be shared by adding a MONITOR_CMD_QMP_ONLY
+    flag and changing the monitor code to check for it. Has the
+    disadvantage of not being upstream and is somewhat intrusive, but
+    the end result is simple anyway
+
+This patch does item 2, it should be simple & easy to revert if we
+later find out that doing 1 is better.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ monitor.c | 42 ++++++++++++++++++++++++++++++++++--------
+ monitor.h |  1 +
+ 2 files changed, 35 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ monitor.c | 42 ++++++++++++++++++++++++++++++++++--------
+ monitor.h |  1 +
+ 2 files changed, 35 insertions(+), 8 deletions(-)
+
+diff --git a/monitor.c b/monitor.c
+index 039d4a9..8b1c337 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -353,6 +353,11 @@ static inline bool monitor_cmd_user_only(const mon_cmd_t *cmd)
+     return (cmd->flags & MONITOR_CMD_USER_ONLY);
+ }
+ 
++static inline bool cmd_is_qmp_only(const mon_cmd_t *cmd)
++{
++    return cmd->flags & MONITOR_CMD_QMP_ONLY;
++}
++
+ static inline int monitor_has_error(const Monitor *mon)
+ {
+     return mon->error != NULL;
+@@ -603,6 +608,9 @@ static void help_cmd_dump(Monitor *mon, const mon_cmd_t *cmds,
+     const mon_cmd_t *cmd;
+ 
+     for(cmd = cmds; cmd->name != NULL; cmd++) {
++        if (cmd_is_qmp_only(cmd)) {
++            continue;
++        }
+         if (!name || !strcmp(name, cmd->name))
+             monitor_printf(mon, "%s%s %s -- %s\n", prefix, cmd->name,
+                            cmd->params, cmd->help);
+@@ -3717,13 +3725,27 @@ static int is_valid_option(const char *c, const char *typestr)
+     return (typestr != NULL);
+ }
+ 
+-static const mon_cmd_t *search_dispatch_table(const mon_cmd_t *disp_table,
+-                                              const char *cmdname)
++static const mon_cmd_t *hmp_search_dispatch_table(const mon_cmd_t *disp_table,
++                                                  const char *cmdname)
+ {
+     const mon_cmd_t *cmd;
+ 
+     for (cmd = disp_table; cmd->name != NULL; cmd++) {
+-        if (compare_cmd(cmdname, cmd->name)) {
++        if (compare_cmd(cmdname, cmd->name) && !cmd_is_qmp_only(cmd)) {
++            return cmd;
++        }
++    }
++
++    return NULL;
++}
++
++static const mon_cmd_t *qmp_search_dispatch_table(const mon_cmd_t *disp_table,
++                                                  const char *cmdname)
++{
++    const mon_cmd_t *cmd;
++
++    for (cmd = disp_table; cmd->name != NULL; cmd++) {
++        if (compare_cmd(cmdname, cmd->name) && !monitor_cmd_user_only(cmd)) {
+             return cmd;
+         }
+     }
+@@ -3733,17 +3755,17 @@ static const mon_cmd_t *search_dispatch_table(const mon_cmd_t *disp_table,
+ 
+ static const mon_cmd_t *monitor_find_command(const char *cmdname)
+ {
+-    return search_dispatch_table(mon_cmds, cmdname);
++    return hmp_search_dispatch_table(mon_cmds, cmdname);
+ }
+ 
+ static const mon_cmd_t *qmp_find_query_cmd(const char *info_item)
+ {
+-    return search_dispatch_table(info_cmds, info_item);
++    return qmp_search_dispatch_table(info_cmds, info_item);
+ }
+ 
+ static const mon_cmd_t *qmp_find_cmd(const char *cmdname)
+ {
+-    return search_dispatch_table(mon_cmds, cmdname);
++    return qmp_search_dispatch_table(mon_cmds, cmdname);
+ }
+ 
+ static const mon_cmd_t *monitor_parse_command(Monitor *mon,
+@@ -4380,7 +4402,9 @@ static void monitor_find_completion(const char *cmdline)
+             cmdname = args[0];
+         readline_set_completion_index(cur_mon->rs, strlen(cmdname));
+         for(cmd = mon_cmds; cmd->name != NULL; cmd++) {
+-            cmd_completion(cmdname, cmd->name);
++            if (!cmd_is_qmp_only(cmd)) {
++                cmd_completion(cmdname, cmd->name);
++            }
+         }
+     } else {
+         /* find the command */
+@@ -4434,7 +4458,9 @@ static void monitor_find_completion(const char *cmdline)
+             } else if (!strcmp(cmd->name, "help|?")) {
+                 readline_set_completion_index(cur_mon->rs, strlen(str));
+                 for (cmd = mon_cmds; cmd->name != NULL; cmd++) {
+-                    cmd_completion(str, cmd->name);
++                    if (!cmd_is_qmp_only(cmd)) {
++                        cmd_completion(str, cmd->name);
++                    }
+                 }
+             }
+             break;
+diff --git a/monitor.h b/monitor.h
+index 19b5466..60c7a90 100644
+--- a/monitor.h
++++ b/monitor.h
+@@ -21,6 +21,7 @@ extern Monitor *default_mon;
+ /* flags for monitor commands */
+ #define MONITOR_CMD_ASYNC       0x0001
+ #define MONITOR_CMD_USER_ONLY   0x0002
++#define MONITOR_CMD_QMP_ONLY    0x0004
+ 
+ /* QMP events */
+ typedef enum MonitorEvent {
+-- 
+1.7.11.4
+

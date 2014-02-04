@@ -1,0 +1,131 @@
+From b15bc1693cfdab0dfa250c791b1dadab73994c0a Mon Sep 17 00:00:00 2001
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Tue, 13 Mar 2012 15:09:25 +0100
+Subject: [PATCH 2/3] add Opteron_G4 CPU model (v2)
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1331651366-9586-3-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 38487
+O-Subject: [RHEL6 qemu-kvm PATCH 2/3] add Opteron_G4 CPU model (v2)
+Bugzilla: 767302
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Bugzilla: 767302
+Upstream: applied
+(cherry picked from commit 885bb0369a4f0abe2c0185178f3cb347cb02cdf1)
+
+Changes v1 -> v2:
+ - Disabled ffxsr flag, that was not tested
+
+This patch addes a Bulldozer-based Opteron_G4 CPU model.
+
+This version has the ffxsr bit actually disabled, to match what was
+documented below. Thanks to Andre Przywara for spotting the bug.
+
+I am trying to be conservative with the new model, so I am enabling only
+features known to be useful to guests, and not enabling anything that
+was not tested or found to be useful to a guest.
+
+List of missing flags in comparison to real hardware:
+
+- vme: host-specific feature.
+- osxsave: it is not set here because it is set by the guest OS, not by KVM
+- monitor: this is filtered out by the KVM module, so no point in
+  enabling it.
+- mmxext: untested, so not enabled.
+- Perf*, Topology*, lwp, ibs: not emulated by KVM.
+- wdt, skinit, osvw, altmovcr8, extapicspace, cmplegacy: untested,
+  so not enabled.
+
+List of new flags, in comparison to the Opteron_G3 model:
+
+- xsave: xsave feature, already implemented by Qemu
+- avx, aes, sse4.x, ssse3, pclmulqdq: all new state the new instructions
+  could use is handled by the xsave state loading/saving code on Qemu.
+- pdpe1gb: 1GB pages, supported by the KVM kernel module.
+- ffxsr: untested, so not enabled
+- fma4, xop: all new state the new instructions could use is handled by
+  the xsave loading/saving code on Qemu.
+- 3dnowprefetch: safe to pass through, though the flag is not used by
+  Linux guests, at least.
+
+Below is the comparison between the current Opteron_G3 model
+and the new model being added.
+
+- The "full" line contains the flags found on actual hardware.
+- The "missing" line shows the flags that are present on actual
+  hardware, but not on the added Opteron_G4 model.
+- The "new" line shows the flags that were not on the Opteron_G3 model
+  but are on Opteron_G4.
+
+feature_edx:
+  Opteron_G3: sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de     fpu
+  full:       sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de vme fpu
+  Opteron_G4: sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de     fpu
+  missing:                                                                                              vme
+
+feature_ecx:
+  Opteron_G3:                       popcnt               cx16       monitor           sse3
+  full:       avx osxsave xsave aes popcnt sse4.2 sse4.1 cx16 ssse3 monitor pclmulqdq sse3
+  Opteron_G4: avx         xsave aes popcnt sse4.2 sse4.1 cx16 ssse3         pclmulqdq sse3
+  missing:        osxsave                                           monitor
+  new:        avx         xsave aes        sse4.2 sse4.1      ssse3         pclmulqdq
+
+extfeature_edx:
+  Opteron_G3: lm rdtscp               fxsr mmx        nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de     fpu
+  full:       lm rdtscp pdpe1gb ffxsr fxsr mmx mmxext nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de vme fpu
+  Opteron_G4: lm rdtscp pdpe1gb       fxsr mmx        nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de     fpu
+  missing:                                     mmxext                                                                        vme
+  new:                  pdpe1gb
+
+extfeature_ecx:
+  Opteron_G3:                                                                misalignsse sse4a abm                        svm           lahf_lm
+  full:       Perf* Topology* fma4 lwp wdt skinit xop ibs osvw 3dnowprefetch misalignsse sse4a abm altmovcr8 extapicspace svm cmplegacy lahf_lm
+  Opteron_G4:                 fma4                xop          3dnowprefetch misalignsse sse4a abm                        svm           lahf_lm
+  new:                        fma4                xop          3dnowprefetch
+  missing:    Perf* Topology*      lwp wdt skinit     ibs osvw                                     altmovcr8 extapicspace     cmplegacy
+
+Changes v1 -> v2:
+ - Actually disable ffxsr bit
+
+Cc: mkletzan@redhat.com
+Cc: armbru@redhat.com
+Cc: alex.williamson@redhat.com
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+---
+ sysconfigs/target/cpu-x86_64.conf |   14 ++++++++++++++
+ 1 files changed, 14 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ sysconfigs/target/cpu-x86_64.conf |   14 ++++++++++++++
+ 1 files changed, 14 insertions(+), 0 deletions(-)
+
+diff --git a/sysconfigs/target/cpu-x86_64.conf b/sysconfigs/target/cpu-x86_64.conf
+index 9e51443..9ad7fac 100644
+--- a/sysconfigs/target/cpu-x86_64.conf
++++ b/sysconfigs/target/cpu-x86_64.conf
+@@ -125,3 +125,17 @@
+    extfeature_ecx = "misalignsse sse4a abm svm lahf_lm"
+    xlevel = "0x80000008"
+    model_id = "AMD Opteron 23xx (Gen 3 Class Opteron)"
++
++[cpudef]
++   name = "Opteron_G4"
++   level = "0xd"
++   vendor = "AuthenticAMD"
++   family = "21"
++   model = "1"
++   stepping = "2"
++   feature_edx = "sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu"
++   feature_ecx = "avx xsave aes popcnt sse4.2 sse4.1 cx16 ssse3 pclmulqdq sse3"
++   extfeature_edx = "lm rdtscp pdpe1gb fxsr mmx nx pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de fpu"
++   extfeature_ecx = " fma4 xop 3dnowprefetch misalignsse sse4a abm svm lahf_lm"
++   xlevel = "0x8000001A"
++   model_id = "AMD Opteron 62xx class CPU"
+-- 
+1.7.7.6
+

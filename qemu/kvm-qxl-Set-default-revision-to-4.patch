@@ -1,0 +1,95 @@
+From c71ba4f10ee5c33d59901ce069c16877cd73a625 Mon Sep 17 00:00:00 2001
+Message-Id: <c71ba4f10ee5c33d59901ce069c16877cd73a625.1350303544.git.minovotn@redhat.com>
+In-Reply-To: <f11ac1cace1097d0ed8778472028b6f9292d2766.1350303544.git.minovotn@redhat.com>
+References: <f11ac1cace1097d0ed8778472028b6f9292d2766.1350303544.git.minovotn@redhat.com>
+From: Soren Sandmann <ssp@redhat.com>
+Date: Fri, 12 Oct 2012 00:42:47 +0200
+Subject: [PATCH 3/3] qxl: Set default revision to 4
+
+RH-Author: Soren Sandmann <ssp@redhat.com>
+Message-id: <1350002567-13334-1-git-send-email-ssp@redhat.com>
+Patchwork-id: 43000
+O-Subject: [PATCH RHEL6.4 qemu-kvm v3 3/3] qxl: Set default revision to 4
+Bugzilla: 860017
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+
+Set the default PCI revision to QXL_REVISION_STABLE_V12. Also for
+compatibility set the qxl and qxl-vga revisions to 3 for the RHEL 6.3
+machine.
+
+A patch that achieves the same default revision bump is in Gerd's
+spice-next repository and so will eventually make it into master.
+
+Blocker bug for RHEL 7: 863511
+
+Upstream-status: submitted
+BZ: 860017
+Cc: Hans de Goede <hdegoede@redhat.com>
+Cc: Gerd Hoffmann <kraxel@redhat.com>
+Cc: Alon Levy <alevy@redhat.com>
+Cc: Paolo Bonzini <pbonzini@redhat.com>
+---
+ configure |    4 ++--
+ hw/pc.c   |    8 ++++++++
+ hw/qxl.h  |    5 -----
+ 3 files changed, 10 insertions(+), 7 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ configure | 4 ++--
+ hw/pc.c   | 8 ++++++++
+ hw/qxl.h  | 2 +-
+ 3 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/configure b/configure
+index 85f82f9..a688983 100755
+--- a/configure
++++ b/configure
+@@ -2037,8 +2037,8 @@ int main(void) { spice_server_new(); return 0; }
+ EOF
+   spice_cflags=$(pkg-config --cflags spice-protocol spice-server 2>/dev/null)
+   spice_libs=$(pkg-config --libs spice-protocol spice-server 2>/dev/null)
+-  if pkg-config --atleast-version=0.8.2 spice-server >/dev/null 2>&1 && \
+-     compile_prog "$spice_cflags" "$spice_libs" ; then
++  if pkg-config --atleast-version=0.12.0 spice-server >/dev/null 2>&1 && \
++     pkg-config --atleast-version=0.12.2 spice-protocol >/dev/null 2>&1; then
+     spice="yes"
+     libs_softmmu="$libs_softmmu $spice_libs"
+     QEMU_CFLAGS="$QEMU_CFLAGS $spice_cflags"
+diff --git a/hw/pc.c b/hw/pc.c
+index be9ca99..957dec1 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -1566,6 +1566,14 @@ static void rhel_common_init(const char *type1_version,
+             .driver   = "USB",\
+             .property = "create_unique_serial",\
+             .value    = "0",\
++        },{\
++            .driver   = "qxl-vga",\
++            .property = "revision",\
++            .value    = stringify(3),\
++        },{\
++            .driver   = "qxl",\
++            .property = "revision",\
++            .value    = stringify(3),\
+         }
+ 
+ #define PC_RHEL6_2_COMPAT \
+diff --git a/hw/qxl.h b/hw/qxl.h
+index c45e3a9..41658e6 100644
+--- a/hw/qxl.h
++++ b/hw/qxl.h
+@@ -111,7 +111,7 @@ typedef struct PCIQXLDevice {
+         }                                                               \
+     } while (0)
+ 
+-#define QXL_DEFAULT_REVISION QXL_REVISION_STABLE_V10
++#define QXL_DEFAULT_REVISION QXL_REVISION_STABLE_V12
+ 
+ /* qxl.c */
+ void *qxl_phys2virt(PCIQXLDevice *qxl, QXLPHYSICAL phys, int group_id);
+-- 
+1.7.11.7
+

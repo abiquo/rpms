@@ -1,0 +1,177 @@
+From ba938a34221077a2fdb58f62a08cd48baf6aa948 Mon Sep 17 00:00:00 2001
+Message-Id: <ba938a34221077a2fdb58f62a08cd48baf6aa948.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:15 +0200
+Subject: [PATCH 02/35] block: clarify the meaning of BDRV_O_NOCACHE
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <087f0576a49d62a6f88e2d9444a564acd2b01493.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43260
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 02/35] block: clarify the meaning of BDRV_O_NOCACHE
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Christoph Hellwig <hch@lst.de>
+
+Change BDRV_O_NOCACHE to only imply bypassing the host OS file cache,
+but no writeback semantics.  All existing callers are changed to also
+specify BDRV_O_CACHE_WB to give them writeback semantics.
+
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit a659979328fb6d4d6100d398f5bd9a2310c3e169)
+
+Conflicts:
+	qemu-io.c
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c           |  8 +-------
+ block/qcow2.c     |  2 +-
+ block/raw-posix.c |  2 +-
+ block/raw-win32.c | 12 ++++++------
+ blockdev.c        |  2 +-
+ qemu-io.c         |  4 ++--
+ qemu-nbd.c        |  2 +-
+ 7 files changed, 13 insertions(+), 19 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c           |  8 +-------
+ block/qcow2.c     |  2 +-
+ block/raw-posix.c |  2 +-
+ block/raw-win32.c | 12 ++++++------
+ blockdev.c        |  2 +-
+ qemu-io.c         |  4 ++--
+ qemu-nbd.c        |  2 +-
+ 7 files changed, 13 insertions(+), 19 deletions(-)
+
+diff --git a/block.c b/block.c
+index 9a8945b..866109d 100644
+--- a/block.c
++++ b/block.c
+@@ -491,13 +491,7 @@ static int bdrv_open_common(BlockDriverState *bs, const char *filename,
+     bs->drv = drv;
+     bs->opaque = g_malloc0(drv->instance_size);
+ 
+-    /*
+-     * Yes, BDRV_O_NOCACHE aka O_DIRECT means we have to present a
+-     * write cache to the guest.  We do need the fdatasync to flush
+-     * out transactions for block allocations, and we maybe have a
+-     * volatile write cache in our backing device to deal with.
+-     */
+-    if (flags & (BDRV_O_CACHE_WB|BDRV_O_NOCACHE))
++    if (flags & BDRV_O_CACHE_WB)
+         bs->enable_write_cache = 1;
+ 
+     /*
+diff --git a/block/qcow2.c b/block/qcow2.c
+index bea9ba2..f0859a6 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -231,7 +231,7 @@ static int qcow2_open(BlockDriverState *bs, int flags)
+     }
+ 
+     /* alloc L2 table/refcount block cache */
+-    writethrough = ((flags & BDRV_O_CACHE_MASK) == 0);
++    writethrough = ((flags & BDRV_O_CACHE_WB) == 0);
+     s->l2_table_cache = qcow2_cache_create(bs, L2_CACHE_SIZE, writethrough);
+     s->refcount_block_cache = qcow2_cache_create(bs, REFCOUNT_CACHE_SIZE,
+         writethrough);
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 662aef5..0111eaa 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -190,7 +190,7 @@ static int raw_open_common(BlockDriverState *bs, const char *filename,
+      * and O_DIRECT for no caching. */
+     if ((bdrv_flags & BDRV_O_NOCACHE))
+         s->open_flags |= O_DIRECT;
+-    else if (!(bdrv_flags & BDRV_O_CACHE_WB))
++    if (!(bdrv_flags & BDRV_O_CACHE_WB))
+         s->open_flags |= O_DSYNC;
+ 
+     s->fd = -1;
+diff --git a/block/raw-win32.c b/block/raw-win32.c
+index 7a671cb..9b283e0 100644
+--- a/block/raw-win32.c
++++ b/block/raw-win32.c
+@@ -92,9 +92,9 @@ static int raw_open(BlockDriverState *bs, const char *filename, int flags)
+         create_flags = OPEN_EXISTING;
+     }
+     overlapped = FILE_ATTRIBUTE_NORMAL;
+-    if ((flags & BDRV_O_NOCACHE))
+-        overlapped |= FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH;
+-    else if (!(flags & BDRV_O_CACHE_WB))
++    if (flags & BDRV_O_NOCACHE)
++        overlapped |= FILE_FLAG_NO_BUFFERING;
++    if (!(flags & BDRV_O_CACHE_WB))
+         overlapped |= FILE_FLAG_WRITE_THROUGH;
+     s->hfile = CreateFile(filename, access_flags,
+                           FILE_SHARE_READ, NULL,
+@@ -353,9 +353,9 @@ static int hdev_open(BlockDriverState *bs, const char *filename, int flags)
+     create_flags = OPEN_EXISTING;
+ 
+     overlapped = FILE_ATTRIBUTE_NORMAL;
+-    if ((flags & BDRV_O_NOCACHE))
+-        overlapped |= FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH;
+-    else if (!(flags & BDRV_O_CACHE_WB))
++    if (flags & BDRV_O_NOCACHE)
++        overlapped |= FILE_FLAG_NO_BUFFERING;
++    if (!(flags & BDRV_O_CACHE_WB))
+         overlapped |= FILE_FLAG_WRITE_THROUGH;
+     s->hfile = CreateFile(filename, access_flags,
+                           FILE_SHARE_READ, NULL,
+diff --git a/blockdev.c b/blockdev.c
+index deecfa1..7c509c3 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -418,7 +418,7 @@ DriveInfo *drive_init(QemuOpts *opts, int default_to_scsi)
+ 
+     if ((buf = qemu_opt_get(opts, "cache")) != NULL) {
+         if (!strcmp(buf, "off") || !strcmp(buf, "none")) {
+-            bdrv_flags |= BDRV_O_NOCACHE;
++            bdrv_flags |= BDRV_O_NOCACHE | BDRV_O_CACHE_WB;
+         } else if (!strcmp(buf, "writeback")) {
+             bdrv_flags |= BDRV_O_CACHE_WB;
+         } else if (!strcmp(buf, "unsafe")) {
+diff --git a/qemu-io.c b/qemu-io.c
+index 3a43f6f..6d7ec15 100644
+--- a/qemu-io.c
++++ b/qemu-io.c
+@@ -1413,7 +1413,7 @@ static int open_f(int argc, char **argv)
+             flags |= BDRV_O_SNAPSHOT;
+             break;
+         case 'n':
+-            flags |= BDRV_O_NOCACHE;
++            flags |= BDRV_O_NOCACHE | BDRV_O_CACHE_WB;
+             break;
+         case 'C':
+             flags |= BDRV_O_CREAT;
+@@ -1513,7 +1513,7 @@ int main(int argc, char **argv)
+             flags |= BDRV_O_SNAPSHOT;
+             break;
+         case 'n':
+-            flags |= BDRV_O_NOCACHE;
++            flags |= BDRV_O_NOCACHE | BDRV_O_CACHE_WB;
+             break;
+         case 'c':
+             add_user_command(optarg);
+diff --git a/qemu-nbd.c b/qemu-nbd.c
+index b4f7e5d..643a7b5 100644
+--- a/qemu-nbd.c
++++ b/qemu-nbd.c
+@@ -231,7 +231,7 @@ int main(int argc, char **argv)
+             flags |= BDRV_O_SNAPSHOT;
+             break;
+         case 'n':
+-            flags |= BDRV_O_NOCACHE;
++            flags |= BDRV_O_NOCACHE | BDRV_O_CACHE_WB;
+             break;
+         case 'b':
+             bindto = optarg;
+-- 
+1.7.11.7
+

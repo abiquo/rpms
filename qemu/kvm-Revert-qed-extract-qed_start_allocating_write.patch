@@ -1,0 +1,85 @@
+From 9a01de5482575ffda3ea04f902d478c362c128c3 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:37 +0100
+Subject: [PATCH 10/55] Revert "qed: extract qed_start_allocating_write()"
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <0ab7244bde151e60e8ae10632190406e94e9be38.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38861
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 10/54] Revert "qed: extract qed_start_allocating_write()"
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+This reverts commit 4ca94945dd9fd1887136907f7de0f3030f5d60f7.
+
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/qed.c |   32 ++++++--------------------------
+ 1 files changed, 6 insertions(+), 26 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qed.c |   32 ++++++--------------------------
+ 1 files changed, 6 insertions(+), 26 deletions(-)
+
+diff --git a/block/qed.c b/block/qed.c
+index 87b96cc..03e265f 100644
+--- a/block/qed.c
++++ b/block/qed.c
+@@ -1081,15 +1081,14 @@ static bool qed_should_set_need_check(BDRVQEDState *s)
+ }
+ 
+ /**
+- * Start an allocating write request or queue it
++ * Write new data cluster
+  *
+- * @ret:        true if request can proceed, false if queued
++ * @acb:        Write request
++ * @len:        Length in bytes
+  *
+- * If a request is queued this function returns false and the caller should
+- * return.  When it becomes time for the request to proceed the qed_aio_next()
+- * function will be called.
++ * This path is taken when writing to previously unallocated clusters.
+  */
+-static bool qed_start_allocating_write(QEDAIOCB *acb)
++static void qed_aio_write_alloc(QEDAIOCB *acb, size_t len)
+ {
+     BDRVQEDState *s = acb_to_s(acb);
+ 
+@@ -1104,26 +1103,7 @@ static bool qed_start_allocating_write(QEDAIOCB *acb)
+     }
+     if (acb != QSIMPLEQ_FIRST(&s->allocating_write_reqs) ||
+         s->allocating_write_reqs_plugged) {
+-        return false;
+-    }
+-    return true;
+-}
+-
+-/**
+- * Write new data cluster
+- *
+- * @acb:        Write request
+- * @len:        Length in bytes
+- *
+- * This path is taken when writing to previously unallocated clusters.
+- */
+-static void qed_aio_write_alloc(QEDAIOCB *acb, size_t len)
+-{
+-    BDRVQEDState *s = acb_to_s(acb);
+-    BlockDriverCompletionFunc *cb;
+-
+-    if (!qed_start_allocating_write(acb)) {
+-        return;
++        return; /* wait for existing request to finish */
+     }
+ 
+     acb->cur_nclusters = qed_bytes_to_clusters(s,
+-- 
+1.7.7.6
+

@@ -1,0 +1,128 @@
+From f1294086e341d8cee1e9afc97f81984007703a15 Mon Sep 17 00:00:00 2001
+Message-Id: <f1294086e341d8cee1e9afc97f81984007703a15.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 12 Oct 2012 17:02:31 +0200
+Subject: [PATCH 12/17] virtio-scsi: Report missed events
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1350061351-32590-1-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 43067
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v3 07/10] virtio-scsi: Report missed events
+Bugzilla: 808660
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 808660
+
+When an event is reported but no buffers are present in the event vq,
+we can set a flag and report a dummy event as soon as one is added.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit 64f64855d0ec2c5979f6986d2f52e8861d58e208)
+
+Conflicts:
+	hw/virtio-scsi.c
+---
+ hw/virtio-scsi.c | 54 ++++++++++++++++++++++++++++++++++++------------------
+ 1 file modificato, 36 inserzioni(+), 18 rimozioni(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-scsi.c | 54 ++++++++++++++++++++++++++++++++++++------------------
+ 1 file changed, 36 insertions(+), 18 deletions(-)
+
+diff --git a/hw/virtio-scsi.c b/hw/virtio-scsi.c
+index a67c25d..92d4dac 100644
+--- a/hw/virtio-scsi.c
++++ b/hw/virtio-scsi.c
+@@ -145,6 +145,7 @@ typedef struct {
+     uint32_t sense_size;
+     uint32_t cdb_size;
+     int resetting;
++    bool events_dropped;
+ } VirtIOSCSI;
+ 
+ typedef struct VirtIOSCSIReq {
+@@ -422,10 +423,6 @@ static void virtio_scsi_handle_ctrl(VirtIODevice *vdev, VirtQueue *vq)
+     }
+ }
+ 
+-static void virtio_scsi_handle_event(VirtIODevice *vdev, VirtQueue *vq)
+-{
+-}
+-
+ static void virtio_scsi_command_complete(SCSIRequest *r, uint32_t status,
+                                          int32_t resid)
+ {
+@@ -600,22 +597,34 @@ static void virtio_scsi_push_event(VirtIOSCSI *s, SCSIDevice *dev,
+ {
+     VirtIOSCSIReq *req = virtio_scsi_pop_req(s, s->event_vq);
+     VirtIOSCSIEvent *evt;
++    int in_size;
+ 
+-    if (req) {
+-        int in_size;
+-        if (req->elem.out_num || req->elem.in_num != 1) {
+-            virtio_scsi_bad_req();
+-        }
++    if (!req) {
++        s->events_dropped = true;
++        return;
++    }
+ 
+-        in_size = req->elem.in_sg[0].iov_len;
+-        if (in_size < sizeof(VirtIOSCSIEvent)) {
+-            virtio_scsi_bad_req();
+-        }
++    if (req->elem.out_num || req->elem.in_num != 1) {
++        virtio_scsi_bad_req();
++    }
+ 
+-        evt = req->resp.event;
+-        memset(evt, 0, sizeof(VirtIOSCSIEvent));
+-        evt->event = event;
+-        evt->reason = reason;
++    if (s->events_dropped) {
++        event |= VIRTIO_SCSI_T_EVENTS_MISSED;
++        s->events_dropped = false;
++    }
++
++    in_size = req->elem.in_sg[0].iov_len;
++    if (in_size < sizeof(VirtIOSCSIEvent)) {
++        virtio_scsi_bad_req();
++    }
++
++    evt = req->resp.event;
++    memset(evt, 0, sizeof(VirtIOSCSIEvent));
++    evt->event = event;
++    evt->reason = reason;
++    if (!dev) {
++        assert(event == VIRTIO_SCSI_T_NO_EVENT);
++    } else {
+         evt->lun[0] = 1;
+         evt->lun[1] = dev->id;
+ 
+@@ -624,7 +633,16 @@ static void virtio_scsi_push_event(VirtIOSCSI *s, SCSIDevice *dev,
+             evt->lun[2] = (dev->lun >> 8) | 0x40;
+         }
+         evt->lun[3] = dev->lun & 0xFF;
+-        virtio_scsi_complete_req(req);
++    }
++    virtio_scsi_complete_req(req);
++}
++
++static void virtio_scsi_handle_event(VirtIODevice *vdev, VirtQueue *vq)
++{
++    VirtIOSCSI *s = (VirtIOSCSI *)vdev;
++
++    if (s->events_dropped) {
++        virtio_scsi_push_event(s, NULL, VIRTIO_SCSI_T_NO_EVENT, 0);
+     }
+ }
+ 
+-- 
+1.7.11.7
+

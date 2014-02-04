@@ -1,0 +1,102 @@
+From 2d4d6af5cffac1efb7e97db0ca9db81cfadbad23 Mon Sep 17 00:00:00 2001
+Message-Id: <2d4d6af5cffac1efb7e97db0ca9db81cfadbad23.1351776104.git.minovotn@redhat.com>
+In-Reply-To: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+References: <383c464e74b19af5a4e1e18bb56df969e9d61c2a.1351776104.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Mon, 29 Oct 2012 18:52:36 +0100
+Subject: [PATCH 10/11] pc: generate APIC IDs according to CPU topology
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1351536756-16475-11-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 43757
+O-Subject: [RHEL6.4 qemu-kvm PATCH 10/10] pc: generate APIC IDs according to CPU topology
+Bugzilla: 733720
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+Bugzilla: 733720
+Related TestOnly BZs: 816804, 815958, 782648
+Upstream: submitted
+ Message-Id: <1351101001-14589-28-git-send-email-ehabkost@redhat.com>
+ http://article.gmane.org/gmane.comp.emulators.qemu/177666
+
+This keeps compatibility on machine-types rhel6.3.0 and older, and
+prints a warning in case the requested configuration won't get the
+correct topology.
+
+[RHEL note: instead of using PCInitArgs, use a static variable for
+ compat_contiguous_apic_ids]
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/pc.c | 27 +++++++++++++++++++++++----
+ 1 file changed, 23 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/pc.c | 27 +++++++++++++++++++++++----
+ 1 file changed, 23 insertions(+), 4 deletions(-)
+
+diff --git a/hw/pc.c b/hw/pc.c
+index 2a4022f..443e1aa 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -49,6 +49,7 @@
+ #include "ui/qemu-spice.h"
+ #include "kvmclock.h"
+ #include "bitmap.h"
++#include "topology.h"
+ 
+ /* output Bochs bios info messages */
+ //#define DEBUG_BIOS
+@@ -455,6 +456,14 @@ static void bochs_bios_write(void *opaque, uint32_t addr, uint32_t val)
+     }
+ }
+ 
++
++/* Enable compatibility (buggy) APIC ID generation, that keep APIC IDs
++ * contiguous
++ */
++static bool compat_contiguous_apic_ids;
++/* Warning message about incorrect APIC ID was shown */
++static bool apic_id_warned;
++
+ /* Calculates initial APIC ID for a specific CPU index
+  *
+  * Currently we need to be able to calculate the APIC ID from the CPU index
+@@ -464,10 +473,19 @@ static void bochs_bios_write(void *opaque, uint32_t addr, uint32_t val)
+  */
+ uint32_t apic_id_for_cpu(int cpu_index)
+ {
+-    /* right now APIC ID == CPU index. this will eventually change to use
+-     * the CPU topology configuration properly
+-     */
+-    return cpu_index;
++    uint32_t correct_id;
++
++    correct_id = topo_apicid_for_cpu(smp_cores, smp_threads, cpu_index);
++    if (compat_contiguous_apic_ids) {
++        if (cpu_index != correct_id && !apic_id_warned) {
++            error_report("APIC IDs set in compatibility mode, "
++                         "CPU topology won't match the configuration");
++            apic_id_warned = true;
++        }
++        return cpu_index;
++    } else {
++        return correct_id;
++    }
+ }
+ 
+ /* Returns the limit to APIC ID values
+@@ -1705,6 +1723,7 @@ static void pc_rhel630_compat(void)
+     disable_kvm_pv_eoi();
+     set_pmu_passthrough(true);
+     disable_tsc_deadline();
++    compat_contiguous_apic_ids = true;
+ }
+ 
+ static void pc_rhel620_compat(void)
+-- 
+1.7.11.7
+

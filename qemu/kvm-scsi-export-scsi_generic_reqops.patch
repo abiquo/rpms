@@ -1,0 +1,56 @@
+From 786b8377fb70375623bbedabb848190a518137ce Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:24 +0100
+Subject: [PATCH 068/109] scsi: export scsi_generic_reqops
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-68-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37548
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 067/102] scsi: export scsi_generic_reqops
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 765d1525a6c727674c5f6f459da4fdaeeda91162)
+---
+ hw/scsi-generic.c |    2 +-
+ hw/scsi.h         |    3 +++
+ 2 files changed, 4 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-generic.c |    2 +-
+ hw/scsi.h         |    3 +++
+ 2 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index dda8805..ba8a416 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -426,7 +426,7 @@ static int scsi_generic_initfn(SCSIDevice *s)
+     return 0;
+ }
+ 
+-static const SCSIReqOps scsi_generic_req_ops = {
++const SCSIReqOps scsi_generic_req_ops = {
+     .size         = sizeof(SCSIGenericReq),
+     .free_req     = scsi_free_request,
+     .send_command = scsi_send_command,
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 6670d94..07357f3 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -199,4 +199,7 @@ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense);
+ int scsi_device_get_sense(SCSIDevice *dev, uint8_t *buf, int len, bool fixed);
+ SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int target, int lun);
+ 
++/* scsi-generic.c. */
++extern const SCSIReqOps scsi_generic_req_ops;
++
+ #endif
+-- 
+1.7.7.6
+

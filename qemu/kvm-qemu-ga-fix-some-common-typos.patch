@@ -1,0 +1,84 @@
+From 31dda02025cc46091cc2bdbd05f3625a9debc62c Mon Sep 17 00:00:00 2001
+Message-Id: <31dda02025cc46091cc2bdbd05f3625a9debc62c.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:34 +0200
+Subject: [PATCH 25/41] qemu-ga: fix some common typos
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-20-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39916
+O-Subject: [PATCH RHEL6.4 qemu-kvm 19/36] qemu-ga: fix some common typos
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Partial backport of upstream commit a31f053129f378ff0e8f6e855b3f35d21143b9ef.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qapi-schema-guest.json | 2 +-
+ qemu-ga.c              | 2 +-
+ qga/commands-posix.c   | 4 ++--
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |    2 +-
+ qemu-ga.c              |    2 +-
+ qga/commands-posix.c   |    4 ++--
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index d7a073e..692b570 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -18,7 +18,7 @@
+ # lexer/tokenizer/parser state should be flushed/reset in
+ # preparation for reliably receiving the subsequent response. As
+ # an optimization, clients may opt to ignore all data until a
+-# sentinel value is receiving to avoid unecessary processing of
++# sentinel value is receiving to avoid unnecessary processing of
+ # stale data.
+ #
+ # Similarly, clients should also precede this *request*
+diff --git a/qemu-ga.c b/qemu-ga.c
+index 216be39..680997e 100644
+--- a/qemu-ga.c
++++ b/qemu-ga.c
+@@ -304,7 +304,7 @@ static void ga_disable_non_whitelisted(void)
+     g_free(list_head);
+ }
+ 
+-/* [re-]enable all commands, except those explictly blacklisted by user */
++/* [re-]enable all commands, except those explicitly blacklisted by user */
+ static void ga_enable_non_blacklisted(GList *blacklist)
+ {
+     char **list_head, **list;
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index c2144a4..947b9c8 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -522,7 +522,7 @@ int64_t qmp_guest_fsfreeze_thaw(Error **err)
+          * was returned the filesystem was *not* unfrozen by that particular
+          * call.
+          *
+-         * since multiple preceeding FIFREEZEs require multiple calls to FITHAW
++         * since multiple preceding FIFREEZEs require multiple calls to FITHAW
+          * to unfreeze, continuing issuing FITHAW until an error is returned,
+          * in which case either the filesystem is in an unfreezable state, or,
+          * more likely, it was thawed previously (and remains so afterward).
+@@ -824,7 +824,7 @@ GuestNetworkInterfaceList *qmp_guest_network_get_interfaces(Error **errp)
+             strncpy(ifr.ifr_name,  info->value->name, IF_NAMESIZE);
+             if (ioctl(sock, SIOCGIFHWADDR, &ifr) == -1) {
+                 snprintf(err_msg, sizeof(err_msg),
+-                         "failed to get MAC addres of %s: %s",
++                         "failed to get MAC addresss of %s: %s",
+                          ifa->ifa_name,
+                          strerror(errno));
+                 error_set(errp, QERR_QGA_COMMAND_FAILED, err_msg);
+-- 
+1.7.10.4
+

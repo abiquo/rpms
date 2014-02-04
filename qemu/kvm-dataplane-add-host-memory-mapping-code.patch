@@ -1,0 +1,272 @@
+From a2e778d77ff20d4cf600d45b91f4b181cd550399 Mon Sep 17 00:00:00 2001
+Message-Id: <a2e778d77ff20d4cf600d45b91f4b181cd550399.1357726992.git.minovotn@redhat.com>
+In-Reply-To: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+References: <4f8efce613a639a3c1e3022c521d6c70b7154de8.1357726992.git.minovotn@redhat.com>
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Wed, 2 Jan 2013 15:02:27 +0100
+Subject: [PATCH 04/16] dataplane: add host memory mapping code
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1357138959-1918-5-git-send-email-stefanha@redhat.com>
+Patchwork-id: 45517
+O-Subject: [RHEL6.4 qemu-kvm PATCH v5 04/16] dataplane: add host memory mapping code
+Bugzilla: 877836
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+The data plane thread needs to map guest physical addresses to host
+pointers.  Normally this is done with cpu_physical_memory_map() but the
+function assumes the global mutex is held.  The data plane thread does
+not touch the global mutex and therefore needs a thread-safe memory
+mapping mechanism.
+
+Hostmem registers a CPUPhysMemoryClient similar to how vhost collects
+and pushes memory region information into the kernel.  There is a
+fine-grained lock on the regions list which is held during lookup and
+when updating the regions list.
+
+When the physical memory map changes the .set_memory() callback is
+invoked.  It updates the regions list in-place by removing, merging,
+splitting, or adding regions.
+
+This patch implements Hostmem for RHEL differently from upstream.  Since
+MemoryListener and the memory API is not available in RHEL we use the
+vhost's CPUPhysMemoryClient approach.
+
+Note that the VGA region is skipped since dirty logging is not
+implemented by Hostmem and we don't expect to DMA into VGA memory.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ Makefile.target        |   3 +-
+ configure              |   1 +
+ hw/dataplane/hostmem.c | 124 +++++++++++++++++++++++++++++++++++++++++++++++++
+ hw/dataplane/hostmem.h |  41 ++++++++++++++++
+ 4 files changed, 168 insertions(+), 1 deletion(-)
+ create mode 100644 hw/dataplane/hostmem.c
+ create mode 100644 hw/dataplane/hostmem.h
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.target        |   3 +-
+ configure              |   1 +
+ hw/dataplane/hostmem.c | 124 +++++++++++++++++++++++++++++++++++++++++++++++++
+ hw/dataplane/hostmem.h |  41 ++++++++++++++++
+ 4 files changed, 168 insertions(+), 1 deletion(-)
+ create mode 100644 hw/dataplane/hostmem.c
+ create mode 100644 hw/dataplane/hostmem.h
+
+diff --git a/Makefile.target b/Makefile.target
+index a094bbc..3390b97 100644
+--- a/Makefile.target
++++ b/Makefile.target
+@@ -209,6 +209,7 @@ obj-y += virtio-scsi.o event_notifier.o
+ obj-y += vhost_net.o
+ obj-$(CONFIG_VHOST_NET) += vhost.o
+ obj-$(CONFIG_KVM) += kvm.o kvm-all.o hyperv.o
++obj-$(CONFIG_VIRTIO_BLK_DATA_PLANE) += dataplane/hostmem.o
+ # MSI-X depends on kvm for interrupt injection,
+ # so moved it from Makefile.hw to Makefile.target for now
+ obj-y += msix.o
+@@ -423,7 +424,7 @@ qemu-monitor.h: $(SRC_PATH)/qemu-monitor.hx
+ 
+ clean:
+ 	rm -f *.o *.a *~ $(PROGS) nwfpe/*.o fpu/*.o
+-	rm -f *.d */*.d tcg/*.o ide/*.o
++	rm -f *.d */*.d tcg/*.o ide/*.o dataplane/*.o
+ 	rm -f qemu-options.def qemu-monitor.h gdbstub-xml.c
+ ifdef CONFIG_SYSTEMTAP_TRACE
+ 	rm -f *.stp
+diff --git a/configure b/configure
+index f8c15bb..a82cfd5 100755
+--- a/configure
++++ b/configure
+@@ -2756,6 +2756,7 @@ mkdir -p $target_dir
+ mkdir -p $target_dir/fpu
+ mkdir -p $target_dir/tcg
+ mkdir -p $target_dir/ide
++mkdir -p $target_dir/dataplane
+ if test "$target" = "arm-linux-user" -o "$target" = "armeb-linux-user" -o "$target" = "arm-bsd-user" -o "$target" = "armeb-bsd-user" ; then
+   mkdir -p $target_dir/nwfpe
+ fi
+diff --git a/hw/dataplane/hostmem.c b/hw/dataplane/hostmem.c
+new file mode 100644
+index 0000000..844db97
+--- /dev/null
++++ b/hw/dataplane/hostmem.c
+@@ -0,0 +1,124 @@
++/*
++ * Thread-safe guest to host memory mapping
++ *
++ * Copyright 2012 Red Hat, Inc. and/or its affiliates
++ *
++ * Authors:
++ *   Stefan Hajnoczi <stefanha@redhat.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or later.
++ * See the COPYING file in the top-level directory.
++ *
++ */
++
++#include <linux/vhost.h>
++#include "hw/pci.h" /* for range_*() helper functions */
++#include "hw/vhost.h"
++#include "hostmem.h"
++
++/**
++ * Map guest physical address to host pointer
++ */
++void *hostmem_lookup(HostMem *hostmem, uint64_t phys, uint64_t len,
++                     bool is_write)
++{
++    struct vhost_memory_region *found = NULL;
++    void *host_addr = NULL;
++    uint64_t offset_within_region;
++    unsigned int i;
++
++    is_write = is_write; /*r/w information is currently not tracked */
++
++    qemu_mutex_lock(&hostmem->mem_lock);
++    for (i = 0; i < hostmem->mem->nregions; i++) {
++        struct vhost_memory_region *region = &hostmem->mem->regions[i];
++
++        if (range_covers_byte(region->guest_phys_addr,
++                              region->memory_size,
++                              phys)) {
++            found = region;
++            break;
++        }
++    }
++    if (!found) {
++        goto out;
++    }
++    offset_within_region = phys - found->guest_phys_addr;
++    if (len <= found->memory_size - offset_within_region) {
++        host_addr = (void*)(uintptr_t)(found->userspace_addr +
++                                       offset_within_region);
++    }
++out:
++    qemu_mutex_unlock(&hostmem->mem_lock);
++
++    return host_addr;
++}
++
++static void hostmem_client_set_memory(CPUPhysMemoryClient *client,
++                                      target_phys_addr_t start_addr,
++                                      ram_addr_t size,
++                                      ram_addr_t phys_offset)
++{
++    HostMem *hostmem = container_of(client, HostMem, client);
++    ram_addr_t flags = phys_offset & ~TARGET_PAGE_MASK;
++    size_t s = offsetof(struct vhost_memory, regions) +
++               (hostmem->mem->nregions + 1) * sizeof hostmem->mem->regions[0];
++
++    /* TODO: this is a hack.
++     * At least one vga card (cirrus) changes the gpa to hva
++     * memory maps on data path, which slows us down.
++     * Since we should never need to DMA into VGA memory
++     * anyway, lets just skip these regions. */
++    if (ranges_overlap(start_addr, size, 0xa0000, 0x10000)) {
++        return;
++    }
++
++    qemu_mutex_lock(&hostmem->mem_lock);
++
++    hostmem->mem = qemu_realloc(hostmem->mem, s);
++
++    assert(size);
++
++    vhost_mem_unassign_memory(hostmem->mem, start_addr, size);
++    if (flags == IO_MEM_RAM) {
++        /* Add given mapping, merging adjacent regions if any */
++        vhost_mem_assign_memory(hostmem->mem, start_addr, size,
++                                (uintptr_t)qemu_get_ram_ptr(phys_offset));
++    }
++
++    qemu_mutex_unlock(&hostmem->mem_lock);
++}
++
++static int hostmem_client_sync_dirty_bitmap(struct CPUPhysMemoryClient *client,
++                                            target_phys_addr_t start_addr,
++                                            target_phys_addr_t end_addr)
++{
++    return 0;
++}
++
++static int hostmem_client_migration_log(struct CPUPhysMemoryClient *client,
++                                        int enable)
++{
++    return 0;
++}
++
++void hostmem_init(HostMem *hostmem)
++{
++    memset(hostmem, 0, sizeof(*hostmem));
++
++    qemu_mutex_init(&hostmem->mem_lock);
++
++    hostmem->mem = qemu_mallocz(sizeof(*hostmem->mem));
++
++    hostmem->client.set_memory = hostmem_client_set_memory;
++    hostmem->client.sync_dirty_bitmap = hostmem_client_sync_dirty_bitmap;
++    hostmem->client.migration_log = hostmem_client_migration_log;
++    cpu_register_phys_memory_client(&hostmem->client);
++}
++
++void hostmem_finalize(HostMem *hostmem)
++{
++    cpu_unregister_phys_memory_client(&hostmem->client);
++    qemu_mutex_destroy(&hostmem->mem_lock);
++    qemu_free(hostmem->mem);
++}
+diff --git a/hw/dataplane/hostmem.h b/hw/dataplane/hostmem.h
+new file mode 100644
+index 0000000..6a1aa05
+--- /dev/null
++++ b/hw/dataplane/hostmem.h
+@@ -0,0 +1,41 @@
++/*
++ * Thread-safe guest to host memory mapping
++ *
++ * Copyright 2012 Red Hat, Inc. and/or its affiliates
++ *
++ * Authors:
++ *   Stefan Hajnoczi <stefanha@redhat.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2 or later.
++ * See the COPYING file in the top-level directory.
++ *
++ */
++
++#ifndef HOSTMEM_H
++#define HOSTMEM_H
++
++#include "hw/hw.h"
++#include "qemu-thread.h"
++
++struct vhost_memory;
++typedef struct {
++    CPUPhysMemoryClient client;
++    QemuMutex mem_lock;
++    struct vhost_memory *mem;
++} HostMem;
++
++void hostmem_init(HostMem *hostmem);
++void hostmem_finalize(HostMem *hostmem);
++
++/**
++ * Map a guest physical address to a pointer
++ *
++ * Note that there is no map/unmap mechanism here.  The caller must ensure that
++ * mapped memory is no longer used across events like hot memory unplug.  This
++ * can be done with other mechanisms like bdrv_drain_all() that quiesce
++ * in-flight I/O.
++ */
++void *hostmem_lookup(HostMem *hostmem, uint64_t phys, uint64_t len,
++                     bool is_write);
++
++#endif /* HOSTMEM_H */
+-- 
+1.7.11.7
+

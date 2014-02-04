@@ -1,0 +1,50 @@
+From e559eec1135eb5c20e82d1b19d5c4ed665fc60ed Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:43:57 -0500
+Subject: [PATCH 30/98] qapi: test schema used for unit tests
+
+This is how QMP commands/parameters/types would be defined. We use a
+subset of that functionality here to implement functions/types for unit
+testing.
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@gmail.com>
+(cherry picked from commit 501e5104490fca89ad31e6a430e2cf01f928d5d1)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-test.json |   22 ++++++++++++++++++++++
+ 1 files changed, 22 insertions(+), 0 deletions(-)
+ create mode 100644 qapi-schema-test.json
+
+diff --git a/qapi-schema-test.json b/qapi-schema-test.json
+new file mode 100644
+index 0000000..3acedad
+--- /dev/null
++++ b/qapi-schema-test.json
+@@ -0,0 +1,22 @@
++# *-*- Mode: Python -*-*
++
++# for testing enums
++{ 'enum': 'EnumOne',
++  'data': [ 'value1', 'value2', 'value3' ] }
++{ 'type': 'NestedEnumsOne',
++  'data': { 'enum1': 'EnumOne', '*enum2': 'EnumOne', 'enum3': 'EnumOne', '*enum4': 'EnumOne' } }
++
++# for testing nested structs
++{ 'type': 'UserDefOne',
++  'data': { 'integer': 'int', 'string': 'str' } }
++
++{ 'type': 'UserDefTwo',
++  'data': { 'string': 'str',
++            'dict': { 'string': 'str',
++                      'dict': { 'userdef': 'UserDefOne', 'string': 'str' },
++                      '*dict2': { 'userdef': 'UserDefOne', 'string': 'str' } } } }
++
++# testing commands
++{ 'command': 'user_def_cmd', 'data': {} }
++{ 'command': 'user_def_cmd1', 'data': {'ud1a': 'UserDefOne'} }
++{ 'command': 'user_def_cmd2', 'data': {'ud1a': 'UserDefOne', 'ud1b': 'UserDefOne'}, 'returns': 'UserDefTwo' }
+-- 
+1.7.7.6
+

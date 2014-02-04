@@ -1,0 +1,54 @@
+From 3dc99361305446a742f649559d0e0942e52e77ef Mon Sep 17 00:00:00 2001
+Message-Id: <3dc99361305446a742f649559d0e0942e52e77ef.1347457394.git.minovotn@redhat.com>
+In-Reply-To: <5d2ec4d8ecd7ab6bd4a62bec6b2f63577549b3bd.1347457394.git.minovotn@redhat.com>
+References: <5d2ec4d8ecd7ab6bd4a62bec6b2f63577549b3bd.1347457394.git.minovotn@redhat.com>
+From: Markus Armbruster <armbru@redhat.com>
+Date: Thu, 6 Sep 2012 08:55:52 +0200
+Subject: [PATCH 4/6] vl: Tighten parsing of -m argument
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1346921754-12722-2-git-send-email-armbru@redhat.com>
+Patchwork-id: 41697
+O-Subject: [RHEL-6.4 PATCH qemu-kvm 1/3] vl: Tighten parsing of -m argument
+Bugzilla: 755594
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+
+strtosz_suffix() fails unless the size is followed by 0, whitespace or
+','.  Useless here, because we need to fail for any junk following the
+size, even if it starts with whitespace or ','.  Check manually.
+Things like "-m 1024," are now caught.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 961b42b9dc858936f32effc3f47c76b1c4e7de56)
+---
+ vl.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vl.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/vl.c b/vl.c
+index f366eb3..4280a83 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5439,9 +5439,10 @@ int main(int argc, char **argv, char **envp)
+                 break;
+             case QEMU_OPTION_m: {
+                 int64_t value;
++                char *end;
+ 
+-                value = strtosz(optarg, NULL);
+-                if (value < 0) {
++                value = strtosz(optarg, &end);
++                if (value < 0 || *end) {
+                     fprintf(stderr, "qemu: invalid ram size: %s\n", optarg);
+                     exit(1);
+                 }
+-- 
+1.7.11.4
+

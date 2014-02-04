@@ -1,0 +1,107 @@
+From 7edab18257e48e96c7bf75a7a009723414e2c3d3 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:43 +0100
+Subject: [PATCH 18/99] vmdk: Fix COW
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-19-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37210
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 18/96] vmdk: Fix COW
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+When trying to do COW, VMDK wrote the data back to the backing file. This
+problem was revealed by the patch that made backing files read-only. This patch
+does not only fix the problem, but also simplifies the VMDK code a bit.
+
+This fixes the backing file qemu-iotests cases for VMDK.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit c336500df5bf08492f4e7796b2193cd4976f3548)
+---
+ block/vmdk.c |   35 +++++++++++------------------------
+ 1 files changed, 11 insertions(+), 24 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/vmdk.c |   35 +++++++++++------------------------
+ 1 files changed, 11 insertions(+), 24 deletions(-)
+
+diff --git a/block/vmdk.c b/block/vmdk.c
+index b92efdb..95165ca 100644
+--- a/block/vmdk.c
++++ b/block/vmdk.c
+@@ -87,14 +87,6 @@ typedef struct VmdkMetaData {
+     int valid;
+ } VmdkMetaData;
+ 
+-typedef struct ActiveBDRVState{
+-    BlockDriverState *hd;            // active image handler
+-    uint64_t cluster_offset;         // current write offset
+-}ActiveBDRVState;
+-
+-static ActiveBDRVState activeBDRV;
+-
+-
+ static int vmdk_probe(const uint8_t *buf, int buf_size, const char *filename)
+ {
+     uint32_t magic;
+@@ -492,30 +484,28 @@ static uint64_t get_cluster_offset(BlockDriverState *bs, VmdkMetaData *m_data,
+ static int get_whole_cluster(BlockDriverState *bs, uint64_t cluster_offset,
+                              uint64_t offset, int allocate)
+ {
+-    uint64_t parent_cluster_offset;
+     BDRVVmdkState *s = bs->opaque;
+     uint8_t  whole_grain[s->cluster_sectors*512];        // 128 sectors * 512 bytes each = grain size 64KB
+ 
+     // we will be here if it's first write on non-exist grain(cluster).
+     // try to read from parent image, if exist
+     if (bs->backing_hd) {
+-        BDRVVmdkState *ps = bs->backing_hd->opaque;
++        int ret;
+ 
+         if (!vmdk_is_cid_valid(bs))
+             return -1;
+ 
+-        parent_cluster_offset = get_cluster_offset(bs->backing_hd, NULL,
+-            offset, allocate);
+-
+-        if (parent_cluster_offset) {
+-            BDRVVmdkState *act_s = activeBDRV.hd->opaque;
+-
+-            if (bdrv_pread(ps->hd, parent_cluster_offset, whole_grain, ps->cluster_sectors*512) != ps->cluster_sectors*512)
+-                return -1;
++        ret = bdrv_read(bs->backing_hd, offset >> 9, whole_grain,
++            s->cluster_sectors);
++        if (ret < 0) {
++            return -1;
++        }
+ 
+-            //Write grain only into the active image
+-            if (bdrv_pwrite(act_s->hd, activeBDRV.cluster_offset << 9, whole_grain, sizeof(whole_grain)) != sizeof(whole_grain))
+-                return -1;
++        //Write grain only into the active image
++        ret = bdrv_write(s->hd, cluster_offset, whole_grain,
++            s->cluster_sectors);
++        if (ret < 0) {
++            return -1;
+         }
+     }
+     return 0;
+@@ -601,9 +591,6 @@ static uint64_t get_cluster_offset(BlockDriverState *bs, VmdkMetaData *m_data,
+             cluster_offset >>= 9;
+             tmp = cpu_to_le32(cluster_offset);
+             l2_table[l2_index] = tmp;
+-            // Save the active image state
+-            activeBDRV.cluster_offset = cluster_offset;
+-            activeBDRV.hd = bs;
+         }
+         /* First of all we write grain itself, to avoid race condition
+          * that may to corrupt the image.
+-- 
+1.7.7.5
+

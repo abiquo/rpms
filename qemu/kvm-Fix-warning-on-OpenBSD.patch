@@ -1,0 +1,48 @@
+From 8d24cc71d5dffb71e557331d40e4fa0cc571ba1c Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:09 +0100
+Subject: [PATCH 15/52] Fix warning on OpenBSD
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-16-git-send-email-armbru@redhat.com>
+Patchwork-id: 36576
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 15/52] Fix warning on OpenBSD
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Blue Swirl <blauwirbel@gmail.com>
+
+/src/qemu/net.c: In function `net_check_clients':
+/src/qemu/net.c:1287: warning: `has_nic' might be used uninitialized in this function
+/src/qemu/net.c:1287: warning: `has_host_dev' might be used uninitialized in this function
+
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 64e69d50a394a48de7607f178d53c192443f9066)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ net.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ net.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/net.c b/net.c
+index 4a13bfd..28103e1 100644
+--- a/net.c
++++ b/net.c
+@@ -1363,7 +1363,7 @@ void net_check_clients(void)
+ {
+     VLANState *vlan;
+     VLANClientState *vc;
+-    int has_nic, has_host_dev;
++    int has_nic = 0, has_host_dev = 0;
+ 
+     QTAILQ_FOREACH(vlan, &vlans, next) {
+         QTAILQ_FOREACH(vc, &vlan->clients, next) {
+-- 
+1.7.7.5
+

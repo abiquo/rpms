@@ -1,0 +1,33 @@
+From 2261744890ce580264b10e8ee3149c7e60c6b39a Mon Sep 17 00:00:00 2001
+Message-Id: <2261744890ce580264b10e8ee3149c7e60c6b39a.1355928222.git.minovotn@redhat.com>
+In-Reply-To: <5bb1efba7d5e7913c8641db9d9acc3ed80e03ed7.1355928222.git.minovotn@redhat.com>
+References: <5bb1efba7d5e7913c8641db9d9acc3ed80e03ed7.1355928222.git.minovotn@redhat.com>
+From: Blue Swirl <blauwirbel@gmail.com>
+Date: Thu, 13 Dec 2012 09:25:19 +0100
+Subject: [PATCH 3/6] vmmouse: fix queue_size field initialization
+
+Initialize the field queue_size, dropped by
+91c9e09147ba1f3604a3d5d29b4de7702082a33f.
+
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 8668f61d20eac971d116ebbe8436b4ae963884a8)
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/vmmouse.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hw/vmmouse.c b/hw/vmmouse.c
+index fca16f6..3778225 100644
+--- a/hw/vmmouse.c
++++ b/hw/vmmouse.c
+@@ -275,6 +275,7 @@ static void vmmouse_reset(void *opaque)
+     VMMouseState *s = opaque;
+ 
+     s->status = 0xffff;
++    s->queue_size = VMMOUSE_QUEUE_SIZE;
+ }
+ 
+ void *vmmouse_init(void *m)
+-- 
+1.7.11.7
+

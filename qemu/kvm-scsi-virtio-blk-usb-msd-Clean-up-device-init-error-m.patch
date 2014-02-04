@@ -1,0 +1,155 @@
+From 5c485f986681be6bf544163418682aaf6dd47169 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Mon, 9 Jan 2012 13:37:36 +0100
+Subject: [PATCH 9/9] scsi virtio-blk usb-msd: Clean up device init error
+ messages
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326116256-3685-10-git-send-email-armbru@redhat.com>
+Patchwork-id: 36283
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 9/9] scsi virtio-blk usb-msd: Clean up device init error messages
+Bugzilla: 737879
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+Replace
+
+    error_report("DEVICE-NAME: MESSAGE");
+
+by just
+
+    error_report("MESSAGE");
+
+in block device init functions.
+
+DEVICE-NAME is bogus in some cases: it's "scsi-disk" for device
+scsi-hd and scsi-cd, "virtio-blk-pci" for virtio-blk-s390, and
+"usb-msd" for usb-storage.
+
+There is no real need to put a device name in the message, because
+error_report() points to the offending command line option already:
+
+$ qemu-system-x86_64 --nodefaults --enable-kvm -vnc :0 -S -monitor stdio -usb -device virtio-blk-pci
+upstream-qemu: -device virtio-blk-pci: virtio-blk-pci: drive property not set
+upstream-qemu: -device virtio-blk-pci: Device 'virtio-blk-pci' could not be initialized
+
+And for a monitor command, it's obvious anyway:
+
+$ qemu-system-x86_64 --nodefaults --enable-kvm -vnc :0 -S -monitor stdio -usb
+(qemu) device_add virtio-blk-pci
+virtio-blk-pci: drive property not set
+Device 'virtio-blk-pci' could not be initialized
+
+Reported-by: Amit Shah <amit.shah@redhat.com>
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+(cherry picked from commit 6a84cb1f2822e494839b93dd8c7f7f8fa6c261a9)
+
+Conflicts:
+
+	hw/scsi-disk.c
+	hw/scsi-generic.c
+---
+ hw/scsi-disk.c    |    4 ++--
+ hw/scsi-generic.c |    8 ++++----
+ hw/usb-msd.c      |    2 +-
+ hw/virtio-blk.c   |    2 +-
+ 4 files changed, 8 insertions(+), 8 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c    |    4 ++--
+ hw/scsi-generic.c |    8 ++++----
+ hw/usb-msd.c      |    2 +-
+ hw/virtio-blk.c   |    2 +-
+ 4 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 73c6750..bc698d7 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1261,7 +1261,7 @@ static int scsi_initfn(SCSIDevice *dev, uint8_t scsi_type)
+     }
+ 
+     if (!s->qdev.conf.bs) {
+-        error_report("scsi-disk: drive property not set");
++        error_report("drive property not set");
+         return -1;
+     }
+     s->bs = s->qdev.conf.bs;
+@@ -1284,7 +1284,7 @@ static int scsi_initfn(SCSIDevice *dev, uint8_t scsi_type)
+     }
+ 
+     if (bdrv_is_sg(s->bs)) {
+-        error_report("scsi-disk: unwanted /dev/sg*");
++        error_report("unwanted /dev/sg*");
+         return -1;
+     }
+ 
+diff --git a/hw/scsi-generic.c b/hw/scsi-generic.c
+index 3ae3a5f..210f3e5 100644
+--- a/hw/scsi-generic.c
++++ b/hw/scsi-generic.c
+@@ -441,14 +441,14 @@ static int scsi_generic_initfn(SCSIDevice *dev)
+     struct sg_scsi_id scsiid;
+ 
+     if (!s->qdev.conf.bs) {
+-        error_report("scsi-generic: drive property not set");
++        error_report("drive property not set");
+         return -1;
+     }
+     s->bs = s->qdev.conf.bs;
+ 
+     /* check we are really using a /dev/sg* file */
+     if (!bdrv_is_sg(s->bs)) {
+-        error_report("scsi-generic: not /dev/sg*");
++        error_report("not /dev/sg*");
+         return -1;
+     }
+ 
+@@ -464,13 +464,13 @@ static int scsi_generic_initfn(SCSIDevice *dev)
+     /* check we are using a driver managing SG_IO (version 3 and after */
+     if (bdrv_ioctl(s->bs, SG_GET_VERSION_NUM, &sg_version) < 0 ||
+         sg_version < 30000) {
+-        error_report("scsi-generic: scsi generic interface too old");
++        error_report("scsi generic interface too old");
+         return -1;
+     }
+ 
+     /* get LUN of the /dev/sg? */
+     if (bdrv_ioctl(s->bs, SG_GET_SCSI_ID, &scsiid)) {
+-        error_report("scsi-generic: SG_GET_SCSI_ID ioctl failed");
++        error_report("SG_GET_SCSI_ID ioctl failed");
+         return -1;
+     }
+ 
+diff --git a/hw/usb-msd.c b/hw/usb-msd.c
+index 30e103b..5b15821 100644
+--- a/hw/usb-msd.c
++++ b/hw/usb-msd.c
+@@ -513,7 +513,7 @@ static int usb_msd_initfn(USBDevice *dev)
+     DriveInfo *dinfo;
+ 
+     if (!bs) {
+-        error_report("usb-msd: drive property not set");
++        error_report("drive property not set");
+         return -1;
+     }
+ 
+diff --git a/hw/virtio-blk.c b/hw/virtio-blk.c
+index 7466cf7..d520a38 100644
+--- a/hw/virtio-blk.c
++++ b/hw/virtio-blk.c
+@@ -559,7 +559,7 @@ VirtIODevice *virtio_blk_init(DeviceState *dev, BlockConf *conf)
+     DriveInfo *dinfo;
+ 
+     if (!conf->bs) {
+-        error_report("virtio-blk-pci: drive property not set");
++        error_report("drive property not set");
+         return NULL;
+     }
+     if (!bdrv_is_inserted(conf->bs)) {
+-- 
+1.7.7.4
+

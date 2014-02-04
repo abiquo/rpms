@@ -1,0 +1,69 @@
+From a3d932f2bb1b730d4ea384401bd5355a81abe5a7 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Thu, 15 Dec 2011 10:39:53 +0100
+Subject: [PATCH 1/2] usb-hub: implement reset
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1323945593-30851-3-git-send-email-kraxel@redhat.com>
+Patchwork-id: 35827
+O-Subject: [RHEL-6.3 qemu-kvm PATCH 2/2] usb-hub: implement reset
+Bugzilla: 767499
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+based on a patch from hkran@linux.vnet.ibm.com
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 20d183b6f0e14424d245493e7bc6fd6d14a08436)
+---
+ hw/usb-hub.c |   20 +++++++++++++++++---
+ 1 files changed, 17 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-hub.c |   20 +++++++++++++++++---
+ 1 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/hw/usb-hub.c b/hw/usb-hub.c
+index 277f656..94880b5 100644
+--- a/hw/usb-hub.c
++++ b/hw/usb-hub.c
+@@ -220,7 +220,22 @@ static void usb_hub_complete(USBPort *port, USBPacket *packet)
+ 
+ static void usb_hub_handle_reset(USBDevice *dev)
+ {
+-    /* XXX: do it */
++    USBHubState *s = DO_UPCAST(USBHubState, dev, dev);
++    USBHubPort *port;
++    int i;
++
++    for (i = 0; i < NUM_PORTS; i++) {
++        port = s->ports + i;
++        port->wPortStatus = PORT_STAT_POWER;
++        port->wPortChange = 0;
++        if (port->port.dev && port->port.dev->attached) {
++            port->wPortStatus |= PORT_STAT_CONNECTION;
++            port->wPortChange |= PORT_STAT_C_CONNECTION;
++            if (port->port.dev->speed == USB_SPEED_LOW) {
++                port->wPortStatus |= PORT_STAT_LOW_SPEED;
++            }
++        }
++    }
+ }
+ 
+ static int usb_hub_handle_control(USBDevice *dev, USBPacket *p,
+@@ -493,9 +508,8 @@ static int usb_hub_initfn(USBDevice *dev)
+                           &port->port, s, i, &usb_hub_port_ops,
+                           USB_SPEED_MASK_LOW | USB_SPEED_MASK_FULL);
+         usb_port_location(&port->port, dev->port, i+1);
+-        port->wPortStatus = PORT_STAT_POWER;
+-        port->wPortChange = 0;
+     }
++    usb_hub_handle_reset(dev);
+     return 0;
+ }
+ 
+-- 
+1.7.7.4
+

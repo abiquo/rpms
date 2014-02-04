@@ -1,0 +1,50 @@
+From 4e7ccea80d3f99706b325f17390eeba958eb4bd5 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:24 +0100
+Subject: [PATCH 30/52] Fix warning about uninitialized variable
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-31-git-send-email-armbru@redhat.com>
+Patchwork-id: 36608
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 30/52] Fix warning about uninitialized variable
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Blue Swirl <blauwirbel@gmail.com>
+
+With gcc 4.2.1-sjlj (mingw32-2) I get this warning:
+/src/qemu/exec.c: In function 'qemu_ram_alloc':
+/src/qemu/exec.c:2777: warning: 'offset' may be used uninitialized in this function
+
+Fix by initializing the variable.
+
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 09d7ae9000fe27d1861cb0348cbf71563ded6148)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ exec.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ exec.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/exec.c b/exec.c
+index cddd04e..58cc70e 100644
+--- a/exec.c
++++ b/exec.c
+@@ -2654,7 +2654,7 @@ extern int disable_KSM;
+ static ram_addr_t find_ram_offset(ram_addr_t size)
+ {
+     RAMBlock *block, *next_block;
+-    ram_addr_t offset, mingap = ULONG_MAX;
++    ram_addr_t offset = 0, mingap = ULONG_MAX;
+ 
+     if (QLIST_EMPTY(&ram_list.blocks))
+         return 0;
+-- 
+1.7.7.5
+

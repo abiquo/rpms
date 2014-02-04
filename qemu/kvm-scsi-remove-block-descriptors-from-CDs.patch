@@ -1,0 +1,46 @@
+From 387c6a92c93fd5317cd659a57ed20d8991ebaf20 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:12:32 +0100
+Subject: [PATCH 076/109] scsi: remove block descriptors from CDs
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-76-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37553
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 075/102] scsi: remove block descriptors from CDs
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Reported-by: Thomas Schmitt <scdbackup@gmx.net>
+Tested-by: Thomas Schmitt <scdbackup@gmx.net>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 0fd76ff40b43f5c9f02086a8d53c6157fc0d94a0)
+---
+ hw/scsi-disk.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-disk.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index e62958c..289de5a 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -960,8 +960,9 @@ static int scsi_disk_emulate_mode_sense(SCSIDiskReq *r, uint8_t *outbuf)
+         p += 8;
+     }
+ 
++    /* MMC prescribes that CD/DVD drives have no block descriptors.  */
+     bdrv_get_geometry(s->qdev.conf.bs, &nb_sectors);
+-    if (!dbd && nb_sectors) {
++    if (!dbd && s->qdev.type == TYPE_DISK && nb_sectors) {
+         if (r->req.cmd.buf[0] == MODE_SENSE) {
+             outbuf[3] = 8; /* Block descriptor length  */
+         } else { /* MODE_SENSE_10 */
+-- 
+1.7.7.6
+

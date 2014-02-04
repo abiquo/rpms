@@ -1,0 +1,52 @@
+From 5c13504865d30acaac3a72cf694ea340fd04a8c5 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:13:54 +0100
+Subject: [PATCH 29/99] raw-posix: Fix bdrv_flush error return values
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-30-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37230
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 29/96] raw-posix: Fix bdrv_flush error return values
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+bdrv_flush is supposed to use 0/-errno return values
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 074abad3264bf2bb7cfd279b7457416b318716ca)
+---
+ block/raw-posix.c |    9 ++++++++-
+ 1 files changed, 8 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/raw-posix.c |    9 ++++++++-
+ 1 files changed, 8 insertions(+), 1 deletions(-)
+
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 87977cb..beef064 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -776,7 +776,14 @@ static int raw_create(const char *filename, QEMUOptionParameter *options)
+ static int raw_flush(BlockDriverState *bs)
+ {
+     BDRVRawState *s = bs->opaque;
+-    return qemu_fdatasync(s->fd);
++    int ret;
++
++    ret = qemu_fdatasync(s->fd);
++    if (ret < 0) {
++        return -errno;
++    }
++
++    return 0;
+ }
+ 
+ 
+-- 
+1.7.7.5
+

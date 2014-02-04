@@ -1,0 +1,83 @@
+From 720120cb123cd0e1cc559676e21904f0af0e98cc Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 27 Aug 2012 13:42:37 -0300
+Subject: [RHEL6 qemu-kvm PATCH 1/5] scsi: fix WRITE SAME transfer length and
+ direction
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1346074958-12169-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 41335
+O-Subject: [RHEL 6.4 qemu-kvm PATCH 1/2] scsi: fix WRITE SAME transfer length and direction
+Bugzilla: 841171
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 841171
+
+WRITE SAME transfers a single block, not a single byte.  Also, it transfers
+_to_ the device, not from.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit a5ee9085627eaeb501db31e3758df4e18500be71)
+
+Conflicts:
+	hw/scsi-disk.c
+---
+ hw/scsi-bus.c | 14 ++++++++------
+ 1 file modificato, 8 inserzioni(+), 6 rimozioni(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/scsi-bus.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 5988790..932c5dc 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -748,7 +748,8 @@ static int scsi_req_length(SCSICommand *cmd, SCSIDevice *dev, uint8_t *buf)
+     case MODE_SENSE:
+         break;
+     case WRITE_SAME_10:
+-        cmd->xfer = 1;
++    case WRITE_SAME_16:
++        cmd->xfer = dev->blocksize;
+         break;
+     case READ_CAPACITY_10:
+         cmd->xfer = 8;
+@@ -875,6 +876,10 @@ static int scsi_req_stream_length(SCSICommand *cmd, SCSIDevice *dev, uint8_t *bu
+ 
+ static void scsi_cmd_xfer_mode(SCSICommand *cmd)
+ {
++    if (!cmd->xfer) {
++        cmd->mode = SCSI_XFER_NONE;
++        return;
++    }
+     switch (cmd->buf[0]) {
+     case WRITE_6:
+     case WRITE_10:
+@@ -900,6 +905,7 @@ static void scsi_cmd_xfer_mode(SCSICommand *cmd)
+     case UPDATE_BLOCK:
+     case WRITE_LONG_10:
+     case WRITE_SAME_10:
++    case WRITE_SAME_16:
+     case SEARCH_HIGH_12:
+     case SEARCH_EQUAL_12:
+     case SEARCH_LOW_12:
+@@ -912,11 +918,7 @@ static void scsi_cmd_xfer_mode(SCSICommand *cmd)
+         cmd->mode = SCSI_XFER_TO_DEV;
+         break;
+     default:
+-        if (cmd->xfer)
+-            cmd->mode = SCSI_XFER_FROM_DEV;
+-        else {
+-            cmd->mode = SCSI_XFER_NONE;
+-        }
++        cmd->mode = SCSI_XFER_FROM_DEV;
+         break;
+     }
+ }
+-- 
+1.7.11.4
+

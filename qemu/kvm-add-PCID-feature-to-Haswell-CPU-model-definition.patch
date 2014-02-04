@@ -1,0 +1,54 @@
+From b2cb9d543263d1ca31de3b14cdb270ff03740abc Mon Sep 17 00:00:00 2001
+Message-Id: <b2cb9d543263d1ca31de3b14cdb270ff03740abc.1354540818.git.minovotn@redhat.com>
+In-Reply-To: <2c5d72974e08333d09e77c0027c065e512738973.1354540818.git.minovotn@redhat.com>
+References: <2c5d72974e08333d09e77c0027c065e512738973.1354540818.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Wed, 14 Nov 2012 18:46:54 +0100
+Subject: [PATCH 3/3] add PCID feature to Haswell CPU model definition
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1352918814-16583-4-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 44218
+O-Subject: [RHEL6.4 qemu-kvm PATCH 3/3] add PCID feature to Haswell CPU model definition
+Bugzilla: 869214
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+
+Bugzilla: 869214
+Upstream status: 37507094f350b75c62dc059f998e7185de3ab60a
+
+The Haswell CPU model has the INVPCID feature (CPUID[7].EBX[10])
+enabled, but it makes sense (and is enabled by the KVM kernel code) only
+if PCID (CPUID[1].ECX[17]) is also available.
+
+This patch adds the PCID flag to the Haswell CPU model definition.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 4312112..db99112 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -610,7 +610,8 @@ static x86_def_t builtin_x86_defs[] = {
+              CPUID_EXT_POPCNT | CPUID_EXT_X2APIC | CPUID_EXT_SSE42 |
+              CPUID_EXT_SSE41 | CPUID_EXT_CX16 | CPUID_EXT_SSSE3 |
+              CPUID_EXT_PCLMULQDQ | CPUID_EXT_SSE3 |
+-             CPUID_EXT_TSC_DEADLINE_TIMER | CPUID_EXT_FMA | CPUID_EXT_MOVBE,
++             CPUID_EXT_TSC_DEADLINE_TIMER | CPUID_EXT_FMA | CPUID_EXT_MOVBE |
++             CPUID_EXT_PCID,
+         .ext2_features = CPUID_EXT2_LM | CPUID_EXT2_NX | CPUID_EXT2_SYSCALL,
+         .ext3_features = CPUID_EXT3_LAHF_LM,
+         .cpuid_7_0_ebx_features = CPUID_7_0_EBX_FSGSBASE | CPUID_7_0_EBX_BMI1 |
+-- 
+1.7.11.7
+

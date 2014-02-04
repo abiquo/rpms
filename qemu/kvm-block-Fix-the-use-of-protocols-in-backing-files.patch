@@ -1,0 +1,63 @@
+From e38b063fefb1b98f4f325256034272a5b1182d11 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 7 May 2012 15:01:56 -0300
+Subject: [RHEL6 qemu-kvm PATCH 3/6] block: Fix the use of protocols in backing files
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1336402919-26889-3-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39613
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 2/5] block: Fix the use of protocols in backing files
+Bugzilla: 818876
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Eduardo Habkost <ehabkost@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Backing filenames may contain a protocol.  The code currently doesn't
+consider this case and produces filenames that embed "<protocol>:".
+Don't combine filenames if the backing filename contains a protocol.
+
+Based on an earlier patch by Anthony Liguori <aliguori@us.ibm.com>.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry-picked from upstream commit df2dbb4a508ebea7bcacff3f07caecbae969d528)
+---
+ block.c |   14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ block.c |   14 +++++++++++---
+ 1 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/block.c b/block.c
+index ae6c228..9cef18c 100644
+--- a/block.c
++++ b/block.c
+@@ -655,10 +655,18 @@ int bdrv_open(BlockDriverState *bs, const char *filename, int flags,
+         BlockDriver *back_drv = NULL;
+ 
+         bs->backing_hd = bdrv_new("");
+-        path_combine(backing_filename, sizeof(backing_filename),
+-                     filename, bs->backing_file);
+-        if (bs->backing_format[0] != '\0')
++
++        if (path_has_protocol(bs->backing_file)) {
++            pstrcpy(backing_filename, sizeof(backing_filename),
++                    bs->backing_file);
++        } else {
++            path_combine(backing_filename, sizeof(backing_filename),
++                         filename, bs->backing_file);
++        }
++
++        if (bs->backing_format[0] != '\0') {
+             back_drv = bdrv_find_format(bs->backing_format);
++        }
+ 
+         /* backing files always opened read-only */
+         back_flags =
+-- 
+1.7.3.2
+

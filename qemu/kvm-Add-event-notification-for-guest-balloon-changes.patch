@@ -1,0 +1,188 @@
+From ae461b84dc527df2571aba77483b7030aded3bb6 Mon Sep 17 00:00:00 2001
+Message-Id: <ae461b84dc527df2571aba77483b7030aded3bb6.1355253494.git.minovotn@redhat.com>
+In-Reply-To: <e1113518ec4b649620a785870b1e37dd352f8b90.1355253494.git.minovotn@redhat.com>
+References: <e1113518ec4b649620a785870b1e37dd352f8b90.1355253494.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 11 Dec 2012 15:26:26 +0100
+Subject: [PATCH 4/5] Add event notification for guest balloon changes
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1355239587-12473-4-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 44911
+O-Subject: [RHEL6.4 qemu-kvm PATCH 3/4] Add event notification for guest balloon changes
+Bugzilla: 881732
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+From: "Daniel P. Berrange" <berrange@redhat.com>
+
+After setting a balloon target value, applications have to
+continually poll 'query-balloon' to determine whether the
+guest has reacted to this request. The virtio-balloon backend
+knows exactly when the guest has reacted though, and thus it
+is possible to emit a JSON event to tell the mgmt application
+whenever the guest balloon changes.
+
+This introduces a new 'qemu_balloon_changed()' API which is
+to be called by balloon driver backends, whenever they have
+a change in balloon value. This takes the 'actual' balloon
+value, as would be found in the BalloonInfo struct.
+
+The qemu_balloon_change API emits a JSON monitor event which
+looks like:
+
+  {"timestamp": {"seconds": 1337162462, "microseconds": 814521},
+   "event": "BALLOON_CHANGE", "data": {"actual": 944766976}}
+
+* balloon.c, balloon.h: Introduce qemu_balloon_changed() for
+  emitting balloon change events on the monitor
+* hw/virtio-balloon.c: Invoke qemu_balloon_changed() whenever
+  the guest changes the balloon actual value
+* monitor.c, monitor.h: Define QEVENT_BALLOON_CHANGE
+
+Signed-off-by: Daniel P. Berrange <berrange@redhat.com>
+Acked-by: Amit Shah <amit.shah@redhat.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 973603a813c5d60534b4fa0313f83be40e2b9c47)
+
+Conflicts:
+	balloon.c
+	balloon.h
+	hw/virtio-balloon.c
+	monitor.c
+	monitor.h
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ QMP/qmp-events.txt  | 18 ++++++++++++++++++
+ balloon.c           | 13 +++++++++++++
+ balloon.h           |  2 ++
+ hw/virtio-balloon.c |  5 +++++
+ monitor.c           |  1 +
+ monitor.h           |  1 +
+ 6 files changed, 40 insertions(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ QMP/qmp-events.txt  | 18 ++++++++++++++++++
+ balloon.c           | 13 +++++++++++++
+ balloon.h           |  2 ++
+ hw/virtio-balloon.c |  5 +++++
+ monitor.c           |  1 +
+ monitor.h           |  1 +
+ 6 files changed, 40 insertions(+)
+
+diff --git a/QMP/qmp-events.txt b/QMP/qmp-events.txt
+index 8e805a7..8eec12a 100644
+--- a/QMP/qmp-events.txt
++++ b/QMP/qmp-events.txt
+@@ -388,3 +388,21 @@ Example:
+                "len": 10737418240, "offset": 134217728,
+                "speed": 0 },
+      "timestamp": { "seconds": 1267061043, "microseconds": 959568 } }
++
++
++BALLOON_CHANGE
++----------
++
++Emitted when the guest changes the actual BALLOON level. This
++value is equivalent to the 'actual' field return by the
++'query-balloon' command
++
++Data:
++
++- "actual": actual level of the guest memory balloon in bytes (json-number)
++
++Example:
++
++{ "event": "BALLOON_CHANGE",
++    "data": { "actual": 944766976 },
++    "timestamp": { "seconds": 1267020223, "microseconds": 435656 } }
+diff --git a/balloon.c b/balloon.c
+index a06a00b..7f7f886 100644
+--- a/balloon.c
++++ b/balloon.c
+@@ -32,6 +32,7 @@
+ #include "kvm.h"
+ #include "balloon.h"
+ #include "trace.h"
++#include "qjson.h"
+ 
+ static QEMUBalloonEvent *balloon_event_fn;
+ static QEMUBalloonStatus *balloon_stat_fn;
+@@ -82,6 +83,18 @@ static int qemu_balloon_status(MonitorCompletion cb, void *opaque)
+     return 1;
+ }
+ 
++void qemu_balloon_changed(int64_t actual)
++{
++    QObject *data;
++
++    data = qobject_from_jsonf("{ 'actual': %" PRId64 " }",
++                              actual);
++
++    monitor_protocol_event(QEVENT_BALLOON_CHANGE, data);
++
++    qobject_decref(data);
++}
++
+ static void print_balloon_stat(const char *key, QObject *obj, void *opaque)
+ {
+     Monitor *mon = opaque;
+diff --git a/balloon.h b/balloon.h
+index 7fc1dde..d0fe3b4 100644
+--- a/balloon.h
++++ b/balloon.h
+@@ -30,4 +30,6 @@ int do_info_balloon(Monitor *mon, MonitorCompletion cb, void *opaque);
+ int do_balloon(Monitor *mon, const QDict *params,
+                MonitorCompletion cb, void *opaque);
+ 
++void qemu_balloon_changed(int64_t actual);
++
+ #endif
+diff --git a/hw/virtio-balloon.c b/hw/virtio-balloon.c
+index 15b0611..695ade4 100644
+--- a/hw/virtio-balloon.c
++++ b/hw/virtio-balloon.c
+@@ -194,8 +194,13 @@ static void virtio_balloon_set_config(VirtIODevice *vdev,
+ {
+     VirtIOBalloon *dev = to_virtio_balloon(vdev);
+     struct virtio_balloon_config config;
++    uint32_t oldactual = dev->actual;
+     memcpy(&config, config_data, 8);
+     dev->actual = config.actual;
++    if (dev->actual != oldactual) {
++        qemu_balloon_changed(ram_size -
++                             (dev->actual << VIRTIO_BALLOON_PFN_SHIFT));
++    }
+ }
+ 
+ static uint32_t virtio_balloon_get_features(VirtIODevice *vdev, uint32_t f)
+diff --git a/monitor.c b/monitor.c
+index 1c903b8..6e3c8d8 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -452,6 +452,7 @@ static const char *monitor_event_names[] = {
+     [QEVENT_SUSPEND] = "SUSPEND",
+     [QEVENT_SUSPEND_DISK] = "SUSPEND_DISK",
+     [QEVENT_WAKEUP] = "WAKEUP",
++    [QEVENT_BALLOON_CHANGE] = "BALLOON_CHANGE",
+     [QEVENT_SPICE_MIGRATE_COMPLETED] = "SPICE_MIGRATE_COMPLETED",
+ };
+ QEMU_BUILD_BUG_ON(ARRAY_SIZE(monitor_event_names) != QEVENT_MAX)
+diff --git a/monitor.h b/monitor.h
+index ff3ff3e..f538274 100644
+--- a/monitor.h
++++ b/monitor.h
+@@ -47,6 +47,7 @@ typedef enum MonitorEvent {
+     QEVENT_SUSPEND,
+     QEVENT_SUSPEND_DISK,
+     QEVENT_WAKEUP,
++    QEVENT_BALLOON_CHANGE,
+     QEVENT_SPICE_MIGRATE_COMPLETED,
+ 
+     /* Add to 'monitor_event_names' array in monitor.c when
+-- 
+1.7.11.7
+

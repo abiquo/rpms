@@ -1,0 +1,177 @@
+From 8a4bda84694af00ec0069b5c13f054613c5a1244 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 22 Feb 2012 14:11:40 +0100
+Subject: [PATCH 024/109] scsi: add channel to addressing
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1329919979-20948-24-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 37503
+O-Subject: [RHEL 6.3 qemu-kvm PATCH v2 023/102] scsi: add channel to addressing
+Bugzilla: 782029
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+This also requires little more than adding the new argument to
+scsi_device_find, and the qdev property.  All devices by default
+end up on channel 0.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from 0d3545e76c856be4cce26cf1c96981b26cafb6b1)
+
+Conflicts:
+	hw/esp.c (not merged because it's not on x86)
+	hw/lsi53c895a.c (not merged because we disable it)
+	hw/spapr_vscsi.c (absent in RHEL6)
+---
+ hw/scsi-bus.c |   24 +++++++++++++++---------
+ hw/scsi.h     |    5 +++--
+ 2 files changed, 18 insertions(+), 11 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c |   24 +++++++++++++++---------
+ hw/scsi.h     |    5 +++--
+ 2 files changed, 18 insertions(+), 11 deletions(-)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 76248ce..1905da2 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -16,6 +16,7 @@ static struct BusInfo scsi_bus_info = {
+     .size  = sizeof(SCSIBus),
+     .get_fw_dev_path = scsibus_get_fw_dev_path,
+     .props = (Property[]) {
++        DEFINE_PROP_UINT32("channel", SCSIDevice, channel, 0),
+         DEFINE_PROP_UINT32("scsi-id", SCSIDevice, id, -1),
+         DEFINE_PROP_UINT32("lun", SCSIDevice, lun, -1),
+         DEFINE_PROP_END_OF_LIST(),
+@@ -40,6 +41,10 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+     SCSIDevice *d;
+     int rc = -1;
+ 
++    if (dev->channel > bus->info->max_channel) {
++        error_report("bad scsi channel id: %d", dev->channel);
++        goto err;
++    }
+     if (dev->id != -1 && dev->id > bus->info->max_target) {
+         error_report("bad scsi device id: %d", dev->id);
+         goto err;
+@@ -51,7 +56,7 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+             dev->lun = 0;
+         }
+         do {
+-            d = scsi_device_find(bus, ++id, dev->lun);
++            d = scsi_device_find(bus, dev->channel, ++id, dev->lun);
+         } while (d && d->lun == dev->lun && id <= bus->info->max_target);
+         if (id > bus->info->max_target) {
+             error_report("no free target");
+@@ -61,7 +66,7 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+     } else if (dev->lun == -1) {
+         int lun = -1;
+         do {
+-            d = scsi_device_find(bus, dev->id, ++lun);
++            d = scsi_device_find(bus, dev->channel, dev->id, ++lun);
+         } while (d && d->lun == lun && lun < bus->info->max_lun);
+         if (lun > bus->info->max_lun) {
+             error_report("no free lun");
+@@ -69,7 +74,7 @@ static int scsi_qdev_init(DeviceState *qdev, DeviceInfo *base)
+         }
+         dev->lun = lun;
+     } else {
+-        d = scsi_device_find(bus, dev->id, dev->lun);
++        d = scsi_device_find(bus, dev->channel, dev->id, dev->lun);
+         if (dev->lun == d->lun && dev != d) {
+             qdev_free(&d->qdev);
+         }
+@@ -203,7 +208,7 @@ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
+ {
+     DeviceState *qdev;
+     int i, len, n;
+-    int id;
++    int channel, id;
+     bool found_lun0;
+ 
+     if (r->req.cmd.xfer < 16) {
+@@ -212,13 +217,14 @@ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
+     if (r->req.cmd.buf[2] > 2) {
+         return false;
+     }
++    channel = r->req.dev->channel;
+     id = r->req.dev->id;
+     found_lun0 = false;
+     n = 0;
+     QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
+         SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+ 
+-        if (dev->id == id) {
++        if (dev->channel == channel && dev->id == id) {
+             if (dev->lun == 0) {
+                 found_lun0 = true;
+             }
+@@ -243,7 +249,7 @@ static bool scsi_target_emulate_report_luns(SCSITargetReq *r)
+     QTAILQ_FOREACH(qdev, &r->req.bus->qbus.children, sibling) {
+         SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+ 
+-        if (dev->id == id) {
++        if (dev->channel == channel && dev->id == id) {
+             store_lun(&r->buf[i], dev->lun);
+             i += 8;
+         }
+@@ -1188,12 +1194,12 @@ static char *scsibus_get_fw_dev_path(DeviceState *dev)
+     char path[100];
+ 
+     snprintf(path, sizeof(path), "%s@%d:%d:%d", qdev_fw_name(dev),
+-             0, d->id, d->lun);
++             d->channel, d->id, d->lun);
+ 
+     return strdup(path);
+ }
+ 
+-SCSIDevice *scsi_device_find(SCSIBus *bus, int id, int lun)
++SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int id, int lun)
+ {
+     DeviceState *qdev;
+     SCSIDevice *target_dev = NULL;
+@@ -1201,7 +1207,7 @@ SCSIDevice *scsi_device_find(SCSIBus *bus, int id, int lun)
+     QTAILQ_FOREACH_REVERSE(qdev, &bus->qbus.children, ChildrenHead, sibling) {
+         SCSIDevice *dev = DO_UPCAST(SCSIDevice, qdev, qdev);
+ 
+-        if (dev->id == id) {
++        if (dev->channel == channel && dev->id == id) {
+             if (dev->lun == lun) {
+                 return dev;
+             }
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 9b550b8..483c9ae 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -66,6 +66,7 @@ struct SCSIDevice
+     uint8_t sense[SCSI_SENSE_BUF_SIZE];
+     uint32_t sense_len;
+     QTAILQ_HEAD(, SCSIRequest) requests;
++    uint32_t channel;
+     uint32_t lun;
+     int blocksize;
+     int type;
+@@ -98,7 +99,7 @@ struct SCSIDeviceInfo {
+ 
+ struct SCSIBusInfo {
+     int tcq;
+-    int max_target, max_lun;
++    int max_channel, max_target, max_lun;
+     void (*transfer_data)(SCSIRequest *req, uint32_t arg);
+     void (*complete)(SCSIRequest *req, uint32_t arg);
+     void (*cancel)(SCSIRequest *req);
+@@ -191,6 +192,6 @@ void scsi_req_abort(SCSIRequest *req, int status);
+ void scsi_req_cancel(SCSIRequest *req);
+ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense);
+ int scsi_device_get_sense(SCSIDevice *dev, uint8_t *buf, int len, bool fixed);
+-SCSIDevice *scsi_device_find(SCSIBus *bus, int target, int lun);
++SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int target, int lun);
+ 
+ #endif
+-- 
+1.7.7.6
+

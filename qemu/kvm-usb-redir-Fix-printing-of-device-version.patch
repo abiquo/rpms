@@ -1,0 +1,49 @@
+From 1c389a90dadfdea1a1745abfdebcab9ecdd5ca06 Mon Sep 17 00:00:00 2001
+From: Hans de Goede <hdegoede@redhat.com>
+Date: Sun, 4 Mar 2012 11:57:40 +0100
+Subject: [PATCH 18/35] usb-redir: Fix printing of device version
+
+RH-Author: Hans de Goede <hdegoede@redhat.com>
+Message-id: <1330862278-22314-4-git-send-email-hdegoede@redhat.com>
+Patchwork-id: 37918
+O-Subject: [PATCH 03/21] usb-redir: Fix printing of device version
+Bugzilla: 758104
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+The device version is in bcd format, which requires some special handling to
+print.
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+(cherry picked from commit 52234bc00d5cf13cf96b3d632a4e0aa34cec08be)
+---
+ usb-redir.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ usb-redir.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/usb-redir.c b/usb-redir.c
+index 844c4f1..a8daf31 100644
+--- a/usb-redir.c
++++ b/usb-redir.c
+@@ -1071,8 +1071,10 @@ static void usbredir_device_connect(void *priv,
+                                     usb_redir_cap_connect_device_version)) {
+         INFO("attaching %s device %04x:%04x version %d.%d class %02x\n",
+              speed, device_connect->vendor_id, device_connect->product_id,
+-             device_connect->device_version_bcd >> 8,
+-             device_connect->device_version_bcd & 0xff,
++             ((device_connect->device_version_bcd & 0xf000) >> 12) * 10 +
++             ((device_connect->device_version_bcd & 0x0f00) >>  8),
++             ((device_connect->device_version_bcd & 0x00f0) >>  4) * 10 +
++             ((device_connect->device_version_bcd & 0x000f) >>  0),
+              device_connect->device_class);
+     } else {
+         INFO("attaching %s device %04x:%04x class %02x\n", speed,
+-- 
+1.7.7.6
+

@@ -1,0 +1,108 @@
+From 47866854743b8114656a4edfcd325ac000771d9f Mon Sep 17 00:00:00 2001
+Message-Id: <47866854743b8114656a4edfcd325ac000771d9f.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:26 +0200
+Subject: [PATCH 13/35] block: move aio initialization into a helper function
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <1851b6fb5204cb58f295e6281866e728311bbe4b.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43271
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 13/35] block: move aio initialization into a helper function
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+Move AIO initialization for raw-posix block driver into a helper function.
+
+In addition to just code motion, the aio_ctx pointer is checked for NULL,
+prior to calling laio_init(), to make sure laio_init() is only run once.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit fc32a72dc19a79f7e16156784b1e76a128d41841)
+
+Conflicts:
+	block/raw-posix.c
+---
+ block/raw-posix.c | 49 +++++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 35 insertions(+), 14 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/raw-posix.c | 49 +++++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 35 insertions(+), 14 deletions(-)
+
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 0111eaa..2c78433 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -172,6 +172,38 @@ static bool is_vectored_io_slow(int fd, int bdrv_flags)
+ }
+ #endif
+ 
++#ifdef CONFIG_LINUX_AIO
++static int raw_set_aio(void **aio_ctx, int *use_aio, int bdrv_flags)
++{
++    int ret = -1;
++    assert(aio_ctx != NULL);
++    assert(use_aio != NULL);
++    /*
++     * Currently Linux do AIO only for files opened with O_DIRECT
++     * specified so check NOCACHE flag too
++     */
++    if ((bdrv_flags & (BDRV_O_NOCACHE|BDRV_O_NATIVE_AIO)) ==
++                      (BDRV_O_NOCACHE|BDRV_O_NATIVE_AIO)) {
++
++        /* if non-NULL, laio_init() has already been run */
++        if (*aio_ctx == NULL) {
++            *aio_ctx = laio_init();
++            if (!*aio_ctx) {
++                goto error;
++            }
++        }
++        *use_aio = 1;
++    } else {
++        *use_aio = 0;
++    }
++
++    ret = 0;
++
++error:
++    return ret;
++}
++#endif
++
+ static int raw_open_common(BlockDriverState *bs, const char *filename,
+                            int bdrv_flags, int open_flags)
+ {
+@@ -223,21 +255,10 @@ static int raw_open_common(BlockDriverState *bs, const char *filename,
+     }
+ 
+ #ifdef CONFIG_LINUX_AIO
+-    if ((bdrv_flags & (BDRV_O_NOCACHE|BDRV_O_NATIVE_AIO)) ==
+-                      (BDRV_O_NOCACHE|BDRV_O_NATIVE_AIO)) {
+-
+-        s->aio_ctx = laio_init();
+-        if (!s->aio_ctx) {
+-            goto out_free_buf;
+-        }
+-        s->use_aio = 1;
+-    } else
+-#endif
+-    {
+-#ifdef CONFIG_LINUX_AIO
+-        s->use_aio = 0;
+-#endif
++    if (raw_set_aio(&s->aio_ctx, &s->use_aio, bdrv_flags)) {
++        goto out_close;
+     }
++#endif
+ 
+ #ifdef CONFIG_XFS
+     if (platform_test_xfs_fd(s->fd)) {
+-- 
+1.7.11.7
+

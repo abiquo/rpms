@@ -1,0 +1,85 @@
+From 89ad4e9d076b5403a25eea8a94a707c38508d1fa Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:55:13 +0100
+Subject: [PATCH 46/55] add QERR_BASE_NOT_FOUND
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <a9595a0fa8ea79117063c19f73124bc21d1fcdf8.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38896
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 46/54] add QERR_BASE_NOT_FOUND
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Marcelo Tosatti <mtosatti@redhat.com>
+
+This qerror will be raised when a given streaming base (backing file)
+cannot be found.
+
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit 019b8cbf76fc3126d300c401acca3102c69e7876)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ qemu-monitor.hx |    1 +
+ qerror.c        |    4 ++++
+ qerror.h        |    2 ++
+ 3 files changed, 7 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qemu-monitor.hx |    1 +
+ qerror.c        |    4 ++++
+ qerror.h        |    2 ++
+ 3 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 08e95fb..fa9f552 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -2076,6 +2076,7 @@ Nothing on success.
+ If streaming is already active on this device, DeviceInUse.
+ If device does not exist, DeviceNotFound.
+ If image streaming is not supported by this device, NotSupported.
++If base does not exist, BaseNotFound
+ 
+ EQMP
+ 
+diff --git a/qerror.c b/qerror.c
+index 724a7bf..76043d6 100644
+--- a/qerror.c
++++ b/qerror.c
+@@ -49,6 +49,10 @@ static const QErrorStringTable qerror_table[] = {
+         .desc      = "Device '%(device)' can't go on a %(bad_bus_type) bus",
+     },
+     {
++        .error_fmt = QERR_BASE_NOT_FOUND,
++        .desc      = "Base '%(base)' not found",
++    },
++    {
+         .error_fmt = QERR_BUS_NOT_FOUND,
+         .desc      = "Bus '%(bus)' not found",
+     },
+diff --git a/qerror.h b/qerror.h
+index 18e4b95..9e18fb8 100644
+--- a/qerror.h
++++ b/qerror.h
+@@ -55,6 +55,8 @@ QError *qobject_to_qerror(const QObject *obj);
+ #define QERR_BAD_BUS_FOR_DEVICE \
+     "{ 'class': 'BadBusForDevice', 'data': { 'device': %s, 'bad_bus_type': %s } }"
+ 
++#define QERR_BASE_NOT_FOUND \
++    "{ 'class': 'BaseNotFound', 'data': { 'base': %s } }"
+ #define QERR_BUS_NOT_FOUND \
+     "{ 'class': 'BusNotFound', 'data': { 'bus': %s } }"
+ 
+-- 
+1.7.7.6
+

@@ -1,0 +1,70 @@
+From ede36cd188b9f49ad642dea201a0811314bf03e2 Mon Sep 17 00:00:00 2001
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Mon, 5 Mar 2012 17:43:30 -0500
+Subject: [PATCH 03/98] QDict: Introduce functions to retrieve QDictEntry
+ values
+
+Next commit will introduce a new QDict iteration API which
+returns QDictEntry entries, but we don't want users to directly
+access its members since QDictEntry should be private to QDict.
+
+In the near future this kind of data type will be turned into a
+forward reference.
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 0d078b2adec72fd74b00defb260724b33e87e184)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qdict.c |   21 +++++++++++++++++++++
+ qdict.h |    2 ++
+ 2 files changed, 23 insertions(+), 0 deletions(-)
+
+diff --git a/qdict.c b/qdict.c
+index 4139ca4..6fbc4c1 100644
+--- a/qdict.c
++++ b/qdict.c
+@@ -83,6 +83,27 @@ static QDictEntry *alloc_entry(const char *key, QObject *value)
+ }
+ 
+ /**
++ * qdict_entry_value(): Return qdict entry value
++ *
++ * Return weak reference.
++ */
++QObject *qdict_entry_value(const QDictEntry *entry)
++{
++    return entry->value;
++}
++
++/**
++ * qdict_entry_key(): Return qdict entry key
++ *
++ * Return a *pointer* to the string, it has to be duplicated before being
++ * stored.
++ */
++const char *qdict_entry_key(const QDictEntry *entry)
++{
++    return entry->key;
++}
++
++/**
+  * qdict_find(): List lookup function
+  */
+ static QDictEntry *qdict_find(const QDict *qdict,
+diff --git a/qdict.h b/qdict.h
+index 082d318..b5d68c7 100644
+--- a/qdict.h
++++ b/qdict.h
+@@ -22,6 +22,8 @@ typedef struct QDict {
+ 
+ /* Object API */
+ QDict *qdict_new(void);
++const char *qdict_entry_key(const QDictEntry *entry);
++QObject *qdict_entry_value(const QDictEntry *entry);
+ size_t qdict_size(const QDict *qdict);
+ void qdict_put_obj(QDict *qdict, const char *key, QObject *value);
+ void qdict_del(QDict *qdict, const char *key);
+-- 
+1.7.7.6
+

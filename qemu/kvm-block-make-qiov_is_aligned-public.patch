@@ -1,0 +1,125 @@
+From fc8dd14f2112bcd239ef87c2b60d93e174e17cd3 Mon Sep 17 00:00:00 2001
+Message-Id: <fc8dd14f2112bcd239ef87c2b60d93e174e17cd3.1358333973.git.minovotn@redhat.com>
+From: Stefan Hajnoczi <stefanha@redhat.com>
+Date: Mon, 14 Jan 2013 15:00:13 +0100
+Subject: [PATCH 1/3] block: make qiov_is_aligned() public
+
+RH-Author: Stefan Hajnoczi <stefanha@redhat.com>
+Message-id: <1358175615-24929-2-git-send-email-stefanha@redhat.com>
+Patchwork-id: 45782
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 1/3] block: make qiov_is_aligned() public
+Bugzilla: 895392
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+The qiov_is_aligned() function checks whether a QEMUIOVector meets a
+BlockDriverState's alignment requirements.  This is needed by
+virtio-blk-data-plane so:
+
+1. Move the function from block/raw-posix.c to block/block.c.
+2. Make it public in block/block.h.
+3. Rename to bdrv_qiov_is_aligned().
+4. Change return type from int to bool.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit c53b1c5114bdf7fc945cbf11436da61789ca2267)
+
+Conflicts:
+
+  include/block/block.h -> block.h
+  block/raw-posix.c
+
+Signed-off-by: Stefan Hajnoczi <stefanha@redhat.com>
+---
+ block.c           | 16 ++++++++++++++++
+ block.h           |  1 +
+ block/raw-posix.c | 18 +-----------------
+ 3 files changed, 18 insertions(+), 17 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c           | 16 ++++++++++++++++
+ block.h           |  1 +
+ block/raw-posix.c | 18 +-----------------
+ 3 files changed, 18 insertions(+), 17 deletions(-)
+
+diff --git a/block.c b/block.c
+index 10525c4..1f75c37 100644
+--- a/block.c
++++ b/block.c
+@@ -3889,6 +3889,22 @@ void *qemu_blockalign(BlockDriverState *bs, size_t size)
+     return qemu_memalign((bs && bs->buffer_alignment) ? bs->buffer_alignment : 512, size);
+ }
+ 
++/*
++ * Check if all memory in this vector is sector aligned.
++ */
++bool bdrv_qiov_is_aligned(BlockDriverState *bs, QEMUIOVector *qiov)
++{
++    int i;
++
++    for (i = 0; i < qiov->niov; i++) {
++        if ((uintptr_t) qiov->iov[i].iov_base % bs->buffer_alignment) {
++            return false;
++        }
++    }
++
++    return true;
++}
++
+ void bdrv_set_dirty_tracking(BlockDriverState *bs, int granularity)
+ {
+     int64_t bitmap_size;
+diff --git a/block.h b/block.h
+index ecb4603..6bf79e1 100644
+--- a/block.h
++++ b/block.h
+@@ -199,6 +199,7 @@ BlockDriverState *bdrv_find_overlay(BlockDriverState *active,
+                                     BlockDriverState *bs);
+ BlockDriverState *bdrv_find_base(BlockDriverState *bs);
+ 
++bool bdrv_qiov_is_aligned(BlockDriverState *bs, QEMUIOVector *qiov);
+ 
+ typedef struct BdrvCheckResult {
+     int corruptions;
+diff --git a/block/raw-posix.c b/block/raw-posix.c
+index 9026161..7e068c4 100644
+--- a/block/raw-posix.c
++++ b/block/raw-posix.c
+@@ -412,22 +412,6 @@ static void raw_reopen_abort(BDRVReopenState *state)
+ #endif
+ */
+ 
+-/*
+- * Check if all memory in this vector is sector aligned.
+- */
+-static int qiov_is_aligned(BlockDriverState *bs, QEMUIOVector *qiov)
+-{
+-    int i;
+-
+-    for (i = 0; i < qiov->niov; i++) {
+-        if ((uintptr_t) qiov->iov[i].iov_base % bs->buffer_alignment) {
+-            return 0;
+-        }
+-    }
+-
+-    return 1;
+-}
+-
+ static BlockDriverAIOCB *raw_aio_submit(BlockDriverState *bs,
+         int64_t sector_num, QEMUIOVector *qiov, int nb_sectors,
+         BlockDriverCompletionFunc *cb, void *opaque, int type)
+@@ -449,7 +433,7 @@ static BlockDriverAIOCB *raw_aio_submit(BlockDriverState *bs,
+      * boundary.  Check if this is the case or telll the low-level
+      * driver that it needs to copy the buffer.
+      */
+-    if ((bs->open_flags & BDRV_O_NOCACHE) && !qiov_is_aligned(bs, qiov)) {
++    if ((bs->open_flags & BDRV_O_NOCACHE) && !bdrv_qiov_is_aligned(bs, qiov)) {
+         type |= QEMU_AIO_MISALIGNED;
+     }
+ 
+-- 
+1.7.11.7
+

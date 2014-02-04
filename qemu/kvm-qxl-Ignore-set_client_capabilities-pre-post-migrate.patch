@@ -1,0 +1,70 @@
+From 81c89e38f0b3dcd0c7d344e87b16363bc8562508 Mon Sep 17 00:00:00 2001
+Message-Id: <81c89e38f0b3dcd0c7d344e87b16363bc8562508.1350303544.git.minovotn@redhat.com>
+In-Reply-To: <f11ac1cace1097d0ed8778472028b6f9292d2766.1350303544.git.minovotn@redhat.com>
+References: <f11ac1cace1097d0ed8778472028b6f9292d2766.1350303544.git.minovotn@redhat.com>
+From: Soren Sandmann <ssp@redhat.com>
+Date: Wed, 10 Oct 2012 19:15:45 +0200
+Subject: [PATCH 2/3] qxl: Ignore set_client_capabilities pre/post migrate
+
+RH-Author: Soren Sandmann <ssp@redhat.com>
+Message-id: <1349896546-17500-3-git-send-email-ssp@redhat.com>
+Patchwork-id: 42945
+O-Subject: [PATCH RHEL6.4 qemu-kvm v2 2/3] qxl: Ignore set_client_capabilities pre/post migrate
+Bugzilla: 860017
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+
+From: Hans de Goede <hdegoede@redhat.com>
+
+The recent introduction of set_client_capabilities has broken
+(seamless) migration by trying to call qxl_send_events pre (seamless
+incoming) and post (*) migration, triggering the following assert:
+qxl_send_events: Assertion `qemu_spice_display_is_running(&d->ssd)' failed.
+
+The solution is easy, pre migration the guest will have already received
+the client caps on the migration source side, and post migration there no
+longer is a guest, so we can simply ignore the set_client_capabilities call
+in both those scenarios.
+
+*) Post migration, so not fatal for to the migration itself, but still a crash
+
+Signed-off-by: Hans de Goede <hdegoede@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+
+(Cherry-picked from ab902981cf4d46834d82eb095f2b9ab159e017bf)
+
+BZ: 860017
+Upstream-status: applied
+Cc: Hans de Goede <hdegoede@redhat.com>
+Cc: Gerd Hoffmann <kraxel@redhat.com>
+Cc: Alon Levy <alevy@redhat.com>
+Cc: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/qxl.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/hw/qxl.c b/hw/qxl.c
+index dc5f4bb..c86f6e8 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -872,6 +872,11 @@ static void interface_set_client_capabilities(QXLInstance *sin,
+ {
+     PCIQXLDevice *qxl = container_of(sin, PCIQXLDevice, ssd.qxl);
+ 
++    if (runstate_check(RUN_STATE_INMIGRATE) ||
++        runstate_check(RUN_STATE_POSTMIGRATE)) {
++        return;
++    }
++
+     qxl->shadow_rom.client_present = client_present;
+     memcpy(qxl->shadow_rom.client_capabilities, caps, sizeof(caps));
+     qxl->rom->client_present = client_present;
+-- 
+1.7.11.7
+

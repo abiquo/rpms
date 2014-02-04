@@ -1,0 +1,64 @@
+From 5e4659718c6d6ee9ab11b269d929a292a71b3ab0 Mon Sep 17 00:00:00 2001
+Message-Id: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Thu, 5 Apr 2012 15:47:09 +0200
+Subject: [PATCH 01/18] block: pass new base image format to
+ bdrv_change_backing_file
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1333640829-25881-1-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39124
+O-Subject: [RHEL 6.3 qemu-kvm PATCH] block: pass new base image format to bdrv_change_backing_file
+Bugzilla: 811228
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 801449
+
+Upstream status: submitted
+
+Brew build: http://brewweb.devel.redhat.com/brew/taskinfo?taskID=4266002
+
+This is an addendum to Marcelo's patch for BZ801149; the format was
+not written to the image, only the file name.
+
+This will overwrite an auto-probe image with the right format.
+Format probing is unsafe and we want to avoid it whenever possible.
+An alternative would be to look out the backing file from the image
+above base.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ block/stream.c |    7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/stream.c |    7 +++++--
+ 1 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/block/stream.c b/block/stream.c
+index 4d28dc7..f578f89 100644
+--- a/block/stream.c
++++ b/block/stream.c
+@@ -251,11 +251,14 @@ retry:
+     }
+ 
+     if (!block_job_is_cancelled(&s->common) && sector_num == end && ret == 0) {
+-        const char *base_id = NULL;
++        const char *base_id = NULL, *base_fmt = NULL;
+         if (base) {
+             base_id = s->backing_file_id;
++            if (base->drv) {
++                base_fmt = base->drv->format_name;
++            }
+         }
+-        ret = bdrv_change_backing_file(bs, base_id, NULL);
++        ret = bdrv_change_backing_file(bs, base_id, base_fmt);
+         close_unused_images(bs, base, base_id);
+     }
+ 
+-- 
+1.7.7.6
+

@@ -1,0 +1,240 @@
+From 2ba0b89a3d2071c0ec3e97a2ee97ab0a0f481803 Mon Sep 17 00:00:00 2001
+Message-Id: <2ba0b89a3d2071c0ec3e97a2ee97ab0a0f481803.1355248340.git.minovotn@redhat.com>
+From: Michal Novotny <minovotn@redhat.com>
+Date: Tue, 11 Dec 2012 18:51:55 +0100
+Subject: [PATCH] Revert "hyper-v: Minimal hyper-v support."
+
+This reverts commit 3d5de35b1b36744b84bf3213745d2f7b42485ff5.
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.target       |  2 +-
+ qemu-kvm-x86.c        | 26 --------------------------
+ target-i386/cpu.h     |  3 ---
+ target-i386/cpuid.c   |  3 ---
+ target-i386/hyperv.c  | 14 --------------
+ target-i386/hyperv.h  | 30 ------------------------------
+ target-i386/machine.c | 22 ----------------------
+ 7 files changed, 1 insertion(+), 99 deletions(-)
+ delete mode 100644 target-i386/hyperv.c
+ delete mode 100644 target-i386/hyperv.h
+
+diff --git a/Makefile.target b/Makefile.target
+index a094bbc..052a896 100644
+--- a/Makefile.target
++++ b/Makefile.target
+@@ -208,7 +208,7 @@ obj-y += virtio-blk.o virtio-balloon.o virtio-net.o virtio-pci.o virtio-serial-b
+ obj-y += virtio-scsi.o event_notifier.o
+ obj-y += vhost_net.o
+ obj-$(CONFIG_VHOST_NET) += vhost.o
+-obj-$(CONFIG_KVM) += kvm.o kvm-all.o hyperv.o
++obj-$(CONFIG_KVM) += kvm.o kvm-all.o
+ # MSI-X depends on kvm for interrupt injection,
+ # so moved it from Makefile.hw to Makefile.target for now
+ obj-y += msix.o
+diff --git a/qemu-kvm-x86.c b/qemu-kvm-x86.c
+index a225116..eed3883 100644
+--- a/qemu-kvm-x86.c
++++ b/qemu-kvm-x86.c
+@@ -23,7 +23,6 @@
+ 
+ #include "kvm.h"
+ #include "hw/pc.h"
+-#include "hyperv.h"
+ 
+ #define MSR_IA32_TSC		0x10
+ 
+@@ -883,12 +882,6 @@ static int get_msr_entry(struct kvm_msr_entry *entry, CPUState *env)
+         case MSR_KVM_WALL_CLOCK:
+             env->wall_clock_msr = entry->data;
+             break;
+-        case HV_X64_MSR_GUEST_OS_ID:
+-            env->hyperv_guest_os_id = entry->data;
+-            break;
+-        case HV_X64_MSR_HYPERCALL:
+-            env->hyperv_hypercall = entry->data;
+-            break;
+         case MSR_KVM_PV_EOI_EN:
+             env->pv_eoi_en_msr = entry->data;
+             break;
+@@ -1110,9 +1103,6 @@ void kvm_arch_load_regs(CPUState *env)
+ #endif
+     set_msr_entry(&msrs[n++], MSR_KVM_SYSTEM_TIME,  env->system_time_msr);
+     set_msr_entry(&msrs[n++], MSR_KVM_WALL_CLOCK,  env->wall_clock_msr);
+-    set_msr_entry(&msrs[n++], HV_X64_MSR_GUEST_OS_ID,  env->hyperv_guest_os_id);
+-    set_msr_entry(&msrs[n++], HV_X64_MSR_HYPERCALL,  env->hyperv_hypercall);
+-
+     if (has_msr_pv_eoi_en) {
+         set_msr_entry(&msrs[n++], MSR_KVM_PV_EOI_EN, env->pv_eoi_en_msr);
+     }
+@@ -1353,8 +1343,6 @@ void kvm_arch_save_regs(CPUState *env)
+ #endif
+     msrs[n++].index = MSR_KVM_SYSTEM_TIME;
+     msrs[n++].index = MSR_KVM_WALL_CLOCK;
+-    msrs[n++].index = HV_X64_MSR_GUEST_OS_ID;
+-    msrs[n++].index = HV_X64_MSR_HYPERCALL;
+     if (has_msr_pv_eoi_en) {
+         msrs[n++].index = MSR_KVM_PV_EOI_EN;
+     }
+@@ -1446,9 +1434,6 @@ int kvm_arch_init_vcpu(CPUState *cenv)
+     memset(pv_ent, 0, sizeof(*pv_ent));
+     pv_ent->function = KVM_CPUID_SIGNATURE;
+     pv_ent->eax = 0;
+-    if (hyperv_relaxed_timing_enabled()) {
+-        pv_ent->eax = HYPERV_CPUID_ENLIGHTMENT_INFO;
+-    }
+     pv_ent->ebx = signature[0];
+     pv_ent->ecx = signature[1];
+     pv_ent->edx = signature[2];
+@@ -1458,17 +1443,6 @@ int kvm_arch_init_vcpu(CPUState *cenv)
+     pv_ent->function = KVM_CPUID_FEATURES;
+     pv_ent->eax = cenv->cpuid_kvm_features & kvm_arch_get_supported_cpuid(cenv->kvm_state,
+ 						KVM_CPUID_FEATURES, 0, R_EAX);
+-
+-    if (hyperv_relaxed_timing_enabled()) {
+-        memcpy(signature, "Hv#1\0\0\0\0\0\0\0\0", 12);
+-        pv_ent->eax = signature[0];
+-
+-        pv_ent = &cpuid_ent[cpuid_nent++];
+-        memset(pv_ent, 0, sizeof(*pv_ent));
+-        pv_ent->function = HYPERV_CPUID_ENLIGHTMENT_INFO;
+-        pv_ent->eax |= HV_X64_RELAXED_TIMING_RECOMMENDED;
+-    }
+-
+ #endif
+ 
+     kvm_trim_features(&cenv->cpuid_features,
+diff --git a/target-i386/cpu.h b/target-i386/cpu.h
+index 7415335..60d649f 100644
+--- a/target-i386/cpu.h
++++ b/target-i386/cpu.h
+@@ -723,9 +723,6 @@ typedef struct CPUX86State {
+     uint64_t wall_clock_msr;
+     uint64_t pv_eoi_en_msr;
+ 
+-    uint64_t hyperv_guest_os_id;
+-    uint64_t hyperv_hypercall;
+-
+     uint64_t tsc;
+     uint64_t tsc_deadline;
+ 
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index db99112..00502ea 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -27,7 +27,6 @@
+ 
+ #include "qemu-option.h"
+ #include "qemu-config.h"
+-#include "hyperv.h"
+ 
+ /* feature flags taken from "Intel Processor Identification and the CPUID
+  * Instruction" and AMD's "CPUID Specification".  In cases of disagreement
+@@ -1032,8 +1031,6 @@ static int cpu_x86_find_by_name(x86_def_t *x86_cpu_def, const char *cpu_model)
+             check_cpuid = 1;
+         } else if (!strcmp(featurestr, "enforce")) {
+             check_cpuid = enforce_cpuid = 1;
+-        } else if (!strcmp(featurestr, "hv_relaxed")) {
+-                hyperv_enable_relaxed_timing(true);
+         } else {
+             fprintf(stderr, "feature string `%s' not in format (+feature|-feature|feature=xyz)\n", featurestr);
+             goto error;
+diff --git a/target-i386/hyperv.c b/target-i386/hyperv.c
+deleted file mode 100644
+index 616a1b2..0000000
+--- a/target-i386/hyperv.c
++++ /dev/null
+@@ -1,14 +0,0 @@
+-#include "hyperv.h"
+-
+-static bool hyperv_relaxed_timing;
+-
+-void hyperv_enable_relaxed_timing(bool val)
+-{
+-    hyperv_relaxed_timing = val;
+-}
+-
+-bool hyperv_relaxed_timing_enabled(void)
+-{
+-    return hyperv_relaxed_timing;
+-}
+-
+diff --git a/target-i386/hyperv.h b/target-i386/hyperv.h
+deleted file mode 100644
+index 450ad97..0000000
+--- a/target-i386/hyperv.h
++++ /dev/null
+@@ -1,30 +0,0 @@
+-#ifndef QEMU_HYPERV_H
+-#define QEMU_HYPERV_H
+-
+-#include "qemu-common.h"
+-
+-#ifndef HYPERV_CPUID_ENLIGHTMENT_INFO
+-#define HYPERV_CPUID_ENLIGHTMENT_INFO		0x40000004
+-#endif
+-
+-#ifndef HV_X64_RELAXED_TIMING_RECOMMENDED
+-#define HV_X64_RELAXED_TIMING_RECOMMENDED	(1 << 5)
+-#endif
+-
+-#ifndef HV_X64_MSR_GUEST_OS_ID
+-#define HV_X64_MSR_GUEST_OS_ID			0x40000000
+-#endif
+-
+-#ifndef HV_X64_MSR_HYPERCALL
+-#define HV_X64_MSR_HYPERCALL			0x40000001
+-#endif
+-
+-#if defined(CONFIG_KVM)
+-void hyperv_enable_relaxed_timing(bool val);
+-#else
+-static inline void hyperv_enable_relaxed_timing(bool val) { }
+-#endif
+-
+-bool hyperv_relaxed_timing_enabled(void);
+-
+-#endif /* QEMU_HYPERV_H */
+diff --git a/target-i386/machine.c b/target-i386/machine.c
+index 3b092f9..eb4576e 100644
+--- a/target-i386/machine.c
++++ b/target-i386/machine.c
+@@ -455,25 +455,6 @@ static const VMStateDescription vmstate_msr_tscdeadline = {
+     }
+ };
+ 
+-static bool hyperv_hypercall_needed(void *opaque)
+-{
+-    CPUState *env = opaque;
+-
+-    return env->hyperv_guest_os_id != 0;
+-}
+-
+-static const VMStateDescription vmstate_msr_hyperv_hypercall = {
+-    .name = "cpu/msr_hyperv_hypercall",
+-    .version_id = 1,
+-    .minimum_version_id = 1,
+-    .minimum_version_id_old = 1,
+-    .fields      = (VMStateField []) {
+-        VMSTATE_UINT64(hyperv_guest_os_id, CPUState),
+-        VMSTATE_UINT64(hyperv_hypercall, CPUState),
+-        VMSTATE_END_OF_LIST()
+-    }
+-};
+-
+ static const VMStateDescription vmstate_cpu = {
+     .name = "cpu",
+     .version_id = CPU_SAVE_VERSION,
+@@ -589,9 +570,6 @@ static const VMStateDescription vmstate_cpu = {
+             .vmsd = &vmstate_msr_tscdeadline,
+             .needed = tscdeadline_needed,
+         }, {
+-            .vmsd = &vmstate_msr_hyperv_hypercall,
+-            .needed = hyperv_hypercall_needed,
+-        }, {
+ 	    /* empty */
+ 	}
+     }
+-- 
+1.7.11.7
+

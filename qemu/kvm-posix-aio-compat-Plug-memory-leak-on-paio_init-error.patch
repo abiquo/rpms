@@ -1,0 +1,48 @@
+From 61f8acd2ccfe2f9744c538364e9b1aebfeeeb8a8 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:37 +0100
+Subject: [PATCH 43/52] posix-aio-compat: Plug memory leak on paio_init()
+ error path
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-44-git-send-email-armbru@redhat.com>
+Patchwork-id: 36611
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 43/52] posix-aio-compat: Plug memory leak on paio_init() error path
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+Spotted by Coverity.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit 095ed5be7b61b7168020f0b807c9789b277a3956)
+
+Conflicts:
+
+	posix-aio-compat.c
+---
+ posix-aio-compat.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ posix-aio-compat.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/posix-aio-compat.c b/posix-aio-compat.c
+index 047b7f1..032fe1d 100644
+--- a/posix-aio-compat.c
++++ b/posix-aio-compat.c
+@@ -630,6 +630,7 @@ int paio_init(void)
+     s->fd = qemu_signalfd(&mask);
+     if (s->fd == -1) {
+         fprintf(stderr, "failed to create signalfd\n");
++        qemu_free(s);
+         return -1;
+     }
+ 
+-- 
+1.7.7.5
+

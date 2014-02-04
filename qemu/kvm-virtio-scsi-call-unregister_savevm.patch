@@ -1,0 +1,48 @@
+From 8207a7d6bc13a8b09004aba27e720d32817fa2f4 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 21 Mar 2012 09:28:33 -0300
+Subject: [RHEL6 qemu-kvm PATCH 2/6] virtio-scsi: call unregister_savevm
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1332322116-12270-3-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 38774
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 2/5] virtio-scsi: call unregister_savevm
+Bugzilla: 800710
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Bugzilla: 800710
+
+The hot-unplug path was missing a call to unregister_savevm, which causes
+trouble at the next attempt to migrate.
+
+This might also fix bug 800274, which I could not reproduce in the first
+place.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry-picked from commit eb2fa76418402c8b26e1ab4cb53498ee0f4e52ef)
+---
+ hw/virtio-scsi.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ hw/virtio-scsi.c |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/hw/virtio-scsi.c b/hw/virtio-scsi.c
+index 32a3bdb..d1e1df3 100644
+--- a/hw/virtio-scsi.c
++++ b/hw/virtio-scsi.c
+@@ -619,5 +619,7 @@ VirtIODevice *virtio_scsi_init(DeviceState *dev, VirtIOSCSIConf *proxyconf)
+ 
+ void virtio_scsi_exit(VirtIODevice *vdev)
+ {
++    VirtIOSCSI *s = (VirtIOSCSI *)vdev;
++    unregister_savevm(s->qdev, "virtio-scsi", s);
+     virtio_cleanup(vdev);
+ }
+-- 
+1.7.3.2
+

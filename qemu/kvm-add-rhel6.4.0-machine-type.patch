@@ -1,0 +1,87 @@
+From b652568217cc58ce379a04417fbbfde180e966d6 Mon Sep 17 00:00:00 2001
+Message-Id: <b652568217cc58ce379a04417fbbfde180e966d6.1345545736.git.minovotn@redhat.com>
+In-Reply-To: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+References: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 8 Aug 2012 13:27:10 +0200
+Subject: [PATCH 5/8] add rhel6.4.0 machine type
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1344432431-5976-4-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40629
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 3/4] add rhel6.4.0 machine type
+Bugzilla: 813713
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+$subject says all.  Next patch adds a compat property
+for 6.3 and older, thus I need a 6.4 machine type.
+
+upstream: no, redhat only.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ hw/pc.c |   24 ++++++++++++++++++++++--
+ 1 files changed, 22 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/pc.c | 24 ++++++++++++++++++++++--
+ 1 file changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/hw/pc.c b/hw/pc.c
+index 8c78310..f676905 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -1621,6 +1621,27 @@ static void rhel_common_init(const char *type1_version,
+             .value    = stringify(0),\
+         }, PC_RHEL6_1_COMPAT
+ 
++static void pc_init_rhel640(ram_addr_t ram_size,
++                            const char *boot_device,
++                            const char *kernel_filename,
++                            const char *kernel_cmdline,
++                            const char *initrd_filename,
++                            const char *cpu_model)
++{
++    rhel_common_init("RHEL 6.4.0 PC", 0);
++    pc_init_pci(ram_size, boot_device, kernel_filename, kernel_cmdline,
++                initrd_filename, setdef_cpu_model(cpu_model, "cpu64-rhel6"));
++}
++
++static QEMUMachine pc_machine_rhel640 = {
++    .name = "rhel6.4.0",
++    .alias = "pc",
++    .desc = "RHEL 6.4.0 PC",
++    .init = pc_init_rhel640,
++    .max_cpus = 255,
++    .is_default = 1,
++};
++
+ static void pc_init_rhel630(ram_addr_t ram_size,
+                             const char *boot_device,
+                             const char *kernel_filename,
+@@ -1635,11 +1656,9 @@ static void pc_init_rhel630(ram_addr_t ram_size,
+ 
+ static QEMUMachine pc_machine_rhel630 = {
+     .name = "rhel6.3.0",
+-    .alias = "pc",
+     .desc = "RHEL 6.3.0 PC",
+     .init = pc_init_rhel630,
+     .max_cpus = 255,
+-    .is_default = 1,
+ };
+ 
+ static void pc_init_rhel620(ram_addr_t ram_size,
+@@ -1826,6 +1845,7 @@ static QEMUMachine pc_machine_rhel540 = {
+ 
+ static void rhel_machine_init(void)
+ {
++    qemu_register_machine(&pc_machine_rhel640);
+     qemu_register_machine(&pc_machine_rhel630);
+     qemu_register_machine(&pc_machine_rhel620);
+     qemu_register_machine(&pc_machine_rhel610);
+-- 
+1.7.11.2
+

@@ -1,0 +1,39 @@
+From 974504667f25763bd86b187a451ed3b635e979fa Mon Sep 17 00:00:00 2001
+From: Michael Roth <mdroth@linux.vnet.ibm.com>
+Date: Mon, 5 Mar 2012 17:44:40 -0500
+Subject: [PATCH 73/98] json-parser: add handling for NULL token list
+
+Currently a NULL token list will crash the parser, instead we have it
+pass back a NULL QObject.
+
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+(cherry picked from commit c1990ebfa11265d3aa9b6a4d5d1a02bd3f9ac5c6)
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ json-parser.c |    6 +++++-
+ 1 files changed, 5 insertions(+), 1 deletions(-)
+
+diff --git a/json-parser.c b/json-parser.c
+index 06a4ac1..ffcbc4b 100644
+--- a/json-parser.c
++++ b/json-parser.c
+@@ -634,9 +634,13 @@ QObject *json_parser_parse(QList *tokens, va_list *ap)
+ QObject *json_parser_parse_err(QList *tokens, va_list *ap, Error **errp)
+ {
+     JSONParserContext ctxt = {};
+-    QList *working = qlist_copy(tokens);
++    QList *working;
+     QObject *result;
+ 
++    if (!tokens) {
++        return NULL;
++    }
++    working = qlist_copy(tokens);
+     result = parse_value(&ctxt, &working, ap);
+ 
+     QDECREF(working);
+-- 
+1.7.7.6
+

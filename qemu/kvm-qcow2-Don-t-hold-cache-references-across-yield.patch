@@ -1,0 +1,78 @@
+From 2f565a437e063dd5328e997fd084ac65917a8b36 Mon Sep 17 00:00:00 2001
+Message-Id: <2f565a437e063dd5328e997fd084ac65917a8b36.1335454176.git.minovotn@redhat.com>
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 24 Apr 2012 17:19:23 +0200
+Subject: [PATCH] qcow2: Don't hold cache references across yield
+
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2-cluster.c |   19 +++++++++++--------
+ 1 files changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/block/qcow2-cluster.c b/block/qcow2-cluster.c
+index acf7977..22dd928 100644
+--- a/block/qcow2-cluster.c
++++ b/block/qcow2-cluster.c
+@@ -711,12 +711,12 @@ int qcow2_alloc_cluster_offset(BlockDriverState *bs, uint64_t offset,
+     unsigned int nb_clusters, i = 0;
+     QCowL2Meta *old_alloc;
+ 
++again:
+     ret = get_cluster_table(bs, offset, &l2_table, &l2_offset, &l2_index);
+     if (ret < 0) {
+         return ret;
+     }
+ 
+-again:
+     nb_clusters = size_to_clusters(s, n_end << 9);
+ 
+     nb_clusters = MIN(nb_clusters, s->l2_size - l2_index);
+@@ -733,6 +733,11 @@ again:
+         m->nb_clusters = 0;
+         m->depends_on = NULL;
+ 
++        ret = qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
++        if (ret < 0) {
++            return ret;
++        }
++
+         goto out;
+     }
+ 
+@@ -765,6 +770,11 @@ again:
+     assert(i <= nb_clusters);
+     nb_clusters = i;
+ 
++    ret = qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
++    if (ret < 0) {
++        return ret;
++    }
++
+     /*
+      * Check if there already is an AIO write request in flight which allocates
+      * the same cluster. In this case we need to wait until the previous
+@@ -818,11 +828,6 @@ again:
+     m->nb_clusters = nb_clusters;
+ 
+ out:
+-    ret = qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
+-    if (ret < 0) {
+-        goto fail_put;
+-    }
+-
+     m->nb_available = MIN(nb_clusters << (s->cluster_bits - 9), n_end);
+     m->cluster_offset = cluster_offset;
+ 
+@@ -831,8 +836,6 @@ out:
+     return 0;
+ 
+ fail:
+-    qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
+-fail_put:
+     QLIST_REMOVE(m, next_in_flight);
+     return ret;
+ }
+-- 
+1.7.7.6
+

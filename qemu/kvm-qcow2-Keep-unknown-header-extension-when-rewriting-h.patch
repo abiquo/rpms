@@ -1,0 +1,171 @@
+From 1cc25ea8f2e081a5d8b6c0e958a7ac491389ea84 Mon Sep 17 00:00:00 2001
+Message-Id: <1cc25ea8f2e081a5d8b6c0e958a7ac491389ea84.1350493760.git.minovotn@redhat.com>
+In-Reply-To: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+References: <c93188b6c6973932d2adaa52e6a4920db13b4e62.1350493760.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 17 Oct 2012 05:59:17 +0200
+Subject: [PATCH 04/35] qcow2: Keep unknown header extension when rewriting
+ header
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <6a4d0b7b7463792b4a9596a0f2c0ee485c9d89a0.1350447475.git.jcody@redhat.com>
+Patchwork-id: 43267
+O-Subject: [RHEL6.4 qemu-kvm PATCH v4 04/35] qcow2: Keep unknown header extension when rewriting header
+Bugzilla: 767233
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Kevin Wolf <kwolf@redhat.com>
+
+If we want header extensions to work as compatible extensions, we can't
+destroy yet unknown header extensions when rewriting the header (e.g.
+for changing the backing file). Save all unknown header extensions in a
+list of blobs and include them in a new header.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 75bab85ca01876f912caf46f5fcb4ca8d9a50584)
+
+Conflicts:
+	block/qcow2.h
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/qcow2.c | 44 ++++++++++++++++++++++++++++++++++++++++++--
+ block/qcow2.h |  9 +++++++++
+ 2 files changed, 51 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2.c | 44 ++++++++++++++++++++++++++++++++++++++++++--
+ block/qcow2.h |  9 +++++++++
+ 2 files changed, 51 insertions(+), 2 deletions(-)
+
+diff --git a/block/qcow2.c b/block/qcow2.c
+index dc7c2f1..30c4966 100644
+--- a/block/qcow2.c
++++ b/block/qcow2.c
+@@ -79,8 +79,10 @@ static int qcow2_probe(const uint8_t *buf, int buf_size, const char *filename)
+ static int qcow2_read_extensions(BlockDriverState *bs, uint64_t start_offset,
+                                  uint64_t end_offset)
+ {
++    BDRVQcowState *s = bs->opaque;
+     QCowExtension ext;
+     uint64_t offset;
++    int ret;
+ 
+ #ifdef DEBUG_EXT
+     printf("qcow2_read_extensions: start=%ld end=%ld\n", start_offset, end_offset);
+@@ -130,8 +132,22 @@ static int qcow2_read_extensions(BlockDriverState *bs, uint64_t start_offset,
+             break;
+ 
+         default:
+-            /* unknown magic -- just skip it */
+-            offset = ((offset + ext.len + 7) & ~7);
++            /* unknown magic - save it in case we need to rewrite the header */
++            {
++                Qcow2UnknownHeaderExtension *uext;
++
++                uext = g_malloc0(sizeof(*uext)  + ext.len);
++                uext->magic = ext.magic;
++                uext->len = ext.len;
++                QLIST_INSERT_HEAD(&s->unknown_header_ext, uext, next);
++
++                ret = bdrv_pread(bs->file, offset , uext->data, uext->len);
++                if (ret < 0) {
++                    return ret;
++                }
++
++                offset = ((offset + ext.len + 7) & ~7);
++            }
+             break;
+         }
+     }
+@@ -139,6 +155,16 @@ static int qcow2_read_extensions(BlockDriverState *bs, uint64_t start_offset,
+     return 0;
+ }
+ 
++static void cleanup_unknown_header_ext(BlockDriverState *bs)
++{
++    BDRVQcowState *s = bs->opaque;
++    Qcow2UnknownHeaderExtension *uext, *next;
++
++    QLIST_FOREACH_SAFE(uext, &s->unknown_header_ext, next, next) {
++        QLIST_REMOVE(uext, next);
++        g_free(uext);
++    }
++}
+ 
+ static int qcow2_open(BlockDriverState *bs, int flags)
+ {
+@@ -287,6 +313,7 @@ static int qcow2_open(BlockDriverState *bs, int flags)
+     return ret;
+ 
+  fail:
++    cleanup_unknown_header_ext(bs);
+     qcow2_free_snapshots(bs);
+     qcow2_refcount_close(bs);
+     g_free(s->l1_table);
+@@ -628,6 +655,7 @@ static void qcow2_close(BlockDriverState *bs)
+     qcow2_cache_destroy(bs, s->l2_table_cache);
+     qcow2_cache_destroy(bs, s->refcount_block_cache);
+ 
++    cleanup_unknown_header_ext(bs);
+     g_free(s->cluster_cache);
+     g_free(s->cluster_data);
+     qcow2_refcount_close(bs);
+@@ -669,6 +697,7 @@ int qcow2_update_header(BlockDriverState *bs)
+     int ret;
+     uint64_t total_size;
+     uint32_t refcount_table_clusters;
++    Qcow2UnknownHeaderExtension *uext;
+ 
+     buf = qemu_blockalign(bs, buflen);
+     memset(buf, 0, s->cluster_size);
+@@ -716,6 +745,17 @@ int qcow2_update_header(BlockDriverState *bs)
+         buflen -= ret;
+     }
+ 
++    /* Keep unknown header extensions */
++    QLIST_FOREACH(uext, &s->unknown_header_ext, next) {
++        ret = header_ext_add(buf, uext->magic, uext->data, uext->len, buflen);
++        if (ret < 0) {
++            goto fail;
++        }
++
++        buf += ret;
++        buflen -= ret;
++    }
++
+     /* End of header extensions */
+     ret = header_ext_add(buf, QCOW2_EXT_MAGIC_END, NULL, 0, buflen);
+     if (ret < 0) {
+diff --git a/block/qcow2.h b/block/qcow2.h
+index 5654e27..4f4fa78 100644
+--- a/block/qcow2.h
++++ b/block/qcow2.h
+@@ -88,6 +88,13 @@ typedef struct QCowSnapshot {
+ struct Qcow2Cache;
+ typedef struct Qcow2Cache Qcow2Cache;
+ 
++typedef struct Qcow2UnknownHeaderExtension {
++    uint32_t magic;
++    uint32_t len;
++    QLIST_ENTRY(Qcow2UnknownHeaderExtension) next;
++    uint8_t data[];
++} Qcow2UnknownHeaderExtension;
++
+ typedef struct BDRVQcowState {
+     int cluster_bits;
+     int cluster_size;
+@@ -126,6 +133,8 @@ typedef struct BDRVQcowState {
+     int snapshots_size;
+     int nb_snapshots;
+     QCowSnapshot *snapshots;
++
++    QLIST_HEAD(, Qcow2UnknownHeaderExtension) unknown_header_ext;
+ } BDRVQcowState;
+ 
+ /* XXX: use std qcow open function ? */
+-- 
+1.7.11.7
+

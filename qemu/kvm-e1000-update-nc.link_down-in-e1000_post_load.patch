@@ -1,0 +1,65 @@
+From 481b57ea566f5b937e2ef98fc55d7d70c4a1cf4b Mon Sep 17 00:00:00 2001
+Message-Id: <481b57ea566f5b937e2ef98fc55d7d70c4a1cf4b.1350312451.git.minovotn@redhat.com>
+In-Reply-To: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+References: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+From: Amos Kong <akong@redhat.com>
+Date: Mon, 15 Oct 2012 12:06:00 +0200
+Subject: [PATCH 26/27] e1000: update nc.link_down in e1000_post_load()
+
+RH-Author: Amos Kong <akong@redhat.com>
+Message-id: <1350302761-15231-3-git-send-email-akong@redhat.com>
+Patchwork-id: 43164
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 2/3] e1000: update nc.link_down in e1000_post_load()
+Bugzilla: 852965
+RH-Acked-by: Xiao Wang <jasowang@redhat.com>
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Stefan Hajnoczi <stefanha@redhat.com>
+
+This patch introduced e1000_post_load(), it will be called in the end of
+migration. nc.link_down could not be migrated, this patch updates
+link_down in e1000_post_load() to keep it coincident with real link
+status.
+
+Signed-off-by: Amos Kong <akong@redhat.com>
+Signed-off-by: Stefan Hajnoczi <stefanha@gmail.com>
+(cherry picked from commit e4b823644044de1b8070fde82d0aad8053dc3333)
+---
+ hw/e1000.c |   12 ++++++++++++
+ 1 files changed, 12 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/e1000.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/hw/e1000.c b/hw/e1000.c
+index 0ccf13e..a045368 100644
+--- a/hw/e1000.c
++++ b/hw/e1000.c
+@@ -1044,11 +1044,23 @@ static bool is_version_1(void *opaque, int version_id)
+     return version_id == 1;
+ }
+ 
++static int e1000_post_load(void *opaque, int version_id)
++{
++    E1000State *s = opaque;
++
++    /* nc.link_down can't be migrated, so infer link_down according
++     * to link status bit in mac_reg[STATUS] */
++    s->nic->nc.link_down = (s->mac_reg[STATUS] & E1000_STATUS_LU) == 0;
++
++    return 0;
++}
++
+ static const VMStateDescription vmstate_e1000 = {
+     .name = "e1000",
+     .version_id = 2,
+     .minimum_version_id = 1,
+     .minimum_version_id_old = 1,
++    .post_load = e1000_post_load,
+     .fields      = (VMStateField []) {
+         VMSTATE_PCI_DEVICE(dev, E1000State),
+         VMSTATE_UNUSED_TEST(is_version_1, 4), /* was instance id */
+-- 
+1.7.11.7
+

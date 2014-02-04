@@ -1,0 +1,342 @@
+From 47af122e6da01c07db9d70aa1c76ac0056dd98e3 Mon Sep 17 00:00:00 2001
+Message-Id: <47af122e6da01c07db9d70aa1c76ac0056dd98e3.1335961279.git.minovotn@redhat.com>
+In-Reply-To: <75586368ef7756d673dc5e50b993681d679206a1.1335961279.git.minovotn@redhat.com>
+References: <75586368ef7756d673dc5e50b993681d679206a1.1335961279.git.minovotn@redhat.com>
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 1 May 2012 19:18:50 +0200
+Subject: [PATCH 2/2] block: add 'speed' optional parameter to block-stream
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <1bc2cffc0b84026ccafd686986e5398dbafa206e.1335896521.git.jcody@redhat.com>
+Patchwork-id: 39539
+O-Subject: [RHEL6.3 qemu-kvm PATCH v2 2/2] block: add 'speed' optional parameter to block-stream
+Bugzilla: 813953
+RH-Acked-by: Eric Blake <eblake@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Allow streaming operations to be started with an initial speed limit.
+This eliminates the window of time between starting streaming and
+issuing block-job-set-speed.  Users should use the new optional 'speed'
+parameter instead so that speed limits are in effect immediately when
+the job starts.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Acked-by: Kevin Wolf <kwolf@redhat.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit c83c66c3b58893a4dc056e272822beb88fe9ec7f)
+
+Conflicts:
+
+	block.c
+	block/stream.c
+	block_int.h
+	blockdev.c
+	hmp-commands.hx
+	hmp.c
+	qapi-schema.json
+	qmp-commands.hx
+
+Most of the conflicts were due to differences in error return types, and QAPI
+vs QMP for streaming commands.
+
+Also, since mirror is not upstream, the equivalent functionality needed to be
+added to mirror that was added to stream.  Mirror functionality was placed in
+this patch rather than a separate patch, because the API for block_job_create()
+has changed.
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c          |   13 ++++++++++++-
+ block/mirror.c   |    4 ++--
+ block/stream.c   |    6 +++---
+ block_int.h      |    9 +++++----
+ blockdev.c       |   12 ++++++++++--
+ hmp.c            |    3 ++-
+ qapi-schema.json |    8 ++++++--
+ qemu-monitor.hx  |   10 ++++++----
+ 8 files changed, 46 insertions(+), 19 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c          |   13 ++++++++++++-
+ block/mirror.c   |    4 ++--
+ block/stream.c   |    6 +++---
+ block_int.h      |    9 +++++----
+ blockdev.c       |   12 ++++++++++--
+ hmp.c            |    3 ++-
+ qapi-schema.json |    8 ++++++--
+ qemu-monitor.hx  |   10 ++++++----
+ 8 files changed, 46 insertions(+), 19 deletions(-)
+
+diff --git a/block.c b/block.c
+index 3f9605d..6df77ac 100644
+--- a/block.c
++++ b/block.c
+@@ -3735,7 +3735,8 @@ out:
+ }
+ 
+ void *block_job_create(const BlockJobType *job_type, BlockDriverState *bs,
+-                       BlockDriverCompletionFunc *cb, void *opaque)
++                       int64_t speed, BlockDriverCompletionFunc *cb, 
++                       void *opaque)
+ {
+     BlockJob *job;
+ 
+@@ -3751,6 +3752,16 @@ void *block_job_create(const BlockJobType *job_type, BlockDriverState *bs,
+     job->opaque        = opaque;
+     job->busy          = true;
+     bs->job = job;
++
++    /* Only set speed when necessary to avoid NotSupported error */
++    if (speed != 0) {
++        if (block_job_set_speed(job, speed) < 0) {
++            bs->job = NULL;
++            g_free(job);
++            bdrv_set_in_use(bs, 0);
++            return NULL;
++        }
++    }
+     return job;
+ }
+ 
+diff --git a/block/mirror.c b/block/mirror.c
+index 1460031..2bf3580 100644
+--- a/block/mirror.c
++++ b/block/mirror.c
+@@ -259,13 +259,13 @@ static BlockJobType mirror_job_type = {
+ 
+ int mirror_start(BlockDriverState *bs,
+                  const char *target, BlockDriver *drv, int flags,
+-                 BlockDriverCompletionFunc *cb,
++                 int64_t speed, BlockDriverCompletionFunc *cb,
+                  void *opaque, bool full)
+ {
+     MirrorBlockJob *s;
+     int ret;
+ 
+-    s = block_job_create(&mirror_job_type, bs, cb, opaque);
++    s = block_job_create(&mirror_job_type, bs, speed, cb, opaque);
+     if (!s) {
+         return -EBUSY; /* bs must already be in use */
+     }
+diff --git a/block/stream.c b/block/stream.c
+index 48523cf..83e200e 100644
+--- a/block/stream.c
++++ b/block/stream.c
+@@ -279,12 +279,12 @@ static BlockJobType stream_job_type = {
+ };
+ 
+ int stream_start(BlockDriverState *bs, BlockDriverState *base,
+-                 const char *base_id, BlockDriverCompletionFunc *cb,
+-                 void *opaque)
++                 const char *base_id, int64_t speed, 
++                 BlockDriverCompletionFunc *cb, void *opaque)
+ {
+     StreamBlockJob *s;
+ 
+-    s = block_job_create(&stream_job_type, bs, cb, opaque);
++    s = block_job_create(&stream_job_type, bs, speed, cb, opaque);
+     if (!s) {
+         return -EBUSY; /* bs must already be in use */
+     }
+diff --git a/block_int.h b/block_int.h
+index 7dea4b3..8fae15e 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -307,7 +307,8 @@ int is_windows_drive(const char *filename);
+ #endif
+ 
+ void *block_job_create(const BlockJobType *job_type, BlockDriverState *bs,
+-                       BlockDriverCompletionFunc *cb, void *opaque);
++                       int64_t speed, BlockDriverCompletionFunc *cb,
++                       void *opaque);
+ void block_job_complete(BlockJob *job, int ret);
+ int block_job_set_speed(BlockJob *job, int64_t speed);
+ void block_job_cancel(BlockJob *job);
+@@ -316,12 +317,12 @@ int block_job_cancel_sync(BlockJob *job);
+ void block_job_sleep(BlockJob *job, QEMUClock *clock, int64_t ms);
+ 
+ int stream_start(BlockDriverState *bs, BlockDriverState *base,
+-                 const char *base_id, BlockDriverCompletionFunc *cb,
+-                 void *opaque);
++                 const char *base_id, int64_t speed,
++                 BlockDriverCompletionFunc *cb, void *opaque);
+ 
+ int mirror_start(BlockDriverState *bs,
+                  const char *target, BlockDriver *drv, int flags,
+-                 BlockDriverCompletionFunc *cb,
++                 int64_t speed, BlockDriverCompletionFunc *cb,
+                  void *opaque, bool full);
+ void mirror_abort(BlockDriverState *bs);
+ void mirror_commit(BlockDriverState *bs);
+diff --git a/blockdev.c b/blockdev.c
+index 157d971..27ee9c1 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -810,6 +810,7 @@ void qmp_blockdev_snapshot_sync(const char *device, const char *snapshot_file,
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+ void qmp___com_redhat_drive_mirror(const char *device, const char *target,
+                       bool has_format, const char *format,
++                      bool has_speed, int64_t speed,
+                       bool has_full, bool full,
+                       bool has_mode, enum NewImageMode mode, Error **errp)
+ {
+@@ -822,6 +823,8 @@ void qmp___com_redhat_drive_mirror(const char *device, const char *target,
+         .mode = mode,
+         .has_full = has_full,
+         .full = full,
++        .has_speed = has_speed,
++        .speed = speed,
+     };
+     blockdev_do_action(BLOCKDEV_ACTION_KIND___COM_REDHAT_DRIVE_MIRROR, &mirror, errp);
+ }
+@@ -864,6 +867,7 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+         const char *format = NULL;
+         uint64_t size;
+         bool full;
++        int64_t speed=0;
+ 
+         dev_info = dev_entry->value;
+         dev_entry = dev_entry->next;
+@@ -902,6 +906,9 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+             mode = dev_info->__com_redhat_drive_mirror->mode;
+             full = dev_info->__com_redhat_drive_mirror->has_full
+                 && dev_info->__com_redhat_drive_mirror->full;
++            if (dev_info->__com_redhat_drive_mirror->has_speed) {
++                speed = dev_info->__com_redhat_drive_mirror->speed;
++            }
+             break;
+ 
+         default:
+@@ -1002,7 +1009,7 @@ void qmp_transaction(BlockdevActionList *dev_list, Error **errp)
+              */
+             drive_get_ref(drive_get_by_blockdev(states->old_bs));
+             ret = mirror_start(states->old_bs, new_image_file, drv, flags,
+-                               block_job_cb, states->old_bs, full);
++                               speed, block_job_cb, states->old_bs, full);
+             if (ret == 0) {
+                 /* A marker for the abort action  */
+                 states->new_bs = states->old_bs;
+@@ -1280,6 +1287,7 @@ int do_block_stream(Monitor *mon, const QDict *params, QObject **ret_data)
+ {
+     const char *device = qdict_get_str(params, "device");
+     const char *base = qdict_get_try_str(params, "base");
++    const int64_t speed = qdict_get_try_int(params, "speed", 0);
+     BlockDriverState *bs;
+     BlockDriverState *base_bs = NULL;
+     int ret;
+@@ -1298,7 +1306,7 @@ int do_block_stream(Monitor *mon, const QDict *params, QObject **ret_data)
+         }
+     }
+ 
+-    ret = stream_start(bs, base_bs, base, block_job_cb, bs);
++    ret = stream_start(bs, base_bs, base, speed, block_job_cb, bs);
+     if (ret < 0) {
+         switch (ret) {
+         case -EBUSY:
+diff --git a/hmp.c b/hmp.c
+index c5757d3..74bfb8a 100644
+--- a/hmp.c
++++ b/hmp.c
+@@ -30,6 +30,7 @@ void hmp_drive_mirror(Monitor *mon, const QDict *qdict)
+     const char *format = qdict_get_try_str(qdict, "format");
+     int reuse = qdict_get_try_bool(qdict, "reuse", 0);
+     int full = qdict_get_try_bool(qdict, "full", 0);
++    int speed = qdict_get_try_int(qdict, "speed", 0);
+     enum NewImageMode mode;
+     Error *errp = NULL;
+ 
+@@ -46,7 +47,7 @@ void hmp_drive_mirror(Monitor *mon, const QDict *qdict)
+     }
+ 
+     qmp___com_redhat_drive_mirror(device, filename, !!format, format,
+-				  true, full, true, mode, &errp);
++				  qdict_haskey(qdict, "speed"), speed, true, full, true, mode, &errp);
+     hmp_handle_error(mon, &errp);
+ }
+ 
+diff --git a/qapi-schema.json b/qapi-schema.json
+index 14e7394..f2bbceb 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -45,6 +45,8 @@
+ #
+ # @format: #optional the format of the target image, default is 'qcow2'.
+ #
++# @speed:  #optional the maximum speed, in bytes per second
++#
+ # @mode: #optional whether and how QEMU should create a new image, default is
+ # 'absolute-paths'.
+ #
+@@ -53,7 +55,7 @@
+ ##
+ { 'type': 'BlockdevMirror',
+   'data': { 'device': 'str', 'target': 'str', '*format': 'str',
+-            '*full': 'bool', '*mode': 'NewImageMode' } }
++            '*speed': 'int', '*full': 'bool', '*mode': 'NewImageMode' } }
+ 
+ ##
+ # @BlockdevAction
+@@ -166,6 +168,8 @@
+ # @format: #optional the format of the new destination, default is the
+ #          format of the source
+ #
++# @speed:  #optional the maximum speed, in bytes per second
++#
+ # @mode: #optional whether and how QEMU should create a new image, default is
+ # 'absolute-paths'.
+ #
+@@ -181,5 +185,5 @@
+ ##
+ { 'command': '__com.redhat_drive-mirror',
+   'data': { 'device': 'str', 'target': 'str', '*format': 'str',
+-            '*full': 'bool', '*mode': 'NewImageMode'} }
++            '*speed': 'int', '*full': 'bool', '*mode': 'NewImageMode'} }
+ #endif
+diff --git a/qemu-monitor.hx b/qemu-monitor.hx
+index 0330943..3c173f7 100644
+--- a/qemu-monitor.hx
++++ b/qemu-monitor.hx
+@@ -1597,8 +1597,8 @@ EQMP
+ #ifdef CONFIG_LIVE_SNAPSHOTS
+     {
+         .name       = "__com.redhat_drive-mirror",
+-        .args_type  = "full:-f,device:B,target:s,mode:s?,format:s?",
+-        .params     = "device destination-image-file [mode] [format]",
++        .args_type  = "full:-f,device:B,target:s,mode:s?,format:s?,speed:o?",
++        .params     = "device destination-image-file [mode] [format] [speed]",
+         .user_print = monitor_user_noop,
+         .mhandler.cmd_new = qmp_marshal_input___com_redhat_drive_mirror,
+     },
+@@ -1619,6 +1619,7 @@ Arguments:
+ - "device": device name to operate on (json-string)
+ - "target": name of new image file (json-string)
+ - "format": format of new image (json-string, optional)
++- "speed": the maximum speed, in bytes per second (json-int, optional)
+ - "mode": how an image file should be created into the target
+   file/device (NewImageMode, optional, default 'absolute-paths')
+ - "full": whether the whole disk should be copied to the destination,
+@@ -2155,8 +2156,8 @@ EQMP
+ #ifdef CONFIG_BLOCK_STREAM
+     {
+         .name       = "block-stream",
+-        .args_type  = "device:B,base:s?",
+-        .params     = "device [base]",
++        .args_type  = "device:B,speed:o?,base:s?",
++        .params     = "device [speed [base]]",
+         .help       = "background copy backing file into a block device",
+         .user_print = monitor_user_noop,
+         .mhandler.cmd_new = do_block_stream,
+@@ -2186,6 +2187,7 @@ and the BLOCK_JOB_COMPLETED event is emitted.
+ Arguments:
+ 
+ - device: the device name (json-string)
++- speed:  the rate limit, bytes per second (json-int, optional)
+ - base:   the common backing file name (json-string, optional)
+ 
+ Returns:
+-- 
+1.7.7.6
+

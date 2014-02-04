@@ -1,0 +1,64 @@
+From 9c3287f9256d76431e4346b8f5b1acb89bafeaac Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:45 +0100
+Subject: [PATCH 18/55] vdi: convert to .bdrv_co_is_allocated()
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <271e26c41c8a9f1e60621ec72f33c0150666d4f4.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38868
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 18/54] vdi: convert to .bdrv_co_is_allocated()
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+It is trivial to switch from the synchronous .bdrv_is_allocated()
+interface to .bdrv_co_is_allocated() since vdi_is_allocated() does not
+block.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit e850b35a1f41304c31b971bde95f0534f2afd791)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/vdi.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/vdi.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/block/vdi.c b/block/vdi.c
+index af227a9..d507c7c 100644
+--- a/block/vdi.c
++++ b/block/vdi.c
+@@ -446,8 +446,8 @@ static int vdi_open(BlockDriverState *bs, int flags)
+     return -1;
+ }
+ 
+-static int vdi_is_allocated(BlockDriverState *bs, int64_t sector_num,
+-                             int nb_sectors, int *pnum)
++static int coroutine_fn vdi_co_is_allocated(BlockDriverState *bs,
++        int64_t sector_num, int nb_sectors, int *pnum)
+ {
+     /* TODO: Check for too large sector_num (in bdrv_is_allocated or here). */
+     BDRVVdiState *s = (BDRVVdiState *)bs->opaque;
+@@ -923,7 +923,7 @@ static BlockDriver bdrv_vdi = {
+     .bdrv_close = vdi_close,
+     .bdrv_create = vdi_create,
+     .bdrv_co_flush = vdi_co_flush,
+-    .bdrv_is_allocated = vdi_is_allocated,
++    .bdrv_co_is_allocated = vdi_co_is_allocated,
+     .bdrv_make_empty = vdi_make_empty,
+ 
+     .bdrv_aio_readv = vdi_aio_readv,
+-- 
+1.7.7.6
+

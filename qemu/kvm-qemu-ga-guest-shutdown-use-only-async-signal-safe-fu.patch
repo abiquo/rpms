@@ -1,0 +1,104 @@
+From 7198056520faa3fe868d71f25a7600f9b94d342d Mon Sep 17 00:00:00 2001
+Message-Id: <7198056520faa3fe868d71f25a7600f9b94d342d.1342518105.git.minovotn@redhat.com>
+In-Reply-To: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+References: <27a73856ecc481c66c7afac8171f753887f32e31.1342518105.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Tue, 5 Jun 2012 14:58:45 +0200
+Subject: [PATCH 36/41] qemu-ga: guest-shutdown: use only async-signal-safe
+ functions
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1338908331-15633-31-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 39927
+O-Subject: [PATCH RHEL6.4 qemu-kvm 30/36] qemu-ga: guest-shutdown: use only async-signal-safe functions
+Bugzilla: 827612
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Juan Quintela <quintela@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+POSIX mandates[1] that a child process of a multi-thread program uses
+only async-signal-safe functions before exec(). We consider qemu-ga
+to be multi-thread, because it uses glib.
+
+However, qmp_guest_shutdown() uses functions that are not
+async-signal-safe. Fix it the following way:
+
+- fclose() -> reopen_fd_to_null()
+- execl() -> execle()
+- exit() -> _exit()
+- drop slog() usage (which is not safe)
+
+  [1] http://pubs.opengroup.org/onlinepubs/009695399/functions/fork.html
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+Reviewed-by: Eric Blake <eblake@redhat.com>
+Signed-off-by: Michael Roth <mdroth@linux.vnet.ibm.com>
+(cherry picked from commit 3674838cd05268954bb6473239cd7f700a79bf0f)
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ qapi-schema-guest.json |  3 +--
+ qga/commands-posix.c   | 19 ++++++++-----------
+ 2 files changed, 9 insertions(+), 13 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ qapi-schema-guest.json |    3 +--
+ qga/commands-posix.c   |   19 ++++++++-----------
+ 2 files changed, 9 insertions(+), 13 deletions(-)
+
+diff --git a/qapi-schema-guest.json b/qapi-schema-guest.json
+index 7c6cb21..d4055d2 100644
+--- a/qapi-schema-guest.json
++++ b/qapi-schema-guest.json
+@@ -126,8 +126,7 @@
+ # @guest-shutdown:
+ #
+ # Initiate guest-activated shutdown. Note: this is an asynchronous
+-# shutdown request, with no guaruntee of successful shutdown. Errors
+-# will be logged to guest's syslog.
++# shutdown request, with no guarantee of successful shutdown.
+ #
+ # @mode: #optional "halt", "powerdown" (default), or "reboot"
+ #
+diff --git a/qga/commands-posix.c b/qga/commands-posix.c
+index 1cd7cf0..e351475 100644
+--- a/qga/commands-posix.c
++++ b/qga/commands-posix.c
+@@ -42,8 +42,8 @@
+ void qmp_guest_shutdown(bool has_mode, const char *mode, Error **err)
+ {
+     const char *shutdown_flag;
+-    int ret, status;
+     pid_t rpid, pid;
++    int status;
+ 
+     slog("guest-shutdown called, mode: %s", mode);
+     if (!has_mode || strcmp(mode, "powerdown") == 0) {
+@@ -62,16 +62,13 @@ void qmp_guest_shutdown(bool has_mode, const char *mode, Error **err)
+     if (pid == 0) {
+         /* child, start the shutdown */
+         setsid();
+-        fclose(stdin);
+-        fclose(stdout);
+-        fclose(stderr);
+-
+-        ret = execl("/sbin/shutdown", "shutdown", shutdown_flag, "+0",
+-                    "hypervisor initiated shutdown", (char*)NULL);
+-        if (ret) {
+-            slog("guest-shutdown failed: %s", strerror(errno));
+-        }
+-        exit(!!ret);
++        reopen_fd_to_null(0);
++        reopen_fd_to_null(1);
++        reopen_fd_to_null(2);
++
++        execle("/sbin/shutdown", "shutdown", shutdown_flag, "+0",
++               "hypervisor initiated shutdown", (char*)NULL, environ);
++        _exit(EXIT_FAILURE);
+     } else if (pid < 0) {
+         goto exit_err;
+     }
+-- 
+1.7.10.4
+

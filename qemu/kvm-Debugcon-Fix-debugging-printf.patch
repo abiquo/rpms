@@ -1,0 +1,46 @@
+From aa565ad18012ce3314568668030144b0c1f32292 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Thu, 19 Jan 2012 18:58:31 +0100
+Subject: [PATCH 4/4] Debugcon: Fix debugging printf
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326999511-23666-3-git-send-email-armbru@redhat.com>
+Patchwork-id: 36648
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 2/2] Debugcon: Fix debugging printf
+Bugzilla: 782825
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Gleb Natapov <gleb@redhat.com>
+
+From: Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+
+Signed-off-by: Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+Signed-off-by: Aurelien Jarno <aurelien@aurel32.net>
+(cherry picked from commit 0534163f5bcf4f4f948946a34bc6023de4b8378a)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ hw/debugcon.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/debugcon.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/hw/debugcon.c b/hw/debugcon.c
+index 631faa2..0c1ced0 100644
+--- a/hw/debugcon.c
++++ b/hw/debugcon.c
+@@ -60,7 +60,7 @@ static uint32_t debugcon_ioport_read(void *opaque, uint32_t addr)
+     DebugconState *s = opaque;
+ 
+ #ifdef DEBUG_DEBUGCON
+-    printf("debugcon: read addr=0x%04x\n", addr, val);
++    printf("debugcon: read addr=0x%04x\n", addr);
+ #endif
+ 
+     return s->readback;
+-- 
+1.7.7.5
+

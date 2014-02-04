@@ -1,0 +1,45 @@
+From 665c837bee0b2a0653630146fdf1c4cac5138ac0 Mon Sep 17 00:00:00 2001
+Message-Id: <665c837bee0b2a0653630146fdf1c4cac5138ac0.1350312451.git.minovotn@redhat.com>
+In-Reply-To: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+References: <aa2da19f266f7dd7345db5620ee362446fc6e806.1350312451.git.minovotn@redhat.com>
+From: Alon Levy <alevy@redhat.com>
+Date: Sun, 7 Oct 2012 15:31:56 +0200
+Subject: [PATCH 19/27] qxl: reset current_async on qxl_soft_reset
+
+RH-Author: Alon Levy <alevy@redhat.com>
+Message-id: <1349623920-19894-13-git-send-email-alevy@redhat.com>
+Patchwork-id: 42786
+O-Subject: [PATCH RHEL-6.4 v2 12/16] qxl: reset current_async on qxl_soft_reset
+Bugzilla: 770842
+RH-Acked-by: Gerd Hoffmann <kraxel@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Arnon Gilboa <agilboa@redhat.com>
+
+Signed-off-by: Alon Levy <alevy@redhat.com>
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+
+Upstream: a5f68c22e76bc4108401046081b058a901555bf4
+---
+ hw/qxl.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/qxl.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hw/qxl.c b/hw/qxl.c
+index 60324bb..3862f15 100644
+--- a/hw/qxl.c
++++ b/hw/qxl.c
+@@ -1031,6 +1031,7 @@ static void qxl_soft_reset(PCIQXLDevice *d)
+     trace_qxl_soft_reset(d->id);
+     qxl_check_state(d);
+     qxl_clear_guest_bug(d);
++    d->current_async = QXL_UNDEFINED_IO;
+ 
+     if (d->id == 0) {
+         qxl_enter_vga_mode(d);
+-- 
+1.7.11.7
+

@@ -1,0 +1,83 @@
+From c6583f2d0331d975c00af3aff32f9e670f74c5a6 Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Wed, 2 Nov 2011 13:26:41 +0100
+Subject: [PATCH] virtio-blk: pass full status to the guest
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1320240401-27686-1-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 34837
+O-Subject: [RHEL 6.3 qemu-kvm PATCH] virtio-blk: pass full status to the guest
+Bugzilla: 740504
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 740504
+
+Upstream: 5bb23927761db0d48507c60f56c4e28f72f3c2a7, with conflicts due to
+    our lack of commit 92e3c2a3
+
+Brew build: https://brewweb.devel.redhat.com/taskinfo?taskID=3706539
+
+When SCSI passthrough is being used by the guest, virtio-blk devices
+are not able to detect disk failures.  This is because the status field
+expected by the guest includes also the msg_status, host_status and
+driver_status fields, but the device is only passing down the SCSI status.
+
+The constants aren't found anywhere, only in the Linux header scsi/scsi.h:
+
+    #define msg_byte(result)    (((result) >> 8) & 0xff)
+    #define host_byte(result)   (((result) >> 16) & 0xff)
+    #define driver_byte(result) (((result) >> 24) & 0xff)
+
+The patch fixes this, and also makes sure that the guest always sees a
+CHECK_CONDITION status when there is valid sense data.
+
+Please review and ack for 6.3 and 6.2.z.
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+---
+ hw/virtio-blk.c |   15 ++++++++++++++-
+ 1 files changed, 14 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-blk.c |   15 ++++++++++++++-
+ 1 files changed, 14 insertions(+), 1 deletions(-)
+
+diff --git a/hw/virtio-blk.c b/hw/virtio-blk.c
+index 56f310d..b1f5b21 100644
+--- a/hw/virtio-blk.c
++++ b/hw/virtio-blk.c
+@@ -15,6 +15,7 @@
+ #include "qemu-error.h"
+ #include "trace.h"
+ #include "virtio-blk.h"
++#include "scsi-defs.h"
+ #ifdef __linux__
+ # include <scsi/sg.h>
+ #endif
+@@ -238,7 +239,19 @@ static void virtio_blk_handle_scsi(VirtIOBlockReq *req)
+         status = VIRTIO_BLK_S_OK;
+     }
+ 
+-    req->scsi->errors = hdr.status;
++    /*
++     * From SCSI-Generic-HOWTO: "Some lower level drivers (e.g. ide-scsi)
++     * clear the masked_status field [hence status gets cleared too, see
++     * block/scsi_ioctl.c] even when a CHECK_CONDITION or COMMAND_TERMINATED
++     * status has occurred.  However they do set DRIVER_SENSE in driver_status
++     * field. Also a (sb_len_wr > 0) indicates there is a sense buffer.
++     */
++    if (hdr.status == 0 && hdr.sb_len_wr > 0) {
++        hdr.status = CHECK_CONDITION;
++    }
++
++    req->scsi->errors = hdr.status | (hdr.msg_status << 8) |
++        (hdr.host_status << 16) | (hdr.driver_status << 24);
+     req->scsi->residual = hdr.resid;
+     req->scsi->sense_len = hdr.sb_len_wr;
+     req->scsi->data_len = hdr.dxfer_len;
+-- 
+1.7.7.5
+

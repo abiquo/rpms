@@ -1,0 +1,216 @@
+From 51cac71e045b0cc58cacff49565731e26138b9a0 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@redhat.com>
+Date: Wed, 7 Mar 2012 11:35:39 -0500
+Subject: [PATCH 79/98] vl.c: Move host_main_loop_wait() to OS specific files.
+
+Move host_main_loop_wait() to OS specific files. Create
+qemu-os-posix.h and provide empty inline for the POSIX case.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@redhat.com>
+Acked-by: Juan Quintela <quintela@redhat.com>
+Acked-by: Richard Henderson <rth@redhat.com>
+Signed-off-by: Blue Swirl <blauwirbel@gmail.com>
+(cherry picked from commit 0d93ca7c3b4c93a87723e3397daf6df2034b455a)
+
+Conflicts:
+
+	vl.c
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ os-win32.c      |   43 +++++++++++++++++++++++++++++++++++++++++++
+ qemu-os-posix.h |   33 +++++++++++++++++++++++++++++++++
+ qemu-os-win32.h |    1 +
+ sysemu.h        |    4 ++++
+ vl.c            |   52 +---------------------------------------------------
+ 5 files changed, 82 insertions(+), 51 deletions(-)
+ create mode 100644 qemu-os-posix.h
+
+diff --git a/os-win32.c b/os-win32.c
+index 5a464cc..1f7e28b 100644
+--- a/os-win32.c
++++ b/os-win32.c
+@@ -109,3 +109,46 @@ void qemu_del_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
+     if (found)
+         w->num--;
+ }
++
++void os_host_main_loop_wait(int *timeout)
++{
++    int ret, ret2, i;
++    PollingEntry *pe;
++
++    /* XXX: need to suppress polling by better using win32 events */
++    ret = 0;
++    for(pe = first_polling_entry; pe != NULL; pe = pe->next) {
++        ret |= pe->func(pe->opaque);
++    }
++    if (ret == 0) {
++        int err;
++        WaitObjects *w = &wait_objects;
++
++        ret = WaitForMultipleObjects(w->num, w->events, FALSE, *timeout);
++        if (WAIT_OBJECT_0 + 0 <= ret && ret <= WAIT_OBJECT_0 + w->num - 1) {
++            if (w->func[ret - WAIT_OBJECT_0])
++                w->func[ret - WAIT_OBJECT_0](w->opaque[ret - WAIT_OBJECT_0]);
++
++            /* Check for additional signaled events */
++            for(i = (ret - WAIT_OBJECT_0 + 1); i < w->num; i++) {
++
++                /* Check if event is signaled */
++                ret2 = WaitForSingleObject(w->events[i], 0);
++                if(ret2 == WAIT_OBJECT_0) {
++                    if (w->func[i])
++                        w->func[i](w->opaque[i]);
++                } else if (ret2 == WAIT_TIMEOUT) {
++                } else {
++                    err = GetLastError();
++                    fprintf(stderr, "WaitForSingleObject error %d %d\n", i, err);
++                }
++            }
++        } else if (ret == WAIT_TIMEOUT) {
++        } else {
++            err = GetLastError();
++            fprintf(stderr, "WaitForMultipleObjects error %d %d\n", ret, err);
++        }
++    }
++
++    *timeout = 0;
++}
+diff --git a/qemu-os-posix.h b/qemu-os-posix.h
+new file mode 100644
+index 0000000..96d1036
+--- /dev/null
++++ b/qemu-os-posix.h
+@@ -0,0 +1,33 @@
++/*
++ * posix specific declarations
++ *
++ * Copyright (c) 2003-2008 Fabrice Bellard
++ * Copyright (c) 2010 Jes Sorensen <Jes.Sorensen@redhat.com>
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a copy
++ * of this software and associated documentation files (the "Software"), to deal
++ * in the Software without restriction, including without limitation the rights
++ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++ * copies of the Software, and to permit persons to whom the Software is
++ * furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++ * THE SOFTWARE.
++ */
++
++#ifndef QEMU_OS_POSIX_H
++#define QEMU_OS_POSIX_H
++
++static inline void os_host_main_loop_wait(int *timeout)
++{
++}
++
++#endif
+diff --git a/qemu-os-win32.h b/qemu-os-win32.h
+index be108ad..4d1cac8 100644
+--- a/qemu-os-win32.h
++++ b/qemu-os-win32.h
+@@ -40,4 +40,5 @@ typedef void WaitObjectFunc(void *opaque);
+ int qemu_add_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque);
+ void qemu_del_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque);
+ 
++void os_host_main_loop_wait(int *timeout);
+ #endif
+diff --git a/sysemu.h b/sysemu.h
+index b439b98..72e38fb 100644
+--- a/sysemu.h
++++ b/sysemu.h
+@@ -13,6 +13,10 @@
+ #include "qemu-os-win32.h"
+ #endif
+ 
++#ifdef CONFIG_POSIX
++#include "qemu-os-posix.h"
++#endif
++
+ /* vl.c */
+ 
+ typedef enum {
+diff --git a/vl.c b/vl.c
+index 68ca4eb..f181818 100644
+--- a/vl.c
++++ b/vl.c
+@@ -3940,56 +3940,6 @@ void vm_stop(RunState reason)
+ #endif
+ 
+ 
+-#ifdef _WIN32
+-static void host_main_loop_wait(int *timeout)
+-{
+-    int ret, ret2, i;
+-    PollingEntry *pe;
+-
+-
+-    /* XXX: need to suppress polling by better using win32 events */
+-    ret = 0;
+-    for(pe = first_polling_entry; pe != NULL; pe = pe->next) {
+-        ret |= pe->func(pe->opaque);
+-    }
+-    if (ret == 0) {
+-        int err;
+-        WaitObjects *w = &wait_objects;
+-
+-        ret = WaitForMultipleObjects(w->num, w->events, FALSE, *timeout);
+-        if (WAIT_OBJECT_0 + 0 <= ret && ret <= WAIT_OBJECT_0 + w->num - 1) {
+-            if (w->func[ret - WAIT_OBJECT_0])
+-                w->func[ret - WAIT_OBJECT_0](w->opaque[ret - WAIT_OBJECT_0]);
+-
+-            /* Check for additional signaled events */
+-            for(i = (ret - WAIT_OBJECT_0 + 1); i < w->num; i++) {
+-
+-                /* Check if event is signaled */
+-                ret2 = WaitForSingleObject(w->events[i], 0);
+-                if(ret2 == WAIT_OBJECT_0) {
+-                    if (w->func[i])
+-                        w->func[i](w->opaque[i]);
+-                } else if (ret2 == WAIT_TIMEOUT) {
+-                } else {
+-                    err = GetLastError();
+-                    fprintf(stderr, "WaitForSingleObject error %d %d\n", i, err);
+-                }
+-            }
+-        } else if (ret == WAIT_TIMEOUT) {
+-        } else {
+-            err = GetLastError();
+-            fprintf(stderr, "WaitForMultipleObjects error %d %d\n", ret, err);
+-        }
+-    }
+-
+-    *timeout = 0;
+-}
+-#else
+-static void host_main_loop_wait(int *timeout)
+-{
+-}
+-#endif
+-
+ void main_loop_wait(int timeout)
+ {
+     IOHandlerRecord *ioh;
+@@ -3999,7 +3949,7 @@ void main_loop_wait(int timeout)
+ 
+     qemu_bh_update_timeout(&timeout);
+ 
+-    host_main_loop_wait(&timeout);
++    os_host_main_loop_wait(&timeout);
+ 
+     /* poll any events */
+     /* XXX: separate device handlers from system ones */
+-- 
+1.7.7.6
+

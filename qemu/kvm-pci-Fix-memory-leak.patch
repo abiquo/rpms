@@ -1,0 +1,44 @@
+From 5ae4389a5749d362e7c2635e3fda22f1f25abf62 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:08 +0100
+Subject: [PATCH 14/52] pci: Fix memory leak
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-15-git-send-email-armbru@redhat.com>
+Patchwork-id: 36582
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 14/52] pci: Fix memory leak
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Stefan Weil <weil@mail.berlios.de>
+
+Signed-off-by: Stefan Weil <weil@mail.berlios.de>
+Signed-off-by: Aurelien Jarno <aurelien@aurel32.net>
+(cherry picked from commit 386bbf45720b00496d5b9f9137359801c4e7ac0e)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ hw/pci.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/pci.c |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/hw/pci.c b/hw/pci.c
+index 421216a..0c9d1a5 100644
+--- a/hw/pci.c
++++ b/hw/pci.c
+@@ -1678,6 +1678,7 @@ static int pci_add_option_rom(PCIDevice *pdev)
+     if (size < 0) {
+         error_report("%s: failed to find romfile \"%s\"",
+                      __FUNCTION__, pdev->romfile);
++        qemu_free(path);
+         return -1;
+     }
+     if (size & (size - 1)) {
+-- 
+1.7.7.5
+

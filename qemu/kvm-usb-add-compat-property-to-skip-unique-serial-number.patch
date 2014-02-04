@@ -1,0 +1,117 @@
+From 022446fbb824055728acb2309dd0ebaf688e1d60 Mon Sep 17 00:00:00 2001
+Message-Id: <022446fbb824055728acb2309dd0ebaf688e1d60.1345545736.git.minovotn@redhat.com>
+In-Reply-To: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+References: <004171b9879af86d3c14654d0080b5559ee48267.1345545736.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Wed, 8 Aug 2012 13:27:11 +0200
+Subject: [PATCH 6/8] usb: add compat property to skip unique serial number
+ generation
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1344432431-5976-5-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40628
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 4/4] usb: add compat property to skip unique serial number generation
+Bugzilla: 813713
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+This patch makes 6.4 bug compatible with 6.3 and older.  It adds
+a compat property which skips serial number generation for older
+machine types.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ hw/pc.c       |   14 +++++++++++++-
+ hw/usb-bus.c  |    1 +
+ hw/usb-desc.c |    4 ++++
+ hw/usb.h      |    1 +
+ 4 files changed, 19 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/pc.c       | 14 +++++++++++++-
+ hw/usb-bus.c  |  1 +
+ hw/usb-desc.c |  4 ++++
+ hw/usb.h      |  1 +
+ 4 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/hw/pc.c b/hw/pc.c
+index f676905..9f44e13 100644
+--- a/hw/pc.c
++++ b/hw/pc.c
+@@ -1561,12 +1561,20 @@ static void rhel_common_init(const char *type1_version,
+                      strlen(buf) + 1, buf);
+ }
+ 
++#define PC_RHEL6_3_COMPAT \
++        {\
++            .driver   = "USB",\
++            .property = "create_unique_serial",\
++            .value    = "0",\
++        }
++
+ #define PC_RHEL6_2_COMPAT \
+         {\
+             .driver   = "virtio-net-pci",\
+             .property = "x-__com_redhat_rhel620_compat",\
+             .value    = "on",\
+-        }
++        }, PC_RHEL6_3_COMPAT
++
+ #define PC_RHEL6_1_COMPAT \
+         {\
+             .driver   = "usb-tablet",\
+@@ -1659,6 +1667,10 @@ static QEMUMachine pc_machine_rhel630 = {
+     .desc = "RHEL 6.3.0 PC",
+     .init = pc_init_rhel630,
+     .max_cpus = 255,
++    .compat_props = (GlobalProperty[]) {
++        PC_RHEL6_3_COMPAT,
++        { /* end of list */ }
++    },
+ };
+ 
+ static void pc_init_rhel620(ram_addr_t ram_size,
+diff --git a/hw/usb-bus.c b/hw/usb-bus.c
+index 5fac638..9c5bc16 100644
+--- a/hw/usb-bus.c
++++ b/hw/usb-bus.c
+@@ -19,6 +19,7 @@ static struct BusInfo usb_bus_info = {
+     .get_fw_dev_path = usb_get_fw_dev_path,
+     .props      = (Property[]) {
+         DEFINE_PROP_STRING("port", USBDevice, port_path),
++        DEFINE_PROP_UINT32("create_unique_serial", USBDevice, create_unique_serial, 1),
+         DEFINE_PROP_END_OF_LIST()
+     },
+ };
+diff --git a/hw/usb-desc.c b/hw/usb-desc.c
+index e4a8ee4..dc5d9fe 100644
+--- a/hw/usb-desc.c
++++ b/hw/usb-desc.c
+@@ -321,6 +321,10 @@ void usb_desc_create_serial(USBDevice *dev)
+     char serial[64];
+     int dst;
+ 
++    if (!dev->create_unique_serial) {
++        return;
++    }
++
+     assert(index != 0 && desc->str[index] != NULL);
+     dst = snprintf(serial, sizeof(serial), "%s", desc->str[index]);
+     if (hcd && hcd->parent_bus && hcd->parent_bus->info->get_dev_path) {
+diff --git a/hw/usb.h b/hw/usb.h
+index ce06aa6..e1b2b5e 100644
+--- a/hw/usb.h
++++ b/hw/usb.h
+@@ -162,6 +162,7 @@ struct USBDevice {
+     USBDeviceInfo *info;
+     USBPort *port;
+     char *port_path;
++    uint32_t create_unique_serial;
+     void *opaque;
+ 
+     /* Actual connected speed */
+-- 
+1.7.11.2
+

@@ -1,0 +1,86 @@
+From 180ecfc1f7398b17c1f46d4cce2ff98d201e7c68 Mon Sep 17 00:00:00 2001
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 14 Feb 2012 11:14:10 +0100
+Subject: [PATCH 45/99] qcow2: Fix in-flight list after qcow2_cache_put
+ failure
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1329218101-24213-46-git-send-email-kwolf@redhat.com>
+Patchwork-id: 37238
+O-Subject: [RHEL-6.3 qemu-kvm PATCH v2 45/96] qcow2: Fix in-flight list after qcow2_cache_put failure
+Bugzilla: 783950
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+Bugzilla: 783950
+
+If qcow2_cache_put returns an error during cluster allocation and the
+allocation fails, it must be removed from the list of in-flight allocations.
+Otherwise we'd get a loop in the list when the ACB is used for the next
+allocation.
+
+Luckily, this qcow2_cache_put shouldn't fail anyway because the L2 table is
+only read, so that qcow2_cache_put doesn't even involve I/O.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+(cherry picked from commit 9e2a3701a1fcfec0316b9dc1a6cd62869de5542c)
+---
+ block/qcow2-cluster.c |   12 ++++++++----
+ 1 files changed, 8 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/qcow2-cluster.c |   12 ++++++++----
+ 1 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/block/qcow2-cluster.c b/block/qcow2-cluster.c
+index 85dd758..f1ba054 100644
+--- a/block/qcow2-cluster.c
++++ b/block/qcow2-cluster.c
+@@ -789,8 +789,8 @@ int qcow2_alloc_cluster_offset(BlockDriverState *bs, uint64_t offset,
+                 m->depends_on = old_alloc;
+                 m->nb_clusters = 0;
+                 *num = 0;
+-                ret = 0;
+-                goto fail;
++
++                goto out_wait_dependency;
+             }
+         }
+     }
+@@ -805,7 +805,6 @@ int qcow2_alloc_cluster_offset(BlockDriverState *bs, uint64_t offset,
+ 
+     cluster_offset = qcow2_alloc_clusters(bs, nb_clusters * s->cluster_size);
+     if (cluster_offset < 0) {
+-        QLIST_REMOVE(m, next_in_flight);
+         ret = cluster_offset;
+         goto fail;
+     }
+@@ -818,7 +817,7 @@ int qcow2_alloc_cluster_offset(BlockDriverState *bs, uint64_t offset,
+ out:
+     ret = qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
+     if (ret < 0) {
+-        return ret;
++        goto fail_put;
+     }
+ 
+     m->nb_available = MIN(nb_clusters << (s->cluster_bits - 9), n_end);
+@@ -828,8 +827,13 @@ out:
+ 
+     return 0;
+ 
++out_wait_dependency:
++    return qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
++
+ fail:
+     qcow2_cache_put(bs, s->l2_table_cache, (void**) &l2_table);
++fail_put:
++    QLIST_REMOVE(m, next_in_flight);
+     return ret;
+ }
+ 
+-- 
+1.7.7.5
+

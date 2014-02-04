@@ -1,0 +1,74 @@
+From e04746d0592eb1b36a1afa7c47b541358db88189 Mon Sep 17 00:00:00 2001
+Message-Id: <e04746d0592eb1b36a1afa7c47b541358db88189.1334770230.git.minovotn@redhat.com>
+In-Reply-To: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+References: <5e4659718c6d6ee9ab11b269d929a292a71b3ab0.1334770230.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 13 Apr 2012 16:27:11 +0200
+Subject: [PATCH 03/18] block: set job->speed in block_set_speed
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1334334446-31987-2-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 39213
+O-Subject: [RHEL 6.3 qemu-kvm PATCH 01/16] block: set job->speed in block_set_speed
+Bugzilla: 806432
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Jeffrey Cody <jcody@redhat.com>
+
+Bugzilla: 806432
+
+There is no need to do this in every implementation of set_speed
+(even though there is only one right now).
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Reviewed-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry-picked from upstream commit 9f25eccc1cdbe6ee985b7a5954fa621c2012912e)
+---
+ block.c        |    8 +++++++-
+ block/stream.c |    1 -
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c        |    8 +++++++-
+ block/stream.c |    1 -
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/block.c b/block.c
+index 6c99220..6063f90 100644
+--- a/block.c
++++ b/block.c
+@@ -3687,10 +3687,16 @@ void block_job_complete(BlockJob *job, int ret)
+ 
+ int block_job_set_speed(BlockJob *job, int64_t value)
+ {
++    int rc;
++
+     if (!job->job_type->set_speed) {
+         return -ENOTSUP;
+     }
+-    return job->job_type->set_speed(job, value);
++    rc = job->job_type->set_speed(job, value);
++    if (rc == 0) {
++        job->speed = value;
++    }
++    return rc;
+ }
+ 
+ void block_job_cancel(BlockJob *job)
+diff --git a/block/stream.c b/block/stream.c
+index f578f89..d010e28 100644
+--- a/block/stream.c
++++ b/block/stream.c
+@@ -273,7 +273,6 @@ static int stream_set_speed(BlockJob *job, int64_t value)
+     if (value < 0) {
+         return -EINVAL;
+     }
+-    job->speed = value;
+     ratelimit_set_speed(&s->limit, value / BDRV_SECTOR_SIZE);
+     return 0;
+ }
+-- 
+1.7.7.6
+

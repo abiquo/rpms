@@ -1,0 +1,79 @@
+From 67215b1f1a6235d5ddda73aed13858ccef412cb5 Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Mon, 9 Jan 2012 13:37:31 +0100
+Subject: [PATCH 4/9] virtio-blk: Fix virtio-blk-s390 to require drive
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326116256-3685-5-git-send-email-armbru@redhat.com>
+Patchwork-id: 36279
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 4/9] virtio-blk: Fix virtio-blk-s390 to require drive
+Bugzilla: 737879
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+Move the check from virtio_blk_init_pci(), where it protects only
+virtio-blk-pci, to virtio_blk_init().  Without that, virtio-blk-s390
+initializes without a drive.  I figure that can lead to null pointer
+dereferences.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit d75d25e34e4b4eb6a18122b5fa3baac70cea0f2b)
+
+Conflicts:
+
+	hw/virtio-blk.c
+---
+ hw/virtio-blk.c |    6 ++++++
+ hw/virtio-pci.c |    4 ----
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-blk.c |    6 ++++++
+ hw/virtio-pci.c |    4 ----
+ 2 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/hw/virtio-blk.c b/hw/virtio-blk.c
+index 0e56611..4641e99 100644
+--- a/hw/virtio-blk.c
++++ b/hw/virtio-blk.c
+@@ -12,6 +12,7 @@
+  */
+ 
+ #include <qemu-common.h>
++#include "qemu-error.h"
+ #include "trace.h"
+ #include "virtio-blk.h"
+ #ifdef __linux__
+@@ -557,6 +558,11 @@ VirtIODevice *virtio_blk_init(DeviceState *dev, BlockConf *conf)
+     static int virtio_blk_id;
+     DriveInfo *dinfo;
+ 
++    if (!conf->bs) {
++        error_report("virtio-blk-pci: drive property not set");
++        return NULL;
++    }
++
+     s = (VirtIOBlock *)virtio_common_init("virtio-blk", VIRTIO_ID_BLOCK,
+                                           sizeof(struct virtio_blk_config),
+                                           sizeof(VirtIOBlock));
+diff --git a/hw/virtio-pci.c b/hw/virtio-pci.c
+index 8457b1a..6023196 100644
+--- a/hw/virtio-pci.c
++++ b/hw/virtio-pci.c
+@@ -808,10 +808,6 @@ static int virtio_blk_init_pci(PCIDevice *pci_dev)
+         proxy->class_code != PCI_CLASS_STORAGE_OTHER)
+         proxy->class_code = PCI_CLASS_STORAGE_SCSI;
+ 
+-    if (!proxy->block.bs) {
+-        error_report("virtio-blk-pci: drive property not set");
+-        return -1;
+-    }
+     vdev = virtio_blk_init(&pci_dev->qdev, &proxy->block);
+     if (!vdev) {
+         return -1;
+-- 
+1.7.7.4
+

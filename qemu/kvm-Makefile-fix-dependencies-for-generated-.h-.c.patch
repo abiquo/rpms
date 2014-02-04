@@ -1,0 +1,86 @@
+From b404040c234c3f06bad00bc8dba2f414f65705b9 Mon Sep 17 00:00:00 2001
+From: "Michael S. Tsirkin" <mst@redhat.com>
+Date: Mon, 5 Mar 2012 17:44:43 -0500
+Subject: [PATCH 76/98] Makefile: fix dependencies for generated .h, .c
+
+We have a single rule generating .c and .h files,
+so .h doesn't depend on .c: both depend on the
+source schema.
+
+Fix Makefile to reflect that - without this,
+if .c is there and .h is missing, Makefile does
+not know how to remake .h and assumes it's
+a dummy target, triggering endless rebuilds.
+
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+Reviewed-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 599825c565f4e5f0790ff61ef14574b463e3b710)
+
+Conflicts:
+
+	Makefile
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile |   27 +++++++++++++++------------
+ 1 files changed, 15 insertions(+), 12 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 418683b..8446940 100644
+--- a/Makefile
++++ b/Makefile
+@@ -187,28 +187,30 @@ check-qlist: check-qlist.o qlist.o qint.o qemu-malloc.o qemu-tool.o
+ check-qfloat: check-qfloat.o qfloat.o qemu-malloc.o qemu-tool.o
+ check-qjson: check-qjson.o qfloat.o qint.o qdict.o qstring.o qlist.o qbool.o qjson.o json-streamer.o json-lexer.o json-parser.o qemu-malloc.o error.o qerror.o qemu-error.o qemu-tool.o
+ 
+-$(qapi-obj-y): $(GENERATED_HEADERS)
++$(qapi-obj-y): $(GENERATED_HEADERS) 
+ qapi-dir := qapi-generated
++$(qga-obj-y): $(qapi-dir)/qga-qapi-types.h $(qapi-dir)/qga-qapi-visit.h $(qapi-dir)/qga-qmp-commands.h
+ test-visitor.o test-qmp-commands.o qemu-ga$(EXESUF): QEMU_CFLAGS += -I $(qapi-dir)
+ qemu-ga$(EXESUF): LIBS = $(LIBS_QGA)
+ 
+-$(qapi-dir)/test-qapi-types.c: $(qapi-dir)/test-qapi-types.h
+-$(qapi-dir)/test-qapi-types.h: $(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-types.py
++$(qapi-dir)/test-qapi-types.c $(qapi-dir)/test-qapi-types.h :\
++$(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-types.py
+ 	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-types.py -o "$(qapi-dir)" -p "test-" < $<, "  GEN   $@")
+-$(qapi-dir)/test-qapi-visit.c: $(qapi-dir)/test-qapi-visit.h
+-$(qapi-dir)/test-qapi-visit.h: $(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-visit.py
++$(qapi-dir)/test-qapi-visit.c $(qapi-dir)/test-qapi-visit.h :\
++$(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-visit.py
+ 	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-visit.py -o "$(qapi-dir)" -p "test-" < $<, "  GEN   $@")
+-$(qapi-dir)/test-qmp-commands.h: $(qapi-dir)/test-qmp-marshal.c
+-$(qapi-dir)/test-qmp-marshal.c: $(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-commands.py
++$(qapi-dir)/test-qmp-commands.h $(qapi-dir)/test-qmp-marshal.c :\
++$(SRC_PATH)/qapi-schema-test.json $(SRC_PATH)/scripts/qapi-commands.py
+ 	    $(call quiet-command,python $(SRC_PATH)/scripts/qapi-commands.py -o "$(qapi-dir)" -p "test-" < $<, "  GEN   $@")
+ 
+-$(qapi-dir)/qga-qapi-types.c: $(qapi-dir)/qga-qapi-types.h
+-$(qapi-dir)/qga-qapi-types.h: $(SRC_PATH)/qapi-schema-guest.json $(SRC_PATH)/scripts/qapi-types.py
++$(qapi-dir)/qga-qapi-types.c $(qapi-dir)/qga-qapi-types.h :\
++$(SRC_PATH)/qapi-schema-guest.json $(SRC_PATH)/scripts/qapi-types.py
+ 	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-types.py -o "$(qapi-dir)" -p "qga-" < $<, "  GEN   $@")
+-$(qapi-dir)/qga-qapi-visit.c: $(qapi-dir)/qga-qapi-visit.h
+-$(qapi-dir)/qga-qapi-visit.h: $(SRC_PATH)/qapi-schema-guest.json $(SRC_PATH)/scripts/qapi-visit.py
++$(qapi-dir)/qga-qapi-visit.c $(qapi-dir)/qga-qapi-visit.h :\
++$(SRC_PATH)/qapi-schema-guest.json $(SRC_PATH)/scripts/qapi-visit.py
+ 	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-visit.py -o "$(qapi-dir)" -p "qga-" < $<, "  GEN   $@")
+-$(qapi-dir)/qga-qmp-marshal.c: $(SRC_PATH)/qapi-schema-guest.json $(SRC_PATH)/scripts/qapi-commands.py
++$(qapi-dir)/qga-qmp-commands.h $(qapi-dir)/qga-qmp-marshal.c :\
++$(SRC_PATH)/qapi-schema-guest.json $(SRC_PATH)/scripts/qapi-commands.py
+ 	$(call quiet-command,python $(SRC_PATH)/scripts/qapi-commands.py -o "$(qapi-dir)" -p "qga-" < $<, "  GEN   $@")
+ 
+ test-visitor.o: $(addprefix $(qapi-dir)/, test-qapi-types.c test-qapi-types.h test-qapi-visit.c test-qapi-visit.h) $(qapi-obj-y)
+@@ -221,6 +223,7 @@ QGALIB_GEN=$(addprefix $(qapi-dir)/, qga-qapi-types.c qga-qapi-types.h qga-qapi-
+ $(QGALIB_GEN): $(GENERATED_HEADERS)
+ $(QGALIB) qemu-ga.o: $(QGALIB_GEN) $(qapi-obj-y)
+ 
++
+ qemu-ga$(EXESUF): qemu-ga.o $(qga-obj-y) $(qapi-obj-y) $(trace-obj-y) $(qobject-obj-y) $(version-obj-y) $(addprefix $(qapi-dir)/, qga-qapi-visit.o qga-qapi-types.o qga-qmp-marshal.o)
+ 
+ QEMULIBS=libhw32 libhw64 libuser
+-- 
+1.7.7.6
+

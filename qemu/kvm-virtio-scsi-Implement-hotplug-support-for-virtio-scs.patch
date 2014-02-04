@@ -1,0 +1,164 @@
+From e636afadfe97aee0b7d8dc0e90977921d2ad843a Mon Sep 17 00:00:00 2001
+Message-Id: <e636afadfe97aee0b7d8dc0e90977921d2ad843a.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 12 Oct 2012 16:22:43 +0200
+Subject: [PATCH 11/17] virtio-scsi: Implement hotplug support for virtio-scsi
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1350058967-27351-7-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 43062
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v2 06/10] virtio-scsi: Implement hotplug support for virtio-scsi
+Bugzilla: 808660
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+From: Cong Meng <mc@linux.vnet.ibm.com>
+
+Bugzilla: 808660
+
+Implement the hotplug() and hot_unplug() interfaces in virtio-scsi, by signal
+the virtio_scsi.ko in guest kernel via event virtual queue.
+
+The counterpart patch of virtio_scsi.ko will be sent soon in another thread.
+
+Signed-off-by: Sen Wang <senwang@linux.vnet.ibm.com>
+Signed-off-by: Cong Meng <mc@linux.vnet.ibm.com>
+[ Add memset, fix LUN field, placate checkpatch - Paolo ]
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit b6866fee58bc25b01485dcfcf8be44a915c5f573)
+---
+ hw/virtio-scsi.c | 72 ++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file modificato, 70 inserzioni(+), 2 rimozioni(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/virtio-scsi.c | 72 ++++++++++++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 70 insertions(+), 2 deletions(-)
+
+diff --git a/hw/virtio-scsi.c b/hw/virtio-scsi.c
+index 713b962..a67c25d 100644
+--- a/hw/virtio-scsi.c
++++ b/hw/virtio-scsi.c
+@@ -25,6 +25,10 @@
+ #define VIRTIO_SCSI_MAX_TARGET  255
+ #define VIRTIO_SCSI_MAX_LUN     16383
+ 
++/* Feature Bits */
++#define VIRTIO_SCSI_F_INOUT                    0
++#define VIRTIO_SCSI_F_HOTPLUG                  1
++
+ /* Response codes */
+ #define VIRTIO_SCSI_S_OK                       0
+ #define VIRTIO_SCSI_S_OVERRUN                  1
+@@ -61,6 +65,11 @@
+ #define VIRTIO_SCSI_T_TRANSPORT_RESET          1
+ #define VIRTIO_SCSI_T_ASYNC_NOTIFY             2
+ 
++/* Reasons for transport reset event */
++#define VIRTIO_SCSI_EVT_RESET_HARD             0
++#define VIRTIO_SCSI_EVT_RESET_RESCAN           1
++#define VIRTIO_SCSI_EVT_RESET_REMOVED          2
++
+ /* SCSI command request, followed by data-out */
+ typedef struct {
+     uint8_t lun[8];              /* Logical Unit Number */
+@@ -207,11 +216,13 @@ static void qemu_sgl_init_external(QEMUSGList *qsgl, struct iovec *sg,
+ static void virtio_scsi_parse_req(VirtIOSCSI *s, VirtQueue *vq,
+                                   VirtIOSCSIReq *req)
+ {
+-    assert(req->elem.out_num && req->elem.in_num);
++    assert(req->elem.in_num);
+     req->vq = vq;
+     req->dev = s;
+     req->sreq = NULL;
+-    req->req.buf = req->elem.out_sg[0].iov_base;
++    if (req->elem.out_num) {
++        req->req.buf = req->elem.out_sg[0].iov_base;
++    }
+     req->resp.buf = req->elem.in_sg[0].iov_base;
+ 
+     if (req->elem.out_num > 1) {
+@@ -551,6 +562,7 @@ static void virtio_scsi_set_config(VirtIODevice *vdev,
+ static uint32_t virtio_scsi_get_features(VirtIODevice *vdev,
+                                          uint32_t requested_features)
+ {
++    requested_features |= (1UL << VIRTIO_SCSI_F_HOTPLUG);
+     return requested_features;
+ }
+ 
+@@ -583,6 +595,60 @@ static int virtio_scsi_load(QEMUFile *f, void *opaque, int version_id)
+     return 0;
+ }
+ 
++static void virtio_scsi_push_event(VirtIOSCSI *s, SCSIDevice *dev,
++                                   uint32_t event, uint32_t reason)
++{
++    VirtIOSCSIReq *req = virtio_scsi_pop_req(s, s->event_vq);
++    VirtIOSCSIEvent *evt;
++
++    if (req) {
++        int in_size;
++        if (req->elem.out_num || req->elem.in_num != 1) {
++            virtio_scsi_bad_req();
++        }
++
++        in_size = req->elem.in_sg[0].iov_len;
++        if (in_size < sizeof(VirtIOSCSIEvent)) {
++            virtio_scsi_bad_req();
++        }
++
++        evt = req->resp.event;
++        memset(evt, 0, sizeof(VirtIOSCSIEvent));
++        evt->event = event;
++        evt->reason = reason;
++        evt->lun[0] = 1;
++        evt->lun[1] = dev->id;
++
++        /* Linux wants us to keep the same encoding we use for REPORT LUNS.  */
++        if (dev->lun >= 256) {
++            evt->lun[2] = (dev->lun >> 8) | 0x40;
++        }
++        evt->lun[3] = dev->lun & 0xFF;
++        virtio_scsi_complete_req(req);
++    }
++}
++
++static void virtio_scsi_hotplug(SCSIBus *bus, SCSIDevice *dev)
++{
++    VirtIOSCSI *s = container_of(bus, VirtIOSCSI, bus);
++
++    if (((s->vdev.guest_features >> VIRTIO_SCSI_F_HOTPLUG) & 1) &&
++        (s->vdev.status & VIRTIO_CONFIG_S_DRIVER_OK)) {
++        virtio_scsi_push_event(s, dev, VIRTIO_SCSI_T_TRANSPORT_RESET,
++                               VIRTIO_SCSI_EVT_RESET_RESCAN);
++    }
++}
++
++static void virtio_scsi_hot_unplug(SCSIBus *bus, SCSIDevice *dev)
++{
++    VirtIOSCSI *s = container_of(bus, VirtIOSCSI, bus);
++
++    if ((s->vdev.guest_features >> VIRTIO_SCSI_F_HOTPLUG) & 1) {
++        virtio_scsi_push_event(s, dev, VIRTIO_SCSI_T_TRANSPORT_RESET,
++                               VIRTIO_SCSI_EVT_RESET_REMOVED);
++    }
++}
++
+ static struct SCSIBusInfo virtio_scsi_scsi_info = {
+     .tcq = true,
+     .max_channel = VIRTIO_SCSI_MAX_CHANNEL,
+@@ -591,6 +657,8 @@ static struct SCSIBusInfo virtio_scsi_scsi_info = {
+ 
+     .complete = virtio_scsi_command_complete,
+     .cancel = virtio_scsi_request_cancelled,
++    .hotplug = virtio_scsi_hotplug,
++    .hot_unplug = virtio_scsi_hot_unplug,
+     .get_sg_list = virtio_scsi_get_sg_list,
+     .save_request = virtio_scsi_save_request,
+     .load_request = virtio_scsi_load_request,
+-- 
+1.7.11.7
+

@@ -1,0 +1,60 @@
+From 62fcfe7fecefb47ac153d28540a67b8adeff0f26 Mon Sep 17 00:00:00 2001
+Message-Id: <62fcfe7fecefb47ac153d28540a67b8adeff0f26.1343750985.git.minovotn@redhat.com>
+In-Reply-To: <3ef4055cdb5048ae1b1c3aa11bf1cae31c337b90.1343750985.git.minovotn@redhat.com>
+References: <3ef4055cdb5048ae1b1c3aa11bf1cae31c337b90.1343750985.git.minovotn@redhat.com>
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Mon, 9 Jul 2012 12:56:39 +0200
+Subject: [PATCH 3/5] usb-uhci: fix expire time initialization.
+
+RH-Author: Gerd Hoffmann <kraxel@redhat.com>
+Message-id: <1341838601-27682-4-git-send-email-kraxel@redhat.com>
+Patchwork-id: 40241
+O-Subject: [RHEL-6.4 qemu-kvm PATCH 3/5] usb-uhci: fix expire time initialization.
+Bugzilla: 808653 831549
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Hans de Goede <hdegoede@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+
+expire_time must be initialited when the guest activates the
+usb scheduler, not at device creation time.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+(cherry picked from commit 94cc916a8c7e631afc650cb3c9c2832167b0dd8f)
+
+Conflicts:
+
+	hw/usb-uhci.c
+---
+ hw/usb-uhci.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/usb-uhci.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/hw/usb-uhci.c b/hw/usb-uhci.c
+index 3b32e86..ca1c91e 100644
+--- a/hw/usb-uhci.c
++++ b/hw/usb-uhci.c
+@@ -437,6 +437,8 @@ static void uhci_ioport_writew(void *opaque, uint32_t addr, uint32_t val)
+     case 0x00:
+         if ((val & UHCI_CMD_RS) && !(s->cmd & UHCI_CMD_RS)) {
+             /* start frame processing */
++            s->expire_time = qemu_get_clock(vm_clock) +
++                (get_ticks_per_sec() / FRAME_TIMER_FREQ);
+             qemu_mod_timer(s->frame_timer, qemu_get_clock(vm_clock));
+             s->status &= ~UHCI_STS_HCHALTED;
+         } else if (!(val & UHCI_CMD_RS)) {
+@@ -1158,8 +1160,6 @@ static int usb_uhci_common_initfn(UHCIState *s)
+         }
+     }
+     s->frame_timer = qemu_new_timer(vm_clock, uhci_frame_timer, s);
+-    s->expire_time = qemu_get_clock(vm_clock) +
+-        (get_ticks_per_sec() / FRAME_TIMER_FREQ);
+     s->num_ports_vmstate = NB_PORTS;
+     QTAILQ_INIT(&s->async_pending);
+ 
+-- 
+1.7.10.4
+

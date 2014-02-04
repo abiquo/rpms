@@ -1,0 +1,106 @@
+From 8e3bd35bdb0e26d59e700b35cef3d80823bed66e Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:55:03 +0100
+Subject: [PATCH 36/55] block: check bdrv_in_use() before blockdev operations
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <d2172da92474e83ebc8ef5ecdafc35b0a1f62ff5.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38886
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 36/54] block: check bdrv_in_use() before blockdev operations
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Long-running block operations like block migration and image streaming
+must have continual access to their block device.  It is not safe to
+perform operations like hotplug, eject, change, resize, commit, or
+external snapshot while a long-running operation is in progress.
+
+This patch adds the missing bdrv_in_use() checks so that block migration
+and image streaming never have the rug pulled out from underneath them.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit 2d3735d3bf61d5c8e154a197a11535cc65044334)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c    |    4 ++++
+ blockdev.c |   17 ++++++++++++++++-
+ 2 files changed, 20 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c    |    4 ++++
+ blockdev.c |   17 ++++++++++++++++-
+ 2 files changed, 20 insertions(+), 1 deletions(-)
+
+diff --git a/block.c b/block.c
+index eeef65e..b9f5ff1 100644
+--- a/block.c
++++ b/block.c
+@@ -1033,6 +1033,10 @@ int bdrv_commit(BlockDriverState *bs)
+         return -EACCES;
+     }
+ 
++    if (bdrv_in_use(bs) || bdrv_in_use(bs->backing_hd)) {
++        return -EBUSY;
++    }
++
+     backing_drv = bs->backing_hd->drv;
+     ro = bs->backing_hd->read_only;
+     strncpy(filename, bs->backing_hd->filename, sizeof(filename));
+diff --git a/blockdev.c b/blockdev.c
+index 1882a71..cdd3ea3 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -615,10 +615,16 @@ void do_commit(Monitor *mon, const QDict *qdict)
+ 
+     all_devices = !strcmp(device, "all");
+     QTAILQ_FOREACH(dinfo, &drives, next) {
++        int ret;
++
+         if (!all_devices)
+             if (strcmp(bdrv_get_device_name(dinfo->bdrv), device))
+                 continue;
+-        bdrv_commit(dinfo->bdrv);
++        ret = bdrv_commit(dinfo->bdrv);
++        if (ret == -EBUSY) {
++            qerror_report(QERR_DEVICE_IN_USE, device);
++            return;
++        }
+     }
+ }
+ 
+@@ -646,6 +652,11 @@ int do_snapshot_blkdev(Monitor *mon, const QDict *qdict, QObject **ret_data)
+         ret = -1;
+         goto out;
+     }
++    if (bdrv_in_use(bs)) {
++        qerror_report(QERR_DEVICE_IN_USE, device);
++        ret = -1;
++        goto out;
++    }
+ 
+     pstrcpy(old_filename, sizeof(old_filename), bs->filename);
+ 
+@@ -836,6 +847,10 @@ exit:
+ 
+ static int eject_device(Monitor *mon, BlockDriverState *bs, int force)
+ {
++    if (bdrv_in_use(bs)) {
++        qerror_report(QERR_DEVICE_IN_USE, bdrv_get_device_name(bs));
++        return -1;
++    }
+     if (!bdrv_dev_has_removable_media(bs)) {
+         qerror_report(QERR_DEVICE_NOT_REMOVABLE, bdrv_get_device_name(bs));
+         return -1;
+-- 
+1.7.7.6
+

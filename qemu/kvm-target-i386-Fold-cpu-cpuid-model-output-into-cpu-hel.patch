@@ -1,0 +1,151 @@
+From bd19b378c1867d4cd50a42c20c318ae5d877f5e9 Mon Sep 17 00:00:00 2001
+Message-Id: <bd19b378c1867d4cd50a42c20c318ae5d877f5e9.1349175436.git.minovotn@redhat.com>
+In-Reply-To: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+References: <94968b7fa9b14e71f004474d7ce77e189e6a2bf3.1349175436.git.minovotn@redhat.com>
+From: Eduardo Habkost <ehabkost@redhat.com>
+Date: Fri, 28 Sep 2012 16:50:07 +0200
+Subject: [PATCH 03/34] target-i386: Fold -cpu ?cpuid, ?model output into -cpu
+ help, drop ?dump
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+RH-Author: Eduardo Habkost <ehabkost@redhat.com>
+Message-id: <1348851023-31907-3-git-send-email-ehabkost@redhat.com>
+Patchwork-id: 42520
+O-Subject: [RHEL6 qemu-kvm PATCH 02/18] target-i386: Fold -cpu ?cpuid, ?model output into -cpu help, drop ?dump
+Bugzilla: 833152
+RH-Acked-by: Alex Williamson <alex.williamson@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Igor Mammedov <imammedo@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+From: Peter Maydell <peter.maydell@linaro.org>
+
+Bugzilla: 833152
+
+Commit c8057f95 (accidentally) disabled the ability to pass
+option strings starting with '?' to the target-specific
+cpu_list function, so the target-i386 specific "-cpu ?dump",
+"-cpu ?cpuid" and "-cpu ?model" stopped working.
+
+Since these options are undocumented and not used by libvirt,
+simply drop them completely rather than reinstating them
+with new style syntax. Instead, we fold the ?model and ?cpuid
+output into the output of the plain "-cpu help" output. The
+detailed output produced by ?dump is dropped.
+
+Signed-off-by: Peter Maydell <peter.maydell@linaro.org>
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+Reviewed-by: Eduardo Habkost <ehabkost@redhat.com>
+Reviewed-by: Igor Mammedov <imammedo@redhat.com>
+Signed-off-by: Andreas Färber <afaerber@suse.de>
+(cherry picked from commit 6cdf8854203e51a222c9ce94a8c8c568da834cf6)
+
+Conflicts:
+	target-i386/cpuid.c
+
+The only conflict was on the usage of the fprintf_function typedef, that
+I didn't want to cherry-pick because it would require sorting out some
+header dependencies.
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ target-i386/cpuid.c | 64 +++++++++--------------------------------------------
+ 1 file changed, 11 insertions(+), 53 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ target-i386/cpuid.c | 64 +++++++++--------------------------------------------
+ 1 file changed, 11 insertions(+), 53 deletions(-)
+
+diff --git a/target-i386/cpuid.c b/target-i386/cpuid.c
+index 8b77d05..6fbf4b3 100644
+--- a/target-i386/cpuid.c
++++ b/target-i386/cpuid.c
+@@ -709,71 +709,29 @@ static void listflags(char *buf, int bufsize, uint32_t fbits,
+         }
+ }
+ 
+-/* generate CPU information:
+- * -?        list model names
+- * -?model   list model names/IDs
+- * -?dump    output all model (x86_def_t) data
+- * -?cpuid   list all recognized cpuid flag names
+- */
++/* generate CPU information */
+ void x86_cpu_list (FILE *f, int (*cpu_fprintf)(FILE *f, const char *fmt, ...),
+                   const char *optarg)
+ {
+-    unsigned char model = !strcmp("?model", optarg);
+-    unsigned char dump = !strcmp("?dump", optarg);
+-    unsigned char cpuid = !strcmp("?cpuid", optarg);
+     x86_def_t *def;
+     char buf[256];
+ 
+-    if (cpuid) {
+-        (*cpu_fprintf)(f, "Recognized CPUID flags:\n");
+-        listflags(buf, sizeof (buf), (uint32_t)~0, feature_name, 1);
+-        (*cpu_fprintf)(f, "  f_edx: %s\n", buf);
+-        listflags(buf, sizeof (buf), (uint32_t)~0, ext_feature_name, 1);
+-        (*cpu_fprintf)(f, "  f_ecx: %s\n", buf);
+-        listflags(buf, sizeof (buf), (uint32_t)~0, ext2_feature_name, 1);
+-        (*cpu_fprintf)(f, "  extf_edx: %s\n", buf);
+-        listflags(buf, sizeof (buf), (uint32_t)~0, ext3_feature_name, 1);
+-        (*cpu_fprintf)(f, "  extf_ecx: %s\n", buf);
+-        return;
+-    }
+     for (def = x86_defs; def; def = def->next) {
+         snprintf(buf, sizeof (buf), def->flags ? "[%s]": "%s", def->name);
+-        if (model || dump) {
+-            (*cpu_fprintf)(f, "x86 %16s  %-48s\n", buf, def->model_id);
+-        } else {
+-            (*cpu_fprintf)(f, "x86 %16s\n", buf);
+-        }
+-        if (dump) {
+-            memcpy(buf, &def->vendor1, sizeof (def->vendor1));
+-            memcpy(buf + 4, &def->vendor2, sizeof (def->vendor2));
+-            memcpy(buf + 8, &def->vendor3, sizeof (def->vendor3));
+-            buf[12] = '\0';
+-            (*cpu_fprintf)(f,
+-                "  family %d model %d stepping %d level %d xlevel 0x%x"
+-                " vendor \"%s\"\n",
+-                def->family, def->model, def->stepping, def->level,
+-                def->xlevel, buf);
+-            listflags(buf, sizeof (buf), def->features, feature_name, 0);
+-            (*cpu_fprintf)(f, "  feature_edx %08x (%s)\n", def->features,
+-                buf);
+-            listflags(buf, sizeof (buf), def->ext_features, ext_feature_name,
+-                0);
+-            (*cpu_fprintf)(f, "  feature_ecx %08x (%s)\n", def->ext_features,
+-                buf);
+-            listflags(buf, sizeof (buf), def->ext2_features, ext2_feature_name,
+-                0);
+-            (*cpu_fprintf)(f, "  extfeature_edx %08x (%s)\n",
+-                def->ext2_features, buf);
+-            listflags(buf, sizeof (buf), def->ext3_features, ext3_feature_name,
+-                0);
+-            (*cpu_fprintf)(f, "  extfeature_ecx %08x (%s)\n",
+-                def->ext3_features, buf);
+-            (*cpu_fprintf)(f, "\n");
+-        }
++        (*cpu_fprintf)(f, "x86 %16s  %-48s\n", buf, def->model_id);
+     }
+     if (kvm_enabled()) {
+         (*cpu_fprintf)(f, "x86 %16s\n", "[host]");
+     }
++    (*cpu_fprintf)(f, "\nRecognized CPUID flags:\n");
++    listflags(buf, sizeof(buf), (uint32_t)~0, feature_name, 1);
++    (*cpu_fprintf)(f, "  f_edx: %s\n", buf);
++    listflags(buf, sizeof(buf), (uint32_t)~0, ext_feature_name, 1);
++    (*cpu_fprintf)(f, "  f_ecx: %s\n", buf);
++    listflags(buf, sizeof(buf), (uint32_t)~0, ext2_feature_name, 1);
++    (*cpu_fprintf)(f, "  extf_edx: %s\n", buf);
++    listflags(buf, sizeof(buf), (uint32_t)~0, ext3_feature_name, 1);
++    (*cpu_fprintf)(f, "  extf_ecx: %s\n", buf);
+ }
+ 
+ int cpu_x86_register (CPUX86State *env, const char *cpu_model)
+-- 
+1.7.11.4
+

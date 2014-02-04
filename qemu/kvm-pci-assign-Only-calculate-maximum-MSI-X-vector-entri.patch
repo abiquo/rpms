@@ -1,0 +1,101 @@
+From 8310e6790ee5e4d33ef125e188b77919f666a407 Mon Sep 17 00:00:00 2001
+Message-Id: <8310e6790ee5e4d33ef125e188b77919f666a407.1343746747.git.minovotn@redhat.com>
+In-Reply-To: <a05f97bf1253f4585f1a6c3f03925d7d24a064f4.1343746747.git.minovotn@redhat.com>
+References: <a05f97bf1253f4585f1a6c3f03925d7d24a064f4.1343746747.git.minovotn@redhat.com>
+From: Alex Williamson <alex.williamson@redhat.com>
+Date: Fri, 27 Jul 2012 19:47:16 +0200
+Subject: [PATCH 3/6] pci-assign: Only calculate maximum MSI-X vector entries
+ once
+
+RH-Author: Alex Williamson <alex.williamson@redhat.com>
+Message-id: <20120727194716.6928.40148.stgit@bling.home>
+Patchwork-id: 40442
+O-Subject: [RHEL6.4 qemu-kvm PATCH 2/5] pci-assign: Only calculate maximum MSI-X vector entries once
+Bugzilla: 784496
+RH-Acked-by: Michael S. Tsirkin <mst@redhat.com>
+RH-Acked-by: Don Dutile <ddutile@redhat.com>
+RH-Acked-by: Jason Baron <jbaron@redhat.com>
+
+Bugzilla: https://bugzilla.redhat.com/show_bug.cgi?id=784496
+Upstream commit a47e1f1a7f30d969f442589558d41e01338694fb
+
+We'll use this in a few more places for reseting the MSI-X
+table and ignoring certain accesses, so it seems worth two
+bytes to not recalculate all the time.
+
+Signed-off-by: Alex Williamson <alex.williamson@redhat.com>
+Signed-off-by: Marcelo Tosatti <mtosatti@redhat.com>
+---
+
+ hw/device-assignment.c |   17 +++++++----------
+ hw/device-assignment.h |    1 +
+ 2 files changed, 8 insertions(+), 10 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/device-assignment.c |   17 +++++++----------
+ hw/device-assignment.h |    1 +
+ 2 files changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/hw/device-assignment.c b/hw/device-assignment.c
+index 1441e81..a619db7 100644
+--- a/hw/device-assignment.c
++++ b/hw/device-assignment.c
+@@ -1134,20 +1134,14 @@ static void assigned_dev_update_msi(PCIDevice *pci_dev, unsigned int ctrl_pos)
+ static int assigned_dev_update_msix_mmio(PCIDevice *pci_dev)
+ {
+     AssignedDevice *adev = container_of(pci_dev, AssignedDevice, dev);
+-    uint16_t entries_nr = 0, entries_max_nr;
+-    int pos = 0, i, r = 0;
++    uint16_t entries_nr = 0;
++    int i, r = 0;
+     struct kvm_assigned_msix_nr msix_nr;
+     struct kvm_assigned_msix_entry msix_entry;
+     MSIXTableEntry *entry = adev->msix_table;
+ 
+-    pos = pci_find_capability(pci_dev, PCI_CAP_ID_MSIX);
+-
+-    entries_max_nr = *(uint16_t *)(pci_dev->config + pos + 2);
+-    entries_max_nr &= PCI_MSIX_TABSIZE;
+-    entries_max_nr += 1;
+-
+     /* Get the usable entry number for allocating */
+-    for (i = 0; i < entries_max_nr; i++, entry++) {
++    for (i = 0; i < adev->msix_max; i++, entry++) {
+         /* Ignore unused entry even it's unmasked */
+         if (entry->data == 0) {
+             continue;
+@@ -1180,7 +1174,7 @@ static int assigned_dev_update_msix_mmio(PCIDevice *pci_dev)
+     msix_entry.assigned_dev_id = msix_nr.assigned_dev_id;
+     entries_nr = 0;
+     entry = adev->msix_table;
+-    for (i = 0; i < entries_max_nr; i++, entry++) {
++    for (i = 0; i < adev->msix_max; i++, entry++) {
+         if (entries_nr >= msix_nr.entry_nr)
+             break;
+         if (entry->data == 0) {
+@@ -1427,6 +1421,9 @@ static int assigned_device_pci_cap_init(PCIDevice *pci_dev)
+         bar_nr = msix_table_entry & PCI_MSIX_BIR;
+         msix_table_entry &= ~PCI_MSIX_BIR;
+         dev->msix_table_addr = pci_region[bar_nr].base_addr + msix_table_entry;
++        dev->msix_max = pci_get_word(pci_dev->config + pos + PCI_MSIX_FLAGS);
++        dev->msix_max &= PCI_MSIX_TABSIZE;
++        dev->msix_max += 1;
+     }
+ #endif
+ #endif
+diff --git a/hw/device-assignment.h b/hw/device-assignment.h
+index bc165b7..b598e80 100644
+--- a/hw/device-assignment.h
++++ b/hw/device-assignment.h
+@@ -108,6 +108,7 @@ typedef struct AssignedDevice {
+     struct kvm_irq_routing_entry *entry;
+     MSIXTableEntry *msix_table;
+     target_phys_addr_t msix_table_addr;
++    uint16_t msix_max;
+     int mmio_index;
+     int need_emulate_cmd;
+     char *configfd_name;
+-- 
+1.7.10.4
+

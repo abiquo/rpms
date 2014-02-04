@@ -1,0 +1,63 @@
+From 551c098dcdaf34f9108a43a1b4c6ba0f5dbd4bc9 Mon Sep 17 00:00:00 2001
+Message-Id: <551c098dcdaf34f9108a43a1b4c6ba0f5dbd4bc9.1347457394.git.minovotn@redhat.com>
+In-Reply-To: <5d2ec4d8ecd7ab6bd4a62bec6b2f63577549b3bd.1347457394.git.minovotn@redhat.com>
+References: <5d2ec4d8ecd7ab6bd4a62bec6b2f63577549b3bd.1347457394.git.minovotn@redhat.com>
+From: Markus Armbruster <armbru@redhat.com>
+Date: Thu, 6 Sep 2012 08:55:54 +0200
+Subject: [PATCH 6/6] vl: Round argument of -m up to multiple of 2MiB instead
+ of 8KiB
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1346921754-12722-4-git-send-email-armbru@redhat.com>
+Patchwork-id: 41699
+O-Subject: [RHEL-6.4 PATCH qemu-kvm 3/3] vl: Round argument of -m up to multiple of 2MiB instead of 8KiB
+Bugzilla: 755594
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Pavel Hrdina <phrdina@redhat.com>
+RH-Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+
+Works around bugs that bite when ram_size <= 1MiB:
+
+* pc_init1() computes below_4g_mem_size - 0x100000, which wraps to
+  something huge when below_4g_mem_size is less than 1 MiB.  It's all
+  downhill from there.  Upstream code is different since it got
+  converted to memory API.
+
+* When below_4g_mem_size is 1MiB, the above difference is zero, but
+  cpu_register_physical_memory() crashes for zero size argument.
+  Again, upstream code is different.
+
+* pc_cmos_init() is broken for ram_size < 1MiB.  Fixed upstream in
+  commit e89001f7.
+
+* SeaBIOS requires 1MiB, but doesn't check for it.  Same upstream, no
+  fix expected.
+
+Avoid the problematic memory sizes the simplest possible way.
+
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ vl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ vl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/vl.c b/vl.c
+index 7cfea7b..9c6a9eb 100644
+--- a/vl.c
++++ b/vl.c
+@@ -5453,7 +5453,7 @@ int main(int argc, char **argv, char **envp)
+                     fprintf(stderr, "qemu: at most 2047 MB RAM can be simulated\n");
+                     exit(1);
+                 }
+-                sz = QEMU_ALIGN_UP((uint64_t)value, 8192);
++                sz = QEMU_ALIGN_UP((uint64_t)value, 2 * 1024 * 1024);
+                 ram_size = sz;
+                 if (ram_size != sz) {
+                     fprintf(stderr, "qemu: ram size too large\n");
+-- 
+1.7.11.4
+

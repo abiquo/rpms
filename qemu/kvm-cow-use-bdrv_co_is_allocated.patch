@@ -1,0 +1,66 @@
+From c3b71f5749064b950cf318391527b2953c52f606 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:54:56 +0100
+Subject: [PATCH 29/55] cow: use bdrv_co_is_allocated()
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <8b0c0b6aab291ecc287909d43344d4eaed645a10.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38879
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 29/54] cow: use bdrv_co_is_allocated()
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+Now that bdrv_co_is_allocated() is available we can use it instead of
+the synchronous bdrv_is_allocated() interface.  This is a follow-up that
+Kevin Wolf <kwolf@redhat.com> pointed out after applying the series that
+introduces bdrv_co_is_allocated().
+
+It is safe to make cow_read() a coroutine_fn because its only caller is
+a coroutine_fn.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit e94d13873334b1880746feca59ce84c0eabc1021)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block/cow.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block/cow.c |    6 +++---
+ 1 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/block/cow.c b/block/cow.c
+index 9609423..2c5b08d 100644
+--- a/block/cow.c
++++ b/block/cow.c
+@@ -169,14 +169,14 @@ static int cow_update_bitmap(BlockDriverState *bs, int64_t sector_num,
+     return error;
+ }
+ 
+-static int cow_read(BlockDriverState *bs, int64_t sector_num,
+-                    uint8_t *buf, int nb_sectors)
++static int coroutine_fn cow_read(BlockDriverState *bs, int64_t sector_num,
++                                 uint8_t *buf, int nb_sectors)
+ {
+     BDRVCowState *s = bs->opaque;
+     int ret, n;
+ 
+     while (nb_sectors > 0) {
+-        if (bdrv_is_allocated(bs, sector_num, nb_sectors, &n)) {
++        if (bdrv_co_is_allocated(bs, sector_num, nb_sectors, &n)) {
+             ret = bdrv_pread(bs->file,
+                         s->cow_sectors_offset + sector_num * 512,
+                         buf, n * 512);
+-- 
+1.7.7.6
+

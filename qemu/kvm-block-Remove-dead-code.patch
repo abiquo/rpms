@@ -1,0 +1,48 @@
+From 6ca8abc9ecb202a4d49793920c1e2f217edf99fa Mon Sep 17 00:00:00 2001
+From: Markus Armbruster <armbru@redhat.com>
+Date: Wed, 18 Jan 2012 10:38:21 +0100
+Subject: [PATCH 27/52] block: Remove dead code
+
+RH-Author: Markus Armbruster <armbru@redhat.com>
+Message-id: <1326883126-22053-28-git-send-email-armbru@redhat.com>
+Patchwork-id: 36601
+O-Subject: [RHEL-6.3 PATCH qemu-kvm 27/52] block: Remove dead code
+Bugzilla: 758194
+RH-Acked-by: Miroslav Rezanina <mrezanin@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Amit Shah <amit.shah@redhat.com>
+
+From: Kevin Wolf <kwolf@redhat.com>
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 3574c608195c10f4ac48bb6a27d1c5e2c5f9ac3a)
+Signed-off-by: Markus Armbruster <armbru@redhat.com>
+---
+ block.c |    6 +-----
+ 1 files changed, 1 insertions(+), 5 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c |    6 +-----
+ 1 files changed, 1 insertions(+), 5 deletions(-)
+
+diff --git a/block.c b/block.c
+index 2f1f6a7..f8fe868 100644
+--- a/block.c
++++ b/block.c
+@@ -1819,11 +1819,7 @@ const char *bdrv_get_encrypted_filename(BlockDriverState *bs)
+ void bdrv_get_backing_filename(BlockDriverState *bs,
+                                char *filename, int filename_size)
+ {
+-    if (!bs->backing_file) {
+-        pstrcpy(filename, filename_size, "");
+-    } else {
+-        pstrcpy(filename, filename_size, bs->backing_file);
+-    }
++    pstrcpy(filename, filename_size, bs->backing_file);
+ }
+ 
+ int bdrv_write_compressed(BlockDriverState *bs, int64_t sector_num,
+-- 
+1.7.7.5
+

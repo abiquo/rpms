@@ -1,0 +1,361 @@
+From a6146f53712090d818f14d4cb47b3f8453921b9f Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Tue, 20 Mar 2012 14:07:39 -0300
+Subject: [RHEL6 qemu-kvm PATCH 19/21] qapi: Introduce blockdev-group-snapshot-sync command
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <c1c5e2ac150cbd1c6c22c63acc2fc965e9a63005.1332249823.git.jcody@redhat.com>
+Patchwork-id: 38646
+O-Subject: [RHEL6.3 qemu-kvm PATCH v3 19/21] qapi: Introduce blockdev-group-snapshot-sync command
+Bugzilla: 784153
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+This is a QAPI/QMP only command to take a snapshot of a group of
+devices. This is similar to the blockdev-snapshot-sync command, except
+blockdev-group-snapshot-sync accepts a list devices, filenames, and
+formats.
+
+It is attempted to keep the snapshot of the group atomic; if the
+creation or open of any of the new snapshots fails, then all of
+the new snapshots are abandoned, and the name of the snapshot image
+that failed is returned.  The failure case should not interrupt
+any operations.
+
+Rather than use bdrv_close() along with a subsequent bdrv_open() to
+perform the pivot, the original image is never closed and the new
+image is placed 'in front' of the original image via manipulation
+of the BlockDriverState fields.  Thus, once the new snapshot image
+has been successfully created, there are no more failure points
+before pivoting to the new snapshot.
+
+This allows the group of disks to remain consistent with each other,
+even across snapshot failures.
+
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+Acked-by: Luiz Capitulino <lcapitulino@redhat.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit 8802d1fdd4b73e02ce13fb3a233c64c1913634ab)
+
+Conflicts:
+
+	blockdev.c
+	qapi-schema.json
+
+RHEL6 Note: This is the only command in qapi-schema.json at this point,
+            and changed bdrv_drain_all() to qemu_aio_flush()
+---
+ block.c          |   59 ++++++++++++++++++++++++
+ block.h          |    1 +
+ block_int.h      |    6 +++
+ blockdev.c       |  131 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ qapi-schema.json |   38 ++++++++++++++++
+ 5 files changed, 235 insertions(+), 0 deletions(-)
+
+Signed-off-by: Eduardo Habkost <ehabkost@redhat.com>
+---
+ block.c          |   59 ++++++++++++++++++++++++
+ block.h          |    1 +
+ block_int.h      |    6 +++
+ blockdev.c       |  131 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ qapi-schema.json |   38 ++++++++++++++++
+ 5 files changed, 235 insertions(+), 0 deletions(-)
+
+diff --git a/block.c b/block.c
+index 899b026..eca8c3b 100644
+--- a/block.c
++++ b/block.c
+@@ -704,6 +704,65 @@ void bdrv_make_anon(BlockDriverState *bs)
+     bs->device_name[0] = '\0';
+ }
+ 
++/*
++ * Add new bs contents at the top of an image chain while the chain is
++ * live, while keeping required fields on the top layer.
++ *
++ * This will modify the BlockDriverState fields, and swap contents
++ * between bs_new and bs_top. Both bs_new and bs_top are modified.
++ *
++ * This function does not create any image files.
++ */
++void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top)
++{
++    BlockDriverState tmp;
++
++    /* the new bs must not be in bdrv_states */
++    bdrv_make_anon(bs_new);
++
++    tmp = *bs_new;
++
++    /* there are some fields that need to stay on the top layer: */
++
++    /* dev info */
++    tmp.dev_ops           = bs_top->dev_ops;
++    tmp.dev_opaque        = bs_top->dev_opaque;
++    tmp.dev               = bs_top->dev;
++    tmp.buffer_alignment  = bs_top->buffer_alignment;
++    tmp.copy_on_read      = bs_top->copy_on_read;
++
++    /* geometry */
++    tmp.cyls              = bs_top->cyls;
++    tmp.heads             = bs_top->heads;
++    tmp.secs              = bs_top->secs;
++    tmp.translation       = bs_top->translation;
++
++    /* r/w error */
++    tmp.on_read_error     = bs_top->on_read_error;
++    tmp.on_write_error    = bs_top->on_write_error;
++
++    /* i/o status */
++    tmp.iostatus          = bs_top->iostatus;
++
++    /* keep the same entry in bdrv_states */
++    pstrcpy(tmp.device_name, sizeof(tmp.device_name), bs_top->device_name);
++    tmp.list = bs_top->list;
++
++    /* The contents of 'tmp' will become bs_top, as we are
++     * swapping bs_new and bs_top contents. */
++    tmp.backing_hd = bs_new;
++    pstrcpy(tmp.backing_file, sizeof(tmp.backing_file), bs_top->filename);
++
++    /* swap contents of the fixed new bs and the current top */
++    *bs_new = *bs_top;
++    *bs_top = tmp;
++
++    /* clear the copied fields in the new backing file */
++    bdrv_detach_dev(bs_new, bs_new->dev);
++
++    bdrv_iostatus_disable(bs_new);
++}
++
+ void bdrv_delete(BlockDriverState *bs)
+ {
+     assert(!bs->dev);
+diff --git a/block.h b/block.h
+index e3b2260..68f0d15 100644
+--- a/block.h
++++ b/block.h
+@@ -118,6 +118,7 @@ int bdrv_create2(BlockDriver *drv,
+                  int flags);
+ BlockDriverState *bdrv_new(const char *device_name);
+ void bdrv_make_anon(BlockDriverState *bs);
++void bdrv_append(BlockDriverState *bs_new, BlockDriverState *bs_top);
+ void bdrv_delete(BlockDriverState *bs);
+ int bdrv_file_open(BlockDriverState **pbs, const char *filename, int flags);
+ int bdrv_open(BlockDriverState *bs, const char *filename, int flags,
+diff --git a/block_int.h b/block_int.h
+index 6e2b0c0..5e0cf4b 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -150,6 +150,12 @@ struct BlockDriver {
+     QLIST_ENTRY(BlockDriver) list;
+ };
+ 
++/*
++ * Note: the function bdrv_append() copies and swaps contents of
++ * BlockDriverStates, so if you add new fields to this struct, please
++ * inspect bdrv_append() to determine if the new fields need to be
++ * copied as well.
++ */
+ struct BlockDriverState {
+     int64_t total_sectors; /* if we are reading a disk image, give its
+                               size in sectors */
+diff --git a/blockdev.c b/blockdev.c
+index 10c4d34..bbd7635 100644
+--- a/blockdev.c
++++ b/blockdev.c
+@@ -16,6 +16,7 @@
+ #include "sysemu.h"
+ #include "block_int.h"
+ #include "qjson.h"
++#include "qmp-commands.h"
+ 
+ struct drivelist drives = QTAILQ_HEAD_INITIALIZER(drives);
+ DriveInfo *extboot_drive = NULL;
+@@ -913,6 +914,136 @@ out:
+ }
+ #endif 
+ 
++/* New and old BlockDriverState structs for group snapshots */
++typedef struct BlkGroupSnapshotStates {
++    BlockDriverState *old_bs;
++    BlockDriverState *new_bs;
++    QSIMPLEQ_ENTRY(BlkGroupSnapshotStates) entry;
++} BlkGroupSnapshotStates;
++
++/*
++ * 'Atomic' group snapshots.  The snapshots are taken as a set, and if any fail
++ *  then we do not pivot any of the devices in the group, and abandon the
++ *  snapshots
++ */
++void qmp_blockdev_group_snapshot_sync(SnapshotDevList *dev_list,
++                                      Error **errp)
++{
++    int ret = 0;
++    SnapshotDevList *dev_entry = dev_list;
++    SnapshotDev *dev_info = NULL;
++    BlkGroupSnapshotStates *states;
++    BlockDriver *proto_drv;
++    BlockDriver *drv;
++    int flags;
++    const char *format;
++    const char *snapshot_file;
++
++    QSIMPLEQ_HEAD(snap_bdrv_states, BlkGroupSnapshotStates) snap_bdrv_states;
++    QSIMPLEQ_INIT(&snap_bdrv_states);
++
++    /* drain all i/o before any snapshots */
++    qemu_aio_flush();
++
++    /* We don't do anything in this loop that commits us to the snapshot */
++    while (NULL != dev_entry) {
++        dev_info = dev_entry->value;
++        dev_entry = dev_entry->next;
++
++        states = g_malloc0(sizeof(BlkGroupSnapshotStates));
++        QSIMPLEQ_INSERT_TAIL(&snap_bdrv_states, states, entry);
++
++        states->old_bs = bdrv_find(dev_info->device);
++
++        if (!states->old_bs) {
++            error_set(errp, QERR_DEVICE_NOT_FOUND, dev_info->device);
++            goto delete_and_fail;
++        }
++
++        if (bdrv_in_use(states->old_bs)) {
++            error_set(errp, QERR_DEVICE_IN_USE, dev_info->device);
++            goto delete_and_fail;
++        }
++
++        if (!bdrv_is_read_only(states->old_bs) &&
++             bdrv_is_inserted(states->old_bs)) {
++
++            if (bdrv_flush(states->old_bs)) {
++                error_set(errp, QERR_IO_ERROR);
++                goto delete_and_fail;
++            }
++        }
++
++        snapshot_file = dev_info->snapshot_file;
++
++        flags = states->old_bs->open_flags;
++
++        if (!dev_info->has_format) {
++            format = "qcow2";
++        } else {
++            format = dev_info->format;
++        }
++
++        drv = bdrv_find_format(format);
++        if (!drv) {
++            error_set(errp, QERR_INVALID_BLOCK_FORMAT, format);
++            goto delete_and_fail;
++        }
++
++        proto_drv = bdrv_find_protocol(snapshot_file);
++        if (!proto_drv) {
++            error_set(errp, QERR_INVALID_BLOCK_FORMAT, format);
++            goto delete_and_fail;
++        }
++
++        /* create new image w/backing file */
++        ret = bdrv_img_create(snapshot_file, format,
++                              states->old_bs->filename,
++                              drv->format_name, NULL, -1, flags);
++        if (ret) {
++            error_set(errp, QERR_OPEN_FILE_FAILED, snapshot_file);
++            goto delete_and_fail;
++        }
++
++        /* We will manually add the backing_hd field to the bs later */
++        states->new_bs = bdrv_new("");
++        ret = bdrv_open(states->new_bs, snapshot_file,
++                        flags | BDRV_O_NO_BACKING, drv);
++        if (ret != 0) {
++            error_set(errp, QERR_OPEN_FILE_FAILED, snapshot_file);
++            goto delete_and_fail;
++        }
++    }
++
++
++    /* Now we are going to do the actual pivot.  Everything up to this point
++     * is reversible, but we are committed at this point */
++    QSIMPLEQ_FOREACH(states, &snap_bdrv_states, entry) {
++        /* This removes our old bs from the bdrv_states, and adds the new bs */
++        bdrv_append(states->new_bs, states->old_bs);
++    }
++
++    /* success */
++    goto exit;
++
++delete_and_fail:
++    /*
++    * failure, and it is all-or-none; abandon each new bs, and keep using
++    * the original bs for all images
++    */
++    QSIMPLEQ_FOREACH(states, &snap_bdrv_states, entry) {
++        if (states->new_bs) {
++             bdrv_delete(states->new_bs);
++        }
++    }
++exit:
++    QSIMPLEQ_FOREACH(states, &snap_bdrv_states, entry) {
++        g_free(states);
++    }
++    return;
++}
++
++
+ static void monitor_print_block_stream(Monitor *mon, const QObject *data)
+ {
+     QDict *stream;
+diff --git a/qapi-schema.json b/qapi-schema.json
+index 7fcefdb..1287120 100644
+--- a/qapi-schema.json
++++ b/qapi-schema.json
+@@ -1,3 +1,41 @@
+ # -*- Mode: Python -*-
+ #
+ # QAPI Schema
++
++##
++# @SnapshotDev
++#
++# @device:  the name of the device to generate the snapshot from.
++#
++# @snapshot-file: the target of the new image. A new file will be created.
++#
++# @format: #optional the format of the snapshot image, default is 'qcow2'.
++##
++{ 'type': 'SnapshotDev',
++  'data': {'device': 'str', 'snapshot-file': 'str', '*format': 'str' } }
++
++##
++# @blockdev-group-snapshot-sync
++#
++# Generates a synchronous snapshot of a group of one or more block devices,
++# as atomically as possible.  If the snapshot of any device in the group
++# fails, then the entire group snapshot will be abandoned and the
++# appropriate error returned.
++#
++#  List of:
++#  @SnapshotDev: information needed for the device snapshot
++#
++# Returns: nothing on success
++#          If @device is not a valid block device, DeviceNotFound
++#          If @device is busy, DeviceInUse will be returned
++#          If @snapshot-file can't be created, OpenFileFailed
++#          If @snapshot-file can't be opened, OpenFileFailed
++#          If @format is invalid, InvalidBlockFormat
++#
++# Note: The group snapshot attempt returns failure on the first snapshot
++# device failure.  Therefore, there will be only one device or snapshot file
++# returned in an error condition, and subsequent devices will not have been
++# attempted.
++##
++{ 'command': 'blockdev-group-snapshot-sync',
++  'data': { 'devlist': [ 'SnapshotDev' ] } }
+-- 
+1.7.3.2
+

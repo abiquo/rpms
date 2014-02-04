@@ -1,0 +1,90 @@
+From cecd4878ec4e69d3cd977d25e01bd461fb2eae0c Mon Sep 17 00:00:00 2001
+Message-Id: <cecd4878ec4e69d3cd977d25e01bd461fb2eae0c.1350309834.git.minovotn@redhat.com>
+In-Reply-To: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+References: <14b740b7e3fbafdbfe2e6a302f51d6aa4fa96bf7.1350309834.git.minovotn@redhat.com>
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Fri, 12 Oct 2012 16:22:41 +0200
+Subject: [PATCH 09/17] scsi: report parameter changes to HBA drivers
+
+RH-Author: Paolo Bonzini <pbonzini@redhat.com>
+Message-id: <1350058967-27351-5-git-send-email-pbonzini@redhat.com>
+Patchwork-id: 43061
+O-Subject: [RHEL 6.4 qemu-kvm PATCH v2 04/10] scsi: report parameter changes to HBA drivers
+Bugzilla: 808660
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Orit Wasserman <owasserm@redhat.com>
+
+Bugzilla: 808660
+
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+(cherry picked from commit 53200fad0e61046909254ba07a3a1374cebd818f)
+---
+ hw/scsi-bus.c  | 10 ++++++++++
+ hw/scsi-disk.c |  1 +
+ hw/scsi.h      |  2 ++
+ 3 file modificati, 13 inserzioni(+)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ hw/scsi-bus.c  | 10 ++++++++++
+ hw/scsi-disk.c |  1 +
+ hw/scsi.h      |  2 ++
+ 3 files changed, 13 insertions(+)
+
+diff --git a/hw/scsi-bus.c b/hw/scsi-bus.c
+index 57b5ac8..936d994 100644
+--- a/hw/scsi-bus.c
++++ b/hw/scsi-bus.c
+@@ -989,6 +989,16 @@ int scsi_req_parse(SCSICommand *cmd, SCSIDevice *dev, uint8_t *buf)
+     return 0;
+ }
+ 
++void scsi_device_report_change(SCSIDevice *dev, SCSISense sense)
++{
++    SCSIBus *bus = DO_UPCAST(SCSIBus, qbus, dev->qdev.parent_bus);
++
++    scsi_device_set_ua(dev, sense);
++    if (bus->info->change) {
++        bus->info->change(bus, dev, sense);
++    }
++}
++
+ /*
+  * Predefined sense codes
+  */
+diff --git a/hw/scsi-disk.c b/hw/scsi-disk.c
+index 2ff63d8..6ba4e18 100644
+--- a/hw/scsi-disk.c
++++ b/hw/scsi-disk.c
+@@ -1626,6 +1626,7 @@ static void scsi_disk_resize_cb(void *opaque)
+      */
+     if (s->qdev.type == TYPE_DISK) {
+         scsi_device_set_ua(&s->qdev, SENSE_CODE(CAPACITY_CHANGED));
++        scsi_device_report_change(&s->qdev, SENSE_CODE(CAPACITY_CHANGED));
+     }
+ }
+ 
+diff --git a/hw/scsi.h b/hw/scsi.h
+index 493461f..6fee286 100644
+--- a/hw/scsi.h
++++ b/hw/scsi.h
+@@ -128,6 +128,7 @@ struct SCSIBusInfo {
+     void (*cancel)(SCSIRequest *req);
+     void (*hotplug)(SCSIBus *bus, SCSIDevice *dev);
+     void (*hot_unplug)(SCSIBus *bus, SCSIDevice *dev);
++    void (*change)(SCSIBus *bus, SCSIDevice *dev, SCSISense sense);
+     QEMUSGList *(*get_sg_list)(SCSIRequest *req);
+ 
+     void (*save_request)(QEMUFile *f, SCSIRequest *req);
+@@ -230,6 +231,7 @@ void scsi_req_cancel(SCSIRequest *req);
+ void scsi_req_retry(SCSIRequest *req);
+ void scsi_device_purge_requests(SCSIDevice *sdev, SCSISense sense);
+ void scsi_device_set_ua(SCSIDevice *sdev, SCSISense sense);
++void scsi_device_report_change(SCSIDevice *dev, SCSISense sense);
+ int scsi_device_get_sense(SCSIDevice *dev, uint8_t *buf, int len, bool fixed);
+ SCSIDevice *scsi_device_find(SCSIBus *bus, int channel, int target, int lun);
+ 
+-- 
+1.7.11.7
+

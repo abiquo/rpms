@@ -1,0 +1,218 @@
+From 9dc5080a9b532a4cfc4600147c39f6bf80f8ba66 Mon Sep 17 00:00:00 2001
+From: Jeffrey Cody <jcody@redhat.com>
+Date: Wed, 21 Mar 2012 21:55:17 +0100
+Subject: [PATCH 50/55] block: add .bdrv_co_write_zeroes() interface
+
+RH-Author: Jeffrey Cody <jcody@redhat.com>
+Message-id: <6220d551213dd50717764e12d6387c1e24fda5fd.1332362400.git.jcody@redhat.com>
+Patchwork-id: 38900
+O-Subject: [RHEL6.3 qemu-kvm PATCH v8 50/54] block: add .bdrv_co_write_zeroes() interface
+Bugzilla: 582475
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Kevin Wolf <kwolf@redhat.com>
+
+From: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+
+The ability to zero regions of an image file is a useful primitive for
+higher-level features such as image streaming or zero write detection.
+
+Image formats may support an optimized metadata representation instead
+of writing zeroes into the image file.  This allows zero writes to be
+potentially faster than regular write operations and also preserve
+sparseness of the image file.
+
+The .bdrv_co_write_zeroes() interface should be implemented by block
+drivers that wish to provide efficient zeroing.
+
+Note that this operation is different from the discard operation, which
+may leave the contents of the region indeterminate.  That means
+discarded blocks are not guaranteed to contain zeroes and may contain
+junk data instead.
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+
+(cherry picked from commit f08f2ddae078e8a7683f8b16da8e0cc3029c7b89)
+
+Signed-off-by: Stefan Hajnoczi <stefanha@linux.vnet.ibm.com>
+Signed-off-by: Anthony Liguori <aliguori@us.ibm.com>
+Signed-off-by: Jeff Cody <jcody@redhat.com>
+---
+ block.c      |   53 +++++++++++++++++++++++++++++++++++++++++++++++------
+ block.h      |    8 ++++++++
+ block_int.h  |    8 ++++++++
+ trace-events |    1 +
+ 4 files changed, 64 insertions(+), 6 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ block.c      |   53 +++++++++++++++++++++++++++++++++++++++++++++++------
+ block.h      |    8 ++++++++
+ block_int.h  |    8 ++++++++
+ trace-events |    1 +
+ 4 files changed, 64 insertions(+), 6 deletions(-)
+
+diff --git a/block.c b/block.c
+index 0aaab0b..ca10072 100644
+--- a/block.c
++++ b/block.c
+@@ -48,6 +48,7 @@
+ 
+ typedef enum {
+     BDRV_REQ_COPY_ON_READ = 0x1,
++    BDRV_REQ_ZERO_WRITE   = 0x2,
+ } BdrvRequestFlags;
+ 
+ static void bdrv_dev_change_media_cb(BlockDriverState *bs, bool load);
+@@ -67,7 +68,8 @@ static int coroutine_fn bdrv_co_do_readv(BlockDriverState *bs,
+     int64_t sector_num, int nb_sectors, QEMUIOVector *qiov,
+     BdrvRequestFlags flags);
+ static int coroutine_fn bdrv_co_do_writev(BlockDriverState *bs,
+-    int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
++    int64_t sector_num, int nb_sectors, QEMUIOVector *qiov,
++    BdrvRequestFlags flags);
+ static BlockDriverAIOCB *bdrv_co_aio_rw_vector(BlockDriverState *bs,
+                                                int64_t sector_num,
+                                                QEMUIOVector *qiov,
+@@ -1304,7 +1306,7 @@ static void coroutine_fn bdrv_rw_co_entry(void *opaque)
+                                      rwco->nb_sectors, rwco->qiov, 0);
+     } else {
+         rwco->ret = bdrv_co_do_writev(rwco->bs, rwco->sector_num,
+-                                      rwco->nb_sectors, rwco->qiov);
++                                      rwco->nb_sectors, rwco->qiov, 0);
+     }
+ }
+ 
+@@ -1632,11 +1634,37 @@ int coroutine_fn bdrv_co_copy_on_readv(BlockDriverState *bs,
+                             BDRV_REQ_COPY_ON_READ);
+ }
+ 
++static int coroutine_fn bdrv_co_do_write_zeroes(BlockDriverState *bs,
++    int64_t sector_num, int nb_sectors)
++{
++    BlockDriver *drv = bs->drv;
++    QEMUIOVector qiov;
++    struct iovec iov;
++    int ret;
++
++    /* First try the efficient write zeroes operation */
++    if (drv->bdrv_co_write_zeroes) {
++        return drv->bdrv_co_write_zeroes(bs, sector_num, nb_sectors);
++    }
++
++    /* Fall back to bounce buffer if write zeroes is unsupported */
++    iov.iov_len  = nb_sectors * BDRV_SECTOR_SIZE;
++    iov.iov_base = qemu_blockalign(bs, iov.iov_len);
++    memset(iov.iov_base, 0, iov.iov_len);
++    qemu_iovec_init_external(&qiov, &iov, 1);
++
++    ret = drv->bdrv_co_writev(bs, sector_num, nb_sectors, &qiov);
++
++    qemu_vfree(iov.iov_base);
++    return ret;
++}
++
+ /*
+  * Handle a write request in coroutine context
+  */
+ static int coroutine_fn bdrv_co_do_writev(BlockDriverState *bs,
+-    int64_t sector_num, int nb_sectors, QEMUIOVector *qiov)
++    int64_t sector_num, int nb_sectors, QEMUIOVector *qiov,
++    BdrvRequestFlags flags)
+ {
+     BlockDriver *drv = bs->drv;
+     BdrvTrackedRequest req;
+@@ -1658,7 +1686,11 @@ static int coroutine_fn bdrv_co_do_writev(BlockDriverState *bs,
+ 
+     tracked_request_begin(&req, bs, sector_num, nb_sectors, true);
+ 
+-    ret = drv->bdrv_co_writev(bs, sector_num, nb_sectors, qiov);
++    if (flags & BDRV_REQ_ZERO_WRITE) {
++        ret = bdrv_co_do_write_zeroes(bs, sector_num, nb_sectors);
++    } else {
++        ret = drv->bdrv_co_writev(bs, sector_num, nb_sectors, qiov);
++    }
+ 
+     if (bs->dirty_bitmap) {
+         set_dirty_bitmap(bs, sector_num, nb_sectors, 1);
+@@ -1678,7 +1710,16 @@ int coroutine_fn bdrv_co_writev(BlockDriverState *bs, int64_t sector_num,
+ {
+     trace_bdrv_co_writev(bs, sector_num, nb_sectors);
+ 
+-    return bdrv_co_do_writev(bs, sector_num, nb_sectors, qiov);
++    return bdrv_co_do_writev(bs, sector_num, nb_sectors, qiov, 0);
++}
++
++int coroutine_fn bdrv_co_write_zeroes(BlockDriverState *bs,
++                                      int64_t sector_num, int nb_sectors)
++{
++    trace_bdrv_co_write_zeroes(bs, sector_num, nb_sectors);
++
++    return bdrv_co_do_writev(bs, sector_num, nb_sectors, NULL,
++                             BDRV_REQ_ZERO_WRITE);
+ }
+ 
+ /**
+@@ -2949,7 +2990,7 @@ static void coroutine_fn bdrv_co_do_rw(void *opaque)
+             acb->req.nb_sectors, acb->req.qiov, 0);
+     } else {
+         acb->req.error = bdrv_co_do_writev(bs, acb->req.sector,
+-            acb->req.nb_sectors, acb->req.qiov);
++            acb->req.nb_sectors, acb->req.qiov, 0);
+     }
+ 
+     acb->bh = qemu_bh_new(bdrv_co_em_bh, acb);
+diff --git a/block.h b/block.h
+index c682ea7..36c4a1b 100644
+--- a/block.h
++++ b/block.h
+@@ -150,6 +150,14 @@ int coroutine_fn bdrv_co_copy_on_readv(BlockDriverState *bs,
+     int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
+ int coroutine_fn bdrv_co_writev(BlockDriverState *bs, int64_t sector_num,
+     int nb_sectors, QEMUIOVector *qiov);
++/*
++ * Efficiently zero a region of the disk image.  Note that this is a regular
++ * I/O request like read or write and should have a reasonable size.  This
++ * function is not suitable for zeroing the entire image in a single request
++ * because it may allocate memory for the entire region.
++ */
++int coroutine_fn bdrv_co_write_zeroes(BlockDriverState *bs, int64_t sector_num,
++    int nb_sectors);
+ int coroutine_fn bdrv_co_is_allocated(BlockDriverState *bs, int64_t sector_num,
+     int nb_sectors, int *pnum);
+ BlockDriverState *bdrv_find_backing_image(BlockDriverState *bs,
+diff --git a/block_int.h b/block_int.h
+index 37e3196..fcfe7d0 100644
+--- a/block_int.h
++++ b/block_int.h
+@@ -113,6 +113,14 @@ struct BlockDriver {
+     int coroutine_fn (*bdrv_co_writev)(BlockDriverState *bs,
+         int64_t sector_num, int nb_sectors, QEMUIOVector *qiov);
+     int coroutine_fn (*bdrv_co_flush)(BlockDriverState *bs);
++    /*
++     * Efficiently zero a region of the disk image.  Typically an image format
++     * would use a compact metadata representation to implement this.  This
++     * function pointer may be NULL and .bdrv_co_writev() will be called
++     * instead.
++     */
++    int coroutine_fn (*bdrv_co_write_zeroes)(BlockDriverState *bs,
++        int64_t sector_num, int nb_sectors);
+     int coroutine_fn (*bdrv_co_discard)(BlockDriverState *bs,
+         int64_t sector_num, int nb_sectors);
+     int coroutine_fn (*bdrv_co_is_allocated)(BlockDriverState *bs,
+diff --git a/trace-events b/trace-events
+index 872fa27..b8540cf 100644
+--- a/trace-events
++++ b/trace-events
+@@ -58,6 +58,7 @@ disable bdrv_aio_writev(void *bs, int64_t sector_num, int nb_sectors, void *opaq
+ disable bdrv_lock_medium(void *bs, int locked) "bs %p locked %d"
+ disable bdrv_co_readv(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
+ disable bdrv_co_writev(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
++disable bdrv_co_write_zeroes(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
+ disable bdrv_co_io_em(void *bs, int64_t sector_num, int nb_sectors, int is_write, void *acb) "bs %p sector_num %"PRId64" nb_sectors %d is_write %d acb %p"
+ disable bdrv_co_copy_on_readv(void *bs, int64_t sector_num, int nb_sector) "bs %p sector_num %"PRId64" nb_sectors %d"
+ disable bdrv_co_do_copy_on_readv(void *bs, int64_t sector_num, int nb_sectors, int64_t cluster_sector_num, int cluster_nb_sectors) "bs %p sector_num %"PRId64" nb_sectors %d cluster_sector_num %"PRId64" cluster_nb_sectors %d"
+-- 
+1.7.7.6
+

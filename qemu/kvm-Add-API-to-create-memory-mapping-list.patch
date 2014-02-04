@@ -1,0 +1,288 @@
+From 6814ae596876ff157139c3c9271f1c314267dd20 Mon Sep 17 00:00:00 2001
+Message-Id: <6814ae596876ff157139c3c9271f1c314267dd20.1349774430.git.minovotn@redhat.com>
+In-Reply-To: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+References: <f076c6e7e12f7fd3ec2c6b171c4f154b28e2560b.1349774430.git.minovotn@redhat.com>
+From: Luiz Capitulino <lcapitulino@redhat.com>
+Date: Fri, 5 Oct 2012 17:46:15 +0200
+Subject: [PATCH 03/21] Add API to create memory mapping list
+
+RH-Author: Luiz Capitulino <lcapitulino@redhat.com>
+Message-id: <1349459193-18226-2-git-send-email-lcapitulino@redhat.com>
+Patchwork-id: 42749
+O-Subject: [RHEL6.4 qemu-kvm PATCH 01/19] Add API to create memory mapping list
+Bugzilla: 832458
+RH-Acked-by: Marcelo Tosatti <mtosatti@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+RH-Acked-by: Paolo Bonzini <pbonzini@redhat.com>
+
+From: Wen Congyang <wency@cn.fujitsu.com>
+
+The memory mapping list stores virtual address and physical address mapping.
+The virtual address and physical address are contiguous in the mapping.
+The folloing patch will use this information to create PT_LOAD in the vmcore.
+
+Signed-off-by: Wen Congyang <wency@cn.fujitsu.com>
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+(cherry picked from commit 80167a8a31d7c42e3e33ec23592eb14938c88098)
+
+Conflicts:
+	Makefile.target
+
+Signed-off-by: Luiz Capitulino <lcapitulino@redhat.com>
+---
+ Makefile.target  |   1 +
+ memory_mapping.c | 166 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ memory_mapping.h |  47 ++++++++++++++++
+ 3 files changed, 214 insertions(+)
+ create mode 100644 memory_mapping.c
+ create mode 100644 memory_mapping.h
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ Makefile.target  |   1 +
+ memory_mapping.c | 166 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ memory_mapping.h |  47 ++++++++++++++++
+ 3 files changed, 214 insertions(+)
+ create mode 100644 memory_mapping.c
+ create mode 100644 memory_mapping.h
+
+diff --git a/Makefile.target b/Makefile.target
+index 9a7be3c..62295ff 100644
+--- a/Makefile.target
++++ b/Makefile.target
+@@ -214,6 +214,7 @@ obj-$(CONFIG_KVM) += kvm.o kvm-all.o
+ obj-y += msix.o
+ 
+ obj-$(CONFIG_ISA_MMIO) += isa_mmio.o
++obj-y += memory_mapping.o
+ LIBS+=-lz
+ 
+ sound-obj-y =
+diff --git a/memory_mapping.c b/memory_mapping.c
+new file mode 100644
+index 0000000..718f271
+--- /dev/null
++++ b/memory_mapping.c
+@@ -0,0 +1,166 @@
++/*
++ * QEMU memory mapping
++ *
++ * Copyright Fujitsu, Corp. 2011, 2012
++ *
++ * Authors:
++ *     Wen Congyang <wency@cn.fujitsu.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2. See
++ * the COPYING file in the top-level directory.
++ *
++ */
++
++#include "cpu.h"
++#include "cpu-all.h"
++#include "memory_mapping.h"
++
++static void memory_mapping_list_add_mapping_sorted(MemoryMappingList *list,
++                                                   MemoryMapping *mapping)
++{
++    MemoryMapping *p;
++
++    QTAILQ_FOREACH(p, &list->head, next) {
++        if (p->phys_addr >= mapping->phys_addr) {
++            QTAILQ_INSERT_BEFORE(p, mapping, next);
++            return;
++        }
++    }
++    QTAILQ_INSERT_TAIL(&list->head, mapping, next);
++}
++
++static void create_new_memory_mapping(MemoryMappingList *list,
++                                      target_phys_addr_t phys_addr,
++                                      target_phys_addr_t virt_addr,
++                                      ram_addr_t length)
++{
++    MemoryMapping *memory_mapping;
++
++    memory_mapping = g_malloc(sizeof(MemoryMapping));
++    memory_mapping->phys_addr = phys_addr;
++    memory_mapping->virt_addr = virt_addr;
++    memory_mapping->length = length;
++    list->last_mapping = memory_mapping;
++    list->num++;
++    memory_mapping_list_add_mapping_sorted(list, memory_mapping);
++}
++
++static inline bool mapping_contiguous(MemoryMapping *map,
++                                      target_phys_addr_t phys_addr,
++                                      target_phys_addr_t virt_addr)
++{
++    return phys_addr == map->phys_addr + map->length &&
++           virt_addr == map->virt_addr + map->length;
++}
++
++/*
++ * [map->phys_addr, map->phys_addr + map->length) and
++ * [phys_addr, phys_addr + length) have intersection?
++ */
++static inline bool mapping_have_same_region(MemoryMapping *map,
++                                            target_phys_addr_t phys_addr,
++                                            ram_addr_t length)
++{
++    return !(phys_addr + length < map->phys_addr ||
++             phys_addr >= map->phys_addr + map->length);
++}
++
++/*
++ * [map->phys_addr, map->phys_addr + map->length) and
++ * [phys_addr, phys_addr + length) have intersection. The virtual address in the
++ * intersection are the same?
++ */
++static inline bool mapping_conflict(MemoryMapping *map,
++                                    target_phys_addr_t phys_addr,
++                                    target_phys_addr_t virt_addr)
++{
++    return virt_addr - map->virt_addr != phys_addr - map->phys_addr;
++}
++
++/*
++ * [map->virt_addr, map->virt_addr + map->length) and
++ * [virt_addr, virt_addr + length) have intersection. And the physical address
++ * in the intersection are the same.
++ */
++static inline void mapping_merge(MemoryMapping *map,
++                                 target_phys_addr_t virt_addr,
++                                 ram_addr_t length)
++{
++    if (virt_addr < map->virt_addr) {
++        map->length += map->virt_addr - virt_addr;
++        map->virt_addr = virt_addr;
++    }
++
++    if ((virt_addr + length) >
++        (map->virt_addr + map->length)) {
++        map->length = virt_addr + length - map->virt_addr;
++    }
++}
++
++void memory_mapping_list_add_merge_sorted(MemoryMappingList *list,
++                                          target_phys_addr_t phys_addr,
++                                          target_phys_addr_t virt_addr,
++                                          ram_addr_t length)
++{
++    MemoryMapping *memory_mapping, *last_mapping;
++
++    if (QTAILQ_EMPTY(&list->head)) {
++        create_new_memory_mapping(list, phys_addr, virt_addr, length);
++        return;
++    }
++
++    last_mapping = list->last_mapping;
++    if (last_mapping) {
++        if (mapping_contiguous(last_mapping, phys_addr, virt_addr)) {
++            last_mapping->length += length;
++            return;
++        }
++    }
++
++    QTAILQ_FOREACH(memory_mapping, &list->head, next) {
++        if (mapping_contiguous(memory_mapping, phys_addr, virt_addr)) {
++            memory_mapping->length += length;
++            list->last_mapping = memory_mapping;
++            return;
++        }
++
++        if (phys_addr + length < memory_mapping->phys_addr) {
++            /* create a new region before memory_mapping */
++            break;
++        }
++
++        if (mapping_have_same_region(memory_mapping, phys_addr, length)) {
++            if (mapping_conflict(memory_mapping, phys_addr, virt_addr)) {
++                continue;
++            }
++
++            /* merge this region into memory_mapping */
++            mapping_merge(memory_mapping, virt_addr, length);
++            list->last_mapping = memory_mapping;
++            return;
++        }
++    }
++
++    /* this region can not be merged into any existed memory mapping. */
++    create_new_memory_mapping(list, phys_addr, virt_addr, length);
++}
++
++void memory_mapping_list_free(MemoryMappingList *list)
++{
++    MemoryMapping *p, *q;
++
++    QTAILQ_FOREACH_SAFE(p, &list->head, next, q) {
++        QTAILQ_REMOVE(&list->head, p, next);
++        g_free(p);
++    }
++
++    list->num = 0;
++    list->last_mapping = NULL;
++}
++
++void memory_mapping_list_init(MemoryMappingList *list)
++{
++    list->num = 0;
++    list->last_mapping = NULL;
++    QTAILQ_INIT(&list->head);
++}
+diff --git a/memory_mapping.h b/memory_mapping.h
+new file mode 100644
+index 0000000..836b047
+--- /dev/null
++++ b/memory_mapping.h
+@@ -0,0 +1,47 @@
++/*
++ * QEMU memory mapping
++ *
++ * Copyright Fujitsu, Corp. 2011, 2012
++ *
++ * Authors:
++ *     Wen Congyang <wency@cn.fujitsu.com>
++ *
++ * This work is licensed under the terms of the GNU GPL, version 2. See
++ * the COPYING file in the top-level directory.
++ *
++ */
++
++#ifndef MEMORY_MAPPING_H
++#define MEMORY_MAPPING_H
++
++#include "qemu-queue.h"
++
++/* The physical and virtual address in the memory mapping are contiguous. */
++typedef struct MemoryMapping {
++    target_phys_addr_t phys_addr;
++    target_ulong virt_addr;
++    ram_addr_t length;
++    QTAILQ_ENTRY(MemoryMapping) next;
++} MemoryMapping;
++
++typedef struct MemoryMappingList {
++    unsigned int num;
++    MemoryMapping *last_mapping;
++    QTAILQ_HEAD(, MemoryMapping) head;
++} MemoryMappingList;
++
++/*
++ * add or merge the memory region [phys_addr, phys_addr + length) into the
++ * memory mapping's list. The region's virtual address starts with virt_addr,
++ * and is contiguous. The list is sorted by phys_addr.
++ */
++void memory_mapping_list_add_merge_sorted(MemoryMappingList *list,
++                                          target_phys_addr_t phys_addr,
++                                          target_phys_addr_t virt_addr,
++                                          ram_addr_t length);
++
++void memory_mapping_list_free(MemoryMappingList *list);
++
++void memory_mapping_list_init(MemoryMappingList *list);
++
++#endif
+-- 
+1.7.11.4
+

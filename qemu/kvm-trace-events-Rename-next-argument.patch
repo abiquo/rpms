@@ -1,0 +1,54 @@
+From 9655a7a810e4105c1af23cf484d228ebed7eab24 Mon Sep 17 00:00:00 2001
+Message-Id: <9655a7a810e4105c1af23cf484d228ebed7eab24.1335442258.git.minovotn@redhat.com>
+From: Kevin Wolf <kwolf@redhat.com>
+Date: Tue, 24 Apr 2012 08:19:54 +0200
+Subject: [PATCH 1/2] trace-events: Rename 'next' argument
+
+RH-Author: Kevin Wolf <kwolf@redhat.com>
+Message-id: <1335255594-4327-1-git-send-email-kwolf@redhat.com>
+Patchwork-id: 39416
+O-Subject: [RHEL-6.3 qemu-kvm PATCH] trace-events: Rename 'next' argument
+Bugzilla: 798676
+RH-Acked-by: Alon Levy <alevy@redhat.com>
+RH-Acked-by: Laszlo Ersek <lersek@redhat.com>
+RH-Acked-by: Asias He <asias@redhat.com>
+RH-Acked-by: Markus Armbruster <armbru@redhat.com>
+
+Bugzilla: 798676
+
+'next' is a systemtap keyword, so it's a bad idea to use it as an
+argument name.
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+(cherry picked from commit bfe24e1a26d33d57df3c75e7f44273f0b0ca5943)
+
+Conflicts:
+
+	trace-events
+
+Signed-off-by: Kevin Wolf <kwolf@redhat.com>
+---
+ trace-events |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+Signed-off-by: Michal Novotny <minovotn@redhat.com>
+---
+ trace-events |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/trace-events b/trace-events
+index 9a9d234..057a04c 100644
+--- a/trace-events
++++ b/trace-events
+@@ -198,7 +198,7 @@ disable qemu_coroutine_terminate(void *co) "self %p"
+ 
+ # qemu-coroutine-lock.c
+ disable qemu_co_queue_next_bh(void) ""
+-disable qemu_co_queue_next(void *next) "next %p"
++disable qemu_co_queue_next(void *nxt) "next %p"
+ disable qemu_co_mutex_lock_entry(void *mutex, void *self) "mutex %p self %p"
+ disable qemu_co_mutex_lock_return(void *mutex, void *self) "mutex %p self %p"
+ disable qemu_co_mutex_unlock_entry(void *mutex, void *self) "mutex %p self %p"
+-- 
+1.7.7.6
+
