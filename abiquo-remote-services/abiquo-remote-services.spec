@@ -1,18 +1,16 @@
 %define abiquo_basedir /opt/abiquo
-%define prev_version 2.4.0
 
 Name:     abiquo-remote-services
-Version:  2.6.0
-Release:  4%{?dist}
+Version:  3.0.0
+Release:  2%{?dist}
 Summary:  Abiquo Remote Services
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 Source0:  README 
 Source1:  abiquo.properties.remoteservices
-Source2:  redis-delta-%{prev_version}_to_%{version}.py
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-virtualfactory dhcp redis nfs-utils OpenIPMI-tools
+Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-virtualfactory abiquo-cpp dhcp redis nfs-utils OpenIPMI-tools
 BuildArch: noarch
 
 %description
@@ -29,7 +27,6 @@ mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp ../SOURCES/README $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
-cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/
 
 
 %clean
@@ -37,8 +34,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %post
 # Add dhcpd conf
-cp /etc/dhcpd.conf /etc/dhcpd.conf.bak
-cat > /etc/dhcpd.conf <<EOF
+cp /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.bak
+cat > /etc/dhcp/dhcpd.conf <<EOF
 ddns-update-style interim;
 
 omapi-port 7911;
@@ -56,12 +53,16 @@ EOF
 
 %files
 %defattr(-,root,root,-)
-%doc %{_docdir}/%{name}/
+%doc %{_docdir}/%{name}/README
 %{abiquo_basedir}/config/examples/abiquo.properties.remoteservices
 
 %changelog
-* Tue Sep 10 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-4
-- Added redis delta.
+* Mon Dec 30 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
+- Changed dhcp location
+
+* Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
+- Bumped version to 3.0.0
+- Added abiquo-cpp
 
 * Thu Jun 06 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-3
 - Libvirt dependencies removed.

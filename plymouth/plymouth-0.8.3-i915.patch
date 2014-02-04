@@ -1,0 +1,105 @@
+diff -up plymouth-0.8.3/configure.ac.jx plymouth-0.8.3/configure.ac
+--- plymouth-0.8.3/configure.ac.jx	2010-05-06 13:32:14.000000000 -0400
++++ plymouth-0.8.3/configure.ac	2012-09-12 12:18:51.049085233 -0400
+@@ -56,16 +56,24 @@ PKG_CHECK_MODULES(GTK, [gtk+-2.0 >= 2.12
+ AC_SUBST(GTK_CFLAGS)
+ AC_SUBST(GTK_LIBS)
+ 
+-PKG_CHECK_MODULES(DRM, [libdrm libdrm_intel libdrm_radeon libdrm_nouveau])
++case $(arch) in
++    i686* | x86_64* | ia64*)
++	INTEL_MODULES=libdrm_intel
++	;;
++    *)
++	;;
++esac
++AM_CONDITIONAL(PLYMOUTH_INTEL, [test "x$INTEL_MODULES" = xlibdrm_intel])
++
++PKG_CHECK_MODULES(DRM, [libdrm $INTEL_MODULES libdrm_radeon libdrm_nouveau])
+ 
+ OLD_CFLAGS="$CFLAGS"
+ CFLAGS="$CFLAGS $DRM_CFLAGS"
+-AC_MSG_CHECKING([if i915_drm.h, radeon_drm.h and nouveau_drm.h are in include path])
++AC_MSG_CHECKING([if radeon_drm.h and nouveau_drm.h are in include path])
+ AC_COMPILE_IFELSE(AC_LANG_PROGRAM(
+ [[
+   #include <stdint.h>
+   #include <stdlib.h>
+-  #include "i915_drm.h"
+   #include "radeon_drm.h"
+   #include "nouveau_drm.h"
+ ]],[[]]),[found_drm_kernel_headers=yes],[found_drm_kernel_headers=no])
+@@ -82,7 +90,6 @@ else
+   [[
+     #include <stdint.h>
+     #include <stdlib.h>
+-    #include "i915_drm.h"
+     #include "radeon_drm.h"
+     #include "nouveau_drm.h"
+   ]],[[]]),[found_drm_kernel_headers=yes],[found_drm_kernel_headers=no])
+diff -up plymouth-0.8.3/src/plugins/renderers/drm/Makefile.am.jx plymouth-0.8.3/src/plugins/renderers/drm/Makefile.am
+--- plymouth-0.8.3/src/plugins/renderers/drm/Makefile.am.jx	2010-01-14 17:05:05.000000000 -0500
++++ plymouth-0.8.3/src/plugins/renderers/drm/Makefile.am	2012-09-12 12:19:37.209672215 -0400
+@@ -11,17 +11,22 @@ plugin_LTLIBRARIES = drm.la
+ 
+ drm_la_CFLAGS = $(PLYMOUTH_CFLAGS) $(DRM_CFLAGS)
+ 
++if PLYMOUTH_INTEL
++INTEL_SOURCES = \
++		 $(srcdir)/ply-renderer-i915-driver.h                         \
++		 $(srcdir)/ply-renderer-i915-driver.c
++endif
++
+ drm_la_LDFLAGS = -module -avoid-version -export-dynamic
+ drm_la_LIBADD = $(PLYMOUTH_LIBS) $(DRM_LIBS)                                  \
+                          ../../../libply/libply.la                            \
+                          ../../../libply-splash-core/libply-splash-core.la
+ drm_la_SOURCES = $(srcdir)/plugin.c                                           \
+ 		 $(srcdir)/ply-renderer-driver.h                              \
+-		 $(srcdir)/ply-renderer-i915-driver.h                         \
+-		 $(srcdir)/ply-renderer-i915-driver.c                         \
+ 		 $(srcdir)/ply-renderer-radeon-driver.h                       \
+ 		 $(srcdir)/ply-renderer-radeon-driver.c                       \
+ 		 $(srcdir)/ply-renderer-nouveau-driver.h                      \
+-		 $(srcdir)/ply-renderer-nouveau-driver.c
++		 $(srcdir)/ply-renderer-nouveau-driver.c                      \
++		 $(INTEL_SOURCES)
+ 
+ MAINTAINERCLEANFILES = Makefile.in
+diff -up plymouth-0.8.3/src/plugins/renderers/drm/plugin.c.jx plymouth-0.8.3/src/plugins/renderers/drm/plugin.c
+--- plymouth-0.8.3/src/plugins/renderers/drm/plugin.c.jx	2012-09-12 12:18:50.978085863 -0400
++++ plymouth-0.8.3/src/plugins/renderers/drm/plugin.c	2012-09-12 12:18:51.050085224 -0400
+@@ -56,10 +56,16 @@
+ #include "ply-region.h"
+ #include "ply-terminal.h"
+ 
++#if defined(__i686__) || defined(__x86_64__) || defined(__ia64__)
++#define PLYMOUTH_INTEL
++#endif
++
+ #include "ply-renderer.h"
+ #include "ply-renderer-plugin.h"
+ #include "ply-renderer-driver.h"
++#ifdef PLYMOUTH_INTEL
+ #include "ply-renderer-i915-driver.h"
++#endif
+ #include "ply-renderer-radeon-driver.h"
+ #include "ply-renderer-nouveau-driver.h"
+ 
+@@ -498,12 +504,15 @@ load_driver (ply_renderer_backend_t *bac
+       return false;
+     }
+ 
++#ifdef PLYMOUTH_INTEL
+   if (strcmp (driver_name, "i915") == 0)
+     {
+       backend->driver_interface = ply_renderer_i915_driver_get_interface ();
+       backend->driver_supports_mapping_console = true;
+     }
+-  else if (strcmp (driver_name, "radeon") == 0)
++  else 
++#endif
++  if (strcmp (driver_name, "radeon") == 0)
+     {
+       backend->driver_interface = ply_renderer_radeon_driver_get_interface ();
+       backend->driver_supports_mapping_console = false;

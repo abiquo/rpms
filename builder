@@ -61,13 +61,18 @@ def main(selected=nil)
     abiquo-nodecollector
     abiquo-lvmiscsi
     abiquo-core
-    abiquo-client-premium
+    abiquo-cloud-node
+    abiquo-ui
+    abiquo-cpp
     abiquo-api
     abiquo-am
     abiquo-m
+    abiquo-aim
     abiquo-release-ee
     abiquo-release-notes-ee
     abiquo-vsm
+    rubygem-abiquo-etk
+    abiquo-logos-ee
   }
 
   build_host = 'vbuilder' 
@@ -103,7 +108,7 @@ def main(selected=nil)
       puts "** Fetching sources"
       res1 = perror "spectool -f -g -S #{p}.spec"
       puts "** Sending package to remote build host #{build_host}"
-      res2 = perror "pkgwiz remote-build -b #{build_host} -m abiquo-2.0"
+      res2 = perror "pkgwiz remote-build -b #{build_host} -m abiquo-rhel6"
       if (res1 == 0) and (res2 == 0)
         puts "** OK".green.bold
       else

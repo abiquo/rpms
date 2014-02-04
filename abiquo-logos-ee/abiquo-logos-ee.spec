@@ -1,140 +1,262 @@
-Name: abiquo-logos-ee
-Summary: FrameOS-related icons and pictures.
-Version: 4.9.99
-Release: 13.el5.abiquo
-Group: System Environment/Base
-Source0: http://mirror.abiquo.com/sources/redhat-logos-%{version}-centos.tar.bz2
-Source1: http://mirror.abiquo.com/sources/redhat-logos-anaconda-abiquo-5.1.tar.bz2
-Source2: http://mirror.abiquo.com/sources/redhat-logos-abiquo-bootloader.tar.bz2
-Source3: http://mirror.abiquo.com/sources/redhat-logos-centos-firstboot.tar.bz2
-#Source4: redhat-logos-centos-gdm.tar.bz2
-#Source5: redhat-logos-centos-kdesplash.tar.bz2
-Source6: http://mirror.abiquo.com/sources/redhat-logos-centos-redhat-pixmaps.tar.bz2
-Source7: http://mirror.abiquo.com/sources/redhat-logos-centos-rhgb.tar.bz2
-Source9: redhat-credits.png
-Patch0:  centos5-isolinux-colors.patch
+# Anaconda looks here for images
+%define anaconda_image_prefix /usr/lib/anaconda-runtime
 
-License: Copyright © 2003-2007 the FrameOS Project.  All rights reserved.
-BuildRoot: %{_tmppath}/%{name}-root
-BuildArchitectures: noarch
+Name: abiquo-logos-ee
+Summary: Abiquo-related icons and pictures
+Version: 60.0.14
+Release: 14%{?dist}.abiquo
+Group: System Environment/Base
+# No upstream, do in dist-cvs
+Source0: abiquo-logos-ee-%{version}.tar.bz2
+License: Copyright 2013 Abiquo.  All rights reserved.
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildArch: noarch
 Conflicts: anaconda-images <= 10
-Provides: system-logos redhat-logos
+Provides: system-logos = %{version}-%{release} redhat-logos
+Requires(post): coreutils
+# For _kde4_appsdir macro:
 
 %description
 The redhat-logos package (the "Package") contains files created by the
-FrameOS Project to replace the Red Hat "Shadow Man" logo and  RPM logo.
+Abiquo to replace the Red Hat "Shadow Man" logo and  RPM logo.
 The Red Hat "Shadow Man" logo, RPM, and the RPM logo are trademarks or
 registered trademarks of Red Hat, Inc.
 
-The Package and FrameOS logos (the "Marks") can only used as outlined in 
-the included COPYING file. Please see that file for information on copying
-and redistribution of the FrameOS Marks.
-
 %prep
-%setup -n redhat-logos-%{version}-centos
+%setup -q
 
-(cd anaconda && tar xjf %{SOURCE1})
-(cd bootloader && tar xjf %{SOURCE2})
-(cd firstboot  && tar xjf %{SOURCE3})
-(cd redhat-pixmaps && tar xjf %{SOURCE6})
-(cd rhgb  && tar xjf %{SOURCE7})
-
-%patch0 -p1
 %build
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/pixmaps/redhat
-for i in redhat-pixmaps/*; do
-  install -m 644 $i $RPM_BUILD_ROOT%{_datadir}/pixmaps/redhat
-done
-(cd $RPM_BUILD_ROOT%{_datadir}/pixmaps/redhat; \
-for i in *-mini.xpm; do \
-  linkfile=`echo $i | sed -e "s/\(.*\)-mini/mini-\1/"` ; \
-  ln -s $i $linkfile ; \
-done)
 
 # should be ifarch i386
 mkdir -p $RPM_BUILD_ROOT/boot/grub
-install -m 644 bootloader/rhlilo-en.pcx $RPM_BUILD_ROOT/boot/message
-install -m 644 bootloader/splash.xpm.gz $RPM_BUILD_ROOT/boot/grub/splash.xpm.gz
+install -p -m 644 -D bootloader/splash.xpm.gz $RPM_BUILD_ROOT/boot/grub/splash.xpm.gz
 # end i386 bits
 
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/firstboot/pixmaps
-for i in firstboot/* ; do
-  install -m 644 $i $RPM_BUILD_ROOT%{_datadir}/firstboot/pixmaps
+
+mkdir -p $RPM_BUILD_ROOT%{_datadir}/plymouth/themes/rings
+for i in plymouth/rings/* ; do
+  install -p -m 644 $i $RPM_BUILD_ROOT%{_datadir}/plymouth/themes/rings
 done
 
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/rhgb
-for i in rhgb/* ; do
-  install -m 644 $i $RPM_BUILD_ROOT%{_datadir}/rhgb
-done
 
-(cd anaconda ; make DESTDIR=$RPM_BUILD_ROOT install)
-
-mkdir -p $RPM_BUILD_ROOT%{_datadir}/anaconda/pixmaps/rnotes
-#for i in anaconda/rnotes/*.png ; do
-#  install -m 644 $i $RPM_BUILD_ROOT%{_datadir}/anaconda/pixmaps/rnotes
-#done
-cp -aRf anaconda/rnotes/* $RPM_BUILD_ROOT%{_datadir}/anaconda/pixmaps/rnotes
+(cd anaconda; make DESTDIR=$RPM_BUILD_ROOT install)
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
+
 %files
-%defattr(-, root, root)
+%defattr(-, root, root, -)
 %doc COPYING
-%{_datadir}/firstboot
-%{_datadir}/pixmaps
-%{_datadir}/rhgb
+%{_datadir}/plymouth/themes/rings/
 %{_datadir}/anaconda/pixmaps/*
-/usr/lib/anaconda-runtime/boot/*png
-/usr/lib/anaconda-runtime/*.sh
+
+%{anaconda_image_prefix}/boot/*png
+%{anaconda_image_prefix}/*.sh
+%{anaconda_image_prefix}/*.jpg
+
+# we multi-own these directories, so as not to require the packages that
+# provide them, thereby dragging in excess dependencies.
+%dir %{anaconda_image_prefix}
+%dir %{anaconda_image_prefix}/boot
+%dir %{_datadir}/anaconda
+%dir %{_datadir}/anaconda/pixmaps/
 # should be ifarch i386
-/boot/message*
 /boot/grub/splash.xpm.gz
 # end i386 bits
 
 %changelog
-* Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 4.9.99-13.el5.abiquo
-- Bumped version to 2.6.0
+* Fri Nov 08 2013 Abel Boldú <abel.boldu@abiquo.com> - 60.0.14-14.abiquo
+- New splash by Ian Finlay.
 
-* Tue Jul 06 2010 Sergio Rubio <sergio@rubio.name> 4.9.99-12.el5.abiquo
-- Added Abiquo artwork
-- Removed GDM and KDE artwork
+* Mon Aug 19 2013 Abel Boldú <abel.boldu@abiquo.com> - 60.0.14-13.abiquo
+- rnotes.
 
-* Wed Jan 28 2009 Ralph Angenendt <ralph@centos.org> 4.9.99-9.el5.centos
-- Update to TreeFlower theme
+* Wed Aug 15 2012 Johnny Hughes <johnny@centos.org> 60.0.14-12
+- Bugfix for CentOS Bug #5704
 
-* Thu Nov 22 2007 Karanbir Singh <kbsingh@centos.org> 4.9.99-8.el5.centos
-- Update cs_CZ rnotes
+* Sat Jun 23 2012 Karanbir Singh <kbsingh@centos.org> 60.0.14-11
+- We need to provide a centos logos as well
 
-* Wed Nov 21 2007 Karanbir Singh <kbsingh@centos.org> 4.9.99-7.el5.centos
-- Update cz rnotes
-- Add ro rnotes
+* Thu May 26 2011 Ralph Angenendt <ralph@centos.org> 60.0.14-10
+- Fix KDE issues, fix firstboot issues, add wallpaper with logo
 
-* Tue Nov 20 2007 Johnny Hughes <johnny@centos.org> - 4.9.99-6.el5.centos
-- bumped up release version to be larger than upstream for upgrades
+* Fri Dec 3 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-8
+- Updated ksplash preview image 
 
-* Sun Apr  1 2007 Johnny Hughes <johnny@centos.org> - 4.9.8-6.el5.centos
-- Rolled in ja and cz install slides.
-- Rolled in newer graphics for the install theme.
+* Fri Dec 3 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-8
+- Updated ksplash image 
+- removed old file
 
-* Tue Mar 27 2007 Johnny Hughes <johnny@centos.org> - 4.9.8-5.el5.centos
-- Modified to remove Red Hat branding in the SPEC file.
-- Modofied to add "Other Than English" install slides
+* Mon Nov 22 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-7
+- Added firstboot workstation logo
+- Updated Plymouth logo
 
-* Mon Feb 19 2007 Johnny Hughes <johnny@centos.org> - 4.9.8-2.el5.centos
-- modified to change the file splashtolss.sh to better build the anaconda
-  splash file (splash.lss)
+* Fri Nov 19 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-6
+- Updated COPYING file
 
-* Tue Jan 24 2007 Johnny Hughes <johnny@centos.org> - 4.9.8-1.el5.centos
-- Removed RedHat logos and artwork from Source0 and recompiled it.
-- Added Sources 1 thru 9 to replace logos and artwork. 
-- removed backgrounds/ directory (handling that in desktop-backgrounds-basic)
-- This package no longer tracks the upstream redhat-logos package.
-- Added Theme.rc into the kde-splash tarball (see this RH bugzilla entry)
-  https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=224363
+* Fri Nov 19 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-5
+- Addes screenshots for KDM and KSplash
+
+* Fri Nov 19 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-4
+- Renamed KDM themes to CentOS
+
+* Fri Nov 19 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-3
+- Updated Plymouth logo 
+
+* Fri Nov 19 2010 Marcus Moeller <mmoeller@fedoraproject.org> 60.0.14-2
+- Initial build for CentOS
+
+* Wed Aug 25 2010 Ray Strode <rstrode@redhat.com> 60.0.14-1
+- Update description and COPYING file
+  Resolves: #627374
+
+* Fri Jul 30 2010 Ray Strode <rstrode@redhat.com> 60.0.13-1
+- Add header image
+  Related: #558608
+
+* Fri Jul 16 2010 Ray Strode <rstrode@redhat.com> 60.0.12-1
+- Drop glow theme
+  Resolves: #615251
+
+* Tue Jun 15 2010 Matthias Clasen <mclasen@redhat.com> 60.0.11-2
+- Silence gtk-update-icon-cache in %%post and %%postun
+Resolves: #589983
+
+* Fri May 21 2010 Ray Strode <rstrode@redhat.com> 60.0.11-1
+- Update anaconda artwork based on feedback
+  Resolves: #594825
+
+* Tue May 11 2010 Than Ngo <than@redhat.com> - 60.0.10-1
+- update ksplash theme to match the latest splash
+
+* Thu May 06 2010 Ray Strode <rstrode@redhat.com> 60.0.9-1
+- Add back grub.splash
+  Resolves: 589703
+- Add extra frame to plymouth splash
+  Related: #558608
+
+* Wed May 05 2010 Ray Strode <rstrode@redhat.com> 60.0.8-1
+- Add large logo for compiz easter egg
+  Resolves: #582411
+- Drop Bluecurve
+  Related: #559765
+- Install logo icons in System theme
+  Related: #566370
+
+* Tue May 04 2010 Ray Strode <rstrode@redhat.com> 60.0.7-1
+- Rename firstboot theme to RHEL
+  Resolves: #566173
+- Add new plymouth artwork
+  Related: #558608
+- Update backgrounds
+- Update anaconda
+- Drop gnome-splash
+- Drop empty screensaver dir
+  Resolves: #576912
+- Drop grub splash at request of artists
+
+* Thu Apr 22 2010 Than Ngo <than@redhat.com> - 60.0.6-1
+- fix many cosmetic issues in kdm/ksplash theme
+
+* Mon Apr 12 2010 Ray Strode <rstrode@redhat.com> 60.0.5-3
+Resolves: #576912
+- Readd default.xml
+
+* Fri Apr 09 2010 Ray Strode <rstrode@redhat.com> 60.0.5-2
+- Make the upgrade path from alpha a little smoother
+  Resolves: #580475
+
+* Wed Apr 07 2010 Ray Strode <rstrode@redhat.com> 60.0.5-1
+Resolves: #576912
+- Update wallpapers
+
+* Tue Feb 23 2010 Ray Strode <rstrode@redhat.com> 60.0.4-3
+Resolves: #559695
+- Drop xpm symlinking logic
+- hide anaconda image dir behind macro
+
+* Wed Feb 17 2010 Ray Strode <rstrode@redhat.com> 60.0.4-1
+Resolves: #565886
+- One more update to the KDE artwork
+- Revert firstboot theme rename until later since compat link
+  is causing problems.
+
+* Wed Feb 17 2010 Ray Strode <rstrode@redhat.com> 60.0.3-1
+Resolves: #565886
+- Put backgrounds here since they're "trade dress"
+- Rename firstboot theme from leonidas to RHEL (with compat link)
+
+* Wed Feb 17 2010 Jaroslav Reznik <jreznik@redhat.com> 60.0.2-1
+- KDE theme merged into redhat-logos package
+- updated license (year in copyright)
+
+* Fri Feb 05 2010 Ray Strode <rstrode@redhat.com> 60.0.1-3
+Resolves: #559695
+- spec file cleanups
+
+* Mon Jan 25 2010 Than Ngo <than@redhat.com> - 60.0.1-2
+- drop useless leonidas in KDE
+
+* Fri Jan 22 2010 Ray Strode <rstrode@redhat.com> 60.0.1-1
+Resolves: #556906
+- Add updated artwork for Beta
+
+* Thu Jan 21 2010 Matthias Clasen <mclasen@redhat.com> 60.0.0-2
+- Remove a non-UTF-8 char from the spec
+ 
+* Wed Jan 20 2010 Ray Strode <rstrode@redhat.com> 60.0.0-1
+Resolves: #556906
+- Add bits from glow plymouth theme
+
+* Wed Jan 20 2010 Ray Strode <rstrode@redhat.com> - 11.90.4-1
+Resolves: #556906
+- Update artwork for Beta
+
+* Tue Dec 08 2009 Dennis Gregorovic <dgregor@redhat.com> - 11.90.3-1.1
+- Rebuilt for RHEL 6
+
+* Mon Jun 01 2009 Ray Strode <rstrode@redhat.com> - 11.90.3-1
+- remove some of the aliasing from the charge theme
+
+* Thu May 29 2009 Ray Strode <rstrode@redhat.com> - 11.90.2-1
+- Drop backgrounds again because they don't actually contain logos
+
+* Thu May 29 2009 Ray Strode <rstrode@redhat.com> - 11.90.1-1
+- Install new backgrounds
+
+* Fri May 29 2009 Ray Strode <rstrode@redhat.com> - 11.90.0-2
+- Rebuild using tarball dist from cvs
+
+* Thu May 28 2009 Ray Strode <rstrode@redhat.com> - 11.90.0-1
+- Update artwork for RHEL 6 alpha
+
+* Thu Jan  4 2007 Jeremy Katz <katzj@redhat.com> - 4.9.16-1
+- Fix syslinux splash conversion, Resolves: #209201
+
+* Fri Dec  1 2006 Matthias Clasen <mclasen@redhat.com> - 4.9.15-1
+- Readd rhgb/main-logo.png, Resolves: #214868
+
+* Tue Nov 28 2006 David Zeuthen <davidz@redhat.com> - 4.9.14-1
+- Don't include LILO splash. Resolves: #216748
+- New syslinux-splash from Diana Fong. Resolves: #217493
+
+* Tue Nov 21 2006 David Zeuthen <davidz@redhat.com> - 4.9.13-1
+- Make firstboot/splash-small.png completely transparent
+- Fix up date for last commit
+- Resolves: #216501
+
+* Mon Nov 20 2006 David Zeuthen <davidz@redhat.com> - 4.9.12-1
+- New shadowman gdm logo from Diana Fong (#216370)
+
+* Wed Nov 15 2006 David Zeuthen <davidz@redhat.com> - 4.9.10-1
+- New shadowman logos from Diana Fong (#215614)
+
+* Fri Nov 10 2006 Than Ngo <than@redhat.com> - 4.9.9-1
+- add missing KDE splash (#212130)
 
 * Wed Oct 25 2006 David Zeuthen <davidz@redhat.com> - 4.9.8-1
 - Add new shadowman logos (#211837)
@@ -266,7 +388,7 @@ rm -rf $RPM_BUILD_ROOT
 - automatic rebuild
 
 * Mon Jun 19 2000 Owen Taylor <otaylor@redhat.com>
-- Add %defattr
+- Add %%defattr
 
 * Mon Jun 19 2000 Owen Taylor <otaylor@redhat.com>
 - Add version of logo for embossing on the desktop

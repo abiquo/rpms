@@ -1,0 +1,25 @@
+
+---
+ src/plugins/splash/text/plugin.c |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/plugins/splash/text/plugin.c b/src/plugins/splash/text/plugin.c
+index 690f54b..f1a7f7f 100644
+--- a/src/plugins/splash/text/plugin.c
++++ b/src/plugins/splash/text/plugin.c
+@@ -184,10 +184,10 @@ view_start_animation (view_t *view)
+                                     0xffffff);
+   ply_terminal_set_color_hex_value (terminal,
+                                     PLY_TERMINAL_COLOR_BLUE,
+-                                    0x0073B3);
++                                    0xDD7200);
+   ply_terminal_set_color_hex_value (terminal,
+                                     PLY_TERMINAL_COLOR_BROWN,
+-                                    0x00457E);
++                                    0xA85700);
+ 
+   ply_text_display_set_background_color (view->display,
+                                          PLY_TERMINAL_COLOR_BLACK);
+-- 
+1.7.1
+

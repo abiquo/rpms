@@ -1,7 +1,7 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-m
-Version:  2.6.0
+Version:  3.0.0
 Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo Metering
 Group:    Development/System 
@@ -42,5 +42,8 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
+- Bumped version to 3.0.0
+
 * Wed May 08 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-1
 - Initial release

@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-virtualfactory
-Version:  2.6.0
-Release:  2%{?dist}%{?buildstamp}
+Version:  3.0.0
+Release:  1%{?dist}%{?buildstamp}
 Summary:  Abiquo Virtualfactory
 Group:    Development/System 
 License:  Multiple 
@@ -35,6 +35,9 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/tomcat/webapps/virtualfactory
 
 %changelog
+* Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
+- Bumped version to 3.0.0
+
 * Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
 - Bumped version to 2.6.0
 

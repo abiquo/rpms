@@ -1,4 +1,4 @@
-%define builtin_release_version 2.6.0
+%define builtin_release_version 2.4.0
 %define builtin_release_name GA
 %define real_release_version %{?release_version}%{!?release_version:%{builtin_release_version}}
 %define real_release_name %{?release_name}%{!?release_name:%{builtin_release_name}}
@@ -7,7 +7,7 @@
 Summary: Abiquo release notes files
 Name: abiquo-release-notes-ee
 Version: %{real_release_version}
-Release: 1
+Release: 3
 License: GPL
 Group: System Environment/Base
 Source: http://mirror.abiquo.com/sources/%{name}-%{builtin_release_version}.tar.gz
@@ -36,9 +36,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_defaultdocdir}/HTML
 
 %changelog
-* Fri Sep 20 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-1
-- Bump version to 2.6.0
-
 * Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.4.0-3
 - Bumped version to 2.6.0
 

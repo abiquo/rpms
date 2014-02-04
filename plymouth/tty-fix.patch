@@ -1,0 +1,26 @@
+From 8e02454620e5e0992198549d7ed99cd2a9223c5a Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Thu, 13 Oct 2011 00:28:04 -0400
+Subject: [PATCH] terminal: fix tty locking
+
+---
+ src/libply-splash-core/ply-terminal.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+diff --git a/src/libply-splash-core/ply-terminal.c b/src/libply-splash-core/ply-terminal.c
+index f71f25a..ff59d71 100644
+--- a/src/libply-splash-core/ply-terminal.c
++++ b/src/libply-splash-core/ply-terminal.c
+@@ -188,7 +188,8 @@ ply_terminal_set_unbuffered_input (ply_terminal_t *terminal)
+   if (tcsetattr (terminal->fd, TCSANOW, &term_attributes) != 0)
+     return false;
+ 
+-  if (ioctl (terminal->fd, TIOCGLCKTRMIOS, &locked_term_attributes) == 0)
++  if (!terminal->original_locked_term_attributes_saved &&
++      ioctl (terminal->fd, TIOCGLCKTRMIOS, &locked_term_attributes) == 0)
+     {
+       terminal->original_locked_term_attributes = locked_term_attributes;
+       terminal->original_locked_term_attributes_saved = true;
+-- 
+1.7.1
+

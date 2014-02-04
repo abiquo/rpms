@@ -6,8 +6,8 @@
 
 Summary: Abiquo SOSReport plugins
 Name: abiquo-sosreport-plugins
-Version: 2.6.0
-Release: 1%{?dist}
+Version: 3.0.0
+Release: 2%{?dist}
 License: BSD 
 Group: System Environment/Base
 URL: http://www.abiquo.com/
@@ -30,13 +30,13 @@ This package contains Abiquo sosreport plugins.
 %install
 %{__rm} -rf %{buildroot}
 mkdir -p %{buildroot}%{python_sitelib}/sos/plugins
-%{__cp} %{_sourcedir}/abiquo_node.py %{buildroot}/%{python_sitelib}/sos/plugins/
-%{__cp} %{_sourcedir}/abiquo_xen_node.py %{buildroot}/%{python_sitelib}/sos/plugins/
-%{__cp} %{_sourcedir}/abiquo_server.py %{buildroot}/%{python_sitelib}/sos/plugins/
-%{__cp} %{_sourcedir}/abiquo_dhcp.py %{buildroot}/%{python_sitelib}/sos/plugins/
-%{__cp} %{_sourcedir}/abiquo_rs.py %{buildroot}/%{python_sitelib}/sos/plugins/
-%{__cp} %{_sourcedir}/abiquo_v2v.py %{buildroot}/%{python_sitelib}/sos/plugins/
-%{__cp} %{_sourcedir}/abiquo_lvm.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__install} -Dp -m 0755 %{_sourcedir}/abiquo_node.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__install} -Dp -m 0755 %{_sourcedir}/abiquo_xen_node.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__install} -Dp -m 0755 %{_sourcedir}/abiquo_server.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__install} -Dp -m 0755 %{_sourcedir}/abiquo_dhcp.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__install} -Dp -m 0755 %{_sourcedir}/abiquo_rs.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__install} -Dp -m 0755 %{_sourcedir}/abiquo_v2v.py %{buildroot}/%{python_sitelib}/sos/plugins/
+%{__install} -Dp -m 0755 %{_sourcedir}/abiquo_lvm.py %{buildroot}/%{python_sitelib}/sos/plugins/
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -46,6 +46,12 @@ mkdir -p %{buildroot}%{python_sitelib}/sos/plugins
 %{python_sitelib}/sos/plugins/*
 
 %changelog
+* Fri Jan 10 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
+- Changed install attributes
+
+* Fri Jan 10 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
+- Bumped version to 3.0.0
+
 * Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-1
 - Bumped version to 2.6.0
 

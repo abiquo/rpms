@@ -1,9 +1,9 @@
 %define abiquo_basedir /opt/abiquo
-%define prev_version 2.4.0
+%define prev_version 2.9.0
 
 Name:           abiquo-server
-Version:        2.6.0
-Release:        6%{?dist}%{?buildstamp}
+Version:        3.0.0
+Release:        2%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -14,7 +14,7 @@ Source2:	%{?abiquo_binaries_url}database/kinton-schema.sql
 Source3:	%{?abiquo_binaries_url}database/kinton-delta-%{prev_version}_to_%{version}.sql
 #Source4:	redis-delta-%{prev_version}_to_%{version}.py
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires:       abiquo-core abiquo-client-premium abiquo-api abiquo-m nfs-utils sos wget ruby ntp redis 
+Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils sos wget ruby ntp redis 
 Requires:       /usr/sbin/sendmail /usr/bin/which
 BuildRequires:  /usr/bin/unzip
 BuildArch: 	noarch
@@ -40,7 +40,8 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/profile.d/
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 cp -r %{SOURCE0} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
-cp %{SOURCE3} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+#cp %{SOURCE3} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+#cp %{SOURCE4} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 
 
 %clean
@@ -52,11 +53,11 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/config/examples/abiquo.properties.server
 
 %changelog
-* Tue Sep 10 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-6
-- Moved redis delta to RS.
+* Mon Jan 20 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
+- Added m and api to deps
 
-* Tue Sep 10 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-5
-- Added api and m.
+* Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
+- Bumped version to 3.0.0
 
 * Tue Jun 18 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-4
 - Added redis delta.

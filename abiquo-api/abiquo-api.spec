@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-api
-Version:  2.6.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  3.0.0
+Release:  2%{?dist}%{?buildstamp}
 Summary:  Abiquo Repository Manager
 Group:    Development/System 
 License:  Multiple 
@@ -10,7 +10,7 @@ URL:      http://www.abiquo.com
 Source0:  %{?abiquo_binaries_url}api.war
 Source1:  api.xml
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: abiquo-server
+Requires: abiquo-core
 BuildArch: noarch
 
 %description
@@ -41,6 +41,12 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/api.xml
 
 %changelog
+* Wed Jan 22 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
+- moved server to core dependencies
+
+* Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
+- Bumped version to 3.0.0
+
 * Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-1
 - Bumped version to 2.6.0
 

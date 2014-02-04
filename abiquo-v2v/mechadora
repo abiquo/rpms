@@ -1,0 +1,239 @@
+#!/bin/bash
+
+# This default value works for a 1Gigabit network
+# and a Sata disk
+BLOCK_SIZE="4K"
+
+# The number of retries to perform when waiting for
+# a LUN mapping to appear
+WAIT_FOR_LUN_RETRIES=5
+
+
+### Do not edit the script below ###
+
+E_OK=0
+E_ARGUMENTS=10
+E_UNSUPPORTED_OP=11
+E_DD_NOTFOUND=20
+E_ISCSIADM_NOTFOUND=21
+E_ISCSI_DISCOVERY=30
+E_ISCSI_LOGIN=31
+E_ISCSI_LUN_UNAVAILABLE=32
+E_FILE_NOTFOUND=40
+E_FILE_ALREADYEXISTS=41
+E_VOLUME_NOTFOUND=42
+E_DUMP_FILE=50
+E_DUMP_VOLUME=50
+E_NFS_ACCESS_DENIED=60
+
+
+# Verifies that all requirements are met
+# $1: The operation mode
+function check_requirements() {
+    DD=`which dd`
+    if [[ ! -f "$DD" ]]; then
+	echo "[!] dd not found! You must install coreutils"
+	echo "[+] Try run: yum install coreutils"
+        exit $E_DD_NOTFOUND
+    fi
+    case "$1" in
+        iscsi-*)
+            ISCSIADM=`which iscsiadm`
+            if [[ ! -f "$ISCSIADM" ]]; then
+    	        echo "[!] iscsiadm not found! You must install openiscsi"
+	        echo "[+] Try run: yum install iscsi-initiator-utils"
+                exit $E_ISCSIADM_NOTFOUND
+            fi
+            ;;
+    esac
+}
+
+# Executes a command and properly logs the result
+# $1: The command to run
+# $2: The expected error level. Defaults to 0
+# $3: Rollback action in case of error
+function launch() {
+    ERR=${2:-0}
+    CMD=$1
+    echo "Command: $CMD"
+    eval $CMD
+    RES=$?
+    if [[ "$RES" -ne "$ERR" ]]; then
+        echo "Error executing: $CMD"
+        echo "Error code: $RES"
+        if [[ -n "$3" ]]; then
+            CMD=$3
+            echo "Rollback command: $CMD"
+            eval $CMD
+        fi  
+        exit $RES
+    fi  
+}
+
+# Perform a login operation against an iSCSI target.
+# $1: The ip address of the storage device
+# $2: The taget IQN in the storage device
+function iscsi_login() {
+    IP=$1
+    IQN=$2
+
+    iscsiadm -m node -T "$IQN" -p "$IP" -u
+    iscsiadm -m node -T "$IQN" -p "$IP" -l
+
+    # If we can not directly log in, perform an iSCSI discovery
+    if [[ $? != 0 ]]; then
+        iscsiadm  -m discovery -t st -p "$IP"
+        if [[ $? != 0 ]]; then
+            echo "[!] Error running discovery on $IP"
+            exit $E_ISCSI_DISCOVERY
+        fi
+        # Attempt the login again after the discovery
+        iscsiadm -m node -T "$IQN" -p "$IP" -u
+        iscsiadm -m node -T "$IQN" -p "$IP" -l
+
+        if [[ $? != 0 ]]; then
+            echo "[!] Error running loggin to $IP $IQN"
+            exit $E_ISCSI_DISCOVERY
+        fi
+    fi
+}
+
+# Perform a logout operation against an iSCSI target.
+# $1: The ip address of the storage device
+# $2: The taget IQN in the storage device
+function iscsi_logout() {
+    iscsiadm -m node -T "$2" -p "$1" -u
+}
+
+# Waits until the given LUN mapping is present
+# $1: The full path that will represent the LUN mapping
+function wait_for_lun() {
+    LUN=$1
+    while [[ "$WAIT_FOR_LUN_RETRIES" -gt 0 ]]; do
+        # Wait while the system assigns the device (/dev/sdx) 
+        sleep 2
+        if [[ -L "$LUN" ]]; then
+            break
+        fi
+        WAIT_FOR_LUN_RETRIES=`expr $WAIT_FOR_LUN_RETRIES - 1`
+    done
+    if [[ ! -L "$LUN" ]]; then
+        echo "[!] Could not get the devive path for $LUN"
+        exit $E_ISCSI_LUN_UNAVAILABLE
+    fi
+}
+
+# Mounts the given share in a temporal directory
+# $1: The ip address ot the target server
+# $2: The name of the share
+# Output: The name of the directory where the pool is mounted
+function nfs_mount() {
+    DIR=`mktemp -d`
+    mount $1:$2 $DIR
+    if [[ $? -ne 0 ]]; then
+        rmdir $DIR
+        exit $E_NFS_ACCESS_DENIED
+    fi
+    echo "$DIR"
+}
+
+# Unmounts the given mounted share
+# $1: The path where the share is mounted
+function nfs_unmount() {
+    umount $1 2>/dev/null
+    rmdir $1
+}
+
+# Dumps the contents of the source disk file to the given volume
+# $1: The path to the source disk file
+# $2: The path to the target volume file
+function dump_to_volume() {
+    FILE=$1
+    VOLUME=$2
+    if [[ ! -f "$FILE" ]]; then
+        echo "[!] Source file $FILE not found"
+        exit $E_FILE_NOTFOUND
+    fi
+    launch "dd bs=$BLOCK_SIZE if=\"$FILE\" of=\"$VOLUME\""
+    if [[ $? != 0 ]]; then
+        echo "[!] Error dumping $FILE to $VOLUME"
+        exit $E_DUMP_FILE
+    fi
+}
+
+# Dumps the contents of the source disk file to the given volume
+# $1: The path to the source volume
+# $2: The path to the target disk file
+# $3: The size of the volume
+function dump_to_file() {
+    VOLUME=$1
+    FILE=$2
+    SIZE=${3-""}
+    if [[ -f "$FILE" ]]; then
+        echo "[!] File $FILE already exists"
+        exit $E_FILE_ALREADYEXISTS
+    fi
+    if [[ -z $SIZE ]]; then
+        launch "dd bs=\"$BLOCK_SIZE\" if=\"$VOLUME\" of=\"$FILE\""
+    else
+        launch "dd ibs=1024 count=\"$SIZE\" if=\"$VOLUME\" of=\"$FILE\""
+    fi
+    if [[ $? != 0 ]]; then
+        echo "[!] Error dumping $VOLUME to $FILE"
+        exit $E_DUMP_VOLUME
+    fi
+}
+
+
+if [[ $# -lt 5 ]]; then
+    echo "[+] Usage: `basename $0` <mode> <device ip> <pool name> <disk file path> <volume path> [<volume_size>]"
+    exit $E_ARGUMENTS
+fi
+
+set -u
+
+MODE=$1                 # The operation mode
+DEVICE_IP=$2            # The ip of the storage device
+POOL=$3                 # The storage pool (an iSCSI IQN or an NFS share)
+DISK_FILE_PATH=$4       # The disk file path (source or destination depending on the operation)
+VOLUME_PATH=$5          # The path of the volume (source or destinatino depending on the operation)
+VOLUME_SIZE=${6-""}     # (Optional) The size of the volume, used in the bundle operation.
+
+
+check_requirements $MODE
+
+case "$MODE" in
+    iscsi-deploy)
+        LUN=/dev/disk/by-path/$VOLUME_PATH
+        iscsi_login $DEVICE_IP $POOL
+        wait_for_lun $LUN
+        dump_to_volume $DISK_FILE_PATH $LUN
+        iscsi_logout $DEVICE_IP $POOL
+        ;;
+    nfs-deploy)
+        DIR=`nfs_mount $DEVICE_IP $POOL`
+        VOL="$DIR/$VOLUME_PATH"
+        dump_to_volume $DISK_FILE_PATH $VOL
+        nfs_unmount $DIR
+        ;;
+    iscsi-bundle)
+        LUN=/dev/disk/by-path/$VOLUME_PATH
+        iscsi_login $DEVICE_IP $POOL
+        wait_for_lun $LUN
+        dump_to_file $LUN $DISK_FILE_PATH $VOLUME_SIZE
+        iscsi_logout $DEVICE_IP $POOL
+        ;;
+    nfs-bundle)
+        DIR=`nfs_mount $DEVICE_IP $POOL`
+        VOL="$DIR/$VOLUME_PATH"
+        dump_to_file $VOL $DISK_FILE_PATH $VOLUME_SIZE
+        nfs_unmount $DIR
+        ;;
+    *)
+        echo "[!] Unsupported operation: $MODE"
+        exit $E_UNSUPPORTED_OP
+        ;;
+esac
+
+exit $E_OK
+

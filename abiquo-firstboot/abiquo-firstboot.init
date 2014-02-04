@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# abiquo-firstboot  Abiquo first boot initialization script
+# 
+# chkconfig: 2345 70 70
+# description:
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+
+case "$1" in
+  start)
+
+    # Stop plymouth splash
+    if [ -x /bin/plymouth ]; then
+        /bin/plymouth quit
+    fi
+    # Run abiquo-firstboot tool
+    if [ -x /usr/sbin/abiquo-firstboot ]; then
+    /usr/sbin/abiquo-firstboot
+    fi
+    # Disables itself
+    chkconfig abiquo-firstboot off
+  ;;
+  stop|status|restart|reload|force-reload)
+    # do nothing
+  ;;
+esac

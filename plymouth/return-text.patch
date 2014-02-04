@@ -1,0 +1,34 @@
+From 022d19f2a638713e315f492ab0154d61675695cd Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Thu, 13 Oct 2011 00:20:42 -0400
+Subject: [PATCH] set-default-theme: fix fallback logic
+
+---
+ scripts/plymouth-set-default-theme.in |    9 +++++++--
+ 1 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/plymouth-set-default-theme.in b/scripts/plymouth-set-default-theme.in
+index f589618..105cdd8 100755
+--- a/scripts/plymouth-set-default-theme.in
++++ b/scripts/plymouth-set-default-theme.in
+@@ -63,10 +63,15 @@ function get_default_theme ()
+                 THEME_NAME=$(read_theme_name_from_file ${PLYMOUTH_POLICYDIR}/plymouthd.defaults)
+         fi
+ 
+-        if [ -z "$THEME_NAME" -o ! -r "${PLYMOUTH_DATADIR}/plymouth/themes/$THEME_NAME/$THEME_NAME.plymouth" ]; then
++        if [ -z "$THEME_NAME" -o ! -r "${PLYMOUTH_DATADIR}/plymouth/themes/$THEME_NAME/$THEME_NAME.plymouth" \
++             -a -L "${PLYMOUTH_DATADIR}/plymouth/themes/default.plymouth" ]; then
+                 THEME_NAME=$(basename $(readlink ${PLYMOUTH_DATADIR}/plymouth/themes/default.plymouth) .plymouth)
+         fi
+-        [ -z "$THEME_NAME" ] || echo $THEME_NAME && exit 1
++        if [ -z "$THEME_NAME" -o ! -r "${PLYMOUTH_DATADIR}/plymouth/themes/$THEME_NAME/$THEME_NAME.plymouth" ]; then
++                THEME_NAME="text"
++        fi
++
++        echo $THEME_NAME
+ }
+ 
+ DO_RESET=0
+-- 
+1.7.1
+

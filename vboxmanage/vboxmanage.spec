@@ -7,7 +7,7 @@ License:  Multiple
 URL:      http://www.virtualbox.org
 Source:   http://mirror.abiquo.com/sources/VirtualBox-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-BuildRequires: iasl dev86 libxml2-devel libxslt-devel libIDL-devel hal-devel curl-devel dev86 libcap-devel glibc-devel libstdc++-devel libpng-devel libXmu-devel libX11-devel mesa-libGL-devel libXrandr-devel glibc openssl openssl-devel glibc-headers kBuild pam-devel libgcj-devel
+BuildRequires: iasl dev86 libxml2-devel libxslt-devel libIDL-devel hal-devel curl-devel dev86 libcap-devel glibc-devel libstdc++-devel libpng-devel libXmu-devel libX11-devel mesa-libGL-devel libXrandr-devel glibc openssl openssl-devel glibc-headers kBuild pam-devel libgcj-devel genisoimage device-mapper-libs device-mapper-devel makeself  zlib-static glibc-static
 #BuildRequires: libgcc-multilib
 Patch1:  no-curl-detect.diff
 Source1: VBoxManage
@@ -30,7 +30,7 @@ chmod -R a+rX,g-w,o-w .
 
 %build
 cd VirtualBox-%{version}
-./configure --disable-python --disable-sdl-ttf --disable-alsa --disable-pulse --disable-dbus --disable-kmods --disable-opengl --disable-hardening --build-headless --disable-docs --disable-vmmraw
+./configure --disable-python --disable-sdl-ttf --disable-alsa --disable-pulse --disable-dbus --disable-kmods --disable-opengl --disable-hardening --build-headless --disable-docs --disable-vmmraw --disable-java
 pwd
 source $RPM_BUILD_DIR/VirtualBox-%{version}/env.sh
 kmk all

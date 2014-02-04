@@ -1,0 +1,20 @@
+--- makeself.sh
++++ makeself.sh
+@@ -86,7 +86,7 @@
+ 
+ MS_Usage()
+ {
+-    echo "Usage: $0 [params] archive_dir file_name label [startup_script] [args]"
++    echo "Usage: $0 [params] archive_dir file_name label startup_script [args]"
+     echo "params can be one or more of the following :"
+     echo "    --version | -v  : Print out Makeself version number and exit"
+     echo "    --help | -h     : Print out this help message"
+@@ -143,7 +143,7 @@
+ TAR_ARGS=cvf
+ TAR_EXTRA=""
+ DU_ARGS=-ks
+-HEADER=`dirname "$0"`/makeself-header.sh
++HEADER=/usr/libexec/makeself-header.sh
+ TARGETDIR=""
+ 
+ # LSM file stuff

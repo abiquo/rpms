@@ -1,0 +1,1215 @@
+From abfda7550ac2fca6d816862e271126c2f44fa3cc Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Sun, 13 Jun 2010 22:18:35 -0400
+Subject: [PATCH] [drm] Store mode of each head as index
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Previously, we would store the mode of each head as pointer in
+the array of modes on the connector object.  Now we just store
+the index into that array.
+
+This is to make it clearer that we don't own the memory
+associated with it directly, and that the memory associated with
+it is automatically cleaned up when the connector is.
+
+This also helps to highlight a problem mentioned by
+Forest Bond <forest@alittletooquiet.net> here:
+
+http://lists.freedesktop.org/archives/plymouth/2010-June/000369.html
+
+Namely, we've been naïvely treating the first available mode in
+the connector object as the active mode.  While this is true
+most of the time, it doesn't hold true if the user overrides the
+mode on the kernel command line.
+---
+ src/plugins/renderers/drm/plugin.c |   41 +++++++++++++++++++++---------------
+ 1 files changed, 24 insertions(+), 17 deletions(-)
+
+diff --git a/src/plugins/renderers/drm/plugin.c b/src/plugins/renderers/drm/plugin.c
+index 385bd91..a7f8af7 100644
+--- a/src/plugins/renderers/drm/plugin.c
++++ b/src/plugins/renderers/drm/plugin.c
+@@ -72,7 +72,7 @@ struct _ply_renderer_head
+   unsigned long row_stride;
+ 
+   drmModeConnector *connector;
+-  drmModeModeInfo *mode;
++  int connector_mode_index;
+ 
+   uint32_t controller_id;
+   uint32_t encoder_id;
+@@ -123,12 +123,13 @@ static bool open_input_source (ply_renderer_backend_t      *backend,
+ static ply_renderer_head_t *
+ ply_renderer_head_new (ply_renderer_backend_t *backend,
+                        drmModeConnector       *connector,
++                       int                     connector_mode_index,
+                        uint32_t                encoder_id,
+                        uint32_t                controller_id,
+-                       uint32_t                console_buffer_id,
+-                       drmModeModeInfo        *mode)
++                       uint32_t                console_buffer_id)
+ {
+   ply_renderer_head_t *head;
++  drmModeModeInfo *mode;
+ 
+   head = calloc (1, sizeof (ply_renderer_head_t));
+ 
+@@ -137,7 +138,10 @@ ply_renderer_head_new (ply_renderer_backend_t *backend,
+   head->encoder_id = encoder_id;
+   head->controller_id = controller_id;
+   head->console_buffer_id = console_buffer_id;
+-  head->mode = mode;
++  head->connector_mode_index = connector_mode_index;
++
++  assert (connector_mode_index < connector->count_modes);
++  mode = &head->connector->modes[head->connector_mode_index];
+ 
+   head->area.x = 0;
+   head->area.y = 0;
+@@ -167,11 +171,15 @@ ply_renderer_head_set_scan_out_buffer (ply_renderer_backend_t *backend,
+                                        ply_renderer_head_t    *head,
+                                        uint32_t                buffer_id)
+ {
++  drmModeModeInfo *mode;
++
++  assert (head->connector_mode_index < head->connector->count_modes);
++  mode = &head->connector->modes[head->connector_mode_index];
+ 
+   /* Tell the controller to use the allocated scan out buffer
+    */
+   if (drmModeSetCrtc (backend->device_fd, head->controller_id, buffer_id,
+-                      0, 0, &head->connector->connector_id, 1, head->mode) < 0)
++                      0, 0, &head->connector->connector_id, 1, mode) < 0)
+     return false;
+ 
+   return true;
+@@ -546,13 +554,6 @@ close_device (ply_renderer_backend_t *backend)
+   unload_driver (backend);
+ }
+ 
+-static drmModeModeInfo *
+-get_active_mode_for_connector (ply_renderer_backend_t *backend,
+-                               drmModeConnector       *connector)
+-{
+-  return &connector->modes[0];
+-}
+-
+ static bool
+ controller_is_available (ply_renderer_backend_t *backend,
+                          uint32_t                controller_id)
+@@ -724,7 +725,7 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+       uint32_t controller_id;
+       uint32_t encoder_id;
+       uint32_t console_buffer_id;
+-      drmModeModeInfo *mode;
++      int connector_mode_index;
+ 
+       connector = drmModeGetConnector (backend->device_fd,
+                                        backend->resources->connectors[i]);
+@@ -762,13 +763,19 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+           continue;
+         }
+ 
+-      mode = get_active_mode_for_connector (backend, connector);
++      /* The kernel orders the mode list such that the one picked by default is
++       * the first one.
++       *
++       * FIXME: This falls over if the mode is explicitly overridden on
++       * the kernel command line
++       */
++      connector_mode_index = 0;
+ 
+       console_buffer_id = get_console_buffer_id (backend, controller_id);
+ 
+-      head = ply_renderer_head_new (backend, connector, encoder_id,
+-                                    controller_id, console_buffer_id,
+-                                    mode);
++      head = ply_renderer_head_new (backend, connector, connector_mode_index,
++                                    encoder_id, controller_id,
++                                    console_buffer_id);
+ 
+       ply_list_append_data (backend->heads, head);
+     }
+-- 
+1.7.2.1
+
+From b5b5f081bae003fd2d8065586249085f11d1c4a7 Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Sun, 13 Jun 2010 22:45:36 -0400
+Subject: [PATCH] [drm] Make find_controller return the crtc not crtc id
+
+This will give us the ability to look at the currently active
+mode and so paves the way toward cleaning up a recently added
+FIXME in the code.
+---
+ src/plugins/renderers/drm/plugin.c |   55 +++++++++++++++++------------------
+ 1 files changed, 27 insertions(+), 28 deletions(-)
+
+diff --git a/src/plugins/renderers/drm/plugin.c b/src/plugins/renderers/drm/plugin.c
+index a7f8af7..a77fbe9 100644
+--- a/src/plugins/renderers/drm/plugin.c
++++ b/src/plugins/renderers/drm/plugin.c
+@@ -578,17 +578,28 @@ controller_is_available (ply_renderer_backend_t *backend,
+   return true;
+ }
+ 
+-static uint32_t
++static drmModeCrtc *
+ find_controller_for_encoder (ply_renderer_backend_t *backend,
+                              drmModeEncoder         *encoder)
+ {
+   int i;
+   uint32_t possible_crtcs;
++  drmModeCrtc *controller;
++
++  controller = NULL;
+ 
+   /* Monitor is already lit. We'll use the same controller.
+    */
+   if (encoder->crtc_id != 0)
+-    return encoder->crtc_id;
++    {
++      controller = drmModeGetCrtc (backend->device_fd, encoder->crtc_id);
++
++      if (controller != NULL)
++        {
++          ply_trace ("Found already lit monitor");
++          return controller;
++        }
++    }
+ 
+   /* Monitor cable is plugged in, but the monitor isn't lit
+    * yet. Let's pick an available controller and light it up
+@@ -610,10 +621,14 @@ find_controller_for_encoder (ply_renderer_backend_t *backend,
+         continue;
+ 
+       assert (i < backend->resources->count_crtcs);
+-      return backend->resources->crtcs[i];
++      controller = drmModeGetCrtc (backend->device_fd,
++                                   backend->resources->crtcs[i]);
++
++      if (controller != NULL)
++        break;
+     }
+ 
+-  return 0;
++  return controller;
+ }
+ 
+ static bool
+@@ -692,26 +707,6 @@ find_encoder_for_connector (ply_renderer_backend_t *backend,
+   return find_unused_encoder_for_connector (backend, connector);
+ }
+ 
+-static uint32_t
+-get_console_buffer_id (ply_renderer_backend_t *backend,
+-                       uint32_t                controller_id)
+-{
+-  drmModeCrtc *controller;
+-  uint32_t console_buffer_id;
+-
+-  console_buffer_id = 0;
+-  controller = drmModeGetCrtc (backend->device_fd, controller_id);
+-
+-  if (controller == NULL)
+-    return 0;
+-
+-  console_buffer_id = controller->buffer_id;
+-
+-  drmModeFreeCrtc (controller);
+-
+-  return console_buffer_id;
+-}
+-
+ static bool
+ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+ {
+@@ -722,8 +717,9 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+     {
+       ply_renderer_head_t *head;
+       drmModeEncoder *encoder;
+-      uint32_t controller_id;
+       uint32_t encoder_id;
++      drmModeCrtc *controller;
++      uint32_t controller_id;
+       uint32_t console_buffer_id;
+       int connector_mode_index;
+ 
+@@ -754,15 +750,17 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+         }
+ 
+       encoder_id = encoder->encoder_id;
+-      controller_id = find_controller_for_encoder (backend, encoder);
++      controller = find_controller_for_encoder (backend, encoder);
+       drmModeFreeEncoder (encoder);
+ 
+-      if (controller_id == 0)
++      if (controller == NULL)
+         {
+           drmModeFreeConnector (connector);
+           continue;
+         }
+ 
++      controller_id = controller->crtc_id;
++
+       /* The kernel orders the mode list such that the one picked by default is
+        * the first one.
+        *
+@@ -771,7 +769,8 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+        */
+       connector_mode_index = 0;
+ 
+-      console_buffer_id = get_console_buffer_id (backend, controller_id);
++      console_buffer_id = controller->buffer_id;
++      drmModeFreeCrtc (controller);
+ 
+       head = ply_renderer_head_new (backend, connector, connector_mode_index,
+                                     encoder_id, controller_id,
+-- 
+1.7.2.1
+
+From 9f25189bc8c6cb77cc37e3325e1089e23addf9a0 Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Sun, 13 Jun 2010 23:16:48 -0400
+Subject: [PATCH] [drm] Try to maintain current mode when overridden
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+plymouth has naïvely been treating the first available mode in
+the connector object as the active mode. While this is true
+most of the time, it doesn't hold true if the user overrides the
+mode on the kernel command line.
+
+This commit changes things to look up the actual active mode, and go
+with that, which should help prevent flicker at start up in some cases.
+
+This patch is based heavily on a patch from Forest Bond
+<forest@alittletooquiet.net> here:
+
+http://lists.freedesktop.org/archives/plymouth/2010-June/000369.html
+
+and first mentioned in commit abfda7550ac2fca6d816862e271126c2f44fa3cc
+---
+ src/plugins/renderers/drm/plugin.c |   73 +++++++++++++++++++++++++++++++++---
+ 1 files changed, 67 insertions(+), 6 deletions(-)
+
+diff --git a/src/plugins/renderers/drm/plugin.c b/src/plugins/renderers/drm/plugin.c
+index a77fbe9..f936d0a 100644
+--- a/src/plugins/renderers/drm/plugin.c
++++ b/src/plugins/renderers/drm/plugin.c
+@@ -708,6 +708,65 @@ find_encoder_for_connector (ply_renderer_backend_t *backend,
+ }
+ 
+ static bool
++modes_are_equal (drmModeModeInfo *a,
++                 drmModeModeInfo *b)
++{
++  return a->clock == b->clock &&
++         a->hdisplay == b->hdisplay &&
++         a->hsync_start == b->hsync_start &&
++         a->hsync_end == b->hsync_end &&
++         a->htotal == b->htotal &&
++         a->hskew == b->hskew &&
++         a->vdisplay == b->vdisplay &&
++         a->vsync_start == b->vsync_start &&
++         a->vsync_end == b->vsync_end &&
++         a->vtotal == b->vtotal &&
++         a->vscan == b->vscan &&
++         a->vrefresh == b->vrefresh &&
++         a->flags == b->flags &&
++         a->type == b->type;
++
++}
++
++static int
++find_index_of_mode (ply_renderer_backend_t *backend,
++                    drmModeConnector       *connector,
++                    drmModeModeInfo        *mode)
++{
++  int i;
++
++  for (i = 0; i < connector->count_modes; i++)
++    {
++      if (modes_are_equal (&connector->modes[i], mode))
++        {
++          ply_trace ("Found connector mode index %d for mode %dx%d",
++                     i, mode->hdisplay, mode->vdisplay);
++
++          return i;
++        }
++    }
++
++  return -1;
++}
++
++static int
++get_index_of_active_mode (ply_renderer_backend_t *backend,
++                          drmModeCrtc            *controller,
++                          drmModeConnector       *connector)
++{
++  if (!controller->mode_valid)
++    {
++      ply_trace ("No valid mode currently active on monitor");
++      return -1;
++    }
++
++  ply_trace ("Looking for connector mode index of active mode %dx%d",
++             controller->mode.hdisplay, controller->mode.vdisplay);
++
++  return find_index_of_mode (backend, connector, &controller->mode);
++}
++
++static bool
+ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+ {
+   int i;
+@@ -761,13 +820,15 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+ 
+       controller_id = controller->crtc_id;
+ 
+-      /* The kernel orders the mode list such that the one picked by default is
+-       * the first one.
+-       *
+-       * FIXME: This falls over if the mode is explicitly overridden on
+-       * the kernel command line
++      connector_mode_index = get_index_of_active_mode (backend, controller, connector);
++
++      /* If we couldn't find the current active mode, fall back to the first available.
+        */
+-      connector_mode_index = 0;
++      if (connector_mode_index < 0)
++        {
++          ply_trace ("falling back to first available mode");
++          connector_mode_index = 0;
++        }
+ 
+       console_buffer_id = controller->buffer_id;
+       drmModeFreeCrtc (controller);
+-- 
+1.7.2.1
+
+From c9dda9295e41080cdc3e03939918e92ec6719c04 Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Thu, 19 Aug 2010 19:07:17 -0400
+Subject: [PATCH 1/2] [array] Support integer elements
+
+Right now all array elements must be pointer values, or
+at least pointer sized values.
+
+This commit allows 32-bit integers as elements as well.
+---
+ src/client/ply-boot-client.c                       |    6 +-
+ src/libply-splash-graphics/ply-animation.c         |   10 +-
+ .../ply-progress-animation.c                       |    8 +-
+ src/libply-splash-graphics/ply-throbber.c          |   10 +-
+ src/libply/ply-array.c                             |   99 ++++++++++++++++----
+ src/libply/ply-array.h                             |   24 ++++-
+ 6 files changed, 118 insertions(+), 39 deletions(-)
+
+diff --git a/src/client/ply-boot-client.c b/src/client/ply-boot-client.c
+index c3373f0..077206e 100644
+--- a/src/client/ply-boot-client.c
++++ b/src/client/ply-boot-client.c
+@@ -311,7 +311,7 @@ ply_boot_client_process_incoming_replies (ply_boot_client_t *client)
+           goto out;
+         }
+ 
+-      array = ply_array_new ();
++      array = ply_array_new (PLY_ARRAY_ELEMENT_TYPE_POINTER);
+ 
+       p = answer;
+       q = p;
+@@ -319,13 +319,13 @@ ply_boot_client_process_incoming_replies (ply_boot_client_t *client)
+         {
+           if (*q == '\0')
+             {
+-              ply_array_add_element (array, strdup (p));
++              ply_array_add_pointer_element (array, strdup (p));
+               p = q + 1;
+             }
+         }
+       free (answer);
+ 
+-      answers = (char **) ply_array_steal_elements (array);
++      answers = (char **) ply_array_steal_pointer_elements (array);
+       ply_array_free (array);
+ 
+       ((ply_boot_client_multiple_answers_handler_t) request->handler) (request->user_data, (const char * const *) answers, client);
+diff --git a/src/libply-splash-graphics/ply-animation.c b/src/libply-splash-graphics/ply-animation.c
+index 1fa78b8..772fc91 100644
+--- a/src/libply-splash-graphics/ply-animation.c
++++ b/src/libply-splash-graphics/ply-animation.c
+@@ -84,7 +84,7 @@ ply_animation_new (const char *image_dir,
+ 
+   animation = calloc (1, sizeof (ply_animation_t));
+ 
+-  animation->frames = ply_array_new ();
++  animation->frames = ply_array_new (PLY_ARRAY_ELEMENT_TYPE_POINTER);
+   animation->frames_prefix = strdup (frames_prefix);
+   animation->image_dir = strdup (image_dir);
+   animation->frame_number = 0;
+@@ -106,7 +106,7 @@ ply_animation_remove_frames (ply_animation_t *animation)
+   int i;
+   ply_pixel_buffer_t **frames;
+ 
+-  frames = (ply_pixel_buffer_t **) ply_array_steal_elements (animation->frames);
++  frames = (ply_pixel_buffer_t **) ply_array_steal_pointer_elements (animation->frames);
+   for (i = 0; frames[i] != NULL; i++)
+     ply_pixel_buffer_free (frames[i]);
+   free (frames);
+@@ -147,7 +147,7 @@ animate_at_time (ply_animation_t *animation,
+   if (animation->stop_requested)
+     should_continue = false;
+ 
+-  frames = (ply_pixel_buffer_t * const *) ply_array_get_elements (animation->frames);
++  frames = (ply_pixel_buffer_t * const *) ply_array_get_pointer_elements (animation->frames);
+   ply_pixel_buffer_get_size (frames[animation->frame_number], &animation->frame_area);
+   animation->frame_area.x = animation->x;
+   animation->frame_area.y = animation->y;
+@@ -217,7 +217,7 @@ ply_animation_add_frame (ply_animation_t *animation,
+ 
+   frame = ply_image_convert_to_pixel_buffer (image);
+ 
+-  ply_array_add_element (animation->frames, frame);
++  ply_array_add_pointer_element (animation->frames, frame);
+ 
+   animation->width = MAX (animation->width, ply_pixel_buffer_get_width (frame));
+   animation->height = MAX (animation->height, ply_pixel_buffer_get_height (frame));
+@@ -377,7 +377,7 @@ ply_animation_draw_area (ply_animation_t    *animation,
+   number_of_frames = ply_array_get_size (animation->frames);
+   frame_index = MIN(animation->frame_number, number_of_frames - 1);
+ 
+-  frames = (ply_pixel_buffer_t * const *) ply_array_get_elements (animation->frames);
++  frames = (ply_pixel_buffer_t * const *) ply_array_get_pointer_elements (animation->frames);
+   ply_pixel_buffer_fill_with_buffer (buffer,
+                                      frames[frame_index],
+                                      animation->frame_area.x,
+diff --git a/src/libply-splash-graphics/ply-progress-animation.c b/src/libply-splash-graphics/ply-progress-animation.c
+index f69ea94..079fe27 100644
+--- a/src/libply-splash-graphics/ply-progress-animation.c
++++ b/src/libply-splash-graphics/ply-progress-animation.c
+@@ -84,7 +84,7 @@ ply_progress_animation_new (const char *image_dir,
+ 
+   progress_animation = calloc (1, sizeof (ply_progress_animation_t));
+ 
+-  progress_animation->frames = ply_array_new ();
++  progress_animation->frames = ply_array_new (PLY_ARRAY_ELEMENT_TYPE_POINTER);
+   progress_animation->frames_prefix = strdup (frames_prefix);
+   progress_animation->image_dir = strdup (image_dir);
+   progress_animation->is_hidden = true;
+@@ -118,7 +118,7 @@ ply_progress_animation_remove_frames (ply_progress_animation_t *progress_animati
+   int i;
+   ply_image_t **frames;
+ 
+-  frames = (ply_image_t **) ply_array_steal_elements (progress_animation->frames);
++  frames = (ply_image_t **) ply_array_steal_pointer_elements (progress_animation->frames);
+   for (i = 0; frames[i] != NULL; i++)
+     ply_image_free (frames[i]);
+   free (frames);
+@@ -228,7 +228,7 @@ ply_progress_animation_draw (ply_progress_animation_t *progress_animation)
+       progress_animation->transition_start_time = ply_get_timestamp ();
+     }
+ 
+-  frames = (ply_image_t * const *) ply_array_get_elements (progress_animation->frames);
++  frames = (ply_image_t * const *) ply_array_get_pointer_elements (progress_animation->frames);
+ 
+   progress_animation->frame_area.x = progress_animation->area.x;
+   progress_animation->frame_area.y = progress_animation->area.y;
+@@ -334,7 +334,7 @@ ply_progress_animation_add_frame (ply_progress_animation_t *progress_animation,
+       return false;
+     }
+ 
+-  ply_array_add_element (progress_animation->frames, image);
++  ply_array_add_pointer_element (progress_animation->frames, image);
+ 
+   progress_animation->area.width = MAX (progress_animation->area.width, (size_t) ply_image_get_width (image));
+   progress_animation->area.height = MAX (progress_animation->area.height, (size_t) ply_image_get_height (image));
+diff --git a/src/libply-splash-graphics/ply-throbber.c b/src/libply-splash-graphics/ply-throbber.c
+index 8dbc1c3..04e7137 100644
+--- a/src/libply-splash-graphics/ply-throbber.c
++++ b/src/libply-splash-graphics/ply-throbber.c
+@@ -89,7 +89,7 @@ ply_throbber_new (const char *image_dir,
+ 
+   throbber = calloc (1, sizeof (ply_throbber_t));
+ 
+-  throbber->frames = ply_array_new ();
++  throbber->frames = ply_array_new (PLY_ARRAY_ELEMENT_TYPE_POINTER);
+   throbber->frames_prefix = strdup (frames_prefix);
+   throbber->image_dir = strdup (image_dir);
+   throbber->is_stopped = true;
+@@ -110,7 +110,7 @@ ply_throbber_remove_frames (ply_throbber_t *throbber)
+   int i;
+   ply_pixel_buffer_t **frames;
+ 
+-  frames = (ply_pixel_buffer_t **) ply_array_steal_elements (throbber->frames);
++  frames = (ply_pixel_buffer_t **) ply_array_steal_pointer_elements (throbber->frames);
+   for (i = 0; frames[i] != NULL; i++)
+     ply_pixel_buffer_free (frames[i]);
+   free (frames);
+@@ -154,7 +154,7 @@ animate_at_time (ply_throbber_t *throbber,
+         should_continue = false;
+     }
+ 
+-  frames = (ply_pixel_buffer_t * const *) ply_array_get_elements (throbber->frames);
++  frames = (ply_pixel_buffer_t * const *) ply_array_get_pointer_elements (throbber->frames);
+   ply_pixel_buffer_get_size (frames[throbber->frame_number], &throbber->frame_area);
+   throbber->frame_area.x = throbber->x;
+   throbber->frame_area.y = throbber->y;
+@@ -221,7 +221,7 @@ ply_throbber_add_frame (ply_throbber_t *throbber,
+ 
+   frame = ply_image_convert_to_pixel_buffer (image);
+ 
+-  ply_array_add_element (throbber->frames, frame);
++  ply_array_add_pointer_element (throbber->frames, frame);
+ 
+   throbber->width = MAX (throbber->width, ply_pixel_buffer_get_width (frame));
+   throbber->height = MAX (throbber->height, ply_pixel_buffer_get_height (frame));
+@@ -378,7 +378,7 @@ ply_throbber_draw_area (ply_throbber_t     *throbber,
+   if (throbber->is_stopped)
+     return;
+ 
+-  frames = (ply_image_t * const *) ply_array_get_elements (throbber->frames);
++  frames = (ply_image_t * const *) ply_array_get_pointer_elements (throbber->frames);
+   ply_pixel_buffer_fill_with_buffer (buffer,
+                                      frames[throbber->frame_number],
+                                      throbber->x,
+diff --git a/src/libply/ply-array.c b/src/libply/ply-array.c
+index 00f4a53..b3f88b9 100644
+--- a/src/libply/ply-array.c
++++ b/src/libply/ply-array.c
+@@ -29,23 +29,35 @@
+ 
+ #include "ply-buffer.h"
+ 
+-static const void *null_terminator = NULL;
++static const void *pointer_terminator = NULL;
++static const uint32_t uint32_terminator = 0;
+ 
+ struct _ply_array
+ {
+   ply_buffer_t *buffer;
++  ply_array_element_type_t element_type;
+ };
+ 
+ ply_array_t *
+-ply_array_new (void)
++ply_array_new (ply_array_element_type_t element_type)
+ {
+   ply_array_t *array;
+ 
+   array = calloc (1, sizeof (ply_array_t));
+ 
+   array->buffer = ply_buffer_new ();
++  array->element_type = element_type;
+ 
+-  ply_buffer_append_bytes (array->buffer, &null_terminator, sizeof (const void *));
++  switch (array->element_type)
++    {
++      case PLY_ARRAY_ELEMENT_TYPE_POINTER:
++        ply_buffer_append_bytes (array->buffer, &pointer_terminator, sizeof (pointer_terminator));
++      break;
++
++      case PLY_ARRAY_ELEMENT_TYPE_UINT32:
++        ply_buffer_append_bytes (array->buffer, &uint32_terminator, sizeof (uint32_terminator));
++      break;
++    }
+ 
+   return array;
+ }
+@@ -66,40 +78,93 @@ ply_array_get_size (ply_array_t *array)
+ {
+   int size;
+ 
+-  size = (ply_buffer_get_size (array->buffer) / sizeof (const void *)) - 1;
++
++  switch (array->element_type)
++    {
++      case PLY_ARRAY_ELEMENT_TYPE_POINTER:
++        size = (ply_buffer_get_size (array->buffer) / sizeof (const void *)) - 1;
++      break;
++
++      case PLY_ARRAY_ELEMENT_TYPE_UINT32:
++        size = (ply_buffer_get_size (array->buffer) / sizeof (const uint32_t)) - 1;
++      break;
++    }
+ 
+   return size;
+ }
+ 
+ void
+-ply_array_add_element (ply_array_t *array,
+-                       const void  *data)
++ply_array_add_pointer_element (ply_array_t *array,
++                               const void  *data)
+ {
++  assert (array->element_type == PLY_ARRAY_ELEMENT_TYPE_POINTER);
++
+   /* Temporarily remove NULL terminator
+    */
+-  ply_buffer_remove_bytes_at_end (array->buffer, sizeof (const void *));
++  ply_buffer_remove_bytes_at_end (array->buffer, sizeof (pointer_terminator));
+ 
+   ply_buffer_append_bytes (array->buffer, &data, sizeof (const void *));
+ 
+   /* Add NULL terminator back
+    */
+-  ply_buffer_append_bytes (array->buffer, &null_terminator, sizeof (const void *));
++  ply_buffer_append_bytes (array->buffer, &pointer_terminator, sizeof (pointer_terminator));
++}
++
++void
++ply_array_add_uint32_element (ply_array_t    *array,
++                              const uint32_t  data)
++{
++  assert (array->element_type == PLY_ARRAY_ELEMENT_TYPE_UINT32);
++
++  /* Temporarily remove 0 terminator
++   */
++  ply_buffer_remove_bytes_at_end (array->buffer, sizeof (uint32_terminator));
++
++  ply_buffer_append_bytes (array->buffer, &data, sizeof (const uint32_t));
++
++  /* Add 0 terminator back
++   */
++  ply_buffer_append_bytes (array->buffer, &uint32_terminator, sizeof (uint32_terminator));
+ }
+ 
+ void * const *
+-ply_array_get_elements (ply_array_t *array)
++ply_array_get_pointer_elements (ply_array_t *array)
+ {
++  assert (array->element_type == PLY_ARRAY_ELEMENT_TYPE_POINTER);
+   return (void * const *) ply_buffer_get_bytes (array->buffer);
+ }
+ 
++uint32_t const *
++ply_array_get_uint32_elements (ply_array_t *array)
++{
++  assert (array->element_type == PLY_ARRAY_ELEMENT_TYPE_UINT32);
++  return (uint32_t const *) ply_buffer_get_bytes (array->buffer);
++}
++
+ void **
+-ply_array_steal_elements (ply_array_t *array)
++ply_array_steal_pointer_elements (ply_array_t *array)
+ {
+   void **data;
+ 
++  assert (array->element_type == PLY_ARRAY_ELEMENT_TYPE_POINTER);
++
+   data = (void **) ply_buffer_steal_bytes (array->buffer);
+ 
+-  ply_buffer_append_bytes (array->buffer, &null_terminator, sizeof (const void *));
++  ply_buffer_append_bytes (array->buffer, &pointer_terminator, sizeof (const void *));
++
++  return data;
++}
++
++uint32_t *
++ply_array_steal_uint32_elements (ply_array_t *array)
++{
++  uint32_t *data;
++
++  assert (array->element_type == PLY_ARRAY_ELEMENT_TYPE_UINT32);
++
++  data = (uint32_t *) ply_buffer_steal_bytes (array->buffer);
++
++  ply_buffer_append_bytes (array->buffer, &uint32_terminator, sizeof (const uint32_t));
+ 
+   return data;
+ }
+@@ -115,14 +180,14 @@ main (int    argc,
+   int i;
+   char **data;
+ 
+-  array = ply_array_new ();
++  array = ply_array_new (PLY_ARRAY_ELEMENT_TYPE_POINTER);
+ 
+-  ply_array_add_element (array, "foo");
+-  ply_array_add_element (array, "bar");
+-  ply_array_add_element (array, "baz");
+-  ply_array_add_element (array, "qux");
++  ply_array_add_pointer_element (array, "foo");
++  ply_array_add_pointer_element (array, "bar");
++  ply_array_add_pointer_element (array, "baz");
++  ply_array_add_pointer_element (array, "qux");
+ 
+-  data = (char **) ply_array_get_elements (array);
++  data = (char **) ply_array_get_pointer_elements (array);
+   for (i = 0; data[i] != NULL; i++)
+     {
+       printf ("element '%d' has data '%s'\n", i, data[i]);
+diff --git a/src/libply/ply-array.h b/src/libply/ply-array.h
+index 8a4e544..4e3635d 100644
+--- a/src/libply/ply-array.h
++++ b/src/libply/ply-array.h
+@@ -22,16 +22,30 @@
+ #ifndef PLY_ARRAY_H
+ #define PLY_ARRAY_H
+ 
++#include <stdint.h>
++
+ typedef struct _ply_array ply_array_t;
++typedef enum _ply_array_element_type ply_array_element_type_t;
++
++enum _ply_array_element_type
++{
++  PLY_ARRAY_ELEMENT_TYPE_POINTER,
++  PLY_ARRAY_ELEMENT_TYPE_UINT32
++};
+ 
+ #ifndef PLY_HIDE_FUNCTION_DECLARATIONS
+-ply_array_t *ply_array_new (void);
++ply_array_t *ply_array_new (ply_array_element_type_t element_type);
+ void ply_array_free (ply_array_t *array);
+ int ply_array_get_size (ply_array_t *array);
+-void ply_array_add_element (ply_array_t *array,
+-                            const void  *element);
+-void * const *ply_array_get_elements (ply_array_t *array);
+-void **ply_array_steal_elements (ply_array_t *array);
++void ply_array_add_pointer_element (ply_array_t *array,
++                                    const void  *element);
++void ply_array_add_uint32_element (ply_array_t    *array,
++                                   const uint32_t  element);
++void * const *ply_array_get_pointer_elements (ply_array_t *array);
++uint32_t const *ply_array_get_uint32_elements (ply_array_t *array);
++void **ply_array_steal_pointer_elements (ply_array_t *array);
++
++uint32_t *ply_array_steal_uint32_elements (ply_array_t *array);
+ #endif
+ 
+ #endif /* PLY_ARRAY_H */
+-- 
+1.7.2.1
+
+
+From dff1924448a20fa68de575aecaf4679b2ca88381 Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Thu, 19 Aug 2010 14:22:48 -0400
+Subject: [PATCH 2/2] [drm] Allow multiple monitors to share one controller
+
+Some underpowered video cards will have multiple connectors
+tied to one controller.  In this case all connectors get
+the same "cloned" output automatically.
+
+This commit detects this situation and prevents plymouth from
+wastefully trying to allocate several frame buffers.  This
+commit also prevents plymouth from constantly trying to switch
+between those allocated frame buffers every frame of the animation.
+---
+ src/plugins/renderers/drm/plugin.c |  122 +++++++++++++++++++++++++++++-------
+ 1 files changed, 100 insertions(+), 22 deletions(-)
+
+diff --git a/src/plugins/renderers/drm/plugin.c b/src/plugins/renderers/drm/plugin.c
+index f936d0a..fcb5284 100644
+--- a/src/plugins/renderers/drm/plugin.c
++++ b/src/plugins/renderers/drm/plugin.c
+@@ -46,10 +46,12 @@
+ #include <xf86drm.h>
+ #include <xf86drmMode.h>
+ 
++#include "ply-array.h"
+ #include "ply-buffer.h"
+ #include "ply-event-loop.h"
+ #include "ply-list.h"
+ #include "ply-logger.h"
++#include "ply-hashtable.h"
+ #include "ply-rectangle.h"
+ #include "ply-region.h"
+ #include "ply-terminal.h"
+@@ -71,8 +73,9 @@ struct _ply_renderer_head
+ 
+   unsigned long row_stride;
+ 
+-  drmModeConnector *connector;
+-  int connector_mode_index;
++  ply_array_t *connector_ids;
++  drmModeConnector *connector0;
++  int connector0_mode_index;
+ 
+   uint32_t controller_id;
+   uint32_t encoder_id;
+@@ -106,6 +109,7 @@ struct _ply_renderer_backend
+ 
+   ply_renderer_input_source_t input_source;
+   ply_list_t *heads;
++  ply_hashtable_t *heads_by_connector_id;
+ 
+   int32_t dither_red;
+   int32_t dither_green;
+@@ -120,6 +124,34 @@ static void ply_renderer_head_redraw (ply_renderer_backend_t *backend,
+ static bool open_input_source (ply_renderer_backend_t      *backend,
+                                ply_renderer_input_source_t *input_source);
+ 
++static bool
++ply_renderer_head_add_connector (ply_renderer_head_t *head,
++                                 drmModeConnector    *connector,
++                                 int                  connector_mode_index)
++{
++  drmModeModeInfo *mode;
++
++  mode = &connector->modes[connector_mode_index];
++
++  if (mode->hdisplay != head->area.width || mode->vdisplay != head->area.height)
++    {
++      ply_trace ("Tried to add connector with resolution %dx%d to %dx%d head",
++                 (int) mode->hdisplay, (int) mode->vdisplay,
++                 (int) head->area.width, (int) head->area.height);
++      return false;
++    }
++  else
++    {
++      ply_trace ("Adding connector with id %d to %dx%d head",
++                 (int) connector->connector_id,
++                 (int) head->area.width, (int) head->area.height);
++    }
++
++  ply_array_add_uint32_element (head->connector_ids, connector->connector_id);
++
++  return true;
++}
++
+ static ply_renderer_head_t *
+ ply_renderer_head_new (ply_renderer_backend_t *backend,
+                        drmModeConnector       *connector,
+@@ -134,20 +166,25 @@ ply_renderer_head_new (ply_renderer_backend_t *backend,
+   head = calloc (1, sizeof (ply_renderer_head_t));
+ 
+   head->backend = backend;
+-  head->connector = connector;
+   head->encoder_id = encoder_id;
++  head->connector_ids = ply_array_new (PLY_ARRAY_ELEMENT_TYPE_UINT32);
+   head->controller_id = controller_id;
+   head->console_buffer_id = console_buffer_id;
+-  head->connector_mode_index = connector_mode_index;
+ 
+   assert (connector_mode_index < connector->count_modes);
+-  mode = &head->connector->modes[head->connector_mode_index];
++  mode = &connector->modes[connector_mode_index];
++
++  head->connector0 = connector;
++  head->connector0_mode_index = connector_mode_index;
+ 
+   head->area.x = 0;
+   head->area.y = 0;
+   head->area.width = mode->hdisplay;
+   head->area.height = mode->vdisplay;
+ 
++  ply_renderer_head_add_connector (head, connector, connector_mode_index);
++  assert (ply_array_get_size (head->connector_ids) > 0);
++
+   head->pixel_buffer = ply_pixel_buffer_new (head->area.width, head->area.height);
+ 
+   ply_trace ("Creating %ldx%ld renderer head", head->area.width, head->area.height);
+@@ -162,7 +199,8 @@ ply_renderer_head_free (ply_renderer_head_t *head)
+ {
+   ply_trace ("freeing %ldx%ld renderer head", head->area.width, head->area.height);
+   ply_pixel_buffer_free (head->pixel_buffer);
+-  drmModeFreeConnector (head->connector);
++
++  ply_array_free (head->connector_ids);
+   free (head);
+ }
+ 
+@@ -172,15 +210,23 @@ ply_renderer_head_set_scan_out_buffer (ply_renderer_backend_t *backend,
+                                        uint32_t                buffer_id)
+ {
+   drmModeModeInfo *mode;
++  uint32_t *connector_ids;
++  int number_of_connectors;
+ 
+-  assert (head->connector_mode_index < head->connector->count_modes);
+-  mode = &head->connector->modes[head->connector_mode_index];
++  connector_ids = (uint32_t *) ply_array_get_uint32_elements (head->connector_ids);
++  number_of_connectors = ply_array_get_size (head->connector_ids);
+ 
+-  /* Tell the controller to use the allocated scan out buffer
+-   */
++  mode = &head->connector0->modes[head->connector0_mode_index];
++
++  /* Tell the controller to use the allocated scan out buffer on each connectors
++  */
+   if (drmModeSetCrtc (backend->device_fd, head->controller_id, buffer_id,
+-                      0, 0, &head->connector->connector_id, 1, mode) < 0)
+-    return false;
++                      0, 0, connector_ids, number_of_connectors, mode) < 0)
++    {
++      ply_trace ("Couldn't set scan out buffer for head with controller id %d",
++                 head->controller_id);
++      return false;
++    }
+ 
+   return true;
+ }
+@@ -343,7 +389,6 @@ destroy_backend (ply_renderer_backend_t *backend)
+ {
+   ply_trace ("destroying renderer backend for device %s", backend->device_name);
+   free_heads (backend);
+-  ply_list_free (backend->heads);
+ 
+   free (backend->device_name);
+ 
+@@ -771,6 +816,9 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+ {
+   int i;
+   drmModeConnector *connector;
++  ply_hashtable_t *heads_by_controller_id;
++
++  heads_by_controller_id = ply_hashtable_new (NULL, NULL);
+ 
+   for (i = 0; i < backend->resources->count_connectors; i++)
+     {
+@@ -833,13 +881,34 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+       console_buffer_id = controller->buffer_id;
+       drmModeFreeCrtc (controller);
+ 
+-      head = ply_renderer_head_new (backend, connector, connector_mode_index,
+-                                    encoder_id, controller_id,
+-                                    console_buffer_id);
++      head = ply_hashtable_lookup (heads_by_controller_id,
++                                   (void *) (intptr_t) controller_id);
++
++      if (head == NULL)
++        {
++          head = ply_renderer_head_new (backend, connector, connector_mode_index,
++                                        encoder_id, controller_id,
++                                        console_buffer_id);
++
++          ply_list_append_data (backend->heads, head);
++
++          ply_hashtable_insert (heads_by_controller_id,
++                                (void *) (intptr_t) controller_id,
++                                head);
++        }
++      else
++        {
++          if (!ply_renderer_head_add_connector (head, connector, connector_mode_index))
++            {
++              ply_trace ("couldn't connect monitor to existing head");
++            }
+ 
+-      ply_list_append_data (backend->heads, head);
++          drmModeFreeConnector (connector);
++        }
+     }
+ 
++  ply_hashtable_free (heads_by_controller_id);
++
+ #ifdef PLY_ENABLE_GDM_TRANSITION
+   /* If the driver doesn't support mapping the fb console
+    * then we can't get a smooth crossfade transition to
+@@ -852,12 +921,21 @@ create_heads_for_active_connectors (ply_renderer_backend_t *backend)
+   if (!backend->driver_supports_mapping_console &&
+       ply_list_get_length (backend->heads) == 1)
+     {
+-      ply_trace ("Only one monitor configured, and driver doesn't "
+-                 "support mapping console, so letting frame-buffer "
+-                 "take over");
++      ply_list_node_t *node;
++      ply_renderer_head_t *head;
+ 
+-      free_heads (backend);
+-      return false;
++      node = ply_list_get_first_node (backend->heads);
++      head = (ply_renderer_head_t *) ply_list_node_get_data (node);
++
++      if (ply_array_get_size (head->connector_ids) == 1)
++        {
++          ply_trace ("Only one monitor configured, and driver doesn't "
++                     "support mapping console, so letting frame-buffer "
++                     "take over");
++
++          free_heads (backend);
++          return false;
++        }
+     }
+ #endif
+ 
+-- 
+1.7.2.1
+
+commit e30024211bae67d20ff865e79f9c39278a21fd68
+Author: Ray Strode <rstrode@redhat.com>
+Date:   Fri Aug 20 22:07:26 2010 -0400
+
+    [drm] free stored connector
+    
+    For most connectors associating monitors with our virtual
+    'heads', we merely track their ids.  This means we don't have
+    to bother freeing any client side state at deallocation time.
+    
+    There's one exception, though.  The main connector, connector0,
+    we keep an open reference to.  We do this, because it owns the
+    mode object we use in SetCrtc calls.
+    
+    This commit ensures that connector0 for each head is properly freed
+    when that head is deallocated.
+
+diff --git a/src/plugins/renderers/drm/plugin.c b/src/plugins/renderers/drm/plugin.c
+index fcb5284..308d0a0 100644
+--- a/src/plugins/renderers/drm/plugin.c
++++ b/src/plugins/renderers/drm/plugin.c
+@@ -200,6 +200,7 @@ ply_renderer_head_free (ply_renderer_head_t *head)
+   ply_trace ("freeing %ldx%ld renderer head", head->area.width, head->area.height);
+   ply_pixel_buffer_free (head->pixel_buffer);
+ 
++  drmModeFreeConnector (head->connector0);
+   ply_array_free (head->connector_ids);
+   free (head);
+ }
+From 32ad92adf5013e73c9f1dbe4c244b53e8078e1dc Mon Sep 17 00:00:00 2001
+From: Ray Strode <rstrode@redhat.com>
+Date: Wed, 9 Mar 2011 17:22:03 -0500
+Subject: [PATCH] drm: don't light up unlit monitors
+
+If a monitor is dark when plymouth is started, we shouldn't
+try to light it up.  There are rules on which outputs can be
+attached to which controllers and we're very likely to break
+those rules just assigning things willy-nilly.
+
+The kernel should set us up in the way it thinks is best anyway.
+There's no reason to second guess the kernel here.
+---
+ src/plugins/renderers/drm/plugin.c |  105 +-----------------------------------
+ 1 files changed, 1 insertions(+), 104 deletions(-)
+
+diff --git a/src/plugins/renderers/drm/plugin.c b/src/plugins/renderers/drm/plugin.c
+index 0180cdd..a418a59 100644
+--- a/src/plugins/renderers/drm/plugin.c
++++ b/src/plugins/renderers/drm/plugin.c
+@@ -620,36 +620,10 @@ close_device (ply_renderer_backend_t *backend)
+   unload_driver (backend);
+ }
+ 
+-static bool
+-controller_is_available (ply_renderer_backend_t *backend,
+-                         uint32_t                controller_id)
+-{
+-  ply_list_node_t *node;
+-
+-  node = ply_list_get_first_node (backend->heads);
+-  while (node != NULL)
+-    {
+-      ply_list_node_t *next_node;
+-      ply_renderer_head_t *head;
+-
+-      head = (ply_renderer_head_t *) ply_list_node_get_data (node);
+-      next_node = ply_list_get_next_node (backend->heads, node);
+-
+-      if (head->controller_id == controller_id)
+-        return false;
+-
+-      node = next_node;
+-    }
+-
+-  return true;
+-}
+-
+ static drmModeCrtc *
+ find_controller_for_encoder (ply_renderer_backend_t *backend,
+                              drmModeEncoder         *encoder)
+ {
+-  int i;
+-  uint32_t possible_crtcs;
+   drmModeCrtc *controller;
+ 
+   controller = NULL;
+@@ -667,81 +641,6 @@ find_controller_for_encoder (ply_renderer_backend_t *backend,
+         }
+     }
+ 
+-  /* Monitor cable is plugged in, but the monitor isn't lit
+-   * yet. Let's pick an available controller and light it up
+-   * ourselves.
+-   */
+-  for (i = 0,
+-       possible_crtcs = encoder->possible_crtcs;
+-       possible_crtcs != 0x0;
+-       i++, possible_crtcs >>= 1)
+-    {
+-      /* controller isn't compatible with encoder
+-       */
+-      if ((possible_crtcs & 0x1) == 0)
+-        continue;
+-
+-      /* controller is already being used
+-       */
+-      if (!controller_is_available (backend, backend->resources->crtcs[i]))
+-        continue;
+-
+-      assert (i < backend->resources->count_crtcs);
+-      controller = drmModeGetCrtc (backend->device_fd,
+-                                   backend->resources->crtcs[i]);
+-
+-      if (controller != NULL)
+-        break;
+-    }
+-
+-  return controller;
+-}
+-
+-static bool
+-encoder_is_available (ply_renderer_backend_t *backend,
+-                      uint32_t                encoder_id)
+-{
+-  ply_list_node_t *node;
+-
+-  node = ply_list_get_first_node (backend->heads);
+-  while (node != NULL)
+-    {
+-      ply_list_node_t *next_node;
+-      ply_renderer_head_t *head;
+-
+-      head = (ply_renderer_head_t *) ply_list_node_get_data (node);
+-      next_node = ply_list_get_next_node (backend->heads, node);
+-
+-      if (head->encoder_id == encoder_id)
+-        return false;
+-
+-      node = next_node;
+-    }
+-
+-  return true;
+-}
+-
+-static drmModeEncoder *
+-find_unused_encoder_for_connector (ply_renderer_backend_t *backend,
+-                                   drmModeConnector       *connector)
+-{
+-  int i;
+-  drmModeEncoder *encoder;
+-
+-  for (i = 0; i < connector->count_encoders; i++)
+-    {
+-      encoder = drmModeGetEncoder (backend->device_fd,
+-                                   connector->encoders[i]);
+-
+-      if (encoder == NULL)
+-        continue;
+-
+-      if (encoder_is_available (backend, encoder->encoder_id))
+-        return encoder;
+-
+-      drmModeFreeEncoder (encoder);
+-    }
+-
+   return NULL;
+ }
+ 
+@@ -768,9 +667,7 @@ find_encoder_for_connector (ply_renderer_backend_t *backend,
+       drmModeFreeEncoder (encoder);
+     }
+ 
+-  /* No encoder yet, pick one
+-   */
+-  return find_unused_encoder_for_connector (backend, connector);
++  return NULL;
+ }
+ 
+ static bool
+-- 
+1.7.4.1
+

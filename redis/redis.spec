@@ -1,8 +1,9 @@
 Summary: Redis key-value database.
 Name: redis
-Version: 2.6.11
+Version: 2.6.16
 Release: 1%{?dist}
 License: BSD
+Summary: Redis is an open source, BSD licensed, advanced key-value store.
 Group: Applications/Multimedia
 URL: http://code.google.com/p/redis/
 
@@ -62,7 +63,7 @@ mv %{buildroot}%{_bindir}/%{name}-server %{buildroot}%{_sbindir}/%{name}-server
 
 
 %pre
-/usr/sbin/useradd -c 'Redis' -u 499 -s /bin/false -r -d %{_localstatedir}/lib/redis redis 2> /dev/null || :
+/usr/sbin/useradd -c 'Redis' -s /bin/false -r -d %{_localstatedir}/lib/redis redis 2> /dev/null || :
 
 %preun
 if [ $1 = 0 ]; then
@@ -98,6 +99,12 @@ fi
 %dir %attr(0755,redis,redis) %{_localstatedir}/log/redis
 
 %changelog
+* Mon Dec 09 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.16-1
+- Upstream version 2.6.16
+
+* Tue Dec 03 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.11-2
+- Removed UID
+
 * Tue Mar 26 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.11-1
 - Bumped version to 2.6.11, new config
 

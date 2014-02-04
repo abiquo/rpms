@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-core
-Version: 	2.6.0
-Release: 	5%{?dist}
+Version: 	3.0.0
+Release: 	4%{?dist}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -11,7 +11,7 @@ Source0:        http://mirror.abiquo.com/sources/%{name}-%{version}.tar.gz
 Source1:        abiquo-tomcat.logrotate
 Source2:        %{?abiquo_binaries_url}legal.tar.gz
 Source3:        %{?abiquo_binaries_url}tomcat/abiquo-tomcat.jar
-# Source4:	abiquo_alias.sh
+Source4:	server_ssl.xml
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:	noarch
 
@@ -43,6 +43,7 @@ install -m 755 scripts/abiquo-tomcat.init $RPM_BUILD_ROOT%{_sysconfdir}/rc.d/ini
 cp %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/abiquo-tomcat
 cp -r legal $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/
 cp -r %{SOURCE3} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/lib
+cp -r %{SOURCE4} $RPM_BUILD_ROOT/%{_docdir}/%{name}/examples/tomcat/
 
 %post
 /sbin/chkconfig --add abiquo-tomcat
@@ -71,6 +72,19 @@ fi
 %config %{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %changelog
+* Fri Jan 10 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-4
+- New logrotate settings.
+
+* Tue Dec 17 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-3
+- Added server_ssl.xml
+
+* Mon Dec 16 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
+- Increased KILL_SLEEP_INTERVAL to 10
+
+* Tue Jul 09 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
+- First 3.0 (el6) release.
+- Tomcat version 7.0.47 
+
 * Thu Jul 04 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-5
 - Added Catalina opts for slash decoder.
 

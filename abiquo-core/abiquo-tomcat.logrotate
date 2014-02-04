@@ -1,7 +1,7 @@
 /opt/abiquo/tomcat/logs/catalina.out { 
-    weekly
+    daily
     size 100M 
-    rotate 10 
+    rotate 7 
     compress 
     copytruncate 
     missingok 

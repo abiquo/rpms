@@ -1,0 +1,12 @@
+[Plymouth Theme]
+Name=Rings
+Description=Corporate theme with concentric rings and centered header
+ModuleName=two-step
+
+[two-step]
+ImageDir=/usr/share/plymouth/themes/rings
+HorizontalAlignment=.5
+VerticalAlignment=.5
+BackgroundStartColor=0x080808
+BackgroundEndColor=0x080808
+ProgressFunction=linear
