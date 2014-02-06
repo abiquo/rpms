@@ -2,14 +2,16 @@
 
 Name:     abiquo-ssm
 Version:  3.0.0
-Release:  1%{?dist}%{?buildstamp}
+Release:  3%{?dist}%{?buildstamp}
 Summary:  Abiquo System Storage Manager
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 Source0:  %{?abiquo_binaries_url}ssm.war
+Source1:  %{?abiquo_binaries_url}scripts/nfs-plugin
+Source2:  %{?abiquo_binaries_url}scripts/nfs-plugin-test
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: abiquo-core
+Requires: abiquo-core bc qemu-img
 BuildArch: noarch
 
 %description
@@ -26,16 +28,38 @@ mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/
 mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ssm/ %{SOURCE0}
 
+mkdir -p %{buildroot}/%{_bindir}
+%{__install} -Dp -m 0755 %{SOURCE1} %{buildroot}/%{_bindir}
+%{__install} -Dp -m 0755 %{SOURCE2} %{buildroot}/%{_bindir}
+
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
 %{abiquo_basedir}/tomcat/webapps/ssm
+%{_bindir}/nfs-plugin
+%{_bindir}/nfs-plugin-test
 
 %changelog
-* Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
-- Bumped version to 3.0.0
+* Thu Feb 06 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-3
+- Bumped version to 3.0.0, added nfs plugins.
+
+* Fri Nov 15 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.7.0-1
+- Bumped version to 2.7.0
+
+* Fri Nov 08 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.2-1
+- Bumped version to 2.6.2
+
+* Mon Oct 21 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.1-1
+- Bumped version to 2.6.1
+
+* Thu Jul 25 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-4
+- New requirements added.
+
+* Wed Jul 24 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-3
+- NFS plugin scripts added.
 
 * Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
 - Bumped version to 2.6.0
