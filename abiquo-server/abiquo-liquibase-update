@@ -1,0 +1,22 @@
+#!/bin/bash
+
+DATADIR="/usr/share/doc/abiquo-server/database/"
+CHANGELOG="src/kinton_master_changelog.xml"
+URL="jdbc:mysql://localhost:3306/kinton"
+DBUSER="root"
+DBPASSWORD=""
+DRIVER="com.mysql.jdbc.Driver"
+CLASSPATH=`rpm -ql abiquo-core | grep mysql-connector`
+LOGLEVEL="debug"
+LOGFILE="/var/log/abiquo-liquibase.log"
+
+
+pushd $DATADIR > /dev/null
+liquibase --changeLogFile=$CHANGELOG --url=$URL --username=$DBUSER --password=$DBPASSWORD --driver=$DRIVER \
+          --classpath=$CLASSPATH --logLevel=$LOGLEVEL --logFile=$LOGFILE update
+if [ $? == 0 ]; then
+        echo "Done."
+else
+        echo "Failed! See log in $LOGFILE"
+fi
+popd > /dev/null

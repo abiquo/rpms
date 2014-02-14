@@ -1,0 +1,56 @@
+<project name="liquibase" default="dist" basedir=".">
+
+    <description>
+        ant build file for liquibase
+    </description>
+
+    <!-- set global properties for this build -->
+    <property name="src" location="src/main"/>
+    <property name="build" location="build"/>
+    <property name="dist"  location="dist"/>
+    <property name="lib.dir" location="lib" />
+    <property name="doc.dir" location="${dist}/javadoc" />
+    <property name="resources.dir" location="${src}/resources" />
+
+    <target name="init">
+        <!-- Create the time stamp -->
+        <tstamp/>
+        <!-- Create the build directory structure used by compile -->
+        <mkdir dir="${build}"/>
+    </target>
+
+    <target name="compile" depends="init"
+            description="compile the source " >
+        <!-- Compile the java code from ${src} into ${build} -->
+        <javac srcdir="${src}" destdir="${build}">
+            <classpath>
+                <fileset dir="${lib.dir}">
+                    <include name="**/*.jar" />
+                </fileset>
+            </classpath>
+        </javac>
+        <copy todir="${build}">
+          <fileset dir="${resources.dir}" />
+        </copy>
+    </target>
+
+    <target name="package" depends="compile"
+            description="generate the distribution" >
+        <!-- Create the distribution directory -->
+        <mkdir dir="${dist}/lib"/>
+
+        <!-- Put everything in ${build} into the liquibase.jar file -->
+        <jar jarfile="${dist}/lib/liquibase.jar" basedir="${build}"/>
+    </target>
+
+    <target name="clean"
+            description="clean up" >
+        <!-- Delete the ${build} and ${dist} directory trees -->
+        <delete dir="${build}"/>
+        <delete dir="${dist}"/>
+    </target>
+
+    <target name="javadoc" description="build javadoc">
+        <javadoc sourcepath="${src}/java" destdir="${doc.dir}" />
+    </target>
+</project>

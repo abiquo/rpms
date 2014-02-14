@@ -3,7 +3,7 @@
 
 Name:           abiquo-server
 Version:        3.0.0
-Release:        2%{?dist}%{?buildstamp}
+Release:        4%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
@@ -11,10 +11,11 @@ Summary:        Abiquo Server Enterprise Edition
 Source0:        abiquo.properties.server
 Source1:        abiquo-accounting.cron
 Source2:	%{?abiquo_binaries_url}database/kinton-schema.sql
-Source3:	%{?abiquo_binaries_url}database/kinton-delta-%{prev_version}_to_%{version}.sql
-#Source4:	redis-delta-%{prev_version}_to_%{version}.py
+Source3:	%{?abiquo_binaries_url}database/liquibase-data.tar.gz
+Source4:	abiquo-liquibase-update
+Source5:	%{?abiquo_binaries_url}database/kinton-delta-%{prev_version}_to_%{version}.sql
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils sos wget ruby ntp redis 
+Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils sos wget ruby ntp redis liquibase 
 Requires:       /usr/sbin/sendmail /usr/bin/which
 BuildRequires:  /usr/bin/unzip
 BuildArch: 	noarch
@@ -30,6 +31,7 @@ Make sure that you read the license agrements in /usr/share/doc/abiquo-core lice
 %prep
 
 %install
+mkdir -p $RPM_BUILD_ROOT/%{_bindir}
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}/database
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}/examples
@@ -40,8 +42,12 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/profile.d/
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 cp -r %{SOURCE0} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
-#cp %{SOURCE3} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-#cp %{SOURCE4} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+tar xzf %{SOURCE3} -C $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+cp %{SOURCE4} $RPM_BUILD_ROOT/%{_bindir}/abiquo-liquibase-update
+cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+
+%post
+/bin/chmod +x %{_bindir}/abiquo-liquibase-update
 
 
 %clean
@@ -51,8 +57,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_docdir}/%{name}
 %{_sysconfdir}/cron.d/abiquo-accounting
 %{abiquo_basedir}/config/examples/abiquo.properties.server
+%{_bindir}/abiquo-liquibase-update
 
 %changelog
+* Fri Feb 14 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-4
+- Added liquibase script
+
+* Fri Feb 14 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-3
+- Liquibase updates.
+
 * Mon Jan 20 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
 - Added m and api to deps
 
