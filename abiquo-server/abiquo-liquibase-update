@@ -11,6 +11,16 @@ LOGLEVEL="debug"
 LOGFILE="/var/log/abiquo-liquibase.log"
 
 
+if [ ! -f "$DATADIR$CHANGELOG" ]; then
+	echo "Cannot find changelog file."
+	exit 1
+fi
+
+if [ ! -f "$CLASSPATH" ]; then
+	echo "Cannot find database connector."
+	exit 1
+fi
+
 pushd $DATADIR > /dev/null
 liquibase --changeLogFile=$CHANGELOG --url=$URL --username=$DBUSER --password=$DBPASSWORD --driver=$DRIVER \
           --classpath=$CLASSPATH --logLevel=$LOGLEVEL --logFile=$LOGFILE update
