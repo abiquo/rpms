@@ -21,7 +21,7 @@ BuildRequires: servlet3
 %endif
 BuildRequires: ant >= 0:1.7.0
 
-Requires: java >= 0:1.6.0
+Requires: jdk
 Requires: jpackage-utils
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot

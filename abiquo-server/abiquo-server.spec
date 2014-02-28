@@ -11,8 +11,8 @@ Summary:        Abiquo Server Enterprise Edition
 Source0:        abiquo.properties.server
 Source1:        abiquo-accounting.cron
 Source2:	%{?abiquo_binaries_url}database/kinton-schema.sql
-Source3:	%{?abiquo_binaries_url}database/liquibase-data.tar.gz
-Source4:	abiquo-liquibase-update
+#Source3:	%{?abiquo_binaries_url}database/liquibase-data.tar.gz
+#Source4:	abiquo-liquibase-update
 Source5:	%{?abiquo_binaries_url}database/kinton-delta-%{prev_version}_to_%{version}.sql
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils sos wget ruby ntp redis liquibase 
@@ -42,12 +42,12 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/profile.d/
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 cp -r %{SOURCE0} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
-tar xzf %{SOURCE3} -C $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-cp %{SOURCE4} $RPM_BUILD_ROOT/%{_bindir}/abiquo-liquibase-update
+#tar xzf %{SOURCE3} -C $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+#cp %{SOURCE4} $RPM_BUILD_ROOT/%{_bindir}/abiquo-liquibase-update
 cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 
-%post
-/bin/chmod +x %{_bindir}/abiquo-liquibase-update
+#%post
+#/bin/chmod +x %{_bindir}/abiquo-liquibase-update
 
 
 %clean
@@ -57,7 +57,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_docdir}/%{name}
 %{_sysconfdir}/cron.d/abiquo-accounting
 %{abiquo_basedir}/config/examples/abiquo.properties.server
-%{_bindir}/abiquo-liquibase-update
+#%{_bindir}/abiquo-liquibase-update
 
 %changelog
 * Fri Feb 14 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-4
