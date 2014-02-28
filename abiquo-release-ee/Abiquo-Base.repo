@@ -15,16 +15,16 @@ gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
 [abiquo-base]
-name=abiquo-base-2.6
-baseurl=http://mirror.abiquo.com/abiquo/el6/2.6/os/x86_64/
+name=abiquo-base-3.0
+baseurl=http://mirror.abiquo.com/abiquo/3.0/os/x86_64/
 enabled=1
 gpgcheck=1
 priority=0
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo
 
 [abiquo-updates]
-name=abiquo-updates-2.6
-baseurl=http://mirror.abiquo.com/abiquo/el6/2.6/updates/x86_64/
+name=abiquo-updates-3.0
+baseurl=http://mirror.abiquo.com/abiquo/3.0/updates/x86_64/
 enabled=1
 gpgcheck=1
 priority=0
