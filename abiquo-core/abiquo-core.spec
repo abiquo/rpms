@@ -9,10 +9,10 @@ Group:          Development/Tools
 Summary:        Abiquo Server core package 
 Source0:        http://mirror.abiquo.com/sources/%{name}-tomcat-7.0.59.tgz
 Source1:        abiquo-tomcat.logrotate
-Source2:        ../../tomcat/legal.tar.gz
+Source2:        ../../legal.tar.gz
 Source3:        ../../tomcat/abiquo-tomcat.jar
-Source4:		server_ssl.xml
-Source5:		legal-web.xml
+Source4:	server_ssl.xml
+Source5:	legal-web.xml
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:	noarch
 
