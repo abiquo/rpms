@@ -1,8 +1,8 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-api
-Version:  3.0.0
-Release:  2%{?dist}%{?buildstamp}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo Repository Manager
 Group:    Development/System 
 License:  Multiple 
