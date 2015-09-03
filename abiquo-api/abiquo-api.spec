@@ -39,7 +39,11 @@ rm -rf $RPM_BUILD_ROOT
 #%doc %{_docdir}/%{name}/README
 %{abiquo_basedir}/tomcat/webapps/api
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/api.xml
-%config(noreplace) %{abiquo_basedir}/tomcat/webapps/am/WEB-INF/classes/logback.xml
+%config(noreplace) %{abiquo_basedir}/tomcat/webapps/api/WEB-INF/classes/logback.xml
+
+%changelog
+* Thu Sep 03 2015 Sergio Pena <sergio.pena@abiquo.com> - 3.6.x
+- Modify specs to receive environment variables
 
 %changelog
 * Wed Jan 22 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
