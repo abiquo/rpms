@@ -33,6 +33,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
+%config(noreplace) %{abiquo_basedir}/tomcat/webapps/am/WEB-INF/classes/logback.xml
 %{abiquo_basedir}/tomcat/webapps/am
 
 
