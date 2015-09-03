@@ -1,17 +1,18 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:           abiquo-core
-Version: 	3.0.0
-Release: 	4%{?dist}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
 Summary:        Abiquo Server core package 
-Source0:        http://mirror.abiquo.com/sources/%{name}-%{version}.tar.gz
+Source0:        http://mirror.abiquo.com/sources/%{name}-tomcat-7.0.59.tgz
 Source1:        abiquo-tomcat.logrotate
-Source2:        %{?abiquo_binaries_url}legal.tar.gz
-Source3:        %{?abiquo_binaries_url}tomcat/abiquo-tomcat.jar
-Source4:	server_ssl.xml
+Source2:        ../../tomcat/legal.tar.gz
+Source3:        ../../tomcat/abiquo-tomcat.jar
+Source4:		server_ssl.xml
+Source5:		legal-web.xml
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:	noarch
 
@@ -25,8 +26,8 @@ Make sure that you read the license agrements in /usr/share/doc/abiquo-core lice
 
 %prep
 rm -rf $RPM_BUILD_ROOT
-%setup -q
-%setup -a 2
+%setup -n %{name}-tomcat-7.0.59 -T -b 0 
+%setup -n %{name}-tomcat-7.0.59 -a 2 -T -D
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -44,6 +45,9 @@ cp %{SOURCE1} $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/abiquo-tomcat
 cp -r legal $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/
 cp -r %{SOURCE3} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/lib
 cp -r %{SOURCE4} $RPM_BUILD_ROOT/%{_docdir}/%{name}/examples/tomcat/
+mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/legal/WEB-INF/
+cp %{SOURCE5} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/legal/WEB-INF/web.xml
+
 
 %post
 /sbin/chkconfig --add abiquo-tomcat
@@ -65,13 +69,69 @@ fi
 %{abiquo_basedir}/tomcat/RELEASE-NOTES
 %{abiquo_basedir}/tomcat/webapps
 %{abiquo_basedir}/tomcat/work
-%{_docdir}/%{name}
 /opt/vm_repository
+%{_docdir}/%{name}
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/*
 %config %{_sysconfdir}/rc.d/init.d/abiquo-tomcat
 %config %{_sysconfdir}/logrotate.d/abiquo-tomcat
 
 %changelog
+* Tue Aug 18 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-3
+- Updated tomcat core tgz (sergio.pena+rpmbaker@abiquo.com)
+
+* Mon Aug 10 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-2
+- Source all scripts under /etc/sysconfig/abiquo
+
+* Fri Aug 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
+- Bumped 3.6.0
+
+* Thu May 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-6
+- Creation of vm_repository (sergio.pena+rpmbaker@abiquo.com)
+
+* Thu May 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-5
+- Needed as package is not creating the repo path
+  (sergio.pena+rpmbaker@abiquo.com)
+
+* Fri May 01 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-4
+- Removed /opt/vm_repository (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Apr 29 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-3
+- Added Epoch (sergio.pena+rpmbaker@abiquo.com)
+
+* Mon Apr 27 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-2
+- Added mysql connector to tomcat 
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-1
+- Bumped to 3.4 / Tomcat 7.0.59 (sergio.pena+rpmbaker@abiquo.com)
+- Fixed catalina.sh perms (sergio.pena+rpmbaker@abiquo.com)
+- Fixed catalina.sh perms (sergio.pena+rpmbaker@abiquo.com)
+- Fixed prep for abiquo-tomcat (sergio.pena+rpmbaker@abiquo.com)
+- Fixed prep for abiquo-tomcat (sergio.pena+rpmbaker@abiquo.com)
+* Thu Mar 05 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.x-4
+- Changed tomcat setup (sergio.pena+rpmbaker@abiquo.com)
+
+* Tue Mar 03 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.x-3
+- Bumped tomcat (sergio.pena+rpmbaker@abiquo.com)
+
+* Thu Nov 06 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-3
+- Updated tomcat
+
+* Wed Nov 05 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-2
+- Upgraded tomcat from 7.0.47 to 7.0.56
+
+* Fri Oct 31 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-1
+- Bumped 3.2.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Sep 10 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.1.0-2
+- new package built with tito
+
+* Mon Jul 28 2014 sergio.pena@abiquo.com - 3.1.0-2
+- Added conditional nightly build
+
+* Mon Jun 16 2014 Marc Morata <marc.morata@abiquo.com> - 3.1.0-1
+- Bumped version to 3.1.0 
+
+
 * Fri Jan 10 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-4
 - New logrotate settings.
 
