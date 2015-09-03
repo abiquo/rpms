@@ -7,7 +7,7 @@ Summary:  Abiquo Appliance Manager
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
-Source0:  ../am.war
+Source0:  ../../am.war
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: abiquo-core
 BuildArch: noarch
