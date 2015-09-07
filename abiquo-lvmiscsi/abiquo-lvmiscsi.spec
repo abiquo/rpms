@@ -1,19 +1,19 @@
 %define abiquo_basedir /opt/abiquo/lvmiscsi
 
 Name:           abiquo-lvmiscsi
-Version:        3.0.0
-Release:        1%{?dist}%{?buildstamp}
+Version:        %{getenv:ABIQUO_VERSION}
+Release:        %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
 Summary:        Abiquo LVM iSCSI Storage plugin
-Source0:        http://mirror.abiquo.com/sources/%{name}-tomcat-%{version}.tar.gz
-Source1:        %{?abiquo_binaries_url}lvmiscsi.war
-Source2:        server.xml
+#Source0:        http://mirror.abiquo.com/sources/%{name}-tomcat-%{version}.tar.gz
+Source1:        ../../lvmiscsi.war
+#Source2:        server.xml
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires:	scsi-target-utils
+Requires:       scsi-target-utils, abiquo-core
 BuildRequires:  /usr/bin/unzip
-BuildArch:	noarch
+BuildArch:      noarch
 
 %description
 Abiquo is the Next Generation Cloud Management Solution
@@ -22,7 +22,8 @@ This package includes lvmiscsi storage plugin.
 
 %prep
 rm -rf $RPM_BUILD_ROOT
-%setup -q -n abiquo-lvmiscsi-tomcat-%{version}
+
+#%setup -q -n abiquo-lvmiscsi-tomcat-%{version}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -30,11 +31,12 @@ rm -rf $RPM_BUILD_ROOT
 %install
 mkdir -p $RPM_BUILD_ROOT%{_docdir}/%{name}
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}
-mkdir -p $RPM_BUILD_ROOT/%{_initrddir}
-cp -r tomcat $RPM_BUILD_ROOT/%{abiquo_basedir}
+#mkdir -p $RPM_BUILD_ROOT/%{_initrddir}
+#cp -r tomcat $RPM_BUILD_ROOT/%{abiquo_basedir}
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ROOT
-install -m 755 abiquo-lvmiscsi.init $RPM_BUILD_ROOT/%{_initrddir}/abiquo-lvmiscsi
-install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
+#mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf
+#install -m 755 abiquo-lvmiscsi.init $RPM_BUILD_ROOT/%{_initrddir}/abiquo-lvmiscsi
+#install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/ROOT/ %{SOURCE1}
 
 
@@ -42,22 +44,22 @@ install -m 755 %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/conf/
 #/sbin/chkconfig --del abiquo-lvmiscsi
 
 %files
-%{abiquo_basedir}/tomcat/bin
-%{abiquo_basedir}/tomcat/lib
-%{abiquo_basedir}/tomcat/logs
-%{abiquo_basedir}/tomcat/temp
-%{abiquo_basedir}/tomcat/LICENSE
-%{abiquo_basedir}/tomcat/RUNNING.txt
-%{abiquo_basedir}/tomcat/NOTICE
-%{abiquo_basedir}/tomcat/RELEASE-NOTES
+#%{abiquo_basedir}/tomcat/bin
+#%{abiquo_basedir}/tomcat/lib
+#%{abiquo_basedir}/tomcat/logs
+#%{abiquo_basedir}/tomcat/temp
+#%{abiquo_basedir}/tomcat/LICENSE
+#%{abiquo_basedir}/tomcat/RUNNING.txt
+#%{abiquo_basedir}/tomcat/NOTICE
+#%{abiquo_basedir}/tomcat/RELEASE-NOTES
 %{abiquo_basedir}/tomcat/webapps
-%{abiquo_basedir}/tomcat/work
+#%{abiquo_basedir}/tomcat/work
 %{_docdir}/%{name}
-%config(noreplace) %{abiquo_basedir}/tomcat/conf/*
-%{_initrddir}/abiquo-lvmiscsi
+#%config(noreplace) %{abiquo_basedir}/tomcat/conf/server.xml
+#%{_initrddir}/abiquo-lvmiscsi
 
 %post
-/sbin/chkconfig --add abiquo-lvmiscsi
+#/sbin/chkconfig --add abiquo-tomcat
 
 
 %changelog
