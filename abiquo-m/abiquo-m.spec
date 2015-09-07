@@ -1,13 +1,13 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-m
-Version:  3.0.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo Metering
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
-Source0:  %{?abiquo_binaries_url}m.war
+Source0:  ../../m.war
 Source1:  m.xml
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: abiquo-core
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %{abiquo_basedir}/tomcat/webapps/m
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/m.xml
+%config(noreplace) %{abiquo_basedir}/tomcat/webapps/m/WEB-INF/classes/logback.xml
+
 
 
 %changelog
