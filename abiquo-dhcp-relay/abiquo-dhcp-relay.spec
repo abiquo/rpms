@@ -1,6 +1,6 @@
 Name:     abiquo-dhcp-relay
-Version:  2.6.0
-Release:  2%{?dist}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo DCHP Relay scripts
 Group:    Development/System
 License:  Multiple 
@@ -30,6 +30,24 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/abiquo-dhcp-relay
 
 %changelog
+* Wed Aug 05 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
+- Bumped to 3.6.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-0
+- Bumped to 3.4.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Dec 03 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.x-2
+- Bumped version 
+
+* Wed Dec 03 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.x-1
+- Bumped version
+
+* Fri Oct 31 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-1
+- Bumped 3.2.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Oct 01 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.1.0-2
+- new package built with tito
+
 * Tue Apr 23 2013 Abel Boldú <abel.boldu@abiquo.com> - 2.6.0-2
 - Bumped version to 2.6.0
 
