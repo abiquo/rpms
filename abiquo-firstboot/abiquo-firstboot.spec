@@ -9,7 +9,7 @@ Source0:        abiquo-firstboot.py
 Source1:        abiquo-firstboot.init
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:      noarch
-Requires:       dialog
+Requires:       dialog, python-setuptools, augeas
 
 %description
 Abiquo is the Next Generation Cloud Management Solution
