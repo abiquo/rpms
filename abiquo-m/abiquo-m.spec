@@ -44,6 +44,32 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Aug 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
+- Bumped 3.6.0
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-1
+- Bumped 3.4.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Fri Oct 31 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-1
+- Bumped 3.2.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Oct 01 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.1.0-2
+- new package built with tito
+
+* Mon Jul 28 2014 sergio.pena@abiquo.com - 3.1.0-2
+- Added conditional nightly build
+
+* Mon Jun 16 2014 Marc Morata <marc.morata@abiquo.com> - 3.1.0-1
+- Bumped version to 3.1.0
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.0GA-1
+- Bumped version to 3.0.0GA
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com>
+- Bumped version to 3.0.0GA
+
+* Thu May 01 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.2-1
+- Bumped version to 3.0.2
 * Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
 - Bumped version to 3.0.0
 
