@@ -1,17 +1,21 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-remote-services
-Version:  3.0.0
-Release:  2%{?dist}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo Remote Services
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
+
 Source0:  README 
 Source1:  abiquo.properties.remoteservices
+Source2:  ../../redis
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-virtualfactory abiquo-cpp dhcp redis nfs-utils OpenIPMI-tools
 BuildArch: noarch
+
+Requires: abiquo-vsm abiquo-ssm abiquo-nodecollector abiquo-am abiquo-virtualfactory dhcp nfs-utils abiquo-cpp python-redis
 
 %description
 Next Generation Cloud Management Solution
@@ -25,9 +29,9 @@ Make sure that you read the license agrements in /usr/share/doc/abiquo-core lice
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
-cp ../SOURCES/README $RPM_BUILD_ROOT/%{_docdir}/%{name}/
+cp %{SOURCE0} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
-
+cp %{SOURCE2} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -54,6 +58,7 @@ EOF
 %files
 %defattr(-,root,root,-)
 %doc %{_docdir}/%{name}/README
+%doc %{_docdir}/%{name}/
 %{abiquo_basedir}/config/examples/abiquo.properties.remoteservices
 
 %changelog
