@@ -11,6 +11,7 @@ URL:      http://www.abiquo.com
 Source0:  README 
 Source1:  abiquo.properties.remoteservices
 Source2:  ../../redis
+Source3:  redis-deltas
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
@@ -32,6 +33,7 @@ mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE0} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE2} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
+cp %{SOURCE3} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
