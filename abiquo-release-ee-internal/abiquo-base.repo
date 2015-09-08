@@ -1,0 +1,11 @@
+#
+# Abiquo-Base.repo
+#
+
+[abiquo-base]
+name=Abiquo-base
+baseurl=http://mirror.bcn.abiquo.com/abiquo/3.6/os/x86_64/
+enabled=1
+gpgcheck=1
+priority=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo file:///etc/pki/rpm-gpg/RPM-GPG-KEY-MariaDB file:///etc/pki/rpm-gpg/RPM-GPG-KEY-RabbitMQ file:///etc/pki/rpm-gpg/RPM-GPG-RSA-KEY-Abiquo
