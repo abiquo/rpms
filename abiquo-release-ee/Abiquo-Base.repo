@@ -2,31 +2,10 @@
 # Abiquo-Base.repo
 #
 
-[centos-base]
-name=CentOS-6 - Base
-baseurl=http://mirror.abiquo.com/mirror.centos.org/centos-6/6/os/$basearch/
-gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
-
-[centos-updates]
-name=CentOS-6 - Updates
-baseurl=http://mirror.abiquo.com/mirror.centos.org/centos-6/6/updates/$basearch/
-gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
-
 [abiquo-base]
-name=abiquo-base-3.0
-baseurl=http://mirror.abiquo.com/abiquo/3.0/os/x86_64/
+name=Abiquo-base
+baseurl=http://mirror.abiquo.com/abiquo/3.6/os/x86_64/
 enabled=1
 gpgcheck=1
 priority=0
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo
-
-[abiquo-updates]
-name=abiquo-updates-3.0
-baseurl=http://mirror.abiquo.com/abiquo/3.0/updates/x86_64/
-enabled=1
-gpgcheck=1
-priority=0
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo
-
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo file:///etc/pki/rpm-gpg/RPM-GPG-KEY-MariaDB file:///etc/pki/rpm-gpg/RPM-GPG-KEY-RabbitMQ file:///etc/pki/rpm-gpg/RPM-GPG-RSA-KEY-Abiquo

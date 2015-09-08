@@ -41,8 +41,6 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/m.xml
 %config(noreplace) %{abiquo_basedir}/tomcat/webapps/m/WEB-INF/classes/logback.xml
 
-
-
 %changelog
 * Fri Aug 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
 - Bumped 3.6.0
