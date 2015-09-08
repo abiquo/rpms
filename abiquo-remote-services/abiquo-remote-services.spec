@@ -32,8 +32,8 @@ mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE0} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 cp %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
-cp %{SOURCE2} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
-cp %{SOURCE3} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
+cp -r %{SOURCE2} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
+cp -r %{SOURCE3} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
