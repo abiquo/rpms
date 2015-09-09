@@ -9,7 +9,7 @@ Group:    Development/System
 License:  Multiple 
 URL:      http://www.abiquo.com 
 
-Source0:  %{?abiquo_binaries_url}vsm.war
+Source0:  ../../vsm.war
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
