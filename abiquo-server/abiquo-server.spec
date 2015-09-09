@@ -10,10 +10,10 @@ Summary:        Abiquo Server Enterprise Edition
 
 Source0:        abiquo.properties.server
 Source1:        abiquo-accounting.cron
-Source2:		../../database/kinton-schema.sql
-Source3:		../../database/liquibase-data.tar.gz
-Source4:		abiquo-liquibase
-Source5:		00-failed-templates.sh
+Source2:	../../database/kinton-schema.sql
+Source3:	../../database/liquibase-data.tar.gz
+Source4:	abiquo-liquibase
+Source5:	../../redis
 Source6:    	lqb_update_from_26.sh
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -46,11 +46,11 @@ cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 cp -r %{SOURCE0} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
 tar xzf %{SOURCE3} -C $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-cp %{SOURCE5} $RPM_BUILD_ROOT/%{_docdir}/%{name}/database/
+cp -r %{SOURCE5} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
 cp %{SOURCE4} $RPM_BUILD_ROOT/%{_bindir}/abiquo-liquibase
 cp %{SOURCE6} $RPM_BUILD_ROOT/%{_bindir}/lqb_update_from_26.sh
 
-#%post
+%post
 /bin/chmod +x %{_bindir}/abiquo-liquibase
 /bin/chmod +x %{_bindir}/lqb_update_from_26.sh
 
