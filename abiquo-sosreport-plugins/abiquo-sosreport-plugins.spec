@@ -1,13 +1,9 @@
-%if 0%{?rhel} >= 6
 %define python_sitelib /usr/lib/python2.6/site-packages/
-%else
-%define python_sitelib /usr/lib/python2.4/site-packages/
-%endif
 
 Summary: Abiquo SOSReport plugins
 Name: abiquo-sosreport-plugins
-Version: 3.0.0
-Release: 2%{?dist}
+Version:  		%{getenv:ABIQUO_VERSION}
+Release:  		%{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 License: BSD 
 Group: System Environment/Base
 URL: http://www.abiquo.com/
@@ -46,6 +42,18 @@ mkdir -p %{buildroot}%{python_sitelib}/sos/plugins
 %{python_sitelib}/sos/plugins/*
 
 %changelog
+* Fri Oct 31 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-1
+- Bumped 3.2.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Oct 01 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.1.0-1
+- new package built with tito
+
+* Mon Jun 16 2014 Marc Morata <marc.morata@abiquo.com> - 3.1.0-1
+- Bumped version to 3.1.0
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com>
+- Bumped version to 3.0.0GA
+
 * Fri Jan 10 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
 - Changed install attributes
 
