@@ -1,24 +1,27 @@
 %define abiquo_basedir /opt/abiquo
-%define prev_version 2.9.0
 
 Name:           abiquo-server
-Version:        3.0.0
-Release:        4%{?dist}%{?buildstamp}
+Version:  		%{getenv:ABIQUO_VERSION}
+Release:  		%{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
 Summary:        Abiquo Server Enterprise Edition 
+
 Source0:        abiquo.properties.server
 Source1:        abiquo-accounting.cron
-Source2:	%{?abiquo_binaries_url}database/kinton-schema.sql
-#Source3:	%{?abiquo_binaries_url}database/liquibase-data.tar.gz
-#Source4:	abiquo-liquibase-update
-Source5:	%{?abiquo_binaries_url}database/kinton-delta-%{prev_version}_to_%{version}.sql
+Source2:	../../database/kinton-schema.sql
+Source3:	../../database/liquibase-data.tar.gz
+Source4:	abiquo-liquibase
+Source5:	../../redis
+Source6:    	lqb_update_from_26.sh
+
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils sos wget ruby ntp redis liquibase 
-Requires:       /usr/sbin/sendmail /usr/bin/which
 BuildRequires:  /usr/bin/unzip
-BuildArch: 	noarch
+BuildArch: 		noarch
+
+Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils sos wget ruby ntp liquibase 
+Requires:       /usr/sbin/sendmail /usr/bin/which
 
 %description
 Next Generation Cloud Management Solution
@@ -42,12 +45,14 @@ mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/profile.d/
 cp %{SOURCE2} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
 cp -r %{SOURCE0} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 cp %{SOURCE1} %{buildroot}/%{_sysconfdir}/cron.d/abiquo-accounting
-#tar xzf %{SOURCE3} -C $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
-#cp %{SOURCE4} $RPM_BUILD_ROOT/%{_bindir}/abiquo-liquibase-update
-cp %{SOURCE5} $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+tar xzf %{SOURCE3} -C $RPM_BUILD_ROOT%{_docdir}/%{name}/database/
+cp -r %{SOURCE5} $RPM_BUILD_ROOT/%{_docdir}/%{name}/
+cp %{SOURCE4} $RPM_BUILD_ROOT/%{_bindir}/abiquo-liquibase
+cp %{SOURCE6} $RPM_BUILD_ROOT/%{_bindir}/lqb_update_from_26.sh
 
-#%post
-#/bin/chmod +x %{_bindir}/abiquo-liquibase-update
+%post
+/bin/chmod +x %{_bindir}/abiquo-liquibase
+/bin/chmod +x %{_bindir}/lqb_update_from_26.sh
 
 
 %clean
@@ -57,9 +62,68 @@ rm -rf $RPM_BUILD_ROOT
 %{_docdir}/%{name}
 %{_sysconfdir}/cron.d/abiquo-accounting
 %{abiquo_basedir}/config/examples/abiquo.properties.server
-#%{_bindir}/abiquo-liquibase-update
+%{_bindir}/abiquo-liquibase
+%{_bindir}/lqb_update_from_26.sh
 
 %changelog
+* Fri Aug 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
+- Bumped to version 3.6.0
+
+* Wed Jul 29 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.2-1
+- Bumped 3.4.2
+
+* Wed May 06 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-9
+- abiquo-liquibase get disk controllers from abiquo properties 
+
+* Mon May 04 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-7
+- Add redis delta 3.4.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Thu Apr 30 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-6
+- Removed redis dep (sergio.pena+rpmbaker@abiquo.com)
+
+* Mon Apr 27 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-5
+- Removed spaces at the end of abiquo-liquibase script
+
+* Sun Apr 26 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-4
+- Fixed abiquo-liquibase path (sergio.pena+rpmbaker@abiquo.com)
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-3
+- Changed abiquo-liquibase source (sergio.pena+rpmbaker@abiquo.com)
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-2
+- Fixed war path (sergio.pena+rpmbaker@abiquo.com)
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-1
+- Bumped to 3.4.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Mon Jan 19 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4-1.master
+- Bumped 3.4 (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Oct 29 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2-1.master
+- Bumped 3.2 (sergio.pena+rpmbaker@abiquo.com)
+
+* Thu Oct 02 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.1.1-1
+- New package built with tito
+- Bumped version to 3.1.1
+
+* Mon Jun 16 2014 Marc Morata <marc.morata@abiquo.com> - 3.1.0-1
+- Bumped version to 3.1.0
+
+* Thu Jun 12 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.0GA-3
+- Now the lqb update scripts the shows the m user password
+
+* Fri May 30 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.0GA-2
+- Modified the changelog for liquibase upgrade
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.0GA-1
+- Bumped version to 3.0.0GA
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com>
+- Bumped version to 3.0.0GA
+
+* Thu May 01 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.2-1
+- Bumped version to 3.0.2
+
 * Fri Feb 14 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-4
 - Added liquibase script
 

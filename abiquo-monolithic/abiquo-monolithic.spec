@@ -1,15 +1,15 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-monolithic
-Version:  3.0.0
-Release:  2%{?dist}%{?buildstamp}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo Monolithic Metapackage
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 Source0:  README 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: dhcp nfs-utils samba abiquo-server abiquo-remote-services abiquo-v2v abiquo-api abiquo-m 
+Requires: dhcp nfs-utils samba abiquo-server abiquo-remote-services abiquo-v2v 
 Obsoletes: abiquo-pocsetup
 BuildArch: noarch
 
@@ -89,6 +89,31 @@ EOF
 %doc %{_docdir}/%{name}/README
 
 %changelog
+
+* Fri Aug 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
+- Bumped version 3.6.0
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-0
+- Bumped 3.4.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Fri Oct 31 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-1
+- Bumped 3.2.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Oct 01 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.1.0-3
+- new package built with tito
+
+* Mon Jul 28 2014 sergio.pena@abiquo.com - 3.1.0-3
+- Rem abiquo-api and abiquo-m deps, redundant they are required by abiquo-server
+
+* Mon Jul 28 2014 sergio.pena@abiquo.com - 3.1.0-2
+- Added conditional nightly build
+
+* Mon Jun 16 2014 Marc Morata <marc.morata@abiquo.com> - 3.1.0-1
+- Bumped version to 3.1.0
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com>
+- Bumped version to 3.0.0GA
+
 * Mon Jan 20 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2
 - Added m to  deps
 

@@ -1,19 +1,25 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-v2v
-Version:  3.0.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  		%{getenv:ABIQUO_VERSION}
+Release:  		%{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo V2V Conversion Component 
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
-Source0:  %{?abiquo_binaries_url}bpm-async.war
-Source1:  %{?abiquo_binaries_url}scripts/v2v-diskmanager
-Source2:  %{?abiquo_binaries_url}scripts/mechadora
+
+Source0:  ../../bpm-async.war
+Source1:  ../../scripts/v2v-diskmanager
+Source2:  ../../scripts/mechadora
 Source3:  abiquo.properties.v2v
+Source4:  ../../scripts/export-private
+Source5:  ../../scripts/amz-import
+Source6:  ../../scripts/raw-to-vhdflat
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: abiquo-core vboxmanage iscsi-initiator-utils nfs-utils samba qemu-img
 BuildArch: noarch
+
+Requires: abiquo-core vboxmanage iscsi-initiator-utils nfs-utils samba qemu-img ec2-api-tools
 
 %description
 Next Generation Cloud Management Solution
@@ -22,7 +28,6 @@ This package contains the enterprise V2V conversion component.
 
 This package includes software developed by third-party.
 Make sure that you read the license agrements in /usr/share/doc/abiquo-core licenses before using this software.
-
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -33,9 +38,15 @@ mkdir -p $RPM_BUILD_ROOT/%{_docdir}/%{name}
 /usr/bin/unzip -d $RPM_BUILD_ROOT/%{abiquo_basedir}/tomcat/webapps/bpm-async/ %{SOURCE0}
 cp  %{SOURCE1} $RPM_BUILD_ROOT/%{abiquo_basedir}/scripts
 cp  %{SOURCE2} $RPM_BUILD_ROOT/%{abiquo_basedir}/scripts
+cp  %{SOURCE4} $RPM_BUILD_ROOT/%{abiquo_basedir}/scripts
+cp  %{SOURCE5} $RPM_BUILD_ROOT/%{abiquo_basedir}/scripts
+cp  %{SOURCE6} $RPM_BUILD_ROOT/%{abiquo_basedir}/scripts
 mkdir -p $RPM_BUILD_ROOT/usr/bin/
 %{__install} -Dp -m 0755 %{SOURCE1} $RPM_BUILD_ROOT/usr/bin/
 %{__install} -Dp -m 0755 %{SOURCE2} $RPM_BUILD_ROOT/usr/bin/
+%{__install} -Dp -m 0755 %{SOURCE4} $RPM_BUILD_ROOT/usr/bin/
+%{__install} -Dp -m 0755 %{SOURCE5} $RPM_BUILD_ROOT/usr/bin/
+%{__install} -Dp -m 0755 %{SOURCE6} $RPM_BUILD_ROOT/usr/bin/
 cp %{SOURCE3} $RPM_BUILD_ROOT/%{abiquo_basedir}/config/examples/
 mkdir -p $RPM_BUILD_ROOT/%{abiquo_basedir}/v2v-conversions
 
@@ -79,11 +90,53 @@ EOF
 %{abiquo_basedir}/scripts
 /usr/bin/mechadora
 /usr/bin/v2v-diskmanager
+/usr/bin/export-private
+/usr/bin/amz-import
+/usr/bin/raw-to-vhdflat
 %{abiquo_basedir}/config/examples/abiquo.properties.v2v
+%{abiquo_basedir}/v2v-conversions
+%config(noreplace) %{abiquo_basedir}/tomcat/webapps/bpm-async/WEB-INF/classes/logback.xml
 %{abiquo_basedir}/v2v-conversions
 
 
 %changelog
+* Tue Aug 18 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-3
+- Added ec2 tools as dep (sergio.pena+rpmbaker@abiquo.com)
+
+* Mon Aug 10 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-2
+- Added public export files (sergio.pena+rpmbaker@abiquo.com)
+
+* Fri Aug 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
+- Bumped to 3.6.0
+
+* Tue Apr 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.4.0-1
+- Bumped 3.4.0 (sergio.pena+rpmbaker@abiquo.com)
+
+* Mon Dec 01 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.3-1.master
+- Added Epoch (sergio.pena+rpmbaker@abiquo.com)
+
+* Wed Oct 29 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2-1.master
+- Bumped 3.2 (sergio.pena+rpmbaker@abiquo.com)
+
+* Thu Oct 02 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.1.1-1
+- New package built with tito
+- Bumped version to 3.1.1
+
+* Mon Jul 28 2014 sergio.pena@abiquo.com - 3.1.0-2
+- Added conditional nightly build
+
+* Mon Jun 16 2014 Marc Morata <marc.morata@abiquo.com> - 3.1.0-1
+- Bumped version to 3.1.0
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.0GA-1
+- Bumped version to 3.0.0GA
+
+* Thu May 29 2014 Marc Morata <marc.morata@abiquo.com>
+- Bumped version to 3.0.0GA
+
+* Thu May 01 2014 Marc Morata <marc.morata@abiquo.com> - 3.0.2-1
+- Bumped version to 3.0.2
+
 * Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
 - Bumped version to 3.0.0
 

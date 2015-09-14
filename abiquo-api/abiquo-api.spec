@@ -1,13 +1,13 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-api
-Version:  3.0.0
-Release:  2%{?dist}%{?buildstamp}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo Repository Manager
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
-Source0:  %{?abiquo_binaries_url}api.war
+Source0:  ../../api.war
 Source1:  api.xml
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: abiquo-core
@@ -39,6 +39,11 @@ rm -rf $RPM_BUILD_ROOT
 #%doc %{_docdir}/%{name}/README
 %{abiquo_basedir}/tomcat/webapps/api
 %config(noreplace) %{abiquo_basedir}/tomcat/conf/Catalina/localhost/api.xml
+%config(noreplace) %{abiquo_basedir}/tomcat/webapps/api/WEB-INF/classes/logback.xml
+
+%changelog
+* Thu Sep 03 2015 Sergio Pena <sergio.pena@abiquo.com> - 3.6.x
+- Modify specs to receive environment variables
 
 %changelog
 * Wed Jan 22 2014 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-2

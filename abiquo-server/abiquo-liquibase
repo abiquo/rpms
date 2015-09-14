@@ -1,0 +1,99 @@
+#!/bin/bash 
+
+while getopts h:u:p:P: OPT; do
+  case $OPT in
+    (h) PARAMDBHOST=$OPTARG;;
+    (u) PARAMDBUSER=$OPTARG;;
+    (p) PARAMDBPASS=$OPTARG;;
+    (P) PARAMDBPORT=$OPTARG;;
+  esac
+done
+
+shift $(($OPTIND-1))
+
+DATADIR="/usr/share/doc/abiquo-server/database/"
+CHANGELOG="src/kinton_master_changelog.xml"
+DBUSER=${PARAMDBUSER:-root}
+DBPASSWORD=${PARAMDBPASS:-}
+URL="jdbc:mysql://${PARAMDBHOST:-localhost}:${PARAMDBPORT:-3306}/kinton"
+DRIVER="com.mysql.jdbc.Driver"
+CLASSPATH=`rpm -ql abiquo-core | grep mysql-connector`
+LOGLEVEL="debug"
+LOGFILE="/var/log/abiquo-liquibase-$(date +"%m-%d-%Y-%T").log"
+PROPFILE="/opt/abiquo/config/abiquo.properties"
+PARAM=$1
+
+if [ ! -f "$DATADIR$CHANGELOG" ]; then
+echo "Cannot find changelog file."
+exit 1
+fi
+
+if [ ! -f "$CLASSPATH" ]; then
+echo "Cannot find database connector."
+exit 1
+fi
+
+if [ ! -f "$PROPFILE" ]; then
+echo "Cannot find the abiquo properties file."
+exit 1
+fi
+
+pushd $DATADIR > /dev/null
+
+echo "Upgrading accounting schema"
+mysql -u$DBUSER --password="$DBPASSWORD" < src/accounting/kinton_accounting.sql
+
+function getProperty {
+    echo $(grep $1 -r $PROPFILE | cut -d"=" -f2)
+}
+
+primary_controller=$(getProperty "abiquo.diskController.primary")
+secondary_controller=$(getProperty "abiquo.diskController.secondary")
+
+[ -z $primary_controller ] && standard_primary="IDE" || standard_primary=$primary_controller
+[ -z $secondary_controller ] && standard_secondary="IDE" || standard_secondary=$secondary_controller
+[ -z $primary_controller ] && stateful_primary="SCSI" || stateful_primary=$primary_controller
+[ -z $secondary_controller ] && stateful_secondary="SCSI" || stateful_secondary=$secondary_controller
+
+case $PARAM in
+  update)
+    liquibase --changeLogFile=$CHANGELOG --url=$URL --username=$DBUSER --password=$DBPASSWORD --driver=$DRIVER \
+          --classpath=$CLASSPATH --logLevel=$LOGLEVEL --logFile=$LOGFILE update \
+          -Ddisk.standard.primary.controller=$standard_primary -Ddisk.standard.secondary.controller=$standard_secondary \
+          -Ddisk.stateful.primary.controller=$stateful_primary -Ddisk.stateful.secondary.controller=$stateful_secondary
+    RETURN=$?
+  ;;
+  clearCheckSums)
+    liquibase --changeLogFile=$CHANGELOG --url=$URL --username=$DBUSER --password=$DBPASSWORD --driver=$DRIVER \
+          --classpath=$CLASSPATH --logLevel=$LOGLEVEL --logFile=$LOGFILE clearCheckSums \
+          -Ddisk.standard.primary.controller=$standard_primary -Ddisk.standard.secondary.controller=$standard_secondary \
+          -Ddisk.stateful.primary.controller=$stateful_primary -Ddisk.stateful.secondary.controller=$stateful_secondary
+    RETURN=$?
+  ;;
+  *)
+    cat << EOT
+    ERROR:
+        You must provide one action parameter:
+        abiquo-liquibase [-h HOSTNAME] [-u user] [-p password] <update|clearCheckSums>
+ 
+        Actions parameters:
+        * update
+            Perform liquibase update
+
+        * clearCheckSums
+            Clear checksums on database in case of wrong digest exists on database
+
+        Optional parameters:
+            -H MySQL hostname
+            -u MySQL user
+            -p MySQL password
+EOT
+    RETURN=0
+esac
+
+if [ $RETURN == 0 ]; then
+        echo "Done."
+else
+        echo "Failed! See log in $LOGFILE"
+fi
+popd > /dev/null

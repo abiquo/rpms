@@ -1,13 +1,13 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-am
-Version:  3.0.0
-Release:  1%{?dist}%{?buildstamp}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo Appliance Manager
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
-Source0:  %{?abiquo_binaries_url}am.war
+Source0:  ../../am.war
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: abiquo-core
 BuildArch: noarch
@@ -33,6 +33,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
+%config(noreplace) %{abiquo_basedir}/tomcat/webapps/am/WEB-INF/classes/logback.xml
 %{abiquo_basedir}/tomcat/webapps/am
 
 

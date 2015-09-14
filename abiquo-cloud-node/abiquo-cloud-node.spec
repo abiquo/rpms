@@ -1,15 +1,15 @@
 %define abiquo_basedir /opt/abiquo
 
 Name:     abiquo-cloud-node
-Version:  3.0.0
-Release:  1%{?dist}
+Version:  %{getenv:ABIQUO_VERSION}
+Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo Cloud Node setup package
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
 #Source0:  README
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: libvirt abiquo-aim
+Requires: abiquo-aim
 BuildArch: noarch
 
 %description
@@ -53,6 +53,12 @@ EOF
 %defattr(-,root,root,-)
 
 %changelog
+* Thu Sep 03 2015 sergio.pena@abiquo.com - 3.6.x
+- Dynamic version build
+
+* Mon Jul 28 2014 sergio.pena@abiquo.com - 3.1.0-3
+- Removed recursive libvirt dep (abiquo-aim depends on it)
+
 * Thu Dec 05 2013 Abel Boldú <abel.boldu@abiquo.com> - 3.0.0-1
 - Bumped version to 3.0.0
 

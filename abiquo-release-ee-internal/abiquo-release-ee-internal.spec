@@ -1,4 +1,4 @@
-Name: abiquo-release-ee
+Name: abiquo-release-ee-internal
 Version:  %{getenv:ABIQUO_VERSION}
 Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 Summary:  Abiquo release repositories
