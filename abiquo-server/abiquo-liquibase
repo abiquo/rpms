@@ -41,7 +41,7 @@ fi
 pushd $DATADIR > /dev/null
 
 echo "Upgrading accounting schema"
-mysql -u$DBUSER --password="$DBPASSWORD" < src/accounting/kinton_accounting.sql
+mysql -u$DBUSER --password="$DBPASSWORD" -h"$PARAMDBHOST" -P"$PARAMDBPORT" < src/accounting/kinton_accounting.sql
 
 function getProperty {
     echo $(grep $1 -r $PROPFILE | cut -d"=" -f2)
