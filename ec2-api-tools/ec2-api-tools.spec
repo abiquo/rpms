@@ -47,11 +47,8 @@ rm /etc/sysconfig/abiquo/ec2-api-tools
 /opt/aws
 
 %changelog
-* Fri Sep 25 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 1.7.5-14
-- 
-
 * Fri Sep 25 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 1.7.5-13
-- 
+- Modifiy post scripts to get actual ec2 path from installed zipfile
 
 * Mon Sep 21 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 1.7.5-12
 - Remove Epoch (sergio.pena+rpmbaker@abiquo.com)
