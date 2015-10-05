@@ -15,7 +15,9 @@ DATADIR="/usr/share/doc/abiquo-server/database/"
 CHANGELOG="src/kinton_master_changelog.xml"
 DBUSER=${PARAMDBUSER:-root}
 DBPASSWORD=${PARAMDBPASS:-}
-URL="jdbc:mysql://${PARAMDBHOST:-localhost}:${PARAMDBPORT:-3306}/kinton"
+DBHOST=${PARAMDBHOST:-localhost}
+DBPORT=${PARAMDBPORT:-3306}
+URL="jdbc:mysql://${DBHOST}:${DBPORT}/kinton"
 DRIVER="com.mysql.jdbc.Driver"
 CLASSPATH=`rpm -ql abiquo-core | grep mysql-connector`
 LOGLEVEL="debug"
@@ -41,7 +43,7 @@ fi
 pushd $DATADIR > /dev/null
 
 echo "Upgrading accounting schema"
-mysql -u$DBUSER --password="$DBPASSWORD" -h"$PARAMDBHOST" -P"$PARAMDBPORT" < src/accounting/kinton_accounting.sql
+mysql -u$DBUSER --password="$DBPASSWORD" -h"$DBHOST" -P"$DBPORT" < src/accounting/kinton_accounting.sql
 
 function getProperty {
     echo $(grep $1 -r $PROPFILE | cut -d"=" -f2)
@@ -74,7 +76,7 @@ case $PARAM in
     cat << EOT
     ERROR:
         You must provide one action parameter:
-        abiquo-liquibase [-h HOSTNAME] [-u user] [-p password] <update|clearCheckSums>
+        abiquo-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>
  
         Actions parameters:
         * update
@@ -85,6 +87,7 @@ case $PARAM in
 
         Optional parameters:
             -H MySQL hostname
+            -P MySQL port
             -u MySQL user
             -p MySQL password
 EOT

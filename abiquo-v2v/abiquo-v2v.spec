@@ -19,7 +19,7 @@ Source6:  ../../scripts/raw-to-vhdflat
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 
-Requires: abiquo-core vboxmanage iscsi-initiator-utils nfs-utils samba qemu-img ec2-api-tools
+Requires: abiquo-core vboxmanage iscsi-initiator-utils nfs-utils samba qemu-img ec2-api-tools >= 1.7.5-14
 
 %description
 Next Generation Cloud Management Solution
