@@ -1,23 +1,23 @@
 %define python_sitelib /usr/lib/python2.6/site-packages/
 
-Summary: Abiquo SOSReport plugins
-Name: abiquo-sosreport-plugins
+Summary: Abiquo SOSReport plugins legacy
+Name: abiquo-sosreport-plugins-legacy
 Version:  		%{getenv:ABIQUO_VERSION}
 Release:  		%{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
 License: BSD 
 Group: System Environment/Base
 URL: http://www.abiquo.com/
 Vendor: Abiquo Repository, http://www.abiquo.com
-Requires: sos >= 3.0
+Requires: sos < 3.0
 BuildArch: noarch
 
-Source0: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_node.py
-Source1: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_xen_node.py
-Source2: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_server.py
-Source3: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_dhcp.py
-Source4: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_rs.py
-Source5: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_v2v.py
-Source6: https://raw.github.com/abiquo/abiquo-report-sos-plugin/master/abiquo_lvm.py
+Source0: https://raw.github.com/abiquo/abiquo-report-sos-plugin/legacy/abiquo_node.py
+Source1: https://raw.github.com/abiquo/abiquo-report-sos-plugin/legacy/abiquo_xen_node.py
+Source2: https://raw.github.com/abiquo/abiquo-report-sos-plugin/legacy/abiquo_server.py
+Source3: https://raw.github.com/abiquo/abiquo-report-sos-plugin/legacy/abiquo_dhcp.py
+Source4: https://raw.github.com/abiquo/abiquo-report-sos-plugin/legacy/abiquo_rs.py
+Source5: https://raw.github.com/abiquo/abiquo-report-sos-plugin/legacy/abiquo_v2v.py
+Source6: https://raw.github.com/abiquo/abiquo-report-sos-plugin/legacy/abiquo_lvm.py
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 %description
@@ -42,6 +42,9 @@ mkdir -p %{buildroot}%{python_sitelib}/sos/plugins
 %{python_sitelib}/sos/plugins/*
 
 %changelog
+* Thu Oct 15 2015 mcirauqui <marc.cirauqui@abiquo.com> 3.6.0-1
+- Cahnged to legacy for SOS < 3.0 (marc.cirauqui@abiquo.com)
+
 * Fri Oct 31 2014 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.2.0-1
 - Bumped 3.2.0 (sergio.pena+rpmbaker@abiquo.com)
 
