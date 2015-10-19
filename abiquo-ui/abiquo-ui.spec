@@ -1,3 +1,5 @@
+%define abiquo_basedir /opt/abiquo
+
 Name:     abiquo-ui
 Version:  		%{getenv:ABIQUO_VERSION}
 Release:  		%{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
