@@ -49,13 +49,13 @@ function getProperty {
     echo $(grep $1 -r $PROPFILE | cut -d"=" -f2)
 }
 
-primary_controller=$(getProperty "abiquo.diskController.primary")
-secondary_controller=$(getProperty "abiquo.diskController.secondary")
+typeset -u primary_controller=$(getProperty "abiquo.diskController.primary")
+typeset -u secondary_controller=$(getProperty "abiquo.diskController.secondary")
 
-[ -z $primary_controller ] && standard_primary="IDE" || standard_primary=$primary_controller
-[ -z $secondary_controller ] && standard_secondary="IDE" || standard_secondary=$secondary_controller
-[ -z $primary_controller ] && stateful_primary="SCSI" || stateful_primary=$primary_controller
-[ -z $secondary_controller ] && stateful_secondary="SCSI" || stateful_secondary=$secondary_controller
+standard_primary=${primary_controller:-"IDE"}
+standard_secondary=${secondary_controller:-"IDE"}
+stateful_primary=${primary_controller:-"SCSI"}
+stateful_secondary=${secondary_controller:-"SCSI"}
 
 case $PARAM in
   update)
