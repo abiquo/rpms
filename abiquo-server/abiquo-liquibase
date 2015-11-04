@@ -40,6 +40,14 @@ echo "Cannot find the abiquo properties file."
 exit 1
 fi
 
+if [ "$DBHOST" == "localhost" ]; then
+  NPROC=$(netstat -tupan | grep $DBPORT | wc -l)
+  if [ $NPROC -eq 0 ]; then
+    echo "Cannot find MySQL running on localhost"
+    echo "Please set the right parameters to connect to the MySQL database."
+    exit 1
+  fi
+fi
 pushd $DATADIR > /dev/null
 
 echo "Upgrading accounting schema"
