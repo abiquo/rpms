@@ -40,23 +40,12 @@ echo "Cannot find the abiquo properties file."
 exit 1
 fi
 
-if [ "$DBHOST" == "localhost" ]; then
-  NPROC=$(netstat -tan | grep $DBPORT | wc -l)
-  if [ $NPROC -eq 0 ]; then
-    echo "Cannot find MySQL service running on localhost"
-    echo "Please set the right parameters to connect to the MySQL server."
-    echo "abiquo-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>"
-    exit 1
-  fi
-else
-  mysql -u$DBUSER --password="$DBPASSWORD" -h"$DBHOST" -P"$DBPORT"  -e ""
-  RETURN=$?
-  if [ $RETURN -gt 0 ]; then
-    echo "Cannot connect to mysql server"
-    echo "Please set the right parameters to connect to the MySQL server."
-    exit 1
-  fi
-fi
+mysql -u"$DBUSER" -p"$DBPASSWORD" -h"$DBHOST" -P"$DBPORT"  -e "" || {
+  echo "Cannot connect to MySQL. Please set the right parameters."
+  echo "abiquo-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>"
+  exit 1
+}
+
 pushd $DATADIR > /dev/null
 
 echo "Upgrading accounting schema"
