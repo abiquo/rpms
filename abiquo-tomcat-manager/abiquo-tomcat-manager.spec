@@ -39,19 +39,20 @@ cp -r * $RPM_BUILD_ROOT%{abiquo_basedir}/tomcat/webapps/manager
 #Check tomcat admin
 UUID=$(uuidgen)
 FILECONFIG=/opt/abiquo/tomcat/conf/tomcat-users.xml
+xmlstarlet sel -Q -t -c "tomcat-users/user[@roles='manager-gui']" $FILECONFIG
+if [ $? -eq 1 ]; then
+xmlstarlet ed -P -S -L -s "/tomcat-users" -t elem -n role -v "$UUID" $FILECONFIG
+xmlstarlet ed -P -S -L -i "//role[.='$UUID']" -t attr -n "rolename" -v "manager-gui" $FILECONFIG
+xmlstarlet ed -P -S -L -u "//role[.='$UUID']" -v '' $FILECONFIG
+
 xmlstarlet ed -P -S -L -s "/tomcat-users" -t elem -n user -v "$UUID" $FILECONFIG
 xmlstarlet ed -P -S -L -i "//user[.='$UUID']" -t attr -n "username" -v "admin" $FILECONFIG
 xmlstarlet ed -P -S -L -i "//user[.='$UUID']" -t attr -n "password" -v "xabiquo" $FILECONFIG
 xmlstarlet ed -P -S -L -i "//user[.='$UUID']" -t attr -n "roles" -v "manager-gui" $FILECONFIG
 xmlstarlet ed -P -S -L -u "//user[.='$UUID']" -v '' $FILECONFIG
-xmlstarlet ed -P -S -L -s "/tomcat-users" -t elem -n role -v "$UUID" $FILECONFIG
-xmlstarlet ed -P -S -L -i "//role[.='$UUID']" -t attr -n "rolename" -v "manager-gui" $FILECONFIG
-xmlstarlet ed -P -S -L -u "//role[.='$UUID']" -v '' $FILECONFIG
-
-
-
-#xmlstarlet sel -Q -t -c "tomcat-users/user[@username='admin']" tomcat-users.xml
-
+else
+echo "User with role manager-gui already exists"
+fi
 
 %files
 %{abiquo_basedir}/tomcat/webapps/manager
