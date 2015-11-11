@@ -40,6 +40,12 @@ echo "Cannot find the abiquo properties file."
 exit 1
 fi
 
+mysql -u"$DBUSER" -p"$DBPASSWORD" -h"$DBHOST" -P"$DBPORT"  -e "" || {
+  echo "Cannot connect to MySQL. Please set the right parameters."
+  echo "abiquo-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>"
+  exit 1
+}
+
 pushd $DATADIR > /dev/null
 
 echo "Upgrading accounting schema"
