@@ -40,7 +40,13 @@ echo "Cannot find the abiquo properties file."
 exit 1
 fi
 
-mysql -u"$DBUSER" -p"$DBPASSWORD" -h"$DBHOST" -P"$DBPORT"  -e "" || {
+if [ -z "$DBPASSWORD" ]; then
+  MYSQLCMD="mysql -u$DBUSER -h$DBHOST -P$DBPORT"
+else
+  MYSQLCMD="mysql -u$DBUSER -p$DBPASSWORD -h$DBHOST -P$DBPORT"
+fi
+
+$MYSQLCMD  -e "" || {
   echo "Cannot connect to MySQL. Please set the right parameters."
   echo "abiquo-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>"
   exit 1
@@ -49,7 +55,7 @@ mysql -u"$DBUSER" -p"$DBPASSWORD" -h"$DBHOST" -P"$DBPORT"  -e "" || {
 pushd $DATADIR > /dev/null
 
 echo "Upgrading accounting schema"
-mysql -u$DBUSER --password="$DBPASSWORD" -h"$DBHOST" -P"$DBPORT" < src/accounting/kinton_accounting.sql
+$MYSQLCMD < src/accounting/kinton_accounting.sql
 
 function getProperty {
     echo $(grep $1 -r $PROPFILE | cut -d"=" -f2)
