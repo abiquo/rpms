@@ -16,6 +16,8 @@ Source5:	legal-web.xml
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildArch:	noarch
 
+Requires:       abiquo-sosreport-plugins
+
 %description
 Abiquo is the Next Generation Cloud Management Solution
 
