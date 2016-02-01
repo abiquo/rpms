@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh 
 #
 # chkconfig: 2345 99 99
 # description: Starts the required Abiquo AIM daemons
@@ -7,13 +7,17 @@
 . /etc/init.d/functions
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
+LOGFILE=/var/log/messages
+NAME="abiquo-aim"
+PIDFILE=/var/run/${NAME}.pid
 
 RETVAL=0
 
 start()
 {
+#  echo -n "Starting abiquo-aim"
 
-  status libvirtd
+  status libvirtd > /dev/null
   RETVAL=$?
 
   if [ $RETVAL -ne 0 ]; then
@@ -21,33 +25,58 @@ start()
   fi
   
   echo -n $"Starting AIM daemon: "
-  /usr/sbin/abiquo-aim --config-file /etc/abiquo-aim.ini -d
-
-  success
-  echo
+  /usr/sbin/abiquo-aim --config-file /etc/abiquo-aim.ini -d >> $LOGFILE 2>&1
+  RETVAL=$?
+  if [ $RETVAL -eq 0 ]; then
+    pidof abiquo-aim > $PIDFILE
+    success
+    echo
+  fi
 }
 
 stop()
 {
   /etc/init.d/libvirtd stop
-  PIDS=`pidof abiquo-aim | wc -l`
-  if [ "$PIDS" -ne 0 ]; then
-      kill -9 `pidof abiquo-aim`
+
+  echo -n $"Stopping AIM daemon: "
+
+  if [ ! -f $PIDFILE ]; then
+     success && echo && exit 0
+  else  
+     PID=`cat ${PIDFILE}`
+     if [ "$PID" -ne "0" ]; then
+       kill -9  $PID
+       rm $PIDFILE
+       success
+       echo
+     fi
   fi
-  success
+ 
+}
+
+run_status()
+{
+  status -p $PIDFILE abiquo-aim
 }
 
 
 case "$1" in
   start)
     start
+    RETVAL=$?
     ;;
   stop)
     stop
+    RETVAL=$?
     ;;
   restart)
     stop
     start
+    RETVAL=$?
+    ;;
+  status)
+    run_status
+    RETVAL=$?
     ;;
   *)
     echo $"Usage: $0 {start|stop|restart}"
