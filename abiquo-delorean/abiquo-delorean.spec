@@ -9,7 +9,7 @@ License:  Multiple
 URL:      http://www.abiquo.com
 
 Source0:  ../../watchtower/delorean.jar
-Source1:  ../../watchtower/delorean.conf
+Source1:  delorean.conf
 Source2:  delorean.init
 Source3:  ../../watchtower/watchtower_schema.sql
 
@@ -26,11 +26,9 @@ This package contains Delorean module
 rm -rf $RPM_BUILD_ROOT
 
 %{__install} -Dp -m 0644 %{SOURCE0} %{buildroot}%{abiquo_basedir}/watchtower/delorean/bin/delorean.jar
-%{__install} -Dp -m 0644 %{SOURCE1} %{buildroot}%{abiquo_basedir}/watchtower/delorean/etc/delorean.conf
+%{__install} -Dp -m 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/abiquo/watchtower/delorean.conf
 %{__install} -Dp -m 0755 %{SOURCE2} %{buildroot}%{_initrddir}/abiquo-delorean
 %{__install} -Dp -m 0644 %{SOURCE3} %{buildroot}%{_docdir}/abiquo-watchtower/database/watchtower_schema.sql
-%{__install} -p -d -m 0755 %{buildroot}%{abiquo_basedir}/watchtower/delorean/run
-%{__install} -p -d -m 0755 %{buildroot}%{abiquo_basedir}/watchtower/delorean/logs
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -45,7 +43,11 @@ chkconfig --add abiquo-delorean
 %{abiquo_basedir}/watchtower/delorean
 %{_initrddir}/abiquo-delorean
 %{_docdir}/abiquo-watchtower
+%config(noreplace) %{_sysconfdir}/abiquo/watchtower/delorean.conf
 
 %changelog
 * Mon Oct 19 2015 Sergio Pena <sergio.pena@abiquo.com> 3.8
 Initial release
+
+* Tue Feb 9 2016 Sergio Pena <sergio.pena@abiquo.com> 3.8
+Fix init scripts. Modify path files

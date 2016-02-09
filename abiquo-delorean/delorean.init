@@ -7,11 +7,12 @@
 . /etc/init.d/functions
 
 SERVICE_NAME=abiquo-delorean
-PROGNAME=delorean
+PROGNAME=abiquo-delorean
 PATH_TO_JAR=/opt/abiquo/watchtower/delorean/bin/delorean.jar
-PATH_TO_CONFIG=/opt/abiquo/watchtower/delorean/etc/delorean.conf
-PID_PATH_NAME=/opt/abiquo/watchtower/delorean/run/delorean.pid
-LOG_FILE=/opt/abiquo/watchtower/delorean/logs/run.log
+PATH_TO_CONFIG=/etc/abiquo/watchtower/delorean.conf
+PID_PATH_NAME=/var/run/abiquo-delorean.pid
+LOCK_PATH_NAME=/var/lock/subsys/abiquo-delorean
+LOG_FILE=/var/log/delorean.log
 RETVAL="0"
 
 check_retval() {
@@ -27,52 +28,62 @@ check_retval() {
 }
  
 run_start() {
-        echo -n "Starting $SERVICE_NAME"
-        if [ ! -f $PID_PATH_NAME ]; then
-            nohup java -Dconfig.file=$PATH_TO_CONFIG -jar $PATH_TO_JAR  2>> $LOG_FILE >> $LOG_FILE &
-	    PID=$!
-            echo $PID > $PID_PATH_NAME
-	    sleep 5
-            checkpid $PID
-            RETVAL=$?
-	    check_retval
-        else
- 	    success
-            echo "$SERVICE_NAME is already running ..."
-            exit 0
-        fi
+        RETMSG=$(status -p $PID_PATH_NAME $PROGNAME 2>&1)
+	RETVAL=$?
+	case $RETVAL in
+	  0|1|2)
+	    echo -n $RETMSG
+   	    ;;
+          3)  
+            echo -n "Starting $SERVICE_NAME"
+            if [[ ( ! -f $PID_PATH_NAME )  ]]; then
+              nohup java -Dconfig.file=$PATH_TO_CONFIG -jar $PATH_TO_JAR  2>> $LOG_FILE >> $LOG_FILE &
+	      PID=$!
+              echo $PID > $PID_PATH_NAME
+	      touch $LOCK_PATH_NAME	
+	      sleep 5 && checkpid $PID
+              RETVAL=$?
+            else 
+              echo "$SERVICE_NAME is already running ..."
+            fi
+	esac
 }
 
 run_stop() {
         echo -n "Stopping $SERVICE_NAME"
-	status -p $PID_PATH_NAME delorean
+	status -p $PID_PATH_NAME $PROGNAME > /dev/null
         RETVAL=$?
-        if [[ ( $RETVAL -eq "0" ) && ( -f $PID_PATH_NAME ) ]]; then
+        if [[ ( $RETVAL -eq "0" ) ]]; then
             PID=$(cat $PID_PATH_NAME);
             kill $PID;
             RETVAL=$?
             rm $PID_PATH_NAME
-            check_retval
+            rm $LOCK_PATH_NAME
         else
-            success
-            echo -n "$SERVICE_NAME is not running ..."
-            exit 0
+	    RETVAL=0
+            echo -n "$SERVICE_NAME is not running ..." 
+            if [ -f $PID_PATH_NAME ]; then rm $PID_PATH_NAME; fi
+            if [ -f $LOCK_PATH_NAME ]; then rm $LOCK_PATH_NAME; fi
         fi
 }
 
 run_status() {
- 	status -p $PID_PATH_NAME delorean
+ 	status -p $PID_PATH_NAME $PROGNAME
 }
 case $1 in
     start)
  	run_start
+	check_retval
     ;;
     stop)
         run_stop
+	check_retval
     ;;
     restart)
         run_stop
+	echo
         run_start
+	check_retval
     ;;
     status)
         run_status
