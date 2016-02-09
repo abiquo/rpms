@@ -9,7 +9,7 @@ License:  Multiple
 URL:      http://www.abiquo.com
 
 Source0:  ../../watchtower/delorean.jar
-Source1:  delorean.conf
+Source1:  ../../watchtower/delorean.conf
 Source2:  delorean.init
 Source3:  ../../watchtower/watchtower_schema.sql
 

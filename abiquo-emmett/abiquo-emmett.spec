@@ -9,7 +9,7 @@ License:  Multiple
 URL:      http://www.abiquo.com
 
 Source0:  ../../watchtower/emmett.jar
-Source1:  emmett.conf
+Source1:  ../../watchtower/emmett.conf
 Source2:  emmett.init
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
