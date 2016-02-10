@@ -43,8 +43,8 @@ chkconfig --add abiquo-emmett
 %config(noreplace) %{_sysconfdir}/abiquo/watchtower/emmett.conf
 
 %changelog
-* Mon Oct 19 2015 Sergio Pena <sergio.pena@abiquo.com> 3.8
-Initial release
-
 * Tue Feb 9 2016 Sergio Pena <sergio.pena@abiquo.com> 3.8
 Fix init scripts. Modify path files
+
+* Mon Oct 19 2015 Sergio Pena <sergio.pena@abiquo.com> 3.8
+Initial release
