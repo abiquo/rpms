@@ -62,7 +62,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) /var/www/html/ui/config/tutorials
 %config(noreplace) /var/www/html/ui/config/client-config-custom.json
 %config(noreplace) /var/www/html/ui/lang/lang_??_??_custom.json
-%config(noreplace) /var/www/html/ui/lib/remoteaccess
+%config(noreplace) /var/www/html/ui/externaljsloadertemplate.html
 
 %changelog
 * Mon Aug 10 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-3
