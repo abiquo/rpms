@@ -7,7 +7,7 @@ Url:            http://www.abiquo.com/
 License:        Multiple
 Group:          Development/Tools
 Summary:        Abiquo Server core package 
-Source0:        http://mirror.abiquo.com/sources/%{name}-tomcat-7.0.59.tgz
+Source0:        http://mirror.abiquo.com/sources/%{name}-tomcat-8.0.26.tgz
 Source1:        abiquo-tomcat.logrotate
 Source2:        ../../legal.tar.gz
 Source3:        ../../tomcat/abiquo-tomcat.jar
@@ -28,8 +28,8 @@ Make sure that you read the license agrements in /usr/share/doc/abiquo-core lice
 
 %prep
 rm -rf $RPM_BUILD_ROOT
-%setup -n %{name}-tomcat-7.0.59 -T -b 0 
-%setup -n %{name}-tomcat-7.0.59 -a 2 -T -D
+%setup -n %{name}-tomcat-8.0.26 -T -b 0 
+%setup -n %{name}-tomcat-8.0.26 -a 2 -T -D
 
 %clean
 rm -rf $RPM_BUILD_ROOT
