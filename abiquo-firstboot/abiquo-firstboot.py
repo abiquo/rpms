@@ -197,6 +197,69 @@ class NfsWindow:
                 pass
         return False
 
+class MonitoringWindow:
+    def __init__(self,screen):
+        self.delorean_conf = '/etc/abiquo/watchtower/delorean.conf'
+        self.emmett_conf = '/etc/abiquo/watchtower/emmett.conf'
+
+        self.screen = screen
+        self.label = Label('RabbitMQ address:')
+        self.entry = Entry(33)
+        self.text = TextboxReflowed(50,"Abiquo Watchtower needs to know where your RabbitMQ server is located. This is the same RabbitMQ server your Abiquo API uses.\n")
+        self.topgrid = GridForm(self.screen, "Abiquo Watchtower Configuration", 1, 3)
+        self.topgrid.add(self.text,0,0,(0, 0, 0, 1))
+        self.grid = Grid(2, 1)
+        self.grid.setField (self.label, 0, 0, (0, 0, 1, 0), anchorLeft = 1)
+        self.grid.setField (self.entry, 1, 0)
+        self.topgrid.add (self.grid, 0, 1, (0, 0, 0, 1))
+        self.bb = ButtonBar (self.screen, ["OK","Cancel"],compact=1)
+        self.topgrid.add (self.bb, 0, 2, growx = 1)
+
+    def run(self):
+        self.topgrid.setCurrent(self.entry)
+        result = self.topgrid.run()
+        rc = self.bb.buttonPressed(result)
+        if rc == "cancel":
+            return -1
+        else:
+            logging.info("OK")
+            delorean_tmp = '/tmp/delorean.json'
+            emmett_tmp = '/tmp/emmett.json'
+            # Config files are HOCON format... Whatever that is...
+            # We need to turn them to something we can manage.
+            p = subprocess.call('pyhocon -i %s -o %s -f json' % (self.delorean_conf, delorean_tmp) , shell=True, stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+            if p != 0:
+                logging.error("Could not convert delorean.conf to JSON!")
+                exit(1)
+            
+            with open(delorean_tmp) as delorean_conf:
+                data = json.load(delorean_conf)
+            data['amqp']['rabbitmq']['host'] = self.entry.value()
+            with open(delorean_tmp, 'w') as delorean_conf:
+                json.dump(data, delorean_conf)
+            p = subprocess.call('pyhocon -i %s -o %s -f hocon' % (delorean_tmp, self.delorean_conf) , shell=True, stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+            if p != 0:
+                logging.error("Could not convert delorean.conf back to HOCON!")
+                exit(1)
+
+            # Now emmett
+            p = subprocess.call('pyhocon -i %s -o %s -f json' % (self.emmett_conf, emmett_tmp) , shell=True, stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+            if p != 0:
+                logging.error("Could not convert emmett.conf to JSON!")
+                exit(1)
+            
+            with open(emmett_tmp) as emmett_conf:
+                data = json.load(emmett_conf)
+            data['amqp']['rabbitmq']['host'] = self.entry.value()
+            with open(emmett_tmp, 'w') as emmett_conf:
+                json.dump(data, emmett_conf)
+            p = subprocess.call('pyhocon -i %s -o %s -f hocon' % (emmett_tmp, self.emmett_conf) , shell=True, stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
+            if p != 0:
+                logging.error("Could not convert emmett.conf back to HOCON!")
+                exit(1)
+            
+            return 0
+
 class ApiWindow:
     def __init__(self,screen,profiles):
         self.conf_path = '/var/www/html/ui/config/client-config-custom.json'
@@ -754,6 +817,19 @@ class mainWindow:
         if any(p in profiles for p in ['abiquo-dhcp-relay']):
             while not DONE:
                 self.win = DHCPRelayWindow(screen)
+                rc = self.win.run()
+                if rc == -1:
+                    screen.popWindow()
+                    DONE = 1
+                elif rc == 0:
+                    screen.popWindow()
+                    DONE = 1
+        DONE = 0
+
+        # Watchtower
+        if any(p in profiles for p in ['abiquo-monitoring']):
+            while not DONE:
+                self.win = MonitoringWindow(screen)
                 rc = self.win.run()
                 if rc == -1:
                     screen.popWindow()
