@@ -203,20 +203,28 @@ class MonitoringWindow:
         self.emmett_conf = '/etc/abiquo/watchtower/emmett.conf'
 
         self.screen = screen
-        self.label = Label('RabbitMQ address:')
-        self.entry = Entry(33)
+        self.label_address = Label('RabbitMQ address:')
+        self.entry_address = Entry(30)
+        self.entry_user = Entry(30, "abiquo")
+        self.label_user = Label('RabbitMQ username:')
+        self.entry_pass = Entry(30, "abiquo")
+        self.label_pass = Label('RabbitMQ password:')
         self.text = TextboxReflowed(50,"Abiquo Watchtower needs to know where your RabbitMQ server is located. This is the same RabbitMQ server your Abiquo API uses.\n")
         self.topgrid = GridForm(self.screen, "Abiquo Watchtower Configuration", 1, 3)
         self.topgrid.add(self.text,0,0,(0, 0, 0, 1))
-        self.grid = Grid(2, 1)
-        self.grid.setField (self.label, 0, 0, (0, 0, 1, 0), anchorLeft = 1)
-        self.grid.setField (self.entry, 1, 0)
+        self.grid = Grid(2, 3)
+        self.grid.setField (self.label_address, 0, 0, (0, 0, 1, 0), anchorLeft = 1)
+        self.grid.setField (self.entry_address, 1, 0)
+        self.grid.setField (self.label_user, 0, 1, (0, 0, 2, 0), anchorLeft = 1)
+        self.grid.setField (self.entry_user, 1, 1)
+        self.grid.setField (self.label_pass, 0, 2, (0, 0, 1, 0), anchorLeft = 1)
+        self.grid.setField (self.entry_pass, 1, 2)
         self.topgrid.add (self.grid, 0, 1, (0, 0, 0, 1))
         self.bb = ButtonBar (self.screen, ["OK","Cancel"],compact=1)
         self.topgrid.add (self.bb, 0, 2, growx = 1)
 
     def run(self):
-        self.topgrid.setCurrent(self.entry)
+        self.topgrid.setCurrent(self.entry_address)
         result = self.topgrid.run()
         rc = self.bb.buttonPressed(result)
         if rc == "cancel":
@@ -234,7 +242,9 @@ class MonitoringWindow:
             
             with open(delorean_tmp) as delorean_conf:
                 data = json.load(delorean_conf)
-            data['amqp']['rabbitmq']['host'] = self.entry.value()
+            data['amqp']['rabbitmq']['host'] = self.entry_address.value()
+            data['amqp']['rabbitmq']['username'] = self.entry_user.value()
+            data['amqp']['rabbitmq']['password'] = self.entry_pass.value()
             with open(delorean_tmp, 'w') as delorean_conf:
                 json.dump(data, delorean_conf)
             p = subprocess.call('pyhocon -i %s -o %s -f hocon' % (delorean_tmp, self.delorean_conf) , shell=True, stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
@@ -250,7 +260,9 @@ class MonitoringWindow:
             
             with open(emmett_tmp) as emmett_conf:
                 data = json.load(emmett_conf)
-            data['amqp']['rabbitmq']['host'] = self.entry.value()
+            data['amqp']['rabbitmq']['host'] = self.entry_address.value()
+            data['amqp']['rabbitmq']['username'] = self.entry_user.value()
+            data['amqp']['rabbitmq']['password'] = self.entry_pass.value()
             with open(emmett_tmp, 'w') as emmett_conf:
                 json.dump(data, emmett_conf)
             p = subprocess.call('pyhocon -i %s -o %s -f hocon' % (emmett_tmp, self.emmett_conf) , shell=True, stdout=open('/dev/null', 'w'), stderr=subprocess.STDOUT)
