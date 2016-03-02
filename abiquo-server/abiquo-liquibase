@@ -48,11 +48,6 @@ $MYSQLCMD  -e "" || {
   exit 1
 }
 
-pushd $DATADIR > /dev/null
-
-echo "Upgrading accounting schema"
-$MYSQLCMD < src/accounting/kinton_accounting.sql
-
 function getProperty {
     echo $(grep $1 -r $PROPFILE | cut -d"=" -f2)
 }
@@ -107,4 +102,10 @@ if [ $RETURN == 0 ]; then
 else
         echo "Failed! See log in $LOGFILE"
 fi
+
+pushd $DATADIR > /dev/null
+
+echo "Upgrading accounting schema"
+$MYSQLCMD < src/accounting/kinton_accounting.sql
+
 popd > /dev/null
