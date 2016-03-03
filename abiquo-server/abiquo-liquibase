@@ -60,6 +60,8 @@ standard_secondary=${secondary_controller:-"IDE"}
 stateful_primary=${primary_controller:-"SCSI"}
 stateful_secondary=${secondary_controller:-"SCSI"}
 
+pushd $DATADIR > /dev/null
+
 case $PARAM in
   update)
     liquibase --changeLogFile=$CHANGELOG --url=$URL --username=$DBUSER --password=$DBPASSWORD --driver=$DRIVER \
