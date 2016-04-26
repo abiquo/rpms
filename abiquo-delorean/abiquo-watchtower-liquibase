@@ -51,7 +51,7 @@ case $PARAM in
     cat << EOT
     ERROR:
         You must provide one action parameter:
-        abiquo-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>
+        abiquo-watchtower-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>
  
         Actions parameters:
         * update
