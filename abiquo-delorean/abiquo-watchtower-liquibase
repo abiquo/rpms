@@ -1,0 +1,76 @@
+#!/bin/bash 
+
+while getopts h:u:p:P: OPT; do
+  case $OPT in
+    (h) PARAMDBHOST=$OPTARG;;
+    (u) PARAMDBUSER=$OPTARG;;
+    (p) PARAMDBPASS=$OPTARG;;
+    (P) PARAMDBPORT=$OPTARG;;
+  esac
+done
+
+shift $(($OPTIND-1))
+
+DATADIR="/usr/share/doc/abiquo-watchtower/database/"
+CHANGELOG="src/watchtower_changelog.xml"
+DBUSER=${PARAMDBUSER:-root}
+DBPASSWORD=${PARAMDBPASS:-}
+DBHOST=${PARAMDBHOST:-localhost}
+DBPORT=${PARAMDBPORT:-3306}
+URL="jdbc:mysql://${DBHOST}:${DBPORT}/watchtower"
+DRIVER="com.mysql.jdbc.Driver"
+CLASSPATH='/opt/abiquo/watchtower/delorean/lib/mysql-connector-java-5.1.6.jar'
+LOGLEVEL="debug"
+LOGFILE="/var/log/abiquo-watchtower-liquibase-$(date +"%m-%d-%Y-%T").log"
+PARAM=$1
+
+if [ ! -f "$DATADIR$CHANGELOG" ]; then
+echo "Cannot find changelog file."
+exit 1
+fi
+
+if [ ! -f "$CLASSPATH" ]; then
+echo "Cannot find database connector."
+exit 1
+fi
+
+pushd $DATADIR > /dev/null
+
+case $PARAM in
+  update)
+    liquibase --changeLogFile=$CHANGELOG --url=$URL --username=$DBUSER --password=$DBPASSWORD --driver=$DRIVER \
+          --classpath=$CLASSPATH --logLevel=$LOGLEVEL --logFile=$LOGFILE update 
+    RETURN=$?
+  ;;
+  clearCheckSums)
+    liquibase --changeLogFile=$CHANGELOG --url=$URL --username=$DBUSER --password=$DBPASSWORD --driver=$DRIVER \
+          --classpath=$CLASSPATH --logLevel=$LOGLEVEL --logFile=$LOGFILE clearCheckSums 
+    RETURN=$?
+  ;;
+  *)
+    cat << EOT
+    ERROR:
+        You must provide one action parameter:
+        abiquo-liquibase [-h DB hostname] [-P DB port] [-u user] [-p password] <update|clearCheckSums>
+ 
+        Actions parameters:
+        * update
+            Perform liquibase update
+
+        * clearCheckSums
+            Clear checksums on database in case of wrong digest exists on database
+
+        Optional parameters:
+            -H MySQL hostname
+            -P MySQL port
+            -u MySQL user
+            -p MySQL password
+EOT
+    RETURN=0
+esac
+
+if [ $RETURN == 0 ]; then
+        echo "Done."
+else
+        echo "Failed! See log in $LOGFILE"
+fi
