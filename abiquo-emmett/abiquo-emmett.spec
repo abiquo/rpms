@@ -11,6 +11,7 @@ URL:      http://www.abiquo.com
 Source0:  ../../watchtower/emmett.jar
 Source1:  ../../watchtower/emmett.conf
 Source2:  emmett.init
+Source3:  delorean_logback.xml
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -26,6 +27,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %{__install} -Dp -m 0644 %{SOURCE0} %{buildroot}%{abiquo_basedir}/watchtower/emmett/bin/emmett.jar
 %{__install} -Dp -m 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/abiquo/watchtower/emmett.conf
+%{__install} -Dp -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/abiquo/watchtower/emmett_logback.xml
 %{__install} -Dp -m 0755 %{SOURCE2} %{buildroot}%{_initrddir}/abiquo-emmett
 
 %clean
@@ -41,8 +43,12 @@ chkconfig --add abiquo-emmett
 %{abiquo_basedir}/watchtower/emmett
 %{_initrddir}/abiquo-emmett
 %config(noreplace) %{_sysconfdir}/abiquo/watchtower/emmett.conf
+%config(noreplace) %{_sysconfdir}/abiquo/watchtower/emmett_logback.xml
 
 %changelog
+* Mon May 2 2016 Marc Cirauqui <marc.cirauqui@abiquo.com> 3.8.2
+Add logback config
+
 * Tue Feb 9 2016 Sergio Pena <sergio.pena@abiquo.com> 3.8
 Fix init scripts. Modify path files
 

@@ -13,6 +13,7 @@ PATH_TO_CONFIG=/etc/abiquo/watchtower/emmett.conf
 PID_PATH_NAME=/var/run/abiquo-emmett.pid
 LOCK_PATH_NAME=/var/lock/subsys/abiquo-emmett
 LOG_FILE=/var/log/emmett.log
+LOG_CONFIG=/etc/abiquo/watchtower/emmett_logback.xml
 RETVAL="0"
 
 check_retval() {
@@ -37,7 +38,7 @@ run_start() {
           3)  
             echo -n "Starting $SERVICE_NAME"
             if [[ ( ! -f $PID_PATH_NAME )  ]]; then
-              nohup java -Dconfig.file=$PATH_TO_CONFIG -jar $PATH_TO_JAR  2>> $LOG_FILE >> $LOG_FILE &
+              nohup java -Dlogback.configurationFile=$LOG_CONFIG -Dconfig.file=$PATH_TO_CONFIG -jar $PATH_TO_JAR  2>> $LOG_FILE >> $LOG_FILE &
 	      PID=$!
               echo $PID > $PID_PATH_NAME
 	      touch $LOCK_PATH_NAME	

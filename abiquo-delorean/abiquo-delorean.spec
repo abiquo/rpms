@@ -14,6 +14,7 @@ Source2:  delorean.init
 Source3:  ../../watchtower/liquibase-watchtower-data.tar.gz
 Source4:  abiquo-watchtower-liquibase
 Source5:  ../../watchtower/mysql-connector-java-5.1.6.jar
+Source6:  delorean_logback.xml
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -29,6 +30,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %{__install} -Dp -m 0644 %{SOURCE0} %{buildroot}%{abiquo_basedir}/watchtower/delorean/bin/delorean.jar
 %{__install} -Dp -m 0644 %{SOURCE1} %{buildroot}%{_sysconfdir}/abiquo/watchtower/delorean.conf
+%{__install} -Dp -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/abiquo/watchtower/delorean_logback.xml
 %{__install} -Dp -m 0755 %{SOURCE2} %{buildroot}%{_initrddir}/abiquo-delorean
 %{__install} -Dp -m 0755 %{SOURCE4} %{buildroot}%{_bindir}/abiquo-watchtower-liquibase
 #%{__install} -Dp -m 0755 %{SOURCE5} %{buildroot}%{abiquo_basedir}/watchtower/delorean/lib/
@@ -52,9 +54,13 @@ chkconfig --add abiquo-delorean
 %{_initrddir}/abiquo-delorean
 %{_docdir}/abiquo-watchtower
 %config(noreplace) %{_sysconfdir}/abiquo/watchtower/delorean.conf
+%config(noreplace) %{_sysconfdir}/abiquo/watchtower/delorean_logback.xml
 %{_bindir}/abiquo-watchtower-liquibase
 
 %changelog
+* Mon May 2 2016 Marc Cirauqui <marc.cirauqui@abiquo.com> 3.8.2
+Add logback config
+
 * Tue Feb 9 2016 Sergio Pena <sergio.pena@abiquo.com> 3.8
 Fix init scripts. Modify path files
 
