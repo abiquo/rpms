@@ -11,7 +11,7 @@ URL:      http://www.abiquo.com
 Source0:  ../../watchtower/emmett.jar
 Source1:  ../../watchtower/emmett.conf
 Source2:  emmett.init
-Source3:  delorean_logback.xml
+Source3:  emmett_logback.xml
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -20,7 +20,7 @@ Requires: jdk
 %description
 Next Generation Cloud Management Solution
 
-This package contains Delorean module
+This package contains Emmett module
 
 %install
 rm -rf $RPM_BUILD_ROOT
