@@ -40,7 +40,7 @@ echo "Cannot find the abiquo properties file."
 exit 1
 fi
 
-MYSQLCMD="mysql -u$DBUSER -h$DBHOST -P$DBPORT ${DBPASSWORD:+'-p$DBPASSWORD'}" 
+MYSQLCMD="mysql -u$DBUSER -h$DBHOST -P$DBPORT ${DBPASSWORD:+-p$DBPASSWORD}" 
 
 $MYSQLCMD  -e "" || {
   echo "Cannot connect to MySQL. Please set the right parameters."
