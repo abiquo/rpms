@@ -36,7 +36,7 @@ popd
 mkdir /etc/sysconfig/abiquo -p
 cat << EOF > /etc/sysconfig/abiquo/ec2-api-tools
 export EC2_HOME=$awspath
-export PATH=$PATH:$JAVA_HOME/bin:$M2_HOME/bin:$EC2_HOME/bin
+export PATH=\$PATH:\${JAVA_HOME:+$JAVA_HOME/bin:}\${M2_HOME:+$M2_HOME/bin:}\$EC2_HOME/bin
 EOF
 
 %postun
