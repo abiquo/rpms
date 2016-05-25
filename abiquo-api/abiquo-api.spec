@@ -3,7 +3,7 @@
 Name:     abiquo-api
 Version:  %{getenv:ABIQUO_VERSION}
 Release:  %{getenv:ABIQUO_RELEASE}%{?dist}%{?buildstamp}
-Summary:  Abiquo Repository Manager
+Summary:  Abiquo API
 Group:    Development/System 
 License:  Multiple 
 URL:      http://www.abiquo.com 
