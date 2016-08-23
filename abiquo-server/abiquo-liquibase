@@ -96,7 +96,7 @@ case $PARAM in
             -u MySQL user
             -p MySQL password
 EOT
-    RETURN=0
+    exit 0 
 esac
 
 if [ $RETURN == 0 ]; then
