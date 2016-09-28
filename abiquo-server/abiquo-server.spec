@@ -20,7 +20,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  /usr/bin/unzip
 BuildArch: 		noarch
 
-Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils wget ruby ntp liquibase 
+Requires:       abiquo-core abiquo-ui abiquo-m abiquo-api nfs-utils wget ntp liquibase 
 Requires:       /usr/sbin/sendmail /usr/bin/which
 
 %description
