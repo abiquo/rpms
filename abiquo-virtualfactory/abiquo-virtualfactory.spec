@@ -14,7 +14,7 @@ Source0:  ../../virtualfactory.war
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 
-Requires: abiquo-core
+Requires: abiquo-core genisofs
 
 %description
 Next Generation Cloud Management Solution
