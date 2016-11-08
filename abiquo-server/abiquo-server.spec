@@ -64,7 +64,6 @@ rm -rf $RPM_BUILD_ROOT
 %{abiquo_basedir}/config/examples/abiquo.properties.server
 %{_bindir}/abiquo-liquibase
 %{_bindir}/lqb_update_from_26.sh
-%config(noreplace) /etc/cron.d/abiquo-accounting
 
 %changelog
 * Fri Aug 07 2015 rpmbaker <sergio.pena+rpmbaker@abiquo.com> 3.6.0-1
