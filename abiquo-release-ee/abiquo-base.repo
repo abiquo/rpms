@@ -4,7 +4,7 @@
 
 [abiquo-base]
 name=Abiquo-base
-baseurl=http://mirror.abiquo.com/abiquo/3.8/os/x86_64/
+baseurl=http://mirror.abiquo.com/abiquo/3.10/os/x86_64/
 enabled=1
 gpgcheck=1
 priority=0
