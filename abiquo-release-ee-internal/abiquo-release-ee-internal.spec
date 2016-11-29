@@ -5,12 +5,9 @@ Summary:  Abiquo release repositories
 License:  Multiple
 Group: 	  System Environment/Base
 
-Source:   RPM-GPG-KEY-Abiquo
 Source1:  abiquo-release
 Source2:  abiquo-base.repo
 Source3:  abiquo-updates.repo
-Source4:  RPM-GPG-KEY-MariaDB
-Source5:  RPM-GPG-KEY-RabbitMQ
 Source6:  RPM-GPG-RSA-KEY-Abiquo
 
 BuildRoot: %{_tmppath}/abiquo-release-root
@@ -29,12 +26,6 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc
 
 #GPG
-install -Dpm 644 %{SOURCE0} \
-    $RPM_BUILD_ROOT%{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-Abiquo
-install -Dpm 644 %{SOURCE4} \
-    $RPM_BUILD_ROOT%{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-MariaDB
-install -Dpm 644 %{SOURCE5} \
-    $RPM_BUILD_ROOT%{_sysconfdir}/pki/rpm-gpg/RPM-GPG-KEY-RabbitMQ
 install -Dpm 644 %{SOURCE6} \
     $RPM_BUILD_ROOT%{_sysconfdir}/pki/rpm-gpg/RPM-GPG-RSA-KEY-Abiquo
 
