@@ -1,7 +1,7 @@
 [abiquo-updates]
 name=Abiquo-updates
-baseurl=http://mirror.bcn.abiquo.com/abiquo/3.8/updates/x86_64
+baseurl=http://mirror.bcn.abiquo.com/abiquo/3.10/updates/x86_64
 enabled=1
 gpgcheck=1
 priority=0
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-Abiquo file:///etc/pki/rpm-gpg/RPM-GPG-RSA-KEY-Abiquo
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-RSA-KEY-Abiquo
